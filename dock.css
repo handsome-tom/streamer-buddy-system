@@ -653,3 +653,88 @@ main:has(> .cards:empty) {
 @media (max-height: 119px) {
   main { display: none; }
 }
+
+/* One person's page: their picture and name, Ask, and the history log. */
+.person__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.person__pic {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+.person__name {
+  color: var(--amber);
+  font-size: 15px;
+  font-weight: 700;
+}
+.person .qcard {
+  margin-bottom: 8px;
+}
+.log__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10px 0 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.log__head .pill {
+  height: 24px;
+  padding: 0 10px;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.log__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 7px 0;
+  border-top: 1px solid #26262c;
+}
+.log__body {
+  flex: 1;
+  min-width: 0;
+}
+.log__who {
+  color: var(--muted);
+  font-size: 11px;
+}
+.log__q {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.log__a {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 12px;
+}
+.log__icon {
+  display: flex;
+}
+.log__a .receipt {
+  margin-top: 0;
+}
+.log__a .pill {
+  height: 22px;
+  padding: 0 9px;
+  font-size: 11px;
+}
+
+/* The pop-out has room for full cards, so the bar keeps to dots and buttons. */
+.popout .peek {
+  display: none;
+}
+.popout .bar__status {
+  flex: 1;
+}

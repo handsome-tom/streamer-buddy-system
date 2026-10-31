@@ -10,7 +10,9 @@
 //     When something arrives from someone, their dot pulses in their Twitch
 //     chat colour with a count, and the card opens below. Clicking a waiting
 //     dot pops the cards out into a small window of their own (?popout; it
-//     closes itself once nothing's waiting); otherwise it asks them something.
+//     closes itself once nothing's waiting); otherwise it opens their page:
+//     an Ask box for them and the log of everything between you (questions
+//     both ways, answers, whether they were seen), each clearable, or all.
 //   - the newest question (or answer to yours) also shows right in the bar
 //     with its answer buttons, so a dock kept one row tall works on its own;
 //     a bar that short opens Ask and Connections as pop-outs too
@@ -44,7 +46,8 @@
 //   "inbox"    { id: { from, name, text, at, done, error, answered, seenAt, cleared } }
 //              questions to you (kept a week)
 //   "sent"     { id: { to, text, at, answer: { code, text, at, seen, acked }, seen } }
-//              questions you asked (kept a day)
+//              questions you asked (kept a week)
+//   Both: "gone" once cleared from the log.
 //   "ids"      { login: user id }                          so whispers needn't look them up
 //   "pics"     { login: profile picture URL }              for the dots
 //   "colors"   { login: chat colour "#rrggbb" }             the dots' glow
@@ -87,7 +90,7 @@
 
   let me = null; // { login, id }
   const params = new URLSearchParams(location.search);
-  let view = POPOUT && /^(ask|people)$/.test(params.get("view")) ? params.get("view") : "cards"; // "cards" | "ask" | "people"
+  let view = POPOUT && /^(ask|people|person)$/.test(params.get("view")) ? params.get("view") : "cards"; // "cards" | "ask" | "people"
   const drafts = {}; // question id -> reply being typed (kept if the cards redraw)
   const askDraft = { to: (POPOUT && params.get("to")) || "", text: "", note: "" };
 
@@ -273,7 +276,7 @@
 
   // Ask / Connections: in the dock, or popped out if the dock is just the bar.
   function show(next, to = "") {
-    if (next === "ask") {
+    if (next === "ask" || next === "person") {
       askDraft.to = to || askDraft.to;
       askDraft.note = "";
     }
@@ -403,7 +406,7 @@
     put("inbox", inbox);
   }
   function saveSent() {
-    for (const [k, q] of Object.entries(sent)) if (Date.now() - q.at > DAY_MS) delete sent[k];
+    for (const [k, q] of Object.entries(sent)) if (Date.now() - q.at > 7 * DAY_MS) delete sent[k];
     put("sent", sent);
   }
 
@@ -495,7 +498,7 @@
     sent[id] = { to, text: question, at: Date.now() };
     saveSent();
     askDraft.text = "";
-    view = "cards";
+    if (view !== "person") view = "cards"; // their page shows it in the log
     render();
   }
 
@@ -505,7 +508,7 @@
     if (!me) return;
     // Keep typing where it was if things are redrawn under you.
     const typingIn = document.activeElement?.dataset?.key;
-    main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : cardList());
+    main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : cardList());
     drawDots();
     drawPeek();
     if (typingIn) {
@@ -555,7 +558,7 @@
           popOut();
           render();
         } else {
-          show("ask", login);
+          show("person", login);
         }
       });
       return dot;
@@ -805,6 +808,107 @@
     panel.append(pick, form, note);
     setTimeout(() => input.focus());
     return panel;
+  }
+
+  // One person's page: ask them something, and the log of everything between
+  // you, newest first. Waiting questions to you show as full cards on top.
+  function personPanel(login) {
+    const panel = el("div", "panel person");
+    const head = el("div", "person__head");
+    if (pics[login]) {
+      const img = el("img", "person__pic");
+      img.src = pics[login];
+      img.alt = "";
+      head.append(img);
+    }
+    const name = el("span", "person__name", login);
+    if (/^#[0-9a-f]{6}$/i.test(colors[login] || "")) name.style.color = colors[login];
+    head.append(name);
+    panel.append(head);
+
+    const form = el("form", "panel__form");
+    const input = textBox("Ask them something", askDraft.text);
+    input.dataset.key = "ask";
+    input.maxLength = MAX_LEN;
+    input.addEventListener("input", () => (askDraft.text = input.value));
+    const send = el("button", null, "Send");
+    send.type = "submit";
+    form.append(input, send);
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const question = AskTag.clean(input.value);
+      if (question) ask(login, question, send);
+    });
+    panel.append(form, el("p", "panel__note", askDraft.note));
+
+    for (const id of Object.keys(inbox).filter((id) => inbox[id].from === login && !inbox[id].done)) panel.append(questionCard(id));
+
+    // Everything finished or waiting on them, newest first.
+    const rows = [
+      ...Object.entries(inbox).filter(([, q]) => q.from === login && q.done && !q.gone).map(([id, q]) => ({ id, q, mine: false })),
+      ...Object.entries(sent).filter(([, q]) => q.to === login && !q.gone).map(([id, q]) => ({ id, q, mine: true })),
+    ].sort((a, b) => b.q.at - a.q.at);
+    const logHead = el("div", "log__head");
+    logHead.append(el("span", null, "History"));
+    if (rows.length) {
+      const all = el("button", "pill", "Clear all");
+      all.type = "button";
+      all.addEventListener("click", () => {
+        for (const { q } of rows) q.gone = true;
+        saveInbox();
+        saveSent();
+        render();
+      });
+      logHead.append(all);
+    }
+    panel.append(logHead);
+    if (!rows.length) panel.append(el("p", "panel__sub", "Nothing yet."));
+    for (const { id, q, mine } of rows) panel.append(logRow(id, q, mine, login));
+    setTimeout(() => input.focus());
+    return panel;
+  }
+
+  // One line of history: who asked what, what came back, and if it was seen.
+  function logRow(id, q, mine, login) {
+    const row = el("div", "log__row");
+    const body = el("div", "log__body");
+    body.append(el("div", "log__who", `${mine ? "You asked" : `${login} asked`} · ${ago(q.at)}`), el("div", "log__q", q.text));
+    const out = el("div", "log__a");
+    const reply = mine ? q.answer : q.answered;
+    if (reply) {
+      const a = ANSWERS[reply.code];
+      const icon = el("span", `log__icon answer--${reply.code}`);
+      icon.innerHTML = svg(a.icon, 13);
+      out.append(icon, el("b", null, reply.code === "c" ? reply.text : a.label));
+      // Seen: on your answer, that they marked it; on theirs, that you did.
+      const seen = mine ? reply.acked === true : !!q.seenAt;
+      if (mine && !seen) {
+        const b = el("button", "pill", "Mark as seen");
+        b.type = "button";
+        b.addEventListener("click", () => ack(id));
+        out.append(b);
+      } else {
+        out.append(el("span", `receipt${seen ? " receipt--seen" : ""}`, seen ? "✓ Seen" : "Not seen yet"));
+      }
+    } else {
+      out.append(el("span", "receipt", mine ? "Waiting for their answer" : "Dismissed"));
+    }
+    body.append(out);
+    row.append(body, closeButton(() => {
+      q.gone = true;
+      saveInbox();
+      saveSent();
+      render();
+    }, "Clear from history"));
+    return row;
+  }
+
+  function ago(t) {
+    const m = Math.round((Date.now() - t) / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return `${m} min ago`;
+    const h = Math.round(m / 60);
+    return h < 24 ? `${h} h ago` : `${Math.round(h / 24)} d ago`;
   }
 
   // Connections: who can ask you, and who you can ask. Twitch Space's list
