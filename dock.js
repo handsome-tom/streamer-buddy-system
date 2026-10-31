@@ -401,9 +401,15 @@
     const form = el("form", "people__form");
     const input = el("input");
     input.type = "text";
-    input.placeholder = "Twitch username";
+    input.placeholder = "Their Twitch name";
     input.autocomplete = "off";
     input.spellcheck = false;
+    // Not a sign-in box: keep password managers from popping up over it.
+    input.name = "connection";
+    input.setAttribute("data-1p-ignore", "");
+    input.setAttribute("data-lpignore", "true");
+    input.setAttribute("data-bwignore", "");
+    input.setAttribute("data-form-type", "other");
     const add = el("button", null, "Add");
     add.type = "submit";
     const note = el("p", "people__note");
