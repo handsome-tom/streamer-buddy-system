@@ -514,3 +514,142 @@ main:has(> .cards:empty) {
   font-size: 12px;
   overflow-wrap: anywhere;
 }
+
+/* Pill buttons: Ask, Connections (an icon), and the bar's answer buttons. */
+.pill {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 14px;
+  background: #2f2f35;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pill:hover:not(:disabled) {
+  background: #3a3a44;
+}
+.pill--on,
+.pill--on:hover:not(:disabled) {
+  background: var(--purple);
+  color: #fff;
+}
+.pill--icon {
+  width: 34px;
+  padding: 0;
+  justify-content: center;
+}
+.pill--answer .pill__label {
+  color: var(--text);
+}
+.pill--more {
+  padding: 0 9px;
+  color: var(--muted);
+}
+
+/* The bar's preview of the newest question or answer. */
+.peek {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.peek:empty {
+  display: none;
+}
+.peek__line {
+  flex: 1 1 120px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 60px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.peek__who {
+  flex: none;
+  color: var(--amber);
+  font-weight: 700;
+}
+.peek__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  font-weight: 600;
+}
+.peek__text--muted {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+.peek__icon {
+  flex: none;
+  align-self: center;
+  display: flex;
+}
+.peek__answer {
+  flex: none;
+}
+.peek__error {
+  flex: none;
+  color: var(--bad);
+  font-size: 12px;
+}
+.peek__answers {
+  flex: none;
+  display: flex;
+  gap: 4px;
+}
+.peek__own {
+  flex: 0 1 170px;
+  min-width: 90px;
+}
+.peek__own input {
+  width: 100%;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--field);
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+.peek__own input:focus {
+  border-color: var(--purple);
+  outline: none;
+}
+.peek .receipt {
+  margin-top: 0;
+}
+/* With a question showing, the green light steps aside (problems still show). */
+.bar:has(.peek:not(:empty)) .bar__status {
+  flex: none;
+}
+.bar:has(.peek:not(:empty)) .bar__status:not(.bar__status--bad) {
+  display: none;
+}
+
+/* Narrower bars: answer buttons drop their words, then the reply box goes. */
+@media (max-width: 1250px) {
+  .pill--answer .pill__label { display: none; }
+  .pill--answer { width: 30px; padding: 0; justify-content: center; }
+}
+@media (max-width: 900px) {
+  .peek__own { display: none; }
+}
+@media (max-width: 440px) {
+  .peek__line { display: none; }
+}
+
+/* Kept to one row: everything happens in the bar (and pop-outs). */
+@media (max-height: 119px) {
+  main { display: none; }
+}

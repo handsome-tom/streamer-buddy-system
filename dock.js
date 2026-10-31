@@ -11,6 +11,9 @@
 //     chat colour with a count, and the card opens below. Clicking a waiting
 //     dot pops the cards out into a small window of their own (?popout; it
 //     closes itself once nothing's waiting); otherwise it asks them something.
+//   - the newest question (or answer to yours) also shows right in the bar
+//     with its answer buttons, so a dock kept one row tall works on its own;
+//     a bar that short opens Ask and Connections as pop-outs too
 //   - read receipts: the asker can tap "Mark as seen" on an answer card; the person
 //     who answered sees "✓ Seen" on their "You answered" card. Nothing clears
 //     by itself; cards still close with ×
@@ -78,13 +81,15 @@
   const main = document.getElementById("main");
   const statusEl = document.getElementById("status");
   const dotsEl = document.getElementById("dots");
+  const peekEl = document.getElementById("peek");
   const askBtn = document.getElementById("askBtn");
   const peopleBtn = document.getElementById("peopleBtn");
 
   let me = null; // { login, id }
-  let view = "cards"; // "cards" | "ask" | "people"
+  const params = new URLSearchParams(location.search);
+  let view = POPOUT && /^(ask|people)$/.test(params.get("view")) ? params.get("view") : "cards"; // "cards" | "ask" | "people"
   const drafts = {}; // question id -> reply being typed (kept if the cards redraw)
-  const askDraft = { to: "", text: "", note: "" };
+  const askDraft = { to: (POPOUT && params.get("to")) || "", text: "", note: "" };
 
   // ===== Saved data ========================================================================
 
@@ -254,11 +259,27 @@
   // The cards in a window of their own, in front, sized to fit. Null if OBS
   // (or the browser) won't open one.
   let popWin = null;
-  function popOut() {
+  function popOut(show = "cards", to = "") {
     if (POPOUT) return window;
-    popWin = window.open(`${location.pathname}?popout${DEMO ? "&demo" : ""}`, "streamer-buddy-popout", "popup,width=360,height=520");
+    const q = new URLSearchParams({ popout: "", view: show, to });
+    if (DEMO) q.set("demo", "");
+    popWin = window.open(`${location.pathname}?${q}`, "streamer-buddy-popout", "popup,width=360,height=520");
     popWin?.focus();
     return popWin;
+  }
+
+  // Kept to one row: no room below the bar, so Ask and Connections pop out.
+  const short = () => !POPOUT && innerHeight < 120;
+
+  // Ask / Connections: in the dock, or popped out if the dock is just the bar.
+  function show(next, to = "") {
+    if (next === "ask") {
+      askDraft.to = to || askDraft.to;
+      askDraft.note = "";
+    }
+    if (next !== "cards" && short() && popOut(next, to)) return;
+    view = view === next ? "cards" : next;
+    render();
   }
 
   // Send one whisper. Returns "" once sent, or why not.
@@ -372,8 +393,7 @@
       if (tag.code === "c") q.answer.text = tag.text.replace(/^💬\s*/, "");
       saveSent();
     }
-    if (view === "cards") render(); // otherwise it shows when you're back from Ask / Connections
-    else drawDots();
+    render();
     flash();
     chime();
   }
@@ -483,19 +503,19 @@
 
   function render() {
     if (!me) return;
-    // Keep typing where it was if the cards are redrawn under you.
-    const typingIn = main.contains(document.activeElement) ? document.activeElement.dataset.key : null;
+    // Keep typing where it was if things are redrawn under you.
+    const typingIn = document.activeElement?.dataset?.key;
     main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : cardList());
+    drawDots();
+    drawPeek();
     if (typingIn) {
-      const again = main.querySelector(`[data-key="${typingIn}"]`);
+      const again = document.querySelector(`[data-key="${typingIn}"]`);
       again?.focus();
       again?.setSelectionRange?.(again.value.length, again.value.length);
     }
-    askBtn.classList.toggle("bar__btn--on", view === "ask");
-    peopleBtn.classList.toggle("bar__btn--on", view === "people");
-    peopleBtn.textContent = view === "people" ? "Done" : "Connections";
+    askBtn.classList.toggle("pill--on", view === "ask");
+    peopleBtn.classList.toggle("pill--on", view === "people");
     askBtn.textContent = view === "ask" ? "Cancel" : "Ask";
-    drawDots();
     if (POPOUT) closeWhenDone();
   }
 
@@ -532,13 +552,11 @@
       dot.addEventListener("click", () => {
         if (asks + answers) {
           view = "cards";
-          if (popOut()) return render();
+          popOut();
+          render();
         } else {
-          view = "ask";
-          askDraft.to = login;
-          askDraft.note = "";
+          show("ask", login);
         }
-        render();
       });
       return dot;
     });
@@ -651,6 +669,88 @@
       render();
     }));
     return card;
+  }
+
+  // The bar's preview: the newest question to you, with its answers, or
+  // else the newest answer to a question of yours. "+N" for the rest.
+  function drawPeek() {
+    const open = Object.keys(inbox).filter((id) => !inbox[id].done).sort((a, b) => inbox[b].at - inbox[a].at);
+    const answers = Object.keys(sent).filter((id) => sent[id].answer && !sent[id].answer.seen).sort((a, b) => sent[b].answer.at - sent[a].answer.at);
+    const parts = [];
+    const who = (login, text) => {
+      const name = el("span", "peek__who", text);
+      if (/^#[0-9a-f]{6}$/i.test(colors[login] || "")) name.style.color = colors[login];
+      return name;
+    };
+    if (open.length) {
+      const id = open[0];
+      const q = inbox[id];
+      const line = el("div", "peek__line");
+      line.title = q.text;
+      line.append(who(q.from, q.name), el("span", "peek__text", q.text));
+      if (q.error) line.append(el("span", "peek__error", q.error));
+      const buttons = el("div", "peek__answers");
+      for (const [code, a] of Object.entries(ANSWERS)) {
+        if (code === "c") continue;
+        const b = el("button", `pill pill--answer answer--${code}`);
+        b.type = "button";
+        b.title = a.label;
+        b.disabled = !!q.sending;
+        b.innerHTML = svg(a.icon, 15);
+        b.append(el("span", "pill__label", a.label));
+        b.addEventListener("click", () => answer(id, code));
+        buttons.append(b);
+      }
+      const own = el("form", "peek__own");
+      const input = textBox("Reply…", drafts[id] || "");
+      input.dataset.key = `peek-${id}`;
+      input.maxLength = MAX_LEN;
+      input.addEventListener("input", () => (drafts[id] = input.value));
+      own.append(input);
+      own.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const reply = AskTag.clean(input.value);
+        if (reply) answer(id, "c", reply);
+      });
+      parts.push(line, buttons, own, closeButton(() => dismiss(id), "Dismiss without answering"));
+    } else if (answers.length) {
+      const id = answers[0];
+      const q = sent[id];
+      const a = ANSWERS[q.answer.code];
+      const line = el("div", "peek__line");
+      line.title = q.text;
+      const icon = el("span", `peek__icon answer--${q.answer.code}`);
+      icon.innerHTML = svg(a.icon, 15);
+      line.append(who(q.to, `${q.to} answered`), icon, el("b", "peek__answer", q.answer.code === "c" ? q.answer.text : a.label), el("span", "peek__text peek__text--muted", q.text));
+      parts.push(line);
+      if (q.answer.acked === true) {
+        parts.push(el("span", "receipt receipt--seen", "✓ Seen"));
+      } else {
+        const seen = el("button", "pill", q.answer.acked === "sending" ? "Sending…" : "Mark as seen");
+        seen.type = "button";
+        seen.disabled = q.answer.acked === "sending";
+        seen.addEventListener("click", () => ack(id));
+        parts.push(seen);
+      }
+      parts.push(closeButton(() => {
+        q.answer.seen = true;
+        saveSent();
+        render();
+      }));
+    }
+    const more = open.length + answers.length - (parts.length ? 1 : 0);
+    if (more > 0) {
+      const b = el("button", "pill pill--more", `+${more}`);
+      b.type = "button";
+      b.title = "See them all";
+      b.addEventListener("click", () => {
+        view = "cards";
+        if (short()) popOut();
+        render();
+      });
+      parts.push(b);
+    }
+    peekEl.replaceChildren(...parts);
   }
 
   // A question you asked that hasn't been answered yet.
@@ -806,15 +906,8 @@
 
   // ===== Start =============================================================================
 
-  peopleBtn.addEventListener("click", () => {
-    view = view === "people" ? "cards" : "people";
-    render();
-  });
-  askBtn.addEventListener("click", () => {
-    view = view === "ask" ? "cards" : "ask";
-    askDraft.note = "";
-    render();
-  });
+  peopleBtn.addEventListener("click", () => show("people"));
+  askBtn.addEventListener("click", () => show("ask"));
 
   // Someone else's tab/dock on this page changed the list or answered.
   addEventListener("storage", (e) => {
@@ -861,7 +954,7 @@
     saveSent();
     render();
     loadPics();
-    if (POPOUT) return document.body.classList.add("popout"); // the dock does the listening
+    if (POPOUT) return document.body.classList.add("popout"); // the dock does the listening (view set at the top)
     connect();
     // Twitch asks apps to re-check the sign-in every hour.
     setInterval(async () => {
