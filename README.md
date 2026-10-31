@@ -1,6 +1,6 @@
-# Ask the Streamer — OBS dock
+# Streamer Buddy
 
-A panel for OBS that shows **Ask the Streamer** questions from Twitch Space
+Streamer Buddy is a panel for OBS that shows **Ask the Streamer** questions from Twitch Space
 users, so the streamer can answer without leaving OBS. Answers go back as
 whispers, and the asker sees them as cards in Twitch Space, same as before.
 
@@ -10,8 +10,8 @@ the asker's side.
 ## For the streamer: adding it to OBS
 
 1. In OBS, open **Docks → Custom Browser Docks…**
-2. Give it a name (for example `Questions`) and paste this address:
-   `https://handsome-tom.github.io/twitch-space-obs-dock/`
+2. Give it a name (for example `Streamer Buddy`) and paste this address:
+   `https://handsome-tom.github.io/streamer-buddy/`
 3. Click **Apply**. The new panel appears; drag it above your chat dock.
 4. In the panel, click **Sign in with Twitch** and allow it.
 5. Click **Connections** and add the Twitch usernames of the people who may
