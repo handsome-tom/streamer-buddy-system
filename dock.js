@@ -5,6 +5,10 @@
 //     that Twitch Space shows as a card
 //   - "Ask" sends them a question; it shows as a card in their Twitch chat,
 //     and their answer shows here as a card
+//   - the top bar is a row of profile-picture dots, one per connection; with
+//     nothing waiting that's all there is, so the dock can be one row tall.
+//     When something arrives from someone, their dot pulses with a count and
+//     the card opens below. Clicking a dot asks them something.
 //   - read receipts: the asker can tap "Mark as seen" on an answer card; the person
 //     who answered sees "✓ Seen" on their "You answered" card. Nothing clears
 //     by itself; cards still close with ×
@@ -37,6 +41,7 @@
 //   "sent"     { id: { to, text, at, answer: { code, text, at, seen, acked }, seen } }
 //              questions you asked (kept a day)
 //   "ids"      { login: user id }                          so whispers needn't look them up
+//   "pics"     { login: profile picture URL }              for the dots
 //   "sound"    true to chime when a question or answer arrives
 //
 // Open with ?demo to try the cards without signing in.
@@ -66,6 +71,7 @@
 
   const main = document.getElementById("main");
   const statusEl = document.getElementById("status");
+  const dotsEl = document.getElementById("dots");
   const askBtn = document.getElementById("askBtn");
   const peopleBtn = document.getElementById("peopleBtn");
 
@@ -93,6 +99,7 @@
   let inbox = get("inbox", {});
   let sent = get("sent", {});
   const ids = get("ids", {});
+  const pics = get("pics", {});
 
   const newId = () => Math.random().toString(36).slice(2).padEnd(6, "0").slice(0, 6);
 
@@ -202,13 +209,29 @@
   }
 
   async function lookUp(login) {
-    if (ids[login]) return { login, id: ids[login] };
+    if (ids[login] && pics[login]) return { login, id: ids[login] };
     const r = await helix(`/users?login=${encodeURIComponent(login)}`);
     const u = (await r.json()).data?.[0];
     if (!u) return null;
-    ids[u.login] = u.id;
-    put("ids", ids);
+    remember(u);
     return { login: u.login, id: u.id, name: u.display_name };
+  }
+
+  function remember(u) {
+    ids[u.login] = u.id;
+    pics[u.login] = u.profile_image_url;
+    put("ids", ids);
+    put("pics", pics);
+  }
+
+  // Profile pictures for the dots, refreshed once per load (people change them).
+  async function loadPics() {
+    if (!trusted.length) return;
+    try {
+      const r = await helix(`/users?${trusted.map((l) => `login=${encodeURIComponent(l)}`).join("&")}`);
+      for (const u of (await r.json()).data || []) remember(u);
+      drawDots();
+    } catch {}
   }
 
   // Send one whisper. Returns "" once sent, or why not.
@@ -323,6 +346,7 @@
       saveSent();
     }
     if (view === "cards") render(); // otherwise it shows when you're back from Ask / Connections
+    else drawDots();
     flash();
     chime();
   }
@@ -444,6 +468,40 @@
     peopleBtn.classList.toggle("bar__btn--on", view === "people");
     peopleBtn.textContent = view === "people" ? "Done" : "Connections";
     askBtn.textContent = view === "ask" ? "Cancel" : "Ask";
+    drawDots();
+  }
+
+  // The dots: amber and pulsing for a question from them, purple for their
+  // answer to yours, with how many.
+  function drawDots() {
+    const dots = trusted.map((login) => {
+      const asks = Object.values(inbox).filter((q) => q.from === login && !q.done).length;
+      const answers = Object.values(sent).filter((q) => q.to === login && q.answer && !q.answer.seen).length;
+      const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}`);
+      dot.type = "button";
+      dot.title = asks ? `${login} asked you something` : answers ? `${login} answered you` : `Ask ${login} something`;
+      if (pics[login]) {
+        const img = el("img");
+        img.src = pics[login];
+        img.alt = "";
+        dot.append(img);
+      } else {
+        dot.append(el("span", "dot__letter", login[0].toUpperCase()));
+      }
+      if (asks + answers) dot.append(el("span", "dot__count", String(asks + answers)));
+      dot.addEventListener("click", () => {
+        if (asks + answers) {
+          view = "cards";
+        } else {
+          view = "ask";
+          askDraft.to = login;
+          askDraft.note = "";
+        }
+        render();
+      });
+      return dot;
+    });
+    dotsEl.replaceChildren(...dots);
   }
 
   function cardList() {
@@ -457,7 +515,8 @@
     for (const id of replied) wrap.append(repliedCard(id));
     for (const id of waiting) wrap.append(waitingRow(id));
     if (!answers.length && !open.length && !replied.length && !waiting.length) {
-      wrap.append(el("div", "empty", trusted.length ? "No questions right now" : "Add who can ask you under Connections"));
+      // With connections, the dots say it all: nothing here, so the dock can be one row.
+      if (!trusted.length) wrap.append(el("div", "empty", "Add who can ask you under Connections"));
     }
     return wrap;
   }
@@ -759,6 +818,7 @@
     setStatus("Connecting…", "wait");
     saveSent();
     render();
+    loadPics();
     connect();
     // Twitch asks apps to re-check the sign-in every hour.
     setInterval(async () => {

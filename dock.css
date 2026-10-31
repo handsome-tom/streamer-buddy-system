@@ -57,12 +57,67 @@ button:disabled {
   background: var(--panel);
   border-bottom: 1px solid var(--line);
 }
-.bar__title {
+/* Profile-picture dots, one per connection. */
+.dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   min-width: 0;
-  overflow: hidden;
+}
+.dot {
+  position: relative;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #2f2f35;
+  box-shadow: 0 0 0 2px var(--line);
+}
+.dot img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.dot__letter {
+  color: var(--text);
   font-weight: 700;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+}
+.dot:hover {
+  box-shadow: 0 0 0 2px var(--purple);
+}
+.dot--answer {
+  box-shadow: 0 0 0 2px var(--purple);
+}
+.dot--ask {
+  box-shadow: 0 0 0 2px var(--amber);
+  animation: pulse 1.6s ease-out infinite;
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 2px var(--amber), 0 0 0 2px rgba(255, 179, 26, 0.55); }
+  100% { box-shadow: 0 0 0 2px var(--amber), 0 0 0 12px rgba(255, 179, 26, 0); }
+}
+.dot__count {
+  position: absolute;
+  top: -5px;
+  right: -6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--amber);
+  color: #0e0e10;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+}
+.dot--answer .dot__count {
+  background: var(--purple);
+  color: #fff;
 }
 .bar__status {
   flex: 1;
@@ -89,6 +144,10 @@ button:disabled {
 .bar__status--ok::before { background: var(--good); }
 .bar__status--wait::before { background: var(--amber); }
 .bar__status--bad { color: var(--bad); }
+/* Just the dot (its words show on hover), unless something's wrong. */
+.bar__status:not(.bar__status--bad) {
+  font-size: 0;
+}
 .bar__btn {
   flex: none;
   padding: 4px 8px;
@@ -112,6 +171,10 @@ button:disabled {
 
 main {
   padding: 8px;
+}
+/* Nothing waiting: no space below the dots, so the dock can be one row. */
+main:has(> .cards:empty) {
+  padding: 0;
 }
 
 /* Question cards */
