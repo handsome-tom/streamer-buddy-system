@@ -1,0 +1,299 @@
+/* Ask the Streamer dock: Twitch's dark colours, so it sits well next to the
+   Twitch chat dock in OBS. Cards match Twitch Space's. */
+:root {
+  --bg: #0e0e10;
+  --panel: #18181b;
+  --line: #3a3a3d;
+  --field: #53535f;
+  --text: #efeff1;
+  --muted: #adadb8;
+  --purple: #9147ff;
+  --purple-dark: #772ce8;
+  --amber: #ffb31a;
+  --bad: #ff8280;
+  --good: #00c27a;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.4 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+}
+body {
+  border: 2px solid transparent;
+  min-height: 100vh;
+}
+body.flash {
+  animation: flash 3s ease-out;
+}
+@keyframes flash {
+  0%, 40% { border-color: var(--amber); }
+  100% { border-color: transparent; }
+}
+button {
+  font: inherit;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Top bar */
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.bar__title {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.bar__status {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.bar__status::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 5px;
+  border-radius: 50%;
+  vertical-align: 1px;
+  background: currentColor;
+}
+.bar__status:empty::before {
+  display: none;
+}
+.bar__status--ok::before { background: var(--good); }
+.bar__status--wait::before { background: var(--amber); }
+.bar__status--bad { color: var(--bad); }
+.bar__btn {
+  flex: none;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: #2f2f35;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.bar__btn:hover {
+  background: #3a3a44;
+}
+
+main {
+  padding: 8px;
+}
+
+/* Question cards */
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.qcard {
+  padding: 10px 12px 8px;
+  border: 2px solid var(--amber);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.qcard__head {
+  color: var(--amber);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.qcard__text {
+  margin: 3px 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.qcard__error {
+  margin: -4px 0 8px;
+  color: var(--bad);
+  font-size: 12px;
+}
+.qcard__answers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.qcard__answer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 2px;
+  border: 0;
+  border-radius: 8px;
+  background: #2f2f35;
+  font-size: 12px;
+  font-weight: 600;
+}
+.qcard__answer span {
+  color: var(--text);
+}
+.qcard__answer:hover:not(:disabled) {
+  background: #3a3a44;
+}
+.qcard__own,
+.people__form {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.qcard__own input,
+.people__form input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--field);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.qcard__own input:focus,
+.people__form input:focus {
+  border-color: var(--purple);
+  outline: none;
+}
+.qcard__own button,
+.people__form button,
+.signin__btn {
+  padding: 0 14px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--purple);
+  color: #fff;
+  font-weight: 600;
+}
+.qcard__own button:hover:not(:disabled),
+.people__form button:hover:not(:disabled),
+.signin__btn:hover {
+  background: var(--purple-dark);
+}
+.qcard__dismiss,
+.people__signout {
+  display: block;
+  margin: 6px auto 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+.qcard__dismiss:hover,
+.people__signout:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.answer--y { color: var(--good); }
+.answer--n { color: #eb0400; }
+.answer--m { color: var(--amber); }
+.answer--s { color: #4fc3f7; }
+.answer--o { color: var(--text); }
+.answer--t { color: #bf94ff; }
+
+/* Nothing waiting */
+.empty {
+  padding: 18px 8px;
+  text-align: center;
+}
+.empty__head {
+  font-weight: 600;
+}
+.empty__sub {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Connections */
+.people__head,
+.signin__head {
+  font-size: 15px;
+  font-weight: 600;
+}
+.people__sub,
+.people__note,
+.signin__sub {
+  margin: 4px 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.people__note:empty {
+  display: none;
+}
+.people__list {
+  margin: 10px 0 6px;
+}
+.people__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px;
+  border-bottom: 1px solid #26262c;
+}
+.people__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.x {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+}
+.x:hover {
+  background: rgba(83, 83, 95, 0.48);
+  color: var(--text);
+}
+
+/* Signed out */
+.signin {
+  padding: 18px 6px;
+  text-align: center;
+}
+.signin__btn {
+  margin: 10px 0 2px;
+  padding: 9px 16px;
+}
+.signin__error {
+  margin: 6px 0 0;
+  color: var(--bad);
+  font-size: 12px;
+}
