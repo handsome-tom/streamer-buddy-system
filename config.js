@@ -3,4 +3,4 @@
 // The app's OAuth Redirect URLs must include this page's address, e.g.
 //   https://handsome-tom.github.io/streamer-buddy-system/
 //   http://localhost:8787/      (for testing on this Mac)
-const TWITCH_CLIENT_ID = "";
+const TWITCH_CLIENT_ID = "v6pt264d6puelgyjk5nqbph90j25zz";
