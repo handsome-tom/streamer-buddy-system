@@ -12,7 +12,7 @@
 //
 // Older copies sent the tag as visible text ("… [MTT ?k3j9x2]", "… [MTT !k3j9x2 y]");
 // read() still understands that, so old and new copies keep talking.
-const BuddyTag = (() => {
+const AskTag = (() => {
   const ALPHABET = "?!abcdefghijklmnopqrstuvwxyz0123456789";
   const BASE = 0xe0100;
   const MARK = 200;

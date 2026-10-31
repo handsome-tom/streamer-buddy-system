@@ -291,7 +291,7 @@
 
   function handleWhisper(body, from, name, fromId) {
     from = (from || "").toLowerCase();
-    const tag = BuddyTag.read(body);
+    const tag = AskTag.read(body);
     if (!tag || !from || from === me?.login) return;
     if (fromId && !ids[from]) {
       ids[from] = fromId;
@@ -360,7 +360,7 @@
     const q = inbox[id];
     if (!q || q.sending) return;
     const a = ANSWERS[code];
-    const text = BuddyTag.hide(code === "c" ? `${a.emoji} ${reply}` : `${a.emoji} ${a.label}`, `!${code}${id}`);
+    const text = AskTag.hide(code === "c" ? `${a.emoji} ${reply}` : `${a.emoji} ${a.label}`, `!${code}${id}`);
     q.sending = true;
     q.error = null;
     render();
@@ -390,7 +390,7 @@
     button.disabled = true;
     askDraft.note = "";
     const id = newId();
-    const why = await whisper(to, BuddyTag.hide(`❓ ${question}`, `?${id}`));
+    const why = await whisper(to, AskTag.hide(`❓ ${question}`, `?${id}`));
     button.disabled = false;
     if (why) {
       askDraft.note = `Didn't send: ${why}.`;
@@ -463,7 +463,7 @@
     own.append(input, send);
     own.addEventListener("submit", (e) => {
       e.preventDefault();
-      const reply = BuddyTag.clean(input.value);
+      const reply = AskTag.clean(input.value);
       if (reply) answer(id, "c", reply);
     });
     const x = el("button", "qcard__dismiss", "Dismiss without answering");
@@ -539,7 +539,7 @@
     form.append(input, send);
     form.addEventListener("submit", (e) => {
       e.preventDefault();
-      const question = BuddyTag.clean(input.value);
+      const question = AskTag.clean(input.value);
       if (question) ask(pick.value, question, send);
     });
     const note = el("p", "panel__note", askDraft.note);
