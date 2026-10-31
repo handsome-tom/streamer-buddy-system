@@ -5,7 +5,7 @@
 //     that Twitch Space shows as a card
 //   - "Ask" sends them a question; it shows as a card in their Twitch chat,
 //     and their answer shows here as a card
-//   - read receipts: the asker can tap "Seen" on an answer card; the person
+//   - read receipts: the asker can tap "Mark as seen" on an answer card; the person
 //     who answered sees "✓ Seen" on their "You answered" card. Nothing clears
 //     by itself; cards still close with ×
 //
@@ -26,7 +26,7 @@
 // a whisper comes from Twitch, not from the message text.
 //
 // Updates: index.html loads these files under version.txt; while the dock is
-// open it checks version.txt every few minutes and reloads itself when it
+// open it checks version.txt every minute and reloads itself when it
 // changes (not while you're typing).
 //
 // Saved in this page's localStorage (OBS keeps it between restarts):
@@ -48,7 +48,7 @@
   const MAX_LEN = 200;
   const MAX_OPEN_PER_PERSON = 3;
   const DAY_MS = 24 * 60 * 60 * 1000;
-  const UPDATE_CHECK_MS = 5 * 60 * 1000;
+  const UPDATE_CHECK_MS = 60 * 1000;
   const DEMO = new URLSearchParams(location.search).has("demo");
 
   const svg = (paths, size = 18) => `<svg viewBox="0 0 20 20" width="${size}" height="${size}" aria-hidden="true">${paths}</svg>`;
@@ -394,7 +394,7 @@
     if (!q?.answer || q.answer.acked) return;
     q.answer.acked = "sending";
     render();
-    const why = await whisper(q.to, AskTag.hide("👀 Seen", `!a${id}`));
+    const why = await whisper(q.to, AskTag.hide("Seen", `!a${id}`));
     q.answer.acked = why ? false : true;
     q.answer.ackError = why ? `Didn't send: ${why}.` : null;
     saveSent();
@@ -516,7 +516,7 @@
     if (q.answer.acked === true) {
       body.append(el("span", "receipt receipt--seen", "✓ Seen"));
     } else {
-      const seen = el("button", "receipt receipt--btn", q.answer.acked === "sending" ? "Sending…" : "👀 Seen");
+      const seen = el("button", "receipt receipt--btn", q.answer.acked === "sending" ? "Sending…" : "Mark as seen");
       seen.type = "button";
       seen.title = `Let ${q.to} know you've seen this`;
       seen.disabled = q.answer.acked === "sending";
