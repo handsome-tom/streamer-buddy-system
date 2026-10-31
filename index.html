@@ -4,18 +4,41 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Streamer Buddy System</title>
-  <link rel="stylesheet" href="dock.css">
+  <style>html, body { margin: 0; background: #0e0e10; }</style>
 </head>
 <body>
   <header class="bar">
     <span class="bar__title">Streamer Buddy System</span>
     <span class="bar__status" id="status" title=""></span>
+    <button class="bar__btn" id="askBtn" type="button" hidden>Ask</button>
     <button class="bar__btn" id="peopleBtn" type="button" hidden>Connections</button>
   </header>
 
   <main id="main"></main>
 
-  <script src="config.js"></script>
-  <script src="dock.js"></script>
+  <!-- OBS keeps old copies of pages for a while, so the files are loaded under
+       the current version.txt; a new version is picked up on the next load.
+       Bump version.txt with every change. -->
+  <script>
+    (async () => {
+      let v = "0";
+      try {
+        v = (await (await fetch("version.txt", { cache: "no-store" })).text()).trim();
+      } catch {}
+      window.DOCK_VERSION = v;
+      const css = document.createElement("link");
+      css.rel = "stylesheet";
+      css.href = `dock.css?v=${v}`;
+      document.head.append(css);
+      for (const src of ["config.js", "tag.js", "dock.js"]) {
+        await new Promise((done) => {
+          const s = document.createElement("script");
+          s.src = `${src}?v=${v}`;
+          s.onload = s.onerror = done;
+          document.body.append(s);
+        });
+      }
+    })();
+  </script>
 </body>
 </html>

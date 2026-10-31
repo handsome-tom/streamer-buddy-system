@@ -58,12 +58,15 @@ button:disabled {
   border-bottom: 1px solid var(--line);
 }
 .bar__title {
+  min-width: 0;
+  overflow: hidden;
   font-weight: 700;
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .bar__status {
   flex: 1;
-  min-width: 0;
+  min-width: 12px;
   overflow: hidden;
   color: var(--muted);
   font-size: 11px;
@@ -98,6 +101,13 @@ button:disabled {
 }
 .bar__btn:hover {
   background: #3a3a44;
+}
+.bar__btn--on {
+  background: var(--purple);
+  color: #fff;
+}
+.bar__btn--on:hover {
+  background: var(--purple-dark);
 }
 
 main {
@@ -159,13 +169,13 @@ main {
   background: #3a3a44;
 }
 .qcard__own,
-.people__form {
+.panel__form {
   display: flex;
   gap: 6px;
   margin-top: 8px;
 }
 .qcard__own input,
-.people__form input {
+.panel__form input {
   flex: 1;
   width: 100%;
   min-width: 0;
@@ -177,12 +187,12 @@ main {
   font: inherit;
 }
 .qcard__own input:focus,
-.people__form input:focus {
+.panel__form input:focus {
   border-color: var(--purple);
   outline: none;
 }
 .qcard__own button,
-.people__form button,
+.panel__form button,
 .signin__btn {
   padding: 0 14px;
   border: 0;
@@ -192,12 +202,12 @@ main {
   font-weight: 600;
 }
 .qcard__own button:hover:not(:disabled),
-.people__form button:hover:not(:disabled),
+.panel__form button:hover:not(:disabled),
 .signin__btn:hover {
   background: var(--purple-dark);
 }
 .qcard__dismiss,
-.people__signout {
+.panel__signout {
   display: block;
   margin: 6px auto 0;
   padding: 0;
@@ -207,7 +217,7 @@ main {
   font-size: 12px;
 }
 .qcard__dismiss:hover,
-.people__signout:hover {
+.panel__signout:hover {
   color: var(--text);
   text-decoration: underline;
 }
@@ -219,34 +229,27 @@ main {
 .answer--o { color: var(--text); }
 .answer--t { color: #bf94ff; }
 
-/* Nothing waiting */
+/* Nothing waiting: one quiet line, so the dock can be kept short. */
 .empty {
-  padding: 18px 8px;
-  text-align: center;
-}
-.empty__head {
-  font-weight: 600;
-}
-.empty__sub {
-  margin-top: 2px;
+  padding: 2px 2px 0;
   color: var(--muted);
   font-size: 12px;
 }
 
 /* Connections */
-.people__head,
+.panel__head,
 .signin__head {
   font-size: 15px;
   font-weight: 600;
 }
-.people__sub,
-.people__note,
+.panel__sub,
+.panel__note,
 .signin__sub {
   margin: 4px 0 8px;
   color: var(--muted);
   font-size: 12px;
 }
-.people__note:empty {
+.panel__note:empty {
   display: none;
 }
 .people__list {
@@ -296,4 +299,95 @@ main {
   margin: 6px 0 0;
   color: var(--bad);
   font-size: 12px;
+}
+
+/* Their answer to a question you asked. */
+.acard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 6px 10px 10px;
+  border: 2px solid var(--purple);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.acard__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #2f2f35;
+}
+.acard__body {
+  flex: 1;
+  min-width: 0;
+}
+.acard__who {
+  color: #bf94ff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.acard__head {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.acard__question {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.acard .x {
+  align-self: flex-start;
+}
+
+/* A question you asked, still waiting. */
+.waiting {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 2px 4px 8px;
+  border-left: 2px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}
+.waiting__text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.waiting__who {
+  font-weight: 600;
+}
+
+/* Ask and Connections */
+.panel__select {
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--field);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.panel__check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.panel__check input {
+  accent-color: var(--purple);
+}
+.panel__check + .panel__sub {
+  margin-top: 2px;
 }
