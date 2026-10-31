@@ -89,16 +89,17 @@ button:disabled {
 .dot:hover {
   box-shadow: 0 0 0 2px var(--purple);
 }
+/* --c is their Twitch chat colour (set on the dot), amber if they have none. */
 .dot--answer {
-  box-shadow: 0 0 0 2px var(--purple);
+  box-shadow: 0 0 0 2px var(--c, var(--purple));
 }
 .dot--ask {
-  box-shadow: 0 0 0 2px var(--amber);
+  box-shadow: 0 0 0 2px var(--c, var(--amber));
   animation: pulse 1.6s ease-out infinite;
 }
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 2px var(--amber), 0 0 0 2px rgba(255, 179, 26, 0.55); }
-  100% { box-shadow: 0 0 0 2px var(--amber), 0 0 0 12px rgba(255, 179, 26, 0); }
+  0% { box-shadow: 0 0 0 2px var(--c, var(--amber)), 0 0 0 2px color-mix(in srgb, var(--c, var(--amber)) 60%, transparent); }
+  100% { box-shadow: 0 0 0 2px var(--c, var(--amber)), 0 0 0 12px color-mix(in srgb, var(--c, var(--amber)) 0%, transparent); }
 }
 .dot__count {
   position: absolute;
@@ -108,16 +109,16 @@ button:disabled {
   height: 16px;
   padding: 0 4px;
   border-radius: 8px;
-  background: var(--amber);
-  color: #0e0e10;
+  background: var(--c, var(--amber));
+  color: var(--ink, #0e0e10);
   font-size: 10px;
   font-weight: 800;
   line-height: 16px;
   text-align: center;
 }
 .dot--answer .dot__count {
-  background: var(--purple);
-  color: #fff;
+  background: var(--c, var(--purple));
+  color: var(--ink, #fff);
 }
 .bar__status {
   flex: 1;

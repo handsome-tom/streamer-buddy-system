@@ -7,8 +7,10 @@
 //     and their answer shows here as a card
 //   - the top bar is a row of profile-picture dots, one per connection; with
 //     nothing waiting that's all there is, so the dock can be one row tall.
-//     When something arrives from someone, their dot pulses with a count and
-//     the card opens below. Clicking a dot asks them something.
+//     When something arrives from someone, their dot pulses in their Twitch
+//     chat colour with a count, and the card opens below. Clicking a waiting
+//     dot pops the cards out into a small window of their own (?popout; it
+//     closes itself once nothing's waiting); otherwise it asks them something.
 //   - read receipts: the asker can tap "Mark as seen" on an answer card; the person
 //     who answered sees "✓ Seen" on their "You answered" card. Nothing clears
 //     by itself; cards still close with ×
@@ -42,6 +44,7 @@
 //              questions you asked (kept a day)
 //   "ids"      { login: user id }                          so whispers needn't look them up
 //   "pics"     { login: profile picture URL }              for the dots
+//   "colors"   { login: chat colour "#rrggbb" }             the dots' glow
 //   "sound"    true to chime when a question or answer arrives
 //
 // Open with ?demo to try the cards without signing in.
@@ -55,6 +58,9 @@
   const DAY_MS = 24 * 60 * 60 * 1000;
   const UPDATE_CHECK_MS = 60 * 1000;
   const DEMO = new URLSearchParams(location.search).has("demo");
+  // The popped-out window: shares this page's saved data with the dock (which
+  // does the listening), and just shows and answers.
+  const POPOUT = new URLSearchParams(location.search).has("popout");
 
   const svg = (paths, size = 18) => `<svg viewBox="0 0 20 20" width="${size}" height="${size}" aria-hidden="true">${paths}</svg>`;
   const LINE = 'fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"';
@@ -100,6 +106,7 @@
   let sent = get("sent", {});
   const ids = get("ids", {});
   const pics = get("pics", {});
+  const colors = get("colors", {});
 
   const newId = () => Math.random().toString(36).slice(2).padEnd(6, "0").slice(0, 6);
 
@@ -230,8 +237,28 @@
     try {
       const r = await helix(`/users?${trusted.map((l) => `login=${encodeURIComponent(l)}`).join("&")}`);
       for (const u of (await r.json()).data || []) remember(u);
+      const c = await helix(`/chat/color?${trusted.filter((l) => ids[l]).map((l) => `user_id=${ids[l]}`).join("&")}`);
+      for (const u of (await c.json()).data || []) colors[u.user_login] = u.color || "";
+      put("colors", colors);
       drawDots();
     } catch {}
+  }
+
+  // Black or white, whichever reads better on a colour.
+  function inkOn(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+    return lum > 0.6 ? "#0e0e10" : "#fff";
+  }
+
+  // The cards in a window of their own, in front, sized to fit. Null if OBS
+  // (or the browser) won't open one.
+  let popWin = null;
+  function popOut() {
+    if (POPOUT) return window;
+    popWin = window.open(`${location.pathname}?popout${DEMO ? "&demo" : ""}`, "streamer-buddy-popout", "popup,width=360,height=520");
+    popWin?.focus();
+    return popWin;
   }
 
   // Send one whisper. Returns "" once sent, or why not.
@@ -370,7 +397,7 @@
   // Two soft notes, only if switched on (OBS may pick the dock's sound up on stream).
   let audio = null;
   function chime() {
-    if (!get("sound", false)) return;
+    if (POPOUT || !get("sound", false)) return;
     try {
       audio ||= new AudioContext();
       audio.resume();
@@ -469,6 +496,15 @@
     peopleBtn.textContent = view === "people" ? "Done" : "Connections";
     askBtn.textContent = view === "ask" ? "Cancel" : "Ask";
     drawDots();
+    if (POPOUT) closeWhenDone();
+  }
+
+  // The popped-out window goes away a moment after the last thing is dealt with.
+  let closing = 0;
+  function closeWhenDone() {
+    const waiting = Object.values(inbox).some((q) => !q.done) || Object.values(sent).some((q) => q.answer && !q.answer.seen);
+    clearTimeout(closing);
+    if (!waiting && view === "cards") closing = setTimeout(() => window.close(), 1500);
   }
 
   // The dots: amber and pulsing for a question from them, purple for their
@@ -479,6 +515,10 @@
       const answers = Object.values(sent).filter((q) => q.to === login && q.answer && !q.answer.seen).length;
       const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}`);
       dot.type = "button";
+      if (/^#[0-9a-f]{6}$/i.test(colors[login] || "")) {
+        dot.style.setProperty("--c", colors[login]);
+        dot.style.setProperty("--ink", inkOn(colors[login]));
+      }
       dot.title = asks ? `${login} asked you something` : answers ? `${login} answered you` : `Ask ${login} something`;
       if (pics[login]) {
         const img = el("img");
@@ -492,6 +532,7 @@
       dot.addEventListener("click", () => {
         if (asks + answers) {
           view = "cards";
+          if (popOut()) return render();
         } else {
           view = "ask";
           askDraft.to = login;
@@ -799,6 +840,7 @@
       }
       askBtn.hidden = peopleBtn.hidden = false;
       setStatus("Demo", "wait");
+      if (POPOUT) document.body.classList.add("popout");
       render();
       return;
     }
@@ -819,6 +861,7 @@
     saveSent();
     render();
     loadPics();
+    if (POPOUT) return document.body.classList.add("popout"); // the dock does the listening
     connect();
     // Twitch asks apps to re-check the sign-in every hour.
     setInterval(async () => {
