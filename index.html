@@ -39,7 +39,7 @@
       css.rel = "stylesheet";
       css.href = `dock.css?v=${v}`;
       document.head.append(css);
-      for (const src of ["config.js", "tag.js", "dock.js"]) {
+      for (const src of ["config.js", "dock.js"]) {
         await new Promise((done) => {
           const s = document.createElement("script");
           s.src = `${src}?v=${v}`;

@@ -1,0 +1,15 @@
+# Streamer Buddy System relay (see src/index.js). Deploy: npx wrangler@3 deploy
+name = "streamer-buddy-relay"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+TWITCH_CLIENT_ID = "v6pt264d6puelgyjk5nqbph90j25zz"
+
+[[durable_objects.bindings]]
+name = "HUB"
+class_name = "Hub"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Hub"]

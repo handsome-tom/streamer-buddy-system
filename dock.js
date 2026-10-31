@@ -1,84 +1,71 @@
-// Streamer Buddy System: Ask the Streamer, as an OBS dock. The streamer adds
-// this page as a Custom Browser Dock in OBS. It works both ways with Twitch
-// Space users on her Connections list:
-//   - their questions show here as cards; her answer goes back as a whisper
-//     that Twitch Space shows as a card
-//   - "Ask" sends them a question; it shows as a card in their Twitch chat,
-//     and their answer shows here as a card
-//   - the top bar is a row of profile-picture dots, one per connection; with
-//     nothing waiting that's all there is, so the dock can be one row tall.
-//     When something arrives from someone, their dot pulses in their Twitch
-//     chat colour with a count, and the card opens below. Clicking a waiting
-//     dot pops the cards out into a small window of their own (?popout; it
-//     closes itself once nothing's waiting); otherwise it opens their page:
-//     an Ask box for them and the log of everything between you (questions
-//     both ways, answers, whether they were seen), each clearable, or all.
-//   - the newest question (or answer to yours) also shows right in the bar
-//     with its answer buttons, so a dock kept one row tall works on its own;
-//     a bar that short opens Ask and Connections as pop-outs too
-//   - read receipts: the asker can tap "Mark as seen" on an answer card; the person
-//     who answered sees "✓ Seen" on their "You answered" card. Nothing clears
-//     by itself; cards still close with ×
+// Streamer Buddy System: the hub where a streamer and the people around her
+// (mods, regulars) ask each other quick questions. The same page runs as:
+//   - the streamer's OBS dock (Docks → Custom Browser Docks), and its pop-out
+//     windows (?popout)
+//   - the hub in Twitch Space's Chrome side panel (?embed=ext, inside an
+//     iframe: sign-in is handed over by the extension, see below)
+// Everyone talks through the relay (relay/ in this repo, on Cloudflare): a
+// WebSocket that signs in with your Twitch sign-in, keeps connections and the
+// week's questions, and says who's online. Questions wait there for anyone
+// who's offline.
 //
-// The whispers are the same as Twitch Space's and read like normal messages
-// ("❓ Can I clip that?", "⏳ Soon"); the tag that pairs them is hidden in them
-// (tag.js).
+// What's on screen:
+//   - the top bar: one profile-picture dot per connection, ringed green while
+//     they're online, faded until they've added you back. Something waiting
+//     from someone makes their dot pulse in their Twitch chat colour with a
+//     count. Clicking a waiting dot shows the cards (popped out into a window
+//     of their own in OBS, which closes itself once nothing's waiting);
+//     clicking a quiet dot opens their page: an Ask box for them and the log of
+//     everything between you (questions both ways, answers, seen or not), each
+//     clearable, or all.
+//   - the newest question (or answer to yours, or connection request) right in
+//     the bar with its buttons, so an OBS dock kept one row tall works on its
+//     own; a bar that short opens Ask and Connections as pop-outs too
+//   - cards below the bar when there's room: questions to you with six
+//     one-tap answers or your own reply; answers to yours with "Mark as seen"
+//     (the person who answered sees "✓ Seen"); nothing clears by itself
 //
-// Twitch Space works the whisper window by hand; a page in OBS can't, so this
-// signs in to Twitch's own API instead:
-//   receiving: an EventSub WebSocket subscribed to user.whisper.message, so a
-//              whisper shows the moment it's sent (only while the dock is
-//              running: Twitch doesn't hand over whispers from before)
-//   sending:   POST helix/whispers (Twitch needs a verified phone number on
-//              the streamer's account for this)
+// Connections: two people can ask each other once both have added each other;
+// someone who added you shows as a request you can add back.
 //
-// Connections: like Twitch Space, only people on your list can put a card
-// here, at most 3 unanswered each, and you can only ask people on it. Who sent
-// a whisper comes from Twitch, not from the message text.
+// Updates: index.html loads these files under version.txt; while open it
+// checks version.txt every minute and reloads itself when it changes (not
+// while you're typing).
 //
-// Updates: index.html loads these files under version.txt; while the dock is
-// open it checks version.txt every minute and reloads itself when it
-// changes (not while you're typing).
-//
-// Saved in this page's localStorage (OBS keeps it between restarts):
+// Saved in this page's localStorage (OBS keeps it between restarts; inside the
+// side panel's iframe it's the iframe's own):
 //   "token"    the Twitch sign-in
-//   "trusted"  [logins]                                    your connections
-//   "inbox"    { id: { from, name, text, at, done, error, answered, seenAt, cleared } }
-//              questions to you (kept a week)
-//   "sent"     { id: { to, text, at, answer: { code, text, at, seen, acked }, seen } }
-//              questions you asked (kept a week)
-//   Both: "gone" once cleared from the log.
-//   "ids"      { login: user id }                          so whispers needn't look them up
-//   "pics"     { login: profile picture URL }              for the dots
-//   "colors"   { login: chat colour "#rrggbb" }             the dots' glow
-//   "sound"    true to chime when a question or answer arrives
+//   "ui"       { question id: { closed, waitClosed, cleared, gone } }  what you've
+//              closed or cleared here (per device; the relay keeps the rest)
+//   "ids", "pics", "colors"  Twitch user ids, profile pictures, chat colours
+//   "sound"    true to chime when something arrives
 //
-// Open with ?demo to try the cards without signing in.
+// Open with ?demo to try it without signing in. On this Mac, ?dev=<name> signs
+// in as anyone against the local test relay.
 
 (() => {
-  const SCOPES = "user:read:whispers user:manage:whispers";
+  const SCOPES = ""; // signing in only says who you are
   const HELIX = "https://api.twitch.tv/helix";
-  const EVENTSUB_WS = "wss://eventsub.wss.twitch.tv/ws";
   const MAX_LEN = 200;
-  const MAX_OPEN_PER_PERSON = 3;
-  const DAY_MS = 24 * 60 * 60 * 1000;
   const UPDATE_CHECK_MS = 60 * 1000;
-  const DEMO = new URLSearchParams(location.search).has("demo");
-  // The popped-out window: shares this page's saved data with the dock (which
-  // does the listening), and just shows and answers.
-  const POPOUT = new URLSearchParams(location.search).has("popout");
+  const params = new URLSearchParams(location.search);
+  const DEMO = params.has("demo");
+  const DEV = location.hostname === "localhost" ? params.get("dev") : null;
+  // The popped-out window (OBS): its own connection to the relay, same saved data.
+  const POPOUT = params.has("popout");
+  // Inside Twitch Space's side panel: sign-in comes from the extension.
+  const EMBED = params.get("embed") === "ext";
 
   const svg = (paths, size = 18) => `<svg viewBox="0 0 20 20" width="${size}" height="${size}" aria-hidden="true">${paths}</svg>`;
   const LINE = 'fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"';
-  // Same answers, emoji and icons as Twitch Space.
   const ANSWERS = {
-    y: { label: "Yes", emoji: "✅", icon: `<path d="M4 10.5l4 4 8-9" ${LINE} stroke-width="2.4"/>` },
-    n: { label: "No", emoji: "❌", icon: `<path d="M5 5l10 10M15 5L5 15" ${LINE} stroke-width="2.4"/>` },
-    m: { label: "Maybe", emoji: "🤔", icon: `<path d="M7 7.2a3 3 0 1 1 4.2 2.8c-.8.4-1.2 1-1.2 1.8v.7" ${LINE} stroke-width="2.2"/><circle cx="10" cy="15.6" r="1.3" fill="currentColor"/>` },
-    s: { label: "Soon", emoji: "⏳", icon: `<path d="M5 2.5h10M5 17.5h10M6 2.5c0 4 8 4.5 8 7.5s-8 3.5-8 7.5M14 2.5c0 4-8 4.5-8 7.5s8 3.5 8 7.5" ${LINE} stroke-width="1.8"/>` },
-    o: { label: "OK", emoji: "👍", icon: '<path d="M7 9l3-6c1.2 0 2 .8 2 2v3h3.5a1.5 1.5 0 0 1 1.5 1.8l-1.1 6A1.5 1.5 0 0 1 14.4 17H7zM3 9h3v8H3z" fill="currentColor"/>' },
-    t: { label: "Thank you", emoji: "💜", icon: '<path d="M10 17s-6.5-4-6.5-8.6A3.6 3.6 0 0 1 10 6.2a3.6 3.6 0 0 1 6.5 2.2C16.5 13 10 17 10 17z" fill="currentColor"/>' },
-    c: { label: "Replied", emoji: "💬", icon: `<path d="M3 4h14v9H8l-4 3v-3H3z" ${LINE} stroke-width="1.8"/>` }, // a typed reply
+    y: { label: "Yes", icon: `<path d="M4 10.5l4 4 8-9" ${LINE} stroke-width="2.4"/>` },
+    n: { label: "No", icon: `<path d="M5 5l10 10M15 5L5 15" ${LINE} stroke-width="2.4"/>` },
+    m: { label: "Maybe", icon: `<path d="M7 7.2a3 3 0 1 1 4.2 2.8c-.8.4-1.2 1-1.2 1.8v.7" ${LINE} stroke-width="2.2"/><circle cx="10" cy="15.6" r="1.3" fill="currentColor"/>` },
+    s: { label: "Soon", icon: `<path d="M5 2.5h10M5 17.5h10M6 2.5c0 4 8 4.5 8 7.5s-8 3.5-8 7.5M14 2.5c0 4-8 4.5-8 7.5s8 3.5 8 7.5" ${LINE} stroke-width="1.8"/>` },
+    o: { label: "OK", icon: '<path d="M7 9l3-6c1.2 0 2 .8 2 2v3h3.5a1.5 1.5 0 0 1 1.5 1.8l-1.1 6A1.5 1.5 0 0 1 14.4 17H7zM3 9h3v8H3z" fill="currentColor"/>' },
+    t: { label: "Thank you", icon: '<path d="M10 17s-6.5-4-6.5-8.6A3.6 3.6 0 0 1 10 6.2a3.6 3.6 0 0 1 6.5 2.2C16.5 13 10 17 10 17z" fill="currentColor"/>' },
+    c: { label: "Replied", icon: `<path d="M3 4h14v9H8l-4 3v-3H3z" ${LINE} stroke-width="1.8"/>` }, // a typed reply
   };
 
   const main = document.getElementById("main");
@@ -89,9 +76,8 @@
   const peopleBtn = document.getElementById("peopleBtn");
 
   let me = null; // { login, id }
-  const params = new URLSearchParams(location.search);
-  let view = POPOUT && /^(ask|people|person)$/.test(params.get("view")) ? params.get("view") : "cards"; // "cards" | "ask" | "people"
-  const drafts = {}; // question id -> reply being typed (kept if the cards redraw)
+  let view = POPOUT && /^(ask|people|person)$/.test(params.get("view")) ? params.get("view") : "cards"; // "cards" | "ask" | "people" | "person"
+  const drafts = {}; // question id -> reply being typed (kept if things redraw)
   const askDraft = { to: (POPOUT && params.get("to")) || "", text: "", note: "" };
 
   // ===== Saved data ========================================================================
@@ -109,14 +95,51 @@
     } catch {}
   }
 
-  let trusted = get("trusted", []);
-  let inbox = get("inbox", {});
-  let sent = get("sent", {});
+  // From the relay.
+  let connections = []; // [{ login, mutual, online }]
+  let requests = []; // [login] who added you
+  const questions = {}; // id -> { id, from, to, text, at, answer, dismissed, seenAt }
+  const pending = {}; // id -> true while an answer / seen / dismiss is on its way
+  let ready = false; // first state from the relay arrived
+
+  const ui = get("ui", {});
   const ids = get("ids", {});
   const pics = get("pics", {});
   const colors = get("colors", {});
 
-  const newId = () => Math.random().toString(36).slice(2).padEnd(6, "0").slice(0, 6);
+  function setUi(id, change) {
+    ui[id] = { ...ui[id], ...change };
+    for (const k of Object.keys(ui)) if (!questions[k] && ready) delete ui[k]; // the relay forgot it (a week old)
+    put("ui", ui);
+    render();
+  }
+
+  // The questions, as the drawing code wants them: questions to you (inbox)
+  // and questions you asked (sent), with what you've closed here.
+  let inbox = {};
+  let sent = {};
+  function derive() {
+    inbox = {};
+    sent = {};
+    for (const q of Object.values(questions)) {
+      const u = ui[q.id] || {};
+      if (q.to === me?.login) {
+        inbox[q.id] = {
+          from: q.from, name: q.from, text: q.text, at: q.at,
+          done: !!(q.answer || q.dismissed), answered: q.answer, seenAt: q.seenAt,
+          sending: !!pending[q.id], cleared: !!u.cleared, gone: !!u.gone,
+        };
+      } else if (q.from === me?.login) {
+        sent[q.id] = {
+          to: q.to, text: q.text, at: q.at, seen: !!u.waitClosed || !!q.dismissed, gone: !!u.gone,
+          answer: q.answer && { ...q.answer, acked: q.seenAt ? true : pending[q.id] ? "sending" : false, seen: !!u.closed },
+        };
+      }
+    }
+  }
+
+  const trusted = () => connections.map((c) => c.login);
+  const conn = (login) => connections.find((c) => c.login === login);
 
   function el(tag, className, text) {
     const e = document.createElement(tag);
@@ -139,7 +162,7 @@
     input.value = value;
     input.autocomplete = "off";
     input.spellcheck = false;
-    input.name = "buddy-" + placeholder.toLowerCase().replace(/\W+/g, "-");
+    input.name = "hub-" + placeholder.toLowerCase().replace(/\W+/g, "-");
     input.setAttribute("data-1p-ignore", "");
     input.setAttribute("data-lpignore", "true");
     input.setAttribute("data-bwignore", "");
@@ -149,9 +172,12 @@
 
   // ===== Signing in ========================================================================
   // Twitch's implicit sign-in: off to Twitch, back here with the token after "#".
+  // In the side panel, Twitch's sign-in page can't open inside the iframe, so
+  // the extension does it in a window of its own and hands the token over.
 
   function signIn() {
-    const state = newId() + newId();
+    if (EMBED) return parent.postMessage({ t: "hub-signin" }, "*");
+    const state = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
     put("signinState", state);
     const q = new URLSearchParams({
       response_type: "token",
@@ -167,15 +193,21 @@
   function takeTokenFromAddress() {
     if (!location.hash.includes("access_token") && !location.search.includes("error")) return;
     const h = new URLSearchParams(location.hash.slice(1));
-    const s = new URLSearchParams(location.search);
-    const state = h.get("state") || s.get("state");
-    if (state && state === get("signinState")) {
-      if (h.get("access_token")) put("token", h.get("access_token"));
-    }
+    const state = h.get("state") || params.get("state");
+    if (state && state === get("signinState") && h.get("access_token")) put("token", h.get("access_token"));
     localStorage.removeItem("signinState");
-    history.replaceState(null, "", location.pathname);
-    if (s.get("error")) return s.get("error_description") || s.get("error");
+    history.replaceState(null, "", location.pathname + (EMBED ? "?embed=ext" : ""));
+    if (params.get("error")) return params.get("error_description") || params.get("error");
   }
+
+  // The extension (our parent page) handing over a sign-in.
+  addEventListener("message", (e) => {
+    if (!EMBED || e.source !== parent || !String(e.origin).startsWith("chrome-extension://")) return;
+    if (e.data?.t === "hub-token" && typeof e.data.token === "string") {
+      put("token", e.data.token);
+      start();
+    }
+  });
 
   async function validate() {
     const token = get("token");
@@ -193,7 +225,7 @@
   function signOut() {
     const token = get("token");
     localStorage.removeItem("token");
-    if (token) {
+    if (token && !DEV) {
       fetch("https://id.twitch.tv/oauth2/revoke", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -203,33 +235,12 @@
     location.reload();
   }
 
-  // ===== Twitch API ========================================================================
+  // ===== Twitch API (pictures, colours, checking a name) ===================================
 
-  async function helix(path, options = {}) {
-    const r = await fetch(HELIX + path, {
-      ...options,
-      headers: {
-        Authorization: `Bearer ${get("token")}`,
-        "Client-Id": TWITCH_CLIENT_ID,
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
-    });
-    if (r.status === 401) {
-      localStorage.removeItem("token");
-      showSignedOut("Your Twitch sign-in ran out. Sign in again.");
-      throw new Error("signed out");
-    }
+  async function helix(path) {
+    const r = await fetch(HELIX + path, { headers: { Authorization: `Bearer ${get("token")}`, "Client-Id": TWITCH_CLIENT_ID } });
+    if (r.status === 401) throw new Error("signed out");
     return r;
-  }
-
-  async function lookUp(login) {
-    if (ids[login] && pics[login]) return { login, id: ids[login] };
-    const r = await helix(`/users?login=${encodeURIComponent(login)}`);
-    const u = (await r.json()).data?.[0];
-    if (!u) return null;
-    remember(u);
-    return { login: u.login, id: u.id, name: u.display_name };
   }
 
   function remember(u) {
@@ -239,16 +250,31 @@
     put("pics", pics);
   }
 
-  // Profile pictures for the dots, refreshed once per load (people change them).
+  async function lookUp(login) {
+    if (DEV || DEMO) return { login };
+    const r = await helix(`/users?login=${encodeURIComponent(login)}`);
+    const u = (await r.json()).data?.[0];
+    if (!u) return null;
+    remember(u);
+    return { login: u.login };
+  }
+
+  // Profile pictures and chat colours for the dots, once per load (people change them).
+  let picsFor = "";
   async function loadPics() {
-    if (!trusted.length) return;
+    const logins = [...new Set([...trusted(), ...requests])];
+    if (DEV || DEMO || !logins.length || picsFor === logins.join()) return;
+    picsFor = logins.join();
     try {
-      const r = await helix(`/users?${trusted.map((l) => `login=${encodeURIComponent(l)}`).join("&")}`);
+      const r = await helix(`/users?${logins.map((l) => `login=${encodeURIComponent(l)}`).join("&")}`);
       for (const u of (await r.json()).data || []) remember(u);
-      const c = await helix(`/chat/color?${trusted.filter((l) => ids[l]).map((l) => `user_id=${ids[l]}`).join("&")}`);
-      for (const u of (await c.json()).data || []) colors[u.user_login] = u.color || "";
-      put("colors", colors);
-      drawDots();
+      const known = logins.filter((l) => ids[l]);
+      if (known.length) {
+        const c = await helix(`/chat/color?${known.map((l) => `user_id=${ids[l]}`).join("&")}`);
+        for (const u of (await c.json()).data || []) colors[u.user_login] = u.color || "";
+        put("colors", colors);
+      }
+      render();
     } catch {}
   }
 
@@ -258,163 +284,107 @@
     const lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
     return lum > 0.6 ? "#0e0e10" : "#fff";
   }
+  const colorOf = (login) => (/^#[0-9a-f]{6}$/i.test(colors[login] || "") ? colors[login] : "");
 
-  // The cards in a window of their own, in front, sized to fit. Null if OBS
-  // (or the browser) won't open one.
-  let popWin = null;
-  function popOut(show = "cards", to = "") {
-    if (POPOUT) return window;
-    const q = new URLSearchParams({ popout: "", view: show, to });
-    if (DEMO) q.set("demo", "");
-    popWin = window.open(`${location.pathname}?${q}`, "streamer-buddy-popout", "popup,width=360,height=520");
-    popWin?.focus();
-    return popWin;
-  }
-
-  // Kept to one row: no room below the bar, so Ask and Connections pop out.
-  const short = () => !POPOUT && innerHeight < 120;
-
-  // Ask / Connections: in the dock, or popped out if the dock is just the bar.
-  function show(next, to = "") {
-    if (next === "ask" || next === "person") {
-      askDraft.to = to || askDraft.to;
-      askDraft.note = "";
-    }
-    if (next !== "cards" && short() && popOut(next, to)) return;
-    view = view === next ? "cards" : next;
-    render();
-  }
-
-  // Send one whisper. Returns "" once sent, or why not.
-  async function whisper(to, text) {
-    if (DEMO) return "";
-    try {
-      const user = await lookUp(to);
-      if (!user) return `couldn't find ${to} on Twitch`;
-      const r = await helix(`/whispers?from_user_id=${me.id}&to_user_id=${user.id}`, {
-        method: "POST",
-        body: JSON.stringify({ message: text }),
-      });
-      if (r.status === 204) return "";
-      const why = (await r.json().catch(() => ({}))).message || `Twitch said ${r.status}`;
-      if (/phone/i.test(why)) return "Twitch needs a verified phone number on your account to send whispers";
-      if (r.status === 429) return "Twitch says too many whispers right now, try again in a minute";
-      return why;
-    } catch (e) {
-      return e.message === "signed out" ? "signed out" : "couldn't reach Twitch";
-    }
-  }
-
-  // ===== Receiving: EventSub WebSocket =====================================================
+  // ===== The relay =========================================================================
 
   let socket = null;
-  let watchdog = 0;
   let retryMs = 1000;
+  let pinger = 0;
 
-  function connect(url = EVENTSUB_WS, isReconnect = false) {
-    const ws = new WebSocket(url);
-    let keepaliveMs = 10000;
-    const feed = () => {
-      clearTimeout(watchdog);
-      watchdog = setTimeout(() => ws.close(), keepaliveMs + 10000); // Twitch went quiet
-    };
-
-    ws.onmessage = async (e) => {
-      const msg = JSON.parse(e.data);
-      const type = msg.metadata?.message_type;
-      feed();
-      if (type === "session_welcome") {
-        keepaliveMs = (msg.payload.session.keepalive_timeout_seconds || 10) * 1000;
-        feed();
-        const old = socket;
-        socket = ws;
-        if (isReconnect && old) old.close(); // subscriptions carry over
-        else await subscribe(msg.payload.session.id);
-        retryMs = 1000;
-      } else if (type === "session_reconnect") {
-        connect(msg.payload.session.reconnect_url, true);
-      } else if (type === "notification" && msg.metadata.subscription_type === "user.whisper.message") {
-        const ev = msg.payload.event;
-        handleWhisper(ev.whisper?.text || "", ev.from_user_login, ev.from_user_name, ev.from_user_id);
-      } else if (type === "revocation") {
-        setStatus("Twitch stopped sending whispers", "bad");
+  function connect() {
+    if (!RELAY_URL) return setStatus("Relay not set up yet", "bad");
+    const ws = new WebSocket(RELAY_URL);
+    socket = ws;
+    ws.onopen = () => ws.send(JSON.stringify({ t: "auth", token: DEV ? `dev:${DEV}` : get("token") }));
+    ws.onmessage = (e) => {
+      if (e.data === "pong") return;
+      let m;
+      try {
+        m = JSON.parse(e.data);
+      } catch {
+        return;
       }
+      retryMs = 1000;
+      if (m.t === "state") gotState(m);
+      else if (m.t === "q") gotQuestion(m.q);
+      else if (m.t === "error") gotError(m);
     };
-
-    ws.onclose = () => {
-      if (ws !== socket) return; // an old one being swapped out
+    ws.onclose = (e) => {
+      if (ws !== socket) return;
       socket = null;
-      clearTimeout(watchdog);
+      if (e.code === 4001) return showSignedOut("Your Twitch sign-in ran out. Sign in again.");
       setStatus("Reconnecting…", "wait");
-      setTimeout(() => connect(), retryMs);
-      retryMs = Math.min(retryMs * 2, 60000);
+      setTimeout(connect, retryMs);
+      retryMs = Math.min(retryMs * 2, 30000);
     };
-    if (!socket) socket = ws;
+    clearInterval(pinger);
+    pinger = setInterval(() => socket?.readyState === 1 && socket.send("ping"), 30000); // keeps the line open
   }
 
-  async function subscribe(sessionId) {
-    try {
-      const r = await helix("/eventsub/subscriptions", {
-        method: "POST",
-        body: JSON.stringify({
-          type: "user.whisper.message",
-          version: "1",
-          condition: { user_id: me.id },
-          transport: { method: "websocket", session_id: sessionId },
-        }),
-      });
-      if (r.ok || r.status === 409) setStatus("Listening", "ok");
-      else setStatus(`Couldn't listen: ${(await r.json().catch(() => ({}))).message || r.status}`, "bad");
-    } catch {}
-  }
-
-  function handleWhisper(body, from, name, fromId) {
-    from = (from || "").toLowerCase();
-    const tag = AskTag.read(body);
-    if (!tag || !from || from === me?.login) return;
-    if (fromId && !ids[from]) {
-      ids[from] = fromId;
-      put("ids", ids);
+  function relay(msg) {
+    if (DEMO) return demoRelay(msg);
+    if (socket?.readyState !== 1) {
+      setStatus("Not connected; try again in a moment", "bad");
+      return false;
     }
-    if (!trusted.includes(from)) return; // not on your list: stays a normal whisper
-    if (tag.kind === "?") {
-      if (inbox[tag.id]) return; // already have it
-      const open = Object.values(inbox).filter((q) => q.from === from && !q.done).length;
-      if (open >= MAX_OPEN_PER_PERSON) return;
-      inbox[tag.id] = { from, name: name || from, text: tag.text.replace(/^❓\s*/, ""), at: Date.now() };
-      saveInbox();
-    } else if (tag.code === "a") {
-      // Their read receipt for your answer.
-      const q = inbox[tag.id];
-      if (!q || q.from !== from || q.seenAt) return;
-      q.seenAt = Date.now();
-      saveInbox();
-    } else {
-      const q = sent[tag.id];
-      if (!q || q.to !== from || q.answer || !ANSWERS[tag.code]) return; // only answers to your own questions
-      q.answer = { code: tag.code, at: Date.now() };
-      if (tag.code === "c") q.answer.text = tag.text.replace(/^💬\s*/, "");
-      saveSent();
+    socket.send(JSON.stringify(msg));
+    return true;
+  }
+
+  function gotState(m) {
+    const first = !ready;
+    connections = m.connections || [];
+    requests = m.requests || [];
+    const had = new Set(Object.keys(questions));
+    for (const k of Object.keys(questions)) delete questions[k];
+    for (const q of m.questions || []) questions[q.id] = q;
+    ready = true;
+    setStatus("Online", "ok");
+    if (first) moveOldList();
+    else if ((m.questions || []).some((q) => !had.has(q.id) && q.to === me.login)) arrived();
+    loadPics();
+    render();
+  }
+
+  function gotQuestion(q) {
+    const old = questions[q.id];
+    questions[q.id] = q;
+    delete pending[q.id];
+    // Something new for you: a question to you, or an answer to yours.
+    if ((!old && q.to === me.login) || (q.from === me.login && q.answer && !old?.answer)) arrived();
+    if (!old && q.from === me.login) {
+      askDraft.text = "";
+      askDraft.note = "";
+      if (view === "ask") view = "cards"; // their page shows it in the log
     }
     render();
-    flash();
-    chime();
   }
 
-  function saveInbox() {
-    for (const [k, q] of Object.entries(inbox)) if (Date.now() - q.at > 7 * DAY_MS) delete inbox[k];
-    put("inbox", inbox);
-  }
-  function saveSent() {
-    for (const [k, q] of Object.entries(sent)) if (Date.now() - q.at > 7 * DAY_MS) delete sent[k];
-    put("sent", sent);
+  function gotError(m) {
+    for (const k of Object.keys(pending)) delete pending[k];
+    if (m.why === "signin") return showSignedOut("Your Twitch sign-in ran out. Sign in again.");
+    askDraft.note = `${m.why}.`;
+    setStatus(m.why, "bad");
+    setTimeout(() => ready && setStatus("Online", "ok"), 6000);
+    render();
   }
 
-  // Something new: the dock's edge glows for a few seconds.
-  function flash() {
+  // Before the relay, the list lived on this page ("trusted"): hand it over once.
+  function moveOldList() {
+    const old = get("trusted", null);
+    if (!old) return;
+    for (const login of old) if (!trusted().includes(login)) relay({ t: "connect", login });
+    localStorage.removeItem("trusted");
+    for (const k of ["inbox", "sent"]) localStorage.removeItem(k);
+  }
+
+  // Something arrived: the edge glows, and the chime plays if it's on.
+  function arrived() {
     document.body.classList.remove("flash");
     void document.body.offsetWidth;
     document.body.classList.add("flash");
+    chime();
   }
 
   // Two soft notes, only if switched on (OBS may pick the dock's sound up on stream).
@@ -439,66 +409,67 @@
     } catch {}
   }
 
-  // ===== Answering =========================================================================
+  // ===== Doing things ======================================================================
 
-  async function answer(id, code, reply) {
-    const q = inbox[id];
-    if (!q || q.sending) return;
-    const a = ANSWERS[code];
-    const text = AskTag.hide(code === "c" ? `${a.emoji} ${reply}` : `${a.emoji} ${a.label}`, `!${code}${id}`);
-    q.sending = true;
-    q.error = null;
-    render();
-    const why = await whisper(q.from, text);
-    delete q.sending;
-    if (why) {
-      q.error = `Didn't send: ${why}.`;
-    } else {
-      q.done = true;
-      q.answered = { code, text: code === "c" ? reply : "", at: Date.now() };
+  const clean = (s) => s.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, MAX_LEN);
+
+  function answer(id, code, reply) {
+    if (pending[id]) return;
+    if (relay({ t: "answer", id, code, text: reply || "" })) {
+      pending[id] = true;
       delete drafts[id];
+      render();
     }
-    saveInbox();
-    render();
   }
 
-  // Tell them you've seen their answer.
-  async function ack(id) {
-    const q = sent[id];
-    if (!q?.answer || q.answer.acked) return;
-    q.answer.acked = "sending";
-    render();
-    const why = await whisper(q.to, AskTag.hide("Seen", `!a${id}`));
-    q.answer.acked = why ? false : true;
-    q.answer.ackError = why ? `Didn't send: ${why}.` : null;
-    saveSent();
-    render();
+  function ack(id) {
+    if (pending[id]) return;
+    if (relay({ t: "seen", id })) {
+      pending[id] = true;
+      render();
+    }
   }
 
   function dismiss(id) {
-    if (!inbox[id]) return;
-    inbox[id].done = true;
-    delete drafts[id];
-    saveInbox();
-    render();
+    if (relay({ t: "dismiss", id })) {
+      pending[id] = true;
+      delete drafts[id];
+      render();
+    }
   }
 
-  // ===== Asking ============================================================================
-
-  async function ask(to, question, button) {
-    button.disabled = true;
+  function ask(to, question) {
     askDraft.note = "";
-    const id = newId();
-    const why = await whisper(to, AskTag.hide(`❓ ${question}`, `?${id}`));
-    button.disabled = false;
-    if (why) {
-      askDraft.note = `Didn't send: ${why}.`;
-      return render();
+    relay({ t: "ask", to, text: question });
+  }
+
+  // ===== Pop-outs (OBS) ====================================================================
+
+  // The cards in a window of their own, in front, sized to fit. Null if OBS
+  // (or the browser) won't open one. Not from the side panel, which has room.
+  let popWin = null;
+  function popOut(show = "cards", to = "") {
+    if (POPOUT) return window;
+    if (EMBED) return null;
+    const q = new URLSearchParams({ popout: "", view: show, to });
+    if (DEMO) q.set("demo", "");
+    if (DEV) q.set("dev", DEV);
+    popWin = window.open(`${location.pathname}?${q}`, "streamer-buddy-popout", "popup,width=360,height=520");
+    popWin?.focus();
+    return popWin;
+  }
+
+  // Kept to one row: no room below the bar, so Ask and Connections pop out.
+  const short = () => !POPOUT && !EMBED && innerHeight < 120;
+
+  // Ask / Connections / someone's page: here, or popped out if the dock is just the bar.
+  function show(next, to = "") {
+    if (next === "ask" || next === "person") {
+      askDraft.to = to || askDraft.to;
+      askDraft.note = "";
     }
-    sent[id] = { to, text: question, at: Date.now() };
-    saveSent();
-    askDraft.text = "";
-    if (view !== "person") view = "cards"; // their page shows it in the log
+    if (next !== "cards" && short() && popOut(next, to)) return;
+    view = view === next && next !== "person" ? "cards" : next;
     render();
   }
 
@@ -506,6 +477,7 @@
 
   function render() {
     if (!me) return;
+    derive();
     // Keep typing where it was if things are redrawn under you.
     const typingIn = document.activeElement?.dataset?.key;
     main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : cardList());
@@ -518,6 +490,8 @@
     }
     askBtn.classList.toggle("pill--on", view === "ask");
     peopleBtn.classList.toggle("pill--on", view === "people");
+    peopleBtn.classList.toggle("pill--badge", requests.length > 0);
+    peopleBtn.title = requests.length ? `Connections (${requests.length} waiting for you to add them back)` : "Connections";
     askBtn.textContent = view === "ask" ? "Cancel" : "Ask";
     if (POPOUT) closeWhenDone();
   }
@@ -527,22 +501,26 @@
   function closeWhenDone() {
     const waiting = Object.values(inbox).some((q) => !q.done) || Object.values(sent).some((q) => q.answer && !q.answer.seen);
     clearTimeout(closing);
-    if (!waiting && view === "cards") closing = setTimeout(() => window.close(), 1500);
+    if (ready && !waiting && view === "cards") closing = setTimeout(() => window.close(), 1500);
   }
 
-  // The dots: amber and pulsing for a question from them, purple for their
-  // answer to yours, with how many.
+  // The dots: one per connection; green ring while online, faded until they've
+  // added you back; pulsing in their chat colour for a question from them,
+  // ringed for their answer to yours, with how many.
   function drawDots() {
-    const dots = trusted.map((login) => {
+    const dots = connections.map(({ login, mutual, online }) => {
       const asks = Object.values(inbox).filter((q) => q.from === login && !q.done).length;
       const answers = Object.values(sent).filter((q) => q.to === login && q.answer && !q.answer.seen).length;
-      const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}`);
+      const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}`);
       dot.type = "button";
-      if (/^#[0-9a-f]{6}$/i.test(colors[login] || "")) {
-        dot.style.setProperty("--c", colors[login]);
-        dot.style.setProperty("--ink", inkOn(colors[login]));
+      if (colorOf(login)) {
+        dot.style.setProperty("--c", colorOf(login));
+        dot.style.setProperty("--ink", inkOn(colorOf(login)));
       }
-      dot.title = asks ? `${login} asked you something` : answers ? `${login} answered you` : `Ask ${login} something`;
+      dot.title = !mutual ? `Waiting for ${login} to add you back`
+        : asks ? `${login} asked you something`
+        : answers ? `${login} answered you`
+        : `${login}${online ? " (online)" : ""}`;
       if (pics[login]) {
         const img = el("img");
         img.src = pics[login];
@@ -551,6 +529,7 @@
       } else {
         dot.append(el("span", "dot__letter", login[0].toUpperCase()));
       }
+      if (online) dot.append(el("span", "dot__online"));
       if (asks + answers) dot.append(el("span", "dot__count", String(asks + answers)));
       dot.addEventListener("click", () => {
         if (asks + answers) {
@@ -572,15 +551,25 @@
     const waiting = Object.keys(sent).filter((id) => !sent[id].answer && !sent[id].seen).sort((a, b) => sent[a].at - sent[b].at);
     const open = Object.keys(inbox).filter((id) => !inbox[id].done).sort((a, b) => inbox[a].at - inbox[b].at);
     const replied = Object.keys(inbox).filter((id) => inbox[id].answered && !inbox[id].cleared).sort((a, b) => inbox[a].answered.at - inbox[b].answered.at);
+    for (const login of requests) wrap.append(requestRow(login));
     for (const id of answers) wrap.append(answerCard(id));
     for (const id of open) wrap.append(questionCard(id));
     for (const id of replied) wrap.append(repliedCard(id));
     for (const id of waiting) wrap.append(waitingRow(id));
-    if (!answers.length && !open.length && !replied.length && !waiting.length) {
-      // With connections, the dots say it all: nothing here, so the dock can be one row.
-      if (!trusted.length) wrap.append(el("div", "empty", "Add who can ask you under Connections"));
-    }
+    // With connections, the dots say it all: nothing here, so the dock can be one row.
+    if (!wrap.children.length && !connections.length) wrap.append(el("div", "empty", "Add people under Connections"));
     return wrap;
+  }
+
+  // Someone added you: add them back to connect.
+  function requestRow(login) {
+    const row = el("div", "waiting request");
+    row.append(el("div", "waiting__text", `${login} wants to connect`));
+    const add = el("button", "pill pill--on", "Add back");
+    add.type = "button";
+    add.addEventListener("click", () => relay({ t: "connect", login }));
+    row.append(add);
+    return row;
   }
 
   function questionCard(id) {
@@ -588,13 +577,12 @@
     const card = el("div", "qcard");
     card.setAttribute("role", "alertdialog");
     card.append(el("div", "qcard__head", `${q.name} asks`), el("div", "qcard__text", q.text));
-    if (q.error) card.append(el("div", "qcard__error", q.error));
     const buttons = el("div", "qcard__answers");
     for (const [code, a] of Object.entries(ANSWERS)) {
       if (code === "c") continue;
       const b = el("button", `qcard__answer answer--${code}`);
       b.type = "button";
-      b.disabled = !!q.sending;
+      b.disabled = q.sending;
       b.innerHTML = svg(a.icon);
       b.append(el("span", null, a.label));
       b.addEventListener("click", () => answer(id, code));
@@ -607,11 +595,11 @@
     input.addEventListener("input", () => (drafts[id] = input.value));
     const send = el("button", null, q.sending ? "Sending…" : "Send");
     send.type = "submit";
-    send.disabled = !!q.sending;
+    send.disabled = q.sending;
     own.append(input, send);
     own.addEventListener("submit", (e) => {
       e.preventDefault();
-      const reply = AskTag.clean(input.value);
+      const reply = clean(input.value);
       if (reply) answer(id, "c", reply);
     });
     const x = el("button", "qcard__dismiss", "Dismiss without answering");
@@ -634,27 +622,24 @@
       el("div", "acard__head", q.answer.code === "c" ? q.answer.text : a.label),
       el("div", "acard__question", q.text),
     );
-    if (q.answer.acked === true) {
-      body.append(el("span", "receipt receipt--seen", "✓ Seen"));
-    } else {
-      const seen = el("button", "receipt receipt--btn", q.answer.acked === "sending" ? "Sending…" : "Mark as seen");
-      seen.type = "button";
-      seen.title = `Let ${q.to} know you've seen this`;
-      seen.disabled = q.answer.acked === "sending";
-      seen.addEventListener("click", () => ack(id));
-      body.append(seen);
-      if (q.answer.ackError) body.append(el("div", "qcard__error", q.answer.ackError));
-    }
-    card.append(icon, body, closeButton(() => {
-      q.answer.seen = true;
-      saveSent();
-      render();
-    }));
+    body.append(seenControl(id, q.answer, "receipt receipt--btn"));
+    card.append(icon, body, closeButton(() => setUi(id, { closed: true })));
     return card;
   }
 
+  // "Mark as seen" (tells them), "Sending…", or "✓ Seen".
+  function seenControl(id, answerInfo, className) {
+    if (answerInfo.acked === true) return el("span", "receipt receipt--seen", "✓ Seen");
+    const seen = el("button", className, answerInfo.acked === "sending" ? "Sending…" : "Mark as seen");
+    seen.type = "button";
+    seen.title = "Let them know you've seen this";
+    seen.disabled = answerInfo.acked === "sending";
+    seen.addEventListener("click", () => ack(id));
+    return seen;
+  }
+
   // Your answer to their question, until you close it: "✓ Seen" once they've
-  // tapped Seen.
+  // tapped Mark as seen.
   function repliedCard(id) {
     const q = inbox[id];
     const a = ANSWERS[q.answered.code];
@@ -666,23 +651,20 @@
     head.append(el("span", null, `You answered ${q.name}: `), el("b", null, q.answered.code === "c" ? q.answered.text : a.label));
     body.append(head, el("div", "rcard__question", q.text));
     body.append(q.seenAt ? el("span", "receipt receipt--seen", "✓ Seen") : el("span", "receipt", "Sent"));
-    card.append(icon, body, closeButton(() => {
-      q.cleared = true;
-      saveInbox();
-      render();
-    }));
+    card.append(icon, body, closeButton(() => setUi(id, { cleared: true })));
     return card;
   }
 
-  // The bar's preview: the newest question to you, with its answers, or
-  // else the newest answer to a question of yours. "+N" for the rest.
+  // The bar's preview: the newest question to you, with its answers, or else
+  // the newest answer to a question of yours, or else a connection request.
+  // "+N" for the rest.
   function drawPeek() {
     const open = Object.keys(inbox).filter((id) => !inbox[id].done).sort((a, b) => inbox[b].at - inbox[a].at);
     const answers = Object.keys(sent).filter((id) => sent[id].answer && !sent[id].answer.seen).sort((a, b) => sent[b].answer.at - sent[a].answer.at);
     const parts = [];
     const who = (login, text) => {
       const name = el("span", "peek__who", text);
-      if (/^#[0-9a-f]{6}$/i.test(colors[login] || "")) name.style.color = colors[login];
+      if (colorOf(login)) name.style.color = colorOf(login);
       return name;
     };
     if (open.length) {
@@ -691,14 +673,13 @@
       const line = el("div", "peek__line");
       line.title = q.text;
       line.append(who(q.from, q.name), el("span", "peek__text", q.text));
-      if (q.error) line.append(el("span", "peek__error", q.error));
       const buttons = el("div", "peek__answers");
       for (const [code, a] of Object.entries(ANSWERS)) {
         if (code === "c") continue;
         const b = el("button", `pill pill--answer answer--${code}`);
         b.type = "button";
         b.title = a.label;
-        b.disabled = !!q.sending;
+        b.disabled = q.sending;
         b.innerHTML = svg(a.icon, 15);
         b.append(el("span", "pill__label", a.label));
         b.addEventListener("click", () => answer(id, code));
@@ -712,7 +693,7 @@
       own.append(input);
       own.addEventListener("submit", (e) => {
         e.preventDefault();
-        const reply = AskTag.clean(input.value);
+        const reply = clean(input.value);
         if (reply) answer(id, "c", reply);
       });
       parts.push(line, buttons, own, closeButton(() => dismiss(id), "Dismiss without answering"));
@@ -725,23 +706,17 @@
       const icon = el("span", `peek__icon answer--${q.answer.code}`);
       icon.innerHTML = svg(a.icon, 15);
       line.append(who(q.to, `${q.to} answered`), icon, el("b", "peek__answer", q.answer.code === "c" ? q.answer.text : a.label), el("span", "peek__text peek__text--muted", q.text));
-      parts.push(line);
-      if (q.answer.acked === true) {
-        parts.push(el("span", "receipt receipt--seen", "✓ Seen"));
-      } else {
-        const seen = el("button", "pill", q.answer.acked === "sending" ? "Sending…" : "Mark as seen");
-        seen.type = "button";
-        seen.disabled = q.answer.acked === "sending";
-        seen.addEventListener("click", () => ack(id));
-        parts.push(seen);
-      }
-      parts.push(closeButton(() => {
-        q.answer.seen = true;
-        saveSent();
-        render();
-      }));
+      parts.push(line, seenControl(id, q.answer, "pill"), closeButton(() => setUi(id, { closed: true })));
+    } else if (requests.length) {
+      const login = requests[0];
+      const line = el("div", "peek__line");
+      line.append(who(login, login), el("span", "peek__text peek__text--muted", "wants to connect"));
+      const add = el("button", "pill pill--on", "Add back");
+      add.type = "button";
+      add.addEventListener("click", () => relay({ t: "connect", login }));
+      parts.push(line, add);
     }
-    const more = open.length + answers.length - (parts.length ? 1 : 0);
+    const more = open.length + answers.length - (open.length || answers.length ? 1 : 0);
     if (more > 0) {
       const b = el("button", "pill pill--more", `+${more}`);
       b.type = "button";
@@ -762,11 +737,7 @@
     const row = el("div", "waiting");
     const text = el("div", "waiting__text");
     text.append(el("span", "waiting__who", `Waiting on ${q.to}: `), document.createTextNode(q.text));
-    row.append(text, closeButton(() => {
-      q.seen = true;
-      saveSent();
-      render();
-    }, "Stop waiting"));
+    row.append(text, closeButton(() => setUi(id, { waitClosed: true }), "Stop showing this"));
     return row;
   }
 
@@ -782,50 +753,21 @@
   function askPanel() {
     const panel = el("div", "panel");
     panel.append(el("div", "panel__head", "Ask a connection"));
-    if (!trusted.length) {
-      panel.append(el("p", "panel__sub", "Add someone under Connections first."));
+    const able = connections.filter((c) => c.mutual).map((c) => c.login);
+    if (!able.length) {
+      panel.append(el("p", "panel__sub", "Add someone under Connections first (they need to add you too)."));
       return panel;
     }
-    panel.append(el("p", "panel__sub", "Sent as a whisper. It shows for them as a card in Twitch Space, and their answer shows here."));
+    panel.append(el("p", "panel__sub", "They see it right away if they're online, or as soon as they are."));
     const pick = el("select", "panel__select");
-    for (const login of trusted) pick.append(new Option(login, login, false, login === askDraft.to));
+    for (const login of able) pick.append(new Option(login, login, false, login === askDraft.to));
     askDraft.to = pick.value;
     pick.addEventListener("change", () => (askDraft.to = pick.value));
-    const form = el("form", "panel__form");
-    const input = textBox("Your question", askDraft.text);
-    input.dataset.key = "ask";
-    input.maxLength = MAX_LEN;
-    input.addEventListener("input", () => (askDraft.text = input.value));
-    const send = el("button", null, "Send");
-    send.type = "submit";
-    form.append(input, send);
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const question = AskTag.clean(input.value);
-      if (question) ask(pick.value, question, send);
-    });
-    const note = el("p", "panel__note", askDraft.note);
-    panel.append(pick, form, note);
-    setTimeout(() => input.focus());
+    panel.append(pick, askForm(() => pick.value), el("p", "panel__note", askDraft.note));
     return panel;
   }
 
-  // One person's page: ask them something, and the log of everything between
-  // you, newest first. Waiting questions to you show as full cards on top.
-  function personPanel(login) {
-    const panel = el("div", "panel person");
-    const head = el("div", "person__head");
-    if (pics[login]) {
-      const img = el("img", "person__pic");
-      img.src = pics[login];
-      img.alt = "";
-      head.append(img);
-    }
-    const name = el("span", "person__name", login);
-    if (/^#[0-9a-f]{6}$/i.test(colors[login] || "")) name.style.color = colors[login];
-    head.append(name);
-    panel.append(head);
-
+  function askForm(to) {
     const form = el("form", "panel__form");
     const input = textBox("Ask them something", askDraft.text);
     input.dataset.key = "ask";
@@ -836,10 +778,30 @@
     form.append(input, send);
     form.addEventListener("submit", (e) => {
       e.preventDefault();
-      const question = AskTag.clean(input.value);
-      if (question) ask(login, question, send);
+      const question = clean(input.value);
+      if (question) ask(to(), question);
     });
-    panel.append(form, el("p", "panel__note", askDraft.note));
+    setTimeout(() => document.activeElement === document.body && input.focus());
+    return form;
+  }
+
+  // One person's page: ask them something, and the log of everything between
+  // you, newest first. Waiting questions to you show as full cards on top.
+  function personPanel(login) {
+    const c = conn(login) || { login, mutual: false, online: false };
+    const panel = el("div", "panel person");
+    const head = el("div", "person__head");
+    if (pics[login]) {
+      const img = el("img", "person__pic");
+      img.src = pics[login];
+      img.alt = "";
+      head.append(img);
+    }
+    const name = el("span", "person__name", login);
+    if (colorOf(login)) name.style.color = colorOf(login);
+    head.append(name, el("span", `person__state${c.online ? " person__state--on" : ""}`, !c.mutual ? "hasn't added you yet" : c.online ? "online" : "offline"));
+    panel.append(head);
+    if (c.mutual) panel.append(askForm(() => login), el("p", "panel__note", askDraft.note));
 
     for (const id of Object.keys(inbox).filter((id) => inbox[id].from === login && !inbox[id].done)) panel.append(questionCard(id));
 
@@ -854,17 +816,14 @@
       const all = el("button", "pill", "Clear all");
       all.type = "button";
       all.addEventListener("click", () => {
-        for (const { q } of rows) q.gone = true;
-        saveInbox();
-        saveSent();
-        render();
+        for (const { id } of rows) ui[id] = { ...ui[id], gone: true };
+        setUi(rows[0].id, {});
       });
       logHead.append(all);
     }
     panel.append(logHead);
     if (!rows.length) panel.append(el("p", "panel__sub", "Nothing yet."));
     for (const { id, q, mine } of rows) panel.append(logRow(id, q, mine, login));
-    setTimeout(() => input.focus());
     return panel;
   }
 
@@ -880,26 +839,14 @@
       const icon = el("span", `log__icon answer--${reply.code}`);
       icon.innerHTML = svg(a.icon, 13);
       out.append(icon, el("b", null, reply.code === "c" ? reply.text : a.label));
-      // Seen: on your answer, that they marked it; on theirs, that you did.
-      const seen = mine ? reply.acked === true : !!q.seenAt;
-      if (mine && !seen) {
-        const b = el("button", "pill", "Mark as seen");
-        b.type = "button";
-        b.addEventListener("click", () => ack(id));
-        out.append(b);
-      } else {
-        out.append(el("span", `receipt${seen ? " receipt--seen" : ""}`, seen ? "✓ Seen" : "Not seen yet"));
-      }
+      // Seen: on their answer, that you marked it; on yours, that they did.
+      if (mine) out.append(seenControl(id, reply, "pill"));
+      else out.append(el("span", `receipt${q.seenAt ? " receipt--seen" : ""}`, q.seenAt ? "✓ Seen" : "Not seen yet"));
     } else {
-      out.append(el("span", "receipt", mine ? "Waiting for their answer" : "Dismissed"));
+      out.append(el("span", "receipt", mine ? (q.seen ? "Dismissed" : "Waiting for their answer") : "Dismissed"));
     }
     body.append(out);
-    row.append(body, closeButton(() => {
-      q.gone = true;
-      saveInbox();
-      saveSent();
-      render();
-    }, "Clear from history"));
+    row.append(body, closeButton(() => setUi(id, { gone: true }), "Clear from history"));
     return row;
   }
 
@@ -911,13 +858,13 @@
     return h < 24 ? `${h} h ago` : `${Math.round(h / 24)} d ago`;
   }
 
-  // Connections: who can ask you, and who you can ask. Twitch Space's list
-  // must have you on it too.
+  // Connections: who you can ask and who can ask you, once both have added
+  // each other; requests from people who've added you.
   function peoplePanel() {
     const panel = el("div", "panel");
     panel.append(
       el("div", "panel__head", "Connections"),
-      el("p", "panel__sub", "People who can ask you, and who you can ask. They need you on their Twitch Space connections too."),
+      el("p", "panel__sub", "You can ask each other once you've both added each other."),
     );
     const form = el("form", "panel__form");
     const input = textBox("Their Twitch name");
@@ -929,34 +876,40 @@
       e.preventDefault();
       const login = input.value.trim().replace(/^@/, "").toLowerCase();
       if (!/^[a-z0-9_]{2,25}$/.test(login)) return void (note.textContent = "That isn't a Twitch username.");
-      if (trusted.includes(login)) return void (note.textContent = `${login} is already on your list.`);
+      if (trusted().includes(login)) return void (note.textContent = `${login} is already on your list.`);
       add.disabled = true;
       note.textContent = "";
-      const user = DEMO ? { login } : await lookUp(login).catch(() => null);
+      const user = await lookUp(login).catch(() => null);
       add.disabled = false;
       if (!user) return void (note.textContent = `Couldn't find ${login} on Twitch.`);
-      trusted = [...trusted, user.login];
-      put("trusted", trusted);
       input.value = "";
       input.blur();
-      render();
+      relay({ t: "connect", login: user.login });
     });
     panel.append(form, note);
 
     const list = el("div", "people__list");
-    for (const login of trusted) {
+    for (const login of requests) {
       const row = el("div", "people__row");
-      row.append(el("span", "people__name", login), closeButton(() => {
-        trusted = trusted.filter((l) => l !== login);
-        put("trusted", trusted);
-        render();
-      }, `Remove ${login}`));
+      const back = el("button", "pill pill--on", "Add back");
+      back.type = "button";
+      back.addEventListener("click", () => relay({ t: "connect", login }));
+      row.append(el("span", "people__name", login), el("span", "people__state", "wants to connect"), back);
       list.append(row);
     }
-    if (!trusted.length) list.append(el("p", "panel__sub", "Nobody yet."));
+    for (const { login, mutual, online } of connections) {
+      const row = el("div", "people__row");
+      row.append(
+        el("span", "people__name", login),
+        el("span", `people__state${online ? " people__state--on" : ""}`, !mutual ? "hasn't added you yet" : online ? "online" : "offline"),
+        closeButton(() => relay({ t: "disconnect", login }), `Remove ${login}`),
+      );
+      list.append(row);
+    }
+    if (!connections.length && !requests.length) list.append(el("p", "panel__sub", "Nobody yet."));
     panel.append(list);
 
-    // Sound, off unless she wants it.
+    // Sound, off unless wanted.
     const sound = el("label", "panel__check");
     const box = el("input");
     box.type = "checkbox";
@@ -966,7 +919,7 @@
       if (box.checked) chime();
     });
     sound.append(box, document.createTextNode(" Chime when something arrives"));
-    panel.append(sound, el("p", "panel__sub", "If OBS captures your desktop audio, viewers may hear it too."));
+    panel.append(sound, el("p", "panel__sub", "In OBS: if it captures your desktop audio, viewers may hear it too."));
 
     const out = el("button", "panel__signout", `Sign out of ${me.login}`);
     out.type = "button";
@@ -977,15 +930,19 @@
 
   function showSignedOut(message) {
     me = null;
+    socket?.close();
+    socket = null;
     askBtn.hidden = peopleBtn.hidden = true;
+    dotsEl.replaceChildren();
+    peekEl.replaceChildren();
     setStatus("");
     const box = el("div", "signin");
-    box.append(el("div", "signin__head", "Questions from your connections, right in OBS"));
+    box.append(el("div", "signin__head", "Streamer Buddy System"), el("p", "signin__sub", "Quick questions between you and the people you've connected with."));
     if (message) box.append(el("p", "signin__error", message));
     const b = el("button", "signin__btn", "Sign in with Twitch");
     b.type = "button";
     b.addEventListener("click", signIn);
-    box.append(b, el("p", "signin__sub", "Whispers go out from your account."));
+    box.append(b);
     main.replaceChildren(box);
   }
 
@@ -1003,9 +960,39 @@
     try {
       const v = (await (await fetch("version.txt", { cache: "no-store" })).text()).trim();
       if (!v || v === window.DOCK_VERSION) return;
-      const typing = [...main.querySelectorAll("input[type=text]")].some((i) => i.value.trim() || i === document.activeElement);
+      const typing = [...document.querySelectorAll("input[type=text]")].some((i) => i.value.trim() || i === document.activeElement);
       if (!typing) location.reload();
     } catch {}
+  }
+
+  // ===== Demo ==============================================================================
+  // ?demo: a pretend relay, so the cards can be tried without signing in.
+
+  function demoRelay(m) {
+    const now = Date.now();
+    const q = questions[m.id];
+    if (m.t === "ask") gotQuestion({ id: `d${now}`, from: me.login, to: m.to, text: m.text, at: now, answer: null, dismissed: 0, seenAt: 0 });
+    else if (m.t === "answer" && q) gotQuestion({ ...q, answer: { code: m.code, text: m.text, at: now } });
+    else if (m.t === "dismiss" && q) gotQuestion({ ...q, dismissed: now });
+    else if (m.t === "seen" && q) gotQuestion({ ...q, seenAt: now });
+    else if (m.t === "connect") gotState({ connections: [...connections, { login: m.login, mutual: requests.includes(m.login), online: false }], requests: requests.filter((l) => l !== m.login), questions: Object.values(questions) });
+    else if (m.t === "disconnect") gotState({ connections: connections.filter((c) => c.login !== m.login), requests, questions: Object.values(questions) });
+    return true;
+  }
+
+  function startDemo() {
+    me = { login: "you" };
+    const now = Date.now();
+    gotState({
+      connections: [{ login: "tallglassofwasps", mutual: true, online: true }],
+      requests: ["somemod"],
+      questions: [
+        { id: "demo01", from: "tallglassofwasps", to: "you", text: "Can I clip that last play for TikTok?", at: now, answer: null, dismissed: 0, seenAt: 0 },
+        { id: "demo02", from: "you", to: "tallglassofwasps", text: "Can you mod tonight?", at: now - 60000, answer: { code: "y", text: "", at: now }, dismissed: 0, seenAt: 0 },
+        { id: "demo03", from: "tallglassofwasps", to: "you", text: "Is the raid still on?", at: now - 120000, answer: { code: "s", text: "", at: now - 90000 }, dismissed: 0, seenAt: now - 30000 },
+      ],
+    });
+    setStatus("Demo", "wait");
   }
 
   // ===== Start =============================================================================
@@ -1013,56 +1000,37 @@
   peopleBtn.addEventListener("click", () => show("people"));
   askBtn.addEventListener("click", () => show("ask"));
 
-  // Someone else's tab/dock on this page changed the list or answered.
-  addEventListener("storage", (e) => {
-    if (e.key === "trusted") trusted = get("trusted", []);
-    else if (e.key === "inbox") inbox = get("inbox", {});
-    else if (e.key === "sent") sent = get("sent", {});
-    else return;
-    render();
-  });
-
+  let started = false;
   async function start() {
+    if (POPOUT) document.body.classList.add("popout");
+    if (EMBED) document.body.classList.add("embed");
     if (DEMO) {
-      me = { login: "you", id: "0" };
-      if (!trusted.length) trusted = ["tallglassofwasps"];
-      if (!Object.values(inbox).some((q) => !q.done)) {
-        inbox["demo01"] = { from: "tallglassofwasps", name: "tallglassofwasps", text: "Can I clip that last play for TikTok?", at: Date.now() };
-      }
-      if (!Object.values(inbox).some((q) => q.answered)) {
-        inbox["demo03"] = { from: "tallglassofwasps", name: "tallglassofwasps", text: "Is the raid still on?", at: Date.now(), done: true, answered: { code: "s", text: "", at: Date.now() }, seenAt: Date.now() };
-      }
-      if (!Object.keys(sent).length) {
-        sent["demo02"] = { to: "tallglassofwasps", text: "Can you mod tonight?", at: Date.now(), answer: { code: "y", at: Date.now() } };
-      }
       askBtn.hidden = peopleBtn.hidden = false;
-      setStatus("Demo", "wait");
-      if (POPOUT) document.body.classList.add("popout");
-      render();
-      return;
+      return startDemo();
     }
-    if (!TWITCH_CLIENT_ID) {
-      return showMessage("Not set up yet", "Put the Twitch app's Client ID in config.js.");
-    }
-    const error = takeTokenFromAddress();
-    try {
-      me = await validate();
-    } catch {
-      setTimeout(start, 15000);
-      return showMessage("Can't reach Twitch", "Trying again in a few seconds.");
+    if (!TWITCH_CLIENT_ID) return showMessage("Not set up yet", "Put the Twitch app's Client ID in config.js.");
+    let error = "";
+    if (DEV) {
+      me = { login: DEV.toLowerCase() };
+    } else {
+      error = takeTokenFromAddress();
+      try {
+        me = await validate();
+      } catch {
+        setTimeout(start, 15000);
+        return showMessage("Can't reach Twitch", "Trying again in a few seconds.");
+      }
     }
     if (!me) return showSignedOut(error ? `Twitch said: ${error}` : "");
-    ids[me.login] = me.id;
     askBtn.hidden = peopleBtn.hidden = false;
     setStatus("Connecting…", "wait");
-    saveSent();
     render();
-    loadPics();
-    if (POPOUT) return document.body.classList.add("popout"); // the dock does the listening (view set at the top)
     connect();
+    if (started) return;
+    started = true;
     // Twitch asks apps to re-check the sign-in every hour.
     setInterval(async () => {
-      if (me && !(await validate().catch(() => me))) showSignedOut("Your Twitch sign-in ran out. Sign in again.");
+      if (me && !DEV && !(await validate().catch(() => me))) showSignedOut("Your Twitch sign-in ran out. Sign in again.");
     }, 60 * 60 * 1000);
     setInterval(checkForUpdate, UPDATE_CHECK_MS);
   }
