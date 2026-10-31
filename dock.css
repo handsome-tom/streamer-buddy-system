@@ -391,3 +391,62 @@ main {
 .panel__check + .panel__sub {
   margin-top: 2px;
 }
+
+/* Read receipts: the Seen button on an answer card, and the tag it becomes. */
+.receipt {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 1px 7px;
+  border-radius: 9px;
+  background: #2f2f35;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.receipt--seen {
+  background: rgba(0, 194, 122, 0.16);
+  color: var(--good);
+}
+.receipt--btn {
+  border: 1px solid var(--field);
+  color: var(--text);
+  font-family: inherit;
+}
+.receipt--btn:hover:not(:disabled) {
+  border-color: var(--purple);
+  background: #3a3a44;
+}
+
+/* Your answer to someone's question, until you close it. */
+.rcard {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 4px 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.rcard__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: #2f2f35;
+}
+.rcard__body {
+  flex: 1;
+  min-width: 0;
+}
+.rcard__head {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.rcard__question {
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}

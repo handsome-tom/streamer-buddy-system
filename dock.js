@@ -5,6 +5,9 @@
 //     that Twitch Space shows as a card
 //   - "Ask" sends them a question; it shows as a card in their Twitch chat,
 //     and their answer shows here as a card
+//   - read receipts: the asker can tap "Seen" on an answer card; the person
+//     who answered sees "✓ Seen" on their "You answered" card. Nothing clears
+//     by itself; cards still close with ×
 //
 // The whispers are the same as Twitch Space's and read like normal messages
 // ("❓ Can I clip that?", "⏳ Soon"); the tag that pairs them is hidden in them
@@ -29,8 +32,10 @@
 // Saved in this page's localStorage (OBS keeps it between restarts):
 //   "token"    the Twitch sign-in
 //   "trusted"  [logins]                                    your connections
-//   "inbox"    { id: { from, name, text, at, done, error } } questions to you (kept a week)
-//   "sent"     { id: { to, text, at, answer, seen } }       questions you asked (kept a day)
+//   "inbox"    { id: { from, name, text, at, done, error, answered, seenAt, cleared } }
+//              questions to you (kept a week)
+//   "sent"     { id: { to, text, at, answer: { code, text, at, seen, acked }, seen } }
+//              questions you asked (kept a day)
 //   "ids"      { login: user id }                          so whispers needn't look them up
 //   "sound"    true to chime when a question or answer arrives
 //
@@ -304,6 +309,12 @@
       if (open >= MAX_OPEN_PER_PERSON) return;
       inbox[tag.id] = { from, name: name || from, text: tag.text.replace(/^❓\s*/, ""), at: Date.now() };
       saveInbox();
+    } else if (tag.code === "a") {
+      // Their read receipt for your answer.
+      const q = inbox[tag.id];
+      if (!q || q.from !== from || q.seenAt) return;
+      q.seenAt = Date.now();
+      saveInbox();
     } else {
       const q = sent[tag.id];
       if (!q || q.to !== from || q.answer || !ANSWERS[tag.code]) return; // only answers to your own questions
@@ -370,9 +381,23 @@
       q.error = `Didn't send: ${why}.`;
     } else {
       q.done = true;
+      q.answered = { code, text: code === "c" ? reply : "", at: Date.now() };
       delete drafts[id];
     }
     saveInbox();
+    render();
+  }
+
+  // Tell them you've seen their answer.
+  async function ack(id) {
+    const q = sent[id];
+    if (!q?.answer || q.answer.acked) return;
+    q.answer.acked = "sending";
+    render();
+    const why = await whisper(q.to, AskTag.hide("👀 Seen", `!a${id}`));
+    q.answer.acked = why ? false : true;
+    q.answer.ackError = why ? `Didn't send: ${why}.` : null;
+    saveSent();
     render();
   }
 
@@ -426,10 +451,12 @@
     const answers = Object.keys(sent).filter((id) => sent[id].answer && !sent[id].answer.seen).sort((a, b) => sent[a].answer.at - sent[b].answer.at);
     const waiting = Object.keys(sent).filter((id) => !sent[id].answer && !sent[id].seen).sort((a, b) => sent[a].at - sent[b].at);
     const open = Object.keys(inbox).filter((id) => !inbox[id].done).sort((a, b) => inbox[a].at - inbox[b].at);
+    const replied = Object.keys(inbox).filter((id) => inbox[id].answered && !inbox[id].cleared).sort((a, b) => inbox[a].answered.at - inbox[b].answered.at);
     for (const id of answers) wrap.append(answerCard(id));
     for (const id of open) wrap.append(questionCard(id));
+    for (const id of replied) wrap.append(repliedCard(id));
     for (const id of waiting) wrap.append(waitingRow(id));
-    if (!answers.length && !open.length && !waiting.length) {
+    if (!answers.length && !open.length && !replied.length && !waiting.length) {
       wrap.append(el("div", "empty", trusted.length ? "No questions right now" : "Add who can ask you under Connections"));
     }
     return wrap;
@@ -486,9 +513,41 @@
       el("div", "acard__head", q.answer.code === "c" ? q.answer.text : a.label),
       el("div", "acard__question", q.text),
     );
+    if (q.answer.acked === true) {
+      body.append(el("span", "receipt receipt--seen", "✓ Seen"));
+    } else {
+      const seen = el("button", "receipt receipt--btn", q.answer.acked === "sending" ? "Sending…" : "👀 Seen");
+      seen.type = "button";
+      seen.title = `Let ${q.to} know you've seen this`;
+      seen.disabled = q.answer.acked === "sending";
+      seen.addEventListener("click", () => ack(id));
+      body.append(seen);
+      if (q.answer.ackError) body.append(el("div", "qcard__error", q.answer.ackError));
+    }
     card.append(icon, body, closeButton(() => {
       q.answer.seen = true;
       saveSent();
+      render();
+    }));
+    return card;
+  }
+
+  // Your answer to their question, until you close it: "✓ Seen" once they've
+  // tapped Seen.
+  function repliedCard(id) {
+    const q = inbox[id];
+    const a = ANSWERS[q.answered.code];
+    const card = el("div", "rcard");
+    const icon = el("div", `rcard__icon answer--${q.answered.code}`);
+    icon.innerHTML = svg(a.icon, 16);
+    const body = el("div", "rcard__body");
+    const head = el("div", "rcard__head");
+    head.append(el("span", null, `You answered ${q.name}: `), el("b", null, q.answered.code === "c" ? q.answered.text : a.label));
+    body.append(head, el("div", "rcard__question", q.text));
+    body.append(q.seenAt ? el("span", "receipt receipt--seen", "✓ Seen") : el("span", "receipt", "Sent"));
+    card.append(icon, body, closeButton(() => {
+      q.cleared = true;
+      saveInbox();
       render();
     }));
     return card;
@@ -672,6 +731,9 @@
       if (!trusted.length) trusted = ["tallglassofwasps"];
       if (!Object.values(inbox).some((q) => !q.done)) {
         inbox["demo01"] = { from: "tallglassofwasps", name: "tallglassofwasps", text: "Can I clip that last play for TikTok?", at: Date.now() };
+      }
+      if (!Object.values(inbox).some((q) => q.answered)) {
+        inbox["demo03"] = { from: "tallglassofwasps", name: "tallglassofwasps", text: "Is the raid still on?", at: Date.now(), done: true, answered: { code: "s", text: "", at: Date.now() }, seenAt: Date.now() };
       }
       if (!Object.keys(sent).length) {
         sent["demo02"] = { to: "tallglassofwasps", text: "Can you mod tonight?", at: Date.now(), answer: { code: "y", at: Date.now() } };
