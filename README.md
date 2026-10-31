@@ -1,17 +1,31 @@
-# Streamer Buddy
+# Streamer Buddy System
 
-Streamer Buddy is a panel for OBS that shows **Ask the Streamer** questions from Twitch Space
-users, so the streamer can answer without leaving OBS. Answers go back as
-whispers, and the asker sees them as cards in Twitch Space, same as before.
+Streamer Buddy System is a panel for OBS that shows **Ask the Streamer**
+questions from Twitch Space users, so the streamer can answer without leaving
+OBS. Answers go back as whispers, and the asker sees them as cards in Twitch
+Space, same as before.
 
 It talks to Twitch Space with the same tagged whispers, so nothing changes on
 the asker's side.
 
+## What this is, and what it isn't
+
+| Name | What it is | Where |
+| --- | --- | --- |
+| **Streamer Buddy System** | This project: a web page used as an OBS dock | this repo |
+| **Twitch Space** | The Chrome extension (formerly MytwitchTom) | its own repos |
+| **Ask the Streamer** | A feature of Twitch Space; Streamer Buddy System answers its questions | inside Twitch Space |
+| **Buddy System** | A different, private feature of Twitch Space (where your buddies chatted). Nothing to do with this project | inside Twitch Space |
+
+Always say the full name, **Streamer Buddy System**. "Buddy System" or
+"Buddy" on its own means the Twitch Space feature. This project shares no code
+with Twitch Space; only the whisper format is shared.
+
 ## For the streamer: adding it to OBS
 
 1. In OBS, open **Docks → Custom Browser Docks…**
-2. Give it a name (for example `Streamer Buddy`) and paste this address:
-   `https://handsome-tom.github.io/streamer-buddy/`
+2. Give it a name (for example `Streamer Buddy System`) and paste this address:
+   `https://handsome-tom.github.io/streamer-buddy-system/`
 3. Click **Apply**. The new panel appears; drag it above your chat dock.
 4. In the panel, click **Sign in with Twitch** and allow it.
 5. Click **Connections** and add the Twitch usernames of the people who may

@@ -1,4 +1,4 @@
-// Streamer Buddy: Ask the Streamer, as an OBS dock. The streamer adds this page as a Custom
+// Streamer Buddy System: Ask the Streamer, as an OBS dock. The streamer adds this page as a Custom
 // Browser Dock in OBS; questions from Twitch Space users show here as cards,
 // and the answer goes back as a whisper that Twitch Space shows as a card.
 //
