@@ -1365,3 +1365,121 @@ main:has(> .cards:empty) {
   padding: 0;
   border-radius: 50%;
 }
+
+/* Mod chat. */
+#chatBtn {
+  position: relative;
+}
+.pill__count:not(:empty) {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--purple);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+}
+.chat__rooms .pill__count:not(:empty) {
+  position: static;
+  margin-left: 4px;
+}
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: calc(100vh - 62px);
+}
+.chat__rooms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chat__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.chat__title {
+  font-size: 14px;
+  font-weight: 700;
+}
+.chat__who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  font-size: 11px;
+}
+.chat__member {
+  color: var(--muted);
+  font-weight: 600;
+}
+.chat__member::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: #53535f;
+  vertical-align: 1px;
+}
+.chat__member--on::before {
+  background: var(--good);
+}
+.chat__log {
+  flex: 1;
+  min-height: 120px;
+  overflow-y: auto;
+  padding: 6px 8px;
+  border: 1px solid #26262c;
+  border-radius: 10px;
+  background: var(--bg);
+}
+.chat__msg {
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+.chat__msg--mention {
+  background: rgba(145, 71, 255, 0.16);
+  box-shadow: inset 2px 0 0 var(--purple);
+}
+.chat__from {
+  color: var(--amber);
+  font-weight: 700;
+}
+.chat__time {
+  margin-left: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.chat__text {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.chat__day {
+  margin: 8px 0 4px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+}
+.chat__settings {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.chat__settings .panel__select {
+  flex: 1;
+  width: auto;
+  margin: 0;
+}
+.chat__label {
+  color: var(--muted);
+  font-size: 12px;
+}

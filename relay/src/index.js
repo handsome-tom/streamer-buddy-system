@@ -17,6 +17,10 @@
 // mutual connection, sharing a group id; asking a tag ("#Mods") does the same
 // for the people in it. toTag says who it went to ("everyone", or the tag).
 //
+// Rooms: each person (usually a streamer) can have one chat room, open to one
+// of their tags (e.g. Mods): they and the mutual connections in that tag can
+// talk there. Messages are kept a week (the last 50 come with the state).
+//
 // Tags: each person's own labels for their connections ({ "Mods": [logins] }),
 // e.g. Mods, Lead mods, Tech; only they see them. options are the answer buttons the asker chose: any of
 // the six standard ones by letter (y n m s o t) and their own, as "+label"; a
@@ -30,11 +34,14 @@
 //   auth { token }          connect { login }        disconnect { login }
 //   ask { to, text, options }  answer { id, code, text }  dismiss { id }
 //   tag { login, tag, on }  put a connection in (or out of) one of your tags
+//   room { tag }            open your chat room to one of your tags (null closes it)
+//   say { owner, text }     post in someone's room (yours: owner is you)
 //   seen { id }
 // Messages to a page:
-//   state { me, connections, requests, tags, questions }   (on sign-in, and whenever
+//   state { me, connections, requests, tags, questions, rooms, chat }   (on sign-in, and whenever
 //                                                       connections or who's online change)
 //   q { q }                 a question that's new or changed
+//   msg { m }               a new chat message { id, owner, from, text, at }
 //   error { why }
 // A plain "ping" gets "pong" without waking the hub (keeps idle pages cheap).
 
@@ -47,6 +54,9 @@ const MAX_OPTIONS = 8;
 const MAX_OPTION_LEN = 30;
 const MAX_TAGS = 12;
 const MAX_TAG_LEN = 20;
+const MAX_SAY_LEN = 500;
+const MAX_SAYS_PER_MINUTE = 20;
+const CHAT_BACKLOG = 50;
 
 export default {
   async fetch(req, env) {
@@ -88,6 +98,8 @@ export class Hub {
       else if (m.t === "disconnect") await this.setConnection(who.login, m.login, false);
       else if (m.t === "ask") await this.ask(ws, who, m);
       else if (m.t === "tag") await this.setTag(who.login, m);
+      else if (m.t === "room") await this.setRoom(who.login, m);
+      else if (m.t === "say") await this.say(ws, who, m);
       else if (m.t === "answer") await this.answer(ws, who, m);
       else if (m.t === "dismiss") await this.update(ws, who, m.id, (q) => q.to === who.login && !q.answer && !q.dismissed, (q) => (q.dismissed = Date.now()));
       else if (m.t === "seen") await this.update(ws, who, m.id, (q) => q.from === who.login && q.answer && !q.seenAt, (q) => (q.seenAt = Date.now()));
@@ -179,15 +191,44 @@ export class Hub {
       if (Date.now() - q.at > WEEK_MS) await this.ctx.storage.delete(k);
       else if (q.from === login || q.to === login) questions.push(q);
     }
-    this.sendTo(login, { t: "state", me: login, connections, requests, tags: users[login]?.tags || {}, questions });
+    const rooms = this.roomsFor(login, users);
+    const chat = {};
+    for (const r of rooms) chat[r.owner] = [...(await this.ctx.storage.list({ prefix: `m:${r.owner}:`, reverse: true, limit: CHAT_BACKLOG })).values()].reverse();
+    this.sendTo(login, { t: "state", me: login, connections, requests, tags: users[login]?.tags || {}, questions, rooms, chat });
+  }
+
+  // Who's in an owner's room: them, plus their mutual connections in the
+  // room's tag.
+  members(owner, users) {
+    const o = users[owner];
+    if (!o?.room?.tag) return [];
+    const tagged = (o.tags?.[o.room.tag] || []).filter((l) => o.list.includes(l) && users[l]?.list.includes(owner));
+    return [owner, ...tagged];
+  }
+
+  roomsFor(login, users) {
+    return Object.keys(users)
+      .map((owner) => ({ owner, tag: users[owner].room?.tag, members: this.members(owner, users) }))
+      .filter((r) => r.members.includes(login))
+      .map((r) => ({ owner: r.owner, tag: r.tag, members: r.members.map((l) => ({ login: l, online: this.isOnline(l) })) }));
+  }
+
+  // A room's members changed (or might have): everyone in it before or after hears.
+  async tellRoom(owner, extra = []) {
+    const users = await this.users();
+    for (const l of new Set([...this.members(owner, users), ...extra, owner])) await this.sendState(l);
   }
 
   // Someone came online or went away: their mutual connections' pages hear.
+  // So do the people in any room they're in (who may not be connected to them).
   async tellConnections(login) {
     const users = await this.users();
+    const told = new Set();
     for (const [l, u] of Object.entries(users)) {
-      if (u.list.includes(login) && users[login]?.list.includes(l)) await this.sendState(l);
+      if (u.list.includes(login) && users[login]?.list.includes(l)) told.add(l);
     }
+    for (const r of this.roomsFor(login, users)) for (const m of r.members) if (m.login !== login) told.add(m.login);
+    for (const l of told) await this.sendState(l);
   }
 
   async setConnection(login, other, on) {
@@ -196,8 +237,8 @@ export class Hub {
     const user = (await this.ctx.storage.get(`u:${login}`)) || { list: [] };
     user.list = on ? [...new Set([...user.list, other])] : user.list.filter((l) => l !== other);
     await this.ctx.storage.put(`u:${login}`, user);
-    await this.sendState(login);
-    await this.sendState(other);
+    await this.tellRoom(login, [other]);
+    await this.tellRoom(other, [login]);
   }
 
   async setTag(login, m) {
@@ -211,9 +252,40 @@ export class Hub {
     m.on ? members.add(other) : members.delete(other);
     if (members.size) tags[tag] = [...members];
     else delete tags[tag];
+    const before = this.members(login, await this.users());
     user.tags = tags;
     await this.ctx.storage.put(`u:${login}`, user);
-    await this.sendState(login);
+    if (user.room?.tag === tag) await this.tellRoom(login, [...before, other]);
+    else await this.sendState(login);
+  }
+
+  async setRoom(login, m) {
+    const user = (await this.ctx.storage.get(`u:${login}`)) || { list: [] };
+    const before = this.members(login, await this.users());
+    const tag = m.tag ? clean(m.tag).slice(0, MAX_TAG_LEN) : "";
+    user.room = tag && user.tags?.[tag] ? { tag } : null;
+    await this.ctx.storage.put(`u:${login}`, user);
+    await this.tellRoom(login, before);
+  }
+
+  async say(ws, who, m) {
+    const owner = String(m.owner || "").toLowerCase();
+    const text = String(m.text || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, MAX_SAY_LEN);
+    if (!text) return;
+    const users = await this.users();
+    const members = this.members(owner, users);
+    if (!members.includes(who.login)) return this.send(ws, { t: "error", why: "You're not in that room" });
+    this.saidAt ||= {};
+    const recent = (this.saidAt[who.login] || []).filter((t) => Date.now() - t < 60000);
+    if (recent.length >= MAX_SAYS_PER_MINUTE) return this.send(ws, { t: "error", why: "Slow down a little" });
+    this.saidAt[who.login] = [...recent, Date.now()];
+    const at = Date.now();
+    const msg = { id: `${at.toString(36)}${crypto.randomUUID().slice(0, 4)}`, owner, from: who.login, text, at };
+    await this.ctx.storage.put(`m:${owner}:${String(at).padStart(15, "0")}:${msg.id}`, msg);
+    for (const l of members) this.sendTo(l, { t: "msg", m: msg });
+    // A week is plenty: drop older messages in this room.
+    const old = [...(await this.ctx.storage.list({ prefix: `m:${owner}:`, limit: 50 }))].filter(([, v]) => at - v.at > WEEK_MS).map(([k]) => k);
+    if (old.length) await this.ctx.storage.delete(old);
   }
 
   // ===== Questions ===========================================================================

@@ -93,9 +93,11 @@
   const quickTo = document.getElementById("quickTo");
   const quickText = document.getElementById("quickText");
   const askFull = document.getElementById("askFull");
+  const chatBtn = document.getElementById("chatBtn");
+  const chatCount = document.getElementById("chatCount");
 
   let me = null; // { login, id }
-  let view = POPOUT && /^(ask|people|person)$/.test(params.get("view")) ? params.get("view") : "cards"; // "cards" | "ask" | "people" | "person"
+  let view = POPOUT && /^(ask|people|person|chat)$/.test(params.get("view")) ? params.get("view") : "cards"; // "cards" | "ask" | "people" | "person"
   const drafts = {}; // question id -> reply being typed (kept if things redraw)
   // The Ask box: who to, the question, and its answer buttons (the six
   // standard ones until some are taken off; "+label" for your own).
@@ -120,6 +122,11 @@
   let connections = []; // [{ login, mutual, online }]
   let requests = []; // [login] who added you
   let tags = {}; // { tag: [logins] } your own groups of connections (Mods, Lead mods, Tech…)
+  // Mod chat: the rooms you're in ({ owner, tag, members: [{ login, online }] })
+  // and each room's recent messages ({ owner: [{ id, from, text, at }] }).
+  let rooms = [];
+  let chat = {};
+  const chatDraft = { owner: (POPOUT && params.get("view") === "chat" && params.get("to")) || "", text: "" };
   const questions = {}; // id -> { id, from, to, text, at, answer, dismissed, seenAt }
   const pending = {}; // id -> true while an answer / seen / dismiss is on its way
   let ready = false; // first state from the relay arrived
@@ -362,6 +369,7 @@
       retryMs = 1000;
       if (m.t === "state") gotState(m);
       else if (m.t === "q") gotQuestion(m.q);
+      else if (m.t === "msg") gotMessage(m.m);
       else if (m.t === "error") gotError(m);
     };
     ws.onclose = (e) => {
@@ -391,6 +399,8 @@
     connections = m.connections || [];
     requests = m.requests || [];
     tags = m.tags || {};
+    rooms = m.rooms || [];
+    chat = m.chat || {};
     const had = new Set(Object.keys(questions));
     for (const k of Object.keys(questions)) delete questions[k];
     for (const q of m.questions || []) questions[q.id] = q;
@@ -416,6 +426,32 @@
       if (view === "ask") view = "cards"; // their page shows it in the log
     }
     render();
+  }
+
+  // A chat message. Quiet unless it @mentions you (then the edge glows and,
+  // if it's on, the chime plays); the chat button counts what you haven't read.
+  function gotMessage(msg) {
+    (chat[msg.owner] ||= []).push(msg);
+    if (chat[msg.owner].length > 200) chat[msg.owner].shift();
+    if (view === "chat" && chatRoom() === msg.owner) markRead(msg.owner);
+    else if (msg.from !== me.login && mentions(msg.text)) arrived();
+    render();
+  }
+
+  const mentions = (text) => new RegExp(`@${me.login}\\b`, "i").test(text);
+  function markRead(owner) {
+    const last = chat[owner]?.at(-1)?.at || 0;
+    const read = get("chatRead", {});
+    if ((read[owner] || 0) < last) put("chatRead", { ...read, [owner]: last });
+  }
+  function unread(owner) {
+    const since = get("chatRead", {})[owner] || 0;
+    return (chat[owner] || []).filter((m) => m.at > since && m.from !== me.login).length;
+  }
+  // The room on screen: the one picked, else your own, else the first.
+  function chatRoom() {
+    if (rooms.some((r) => r.owner === chatDraft.owner)) return chatDraft.owner;
+    return (rooms.find((r) => r.owner === me.login) || rooms[0])?.owner || "";
   }
 
   function gotError(m) {
@@ -521,6 +557,7 @@
 
   // Ask / Connections / someone's page: here, or popped out if the dock is just the bar.
   function show(next, to = "") {
+    if (next === "chat" && to) chatDraft.owner = to;
     if (next === "ask" || next === "person") {
       askDraft.to = to || askDraft.to;
       askDraft.note = "";
@@ -537,7 +574,8 @@
     derive();
     // Keep typing where it was if things are redrawn under you.
     const typingIn = document.activeElement?.dataset?.key;
-    main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : cardList());
+    main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : cardList());
+    if (view === "chat") main.querySelector(".chat__log")?.scrollTo(0, 1e9);
     drawDots();
     drawPeek();
     if (typingIn) {
@@ -551,6 +589,11 @@
     peopleBtn.title = requests.length ? `Connections (${requests.length} waiting for you to add them back)` : "Connections";
     askBtn.textContent = view === "ask" ? "Cancel" : "Ask";
     drawQuickAsk();
+    // The chat button: shown once you're in a room or have tags to open one with.
+    chatBtn.hidden = !(rooms.length || Object.keys(tags).length);
+    chatBtn.classList.toggle("pill--on", view === "chat");
+    const n = rooms.reduce((sum, r) => sum + unread(r.owner), 0);
+    chatCount.textContent = n ? String(n) : "";
     if (POPOUT) closeWhenDone();
   }
 
@@ -1193,6 +1236,119 @@
     return h < 24 ? `${h} h ago` : `${Math.round(h / 24)} d ago`;
   }
 
+  // Mod chat: one room per streamer, open to one of their tags. Pick a room
+  // (if you're in more than one), read and post; the owner picks the tag or
+  // closes the room. @name pings someone.
+  function chatPanel() {
+    const panel = el("div", "panel chat");
+    const owner = chatRoom();
+    const room = rooms.find((r) => r.owner === owner);
+    const mine = rooms.find((r) => r.owner === me.login);
+
+    if (rooms.length > 1) {
+      const pick = el("div", "chat__rooms");
+      for (const r of rooms) {
+        const n = unread(r.owner);
+        const b = el("button", `pill${r.owner === owner ? " pill--on" : ""}`, r.owner === me.login ? "Your room" : `${r.owner}'s room`);
+        b.type = "button";
+        if (n) b.append(el("span", "pill__count", String(n)));
+        b.addEventListener("click", () => {
+          chatDraft.owner = r.owner;
+          render();
+        });
+        pick.append(b);
+      }
+      panel.append(pick);
+    }
+
+    if (!room) {
+      panel.append(el("div", "panel__head", "Mod chat"));
+      const names = Object.keys(tags).sort();
+      if (!names.length) {
+        panel.append(el("p", "panel__sub", "No rooms yet. A streamer opens a room for a tag (like Mods) and everyone in it can talk here."));
+        return panel;
+      }
+      panel.append(el("p", "panel__sub", "Open a room for one of your tags. Everyone in it can talk to each other here, and you can read along (it stays quiet for you unless someone @mentions you)."));
+      panel.append(roomPicker(null, "Open room"));
+      return panel;
+    }
+
+    const head = el("div", "chat__head");
+    head.append(el("span", "chat__title", room.owner === me.login ? `Your room · ${room.tag}` : `${room.owner}'s room · ${room.tag}`));
+    const who = el("span", "chat__who");
+    for (const m of room.members) {
+      const dot = el("span", `chat__member${m.online ? " chat__member--on" : ""}`, m.login);
+      if (colorOf(m.login)) dot.style.color = colorOf(m.login);
+      who.append(dot);
+    }
+    head.append(who);
+    panel.append(head);
+
+    const log = el("div", "chat__log");
+    const msgs = chat[owner] || [];
+    if (!msgs.length) log.append(el("p", "panel__sub", "No messages yet. Say hi."));
+    let lastDay = "";
+    for (const m of msgs) {
+      const day = new Date(m.at).toDateString();
+      if (day !== lastDay && lastDay) log.append(el("div", "chat__day", new Date(m.at).toLocaleDateString()));
+      lastDay = day;
+      const line = el("div", `chat__msg${mentions(m.text) && m.from !== me.login ? " chat__msg--mention" : ""}`);
+      const name = el("span", "chat__from", m.from);
+      if (colorOf(m.from)) name.style.color = colorOf(m.from);
+      line.append(name, el("span", "chat__time", new Date(m.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })), el("div", "chat__text", m.text));
+      log.append(line);
+    }
+    panel.append(log);
+    markRead(owner);
+
+    const form = el("form", "ask__form chat__form");
+    const input = textBox("Message the room…", chatDraft.text);
+    input.className = "ask__input";
+    input.dataset.key = "chat";
+    input.maxLength = 500;
+    input.addEventListener("input", () => (chatDraft.text = input.value));
+    const send = el("button", "ask__send");
+    send.type = "submit";
+    send.title = "Send";
+    send.innerHTML = `<svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 16V4M5 9l5-5 5 5"/></svg>`;
+    form.append(input, send);
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (text && relay({ t: "say", owner, text })) {
+        chatDraft.text = "";
+        input.value = "";
+      }
+    });
+    panel.append(form);
+    setTimeout(() => document.activeElement === document.body && input.focus());
+
+    if (mine && owner === me.login) panel.append(roomPicker(mine.tag, "Change"));
+    return panel;
+  }
+
+  // The owner's room settings: which tag it's open to, or close it.
+  function roomPicker(current, label) {
+    const row = el("form", "chat__settings");
+    row.append(el("span", "chat__label", current ? "Open to" : "Tag"));
+    const pick = el("select", "panel__select");
+    for (const t of Object.keys(tags).sort()) pick.append(new Option(`${t} (${tags[t].length})`, t, false, t === current));
+    const go = el("button", "pill pill--on", label);
+    go.type = "submit";
+    row.append(pick, go);
+    row.addEventListener("submit", (e) => {
+      e.preventDefault();
+      relay({ t: "room", tag: pick.value });
+    });
+    if (current) {
+      const close = el("button", "pill", "Close room");
+      close.type = "button";
+      close.addEventListener("click", () => relay({ t: "room", tag: null }));
+      row.append(close);
+    }
+    return row;
+  }
+
   // Connections: who you can ask and who can ask you, once both have added
   // each other; requests from people who've added you.
   function peoplePanel() {
@@ -1296,7 +1452,7 @@
     me = null;
     socket?.close();
     socket = null;
-    askBtn.hidden = peopleBtn.hidden = quickAsk.hidden = askFull.hidden = true;
+    askBtn.hidden = peopleBtn.hidden = quickAsk.hidden = askFull.hidden = chatBtn.hidden = true;
     dotsEl.replaceChildren();
     const again = el("button", "pill pill--warn pill--bad", message ? "Signed out · Sign in with Twitch" : "Sign in with Twitch");
     again.type = "button";
@@ -1344,6 +1500,7 @@
     else if (m.t === "seen" && q) gotQuestion({ ...q, seenAt: now });
     else if (m.t === "connect") gotState({ connections: [...connections, { login: m.login, mutual: requests.includes(m.login), online: false }], requests: requests.filter((l) => l !== m.login), tags, questions: Object.values(questions) });
     else if (m.t === "disconnect") gotState({ connections: connections.filter((c) => c.login !== m.login), requests, tags, questions: Object.values(questions) });
+    else if (m.t === "say") gotMessage({ id: `d${now}`, owner: m.owner, from: me.login, text: m.text, at: now });
     else if (m.t === "tag") {
       const next = { ...tags, [m.tag]: [...new Set([...(tags[m.tag] || []), m.login])].filter((l) => m.on || l !== m.login) };
       if (!next[m.tag].length) delete next[m.tag];
@@ -1359,6 +1516,8 @@
       connections: [{ login: "tallglassofwasps", mutual: true, online: true }, { login: "techbuddy", mutual: true, online: false }],
       requests: ["somemod"],
       tags: { Mods: ["tallglassofwasps"], Tech: ["techbuddy"] },
+      rooms: [{ owner: "you", tag: "Mods", members: [{ login: "you", online: true }, { login: "tallglassofwasps", online: true }] }],
+      chat: { you: [{ id: "c1", owner: "you", from: "tallglassofwasps", text: "Raid target after this game?", at: now - 300000 }, { id: "c2", owner: "you", from: "tallglassofwasps", text: "@you also the poll is ready", at: now - 60000 }] },
       questions: [
         { id: "demo01", from: "tallglassofwasps", to: "you", text: "Can I clip that last play for TikTok?", at: now, answer: null, dismissed: 0, seenAt: 0 },
         { id: "demo02", from: "you", to: "tallglassofwasps", text: "Can you mod tonight?", at: now - 60000, answer: { code: "y", text: "", at: now }, dismissed: 0, seenAt: 0 },
@@ -1371,6 +1530,7 @@
   // ===== Start =============================================================================
 
   peopleBtn.addEventListener("click", () => show("people"));
+  chatBtn.addEventListener("click", () => show("chat", chatRoom()));
   quickAsk.addEventListener("submit", (e) => {
     e.preventDefault();
     const question = clean(quickText.value);
