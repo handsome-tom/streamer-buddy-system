@@ -14,7 +14,11 @@
 //
 // Questions: { id, from, to, text, at, options, answer: { code, text, at } | null,
 // dismissed, seenAt, group }. Asking everyone ("to": "*") makes one copy per
-// mutual connection, sharing a group id. options are the answer buttons the asker chose: any of
+// mutual connection, sharing a group id; asking a tag ("#Mods") does the same
+// for the people in it. toTag says who it went to ("everyone", or the tag).
+//
+// Tags: each person's own labels for their connections ({ "Mods": [logins] }),
+// e.g. Mods, Lead mods, Tech; only they see them. options are the answer buttons the asker chose: any of
 // the six standard ones by letter (y n m s o t) and their own, as "+label"; a
 // typed reply ("c") is always allowed. A question without options (from before
 // options) offers the six standard ones. Answering with your own option is
@@ -25,9 +29,10 @@
 // Messages from a page:
 //   auth { token }          connect { login }        disconnect { login }
 //   ask { to, text, options }  answer { id, code, text }  dismiss { id }
+//   tag { login, tag, on }  put a connection in (or out of) one of your tags
 //   seen { id }
 // Messages to a page:
-//   state { me, connections, requests, questions }   (on sign-in, and whenever
+//   state { me, connections, requests, tags, questions }   (on sign-in, and whenever
 //                                                       connections or who's online change)
 //   q { q }                 a question that's new or changed
 //   error { why }
@@ -40,6 +45,8 @@ const MAX_ASKS_PER_MINUTE = 10;
 const STANDARD = ["y", "n", "m", "s", "o", "t"];
 const MAX_OPTIONS = 8;
 const MAX_OPTION_LEN = 30;
+const MAX_TAGS = 12;
+const MAX_TAG_LEN = 20;
 
 export default {
   async fetch(req, env) {
@@ -80,6 +87,7 @@ export class Hub {
       if (m.t === "connect") await this.setConnection(who.login, m.login, true);
       else if (m.t === "disconnect") await this.setConnection(who.login, m.login, false);
       else if (m.t === "ask") await this.ask(ws, who, m);
+      else if (m.t === "tag") await this.setTag(who.login, m);
       else if (m.t === "answer") await this.answer(ws, who, m);
       else if (m.t === "dismiss") await this.update(ws, who, m.id, (q) => q.to === who.login && !q.answer && !q.dismissed, (q) => (q.dismissed = Date.now()));
       else if (m.t === "seen") await this.update(ws, who, m.id, (q) => q.from === who.login && q.answer && !q.seenAt, (q) => (q.seenAt = Date.now()));
@@ -171,7 +179,7 @@ export class Hub {
       if (Date.now() - q.at > WEEK_MS) await this.ctx.storage.delete(k);
       else if (q.from === login || q.to === login) questions.push(q);
     }
-    this.sendTo(login, { t: "state", me: login, connections, requests, questions });
+    this.sendTo(login, { t: "state", me: login, connections, requests, tags: users[login]?.tags || {}, questions });
   }
 
   // Someone came online or went away: their mutual connections' pages hear.
@@ -192,6 +200,22 @@ export class Hub {
     await this.sendState(other);
   }
 
+  async setTag(login, m) {
+    const tag = clean(m.tag).slice(0, MAX_TAG_LEN);
+    const other = String(m.login || "").toLowerCase();
+    if (!tag || !/^[a-z0-9_]{2,25}$/.test(other)) return;
+    const user = (await this.ctx.storage.get(`u:${login}`)) || { list: [] };
+    const tags = user.tags || {};
+    if (!tags[tag] && Object.keys(tags).length >= MAX_TAGS) return;
+    const members = new Set(tags[tag] || []);
+    m.on ? members.add(other) : members.delete(other);
+    if (members.size) tags[tag] = [...members];
+    else delete tags[tag];
+    user.tags = tags;
+    await this.ctx.storage.put(`u:${login}`, user);
+    await this.sendState(login);
+  }
+
   // ===== Questions ===========================================================================
 
   // To one person, or to "*": everyone you're mutually connected with, as one
@@ -199,12 +223,15 @@ export class Hub {
   async ask(ws, who, m) {
     const text = clean(m.text);
     if (!text) return;
-    const everyone = m.to === "*";
+    const tagName = String(m.to || "").startsWith("#") ? String(m.to).slice(1) : null;
+    const everyone = m.to === "*" || tagName !== null;
     let targets;
     if (everyone) {
       const users = await this.users();
-      targets = (users[who.login]?.list || []).filter((l) => users[l]?.list.includes(who.login));
-      if (!targets.length) return this.send(ws, { t: "error", why: "Nobody to ask yet: add people under Connections" });
+      const mine = users[who.login] || { list: [] };
+      const pool = tagName !== null ? mine.tags?.[tagName] || [] : mine.list;
+      targets = pool.filter((l) => mine.list.includes(l) && users[l]?.list.includes(who.login));
+      if (!targets.length) return this.send(ws, { t: "error", why: tagName !== null ? `Nobody in ${tagName} can be asked yet` : "Nobody to ask yet: add people under Connections" });
     } else {
       const to = String(m.to || "").toLowerCase();
       if (!(await this.mutual(who.login, to))) return this.send(ws, { t: "error", why: `You and ${to} need to add each other first` });
@@ -226,7 +253,7 @@ export class Hub {
     for (const to of targets) {
       if (full.includes(to)) continue; // asking everyone skips anyone already full up
       const q = { id: crypto.randomUUID().slice(0, 8), from: who.login, to, text, at: Date.now(), options, answer: null, dismissed: 0, seenAt: 0 };
-      if (group) q.group = group;
+      if (group) Object.assign(q, { group, toTag: tagName ?? "everyone" });
       await this.ctx.storage.put(`q:${q.id}`, q);
       this.share(q);
       sent++;

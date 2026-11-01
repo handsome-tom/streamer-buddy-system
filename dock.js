@@ -69,6 +69,7 @@
     x: { label: "", icon: `<path d="M3 10.6V4a1 1 0 0 1 1-1h6.6l6.7 6.7a1 1 0 0 1 0 1.4l-5.6 5.6a1 1 0 0 1-1.4 0z" ${LINE} stroke-width="1.7"/><circle cx="7" cy="7" r="1.3" fill="currentColor"/>` }, // one of the asker's own options
   };
   const STANDARD = ["y", "n", "m", "s", "o", "t"];
+  const TAG_ICON = `<svg viewBox="0 0 20 20" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 10.6V4a1 1 0 0 1 1-1h6.6l6.7 6.7a1 1 0 0 1 0 1.4l-5.6 5.6a1 1 0 0 1-1.4 0z"/><circle cx="7" cy="7" r="1.2" fill="currentColor"/></svg>`;
   const PEOPLE_ICON = `<svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="7.5" cy="6.5" r="3"/><path d="M2 17c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="14" cy="7.5" r="2.4"/><path d="M14.5 12.2c2.2.3 3.8 2 3.8 4.3"/></svg>`;
   // Accounts whose picture gets a bright ring everywhere, so they stand out
   // (Alex's own channel).
@@ -117,6 +118,7 @@
   // From the relay.
   let connections = []; // [{ login, mutual, online }]
   let requests = []; // [login] who added you
+  let tags = {}; // { tag: [logins] } your own groups of connections (Mods, Lead mods, Tech…)
   const questions = {}; // id -> { id, from, to, text, at, answer, dismissed, seenAt }
   const pending = {}; // id -> true while an answer / seen / dismiss is on its way
   let ready = false; // first state from the relay arrived
@@ -144,13 +146,13 @@
       const u = ui[q.id] || {};
       if (q.to === me?.login) {
         inbox[q.id] = {
-          from: q.from, name: q.from, text: q.text, at: q.at, options: q.options, group: q.group,
+          from: q.from, name: q.from, text: q.text, at: q.at, options: q.options, group: q.group, toTag: q.toTag,
           done: !!(q.answer || q.dismissed), answered: q.answer, seenAt: q.seenAt,
           sending: !!pending[q.id], cleared: !!u.cleared, gone: !!u.gone,
         };
       } else if (q.from === me?.login) {
         sent[q.id] = {
-          to: q.to, text: q.text, at: q.at, group: q.group, seen: !!u.waitClosed || !!q.dismissed, gone: !!u.gone,
+          to: q.to, text: q.text, at: q.at, group: q.group, toTag: q.toTag, seen: !!u.waitClosed || !!q.dismissed, gone: !!u.gone,
           answer: q.answer && { ...q.answer, acked: q.seenAt ? true : pending[q.id] ? "sending" : false, seen: !!u.closed },
         };
       }
@@ -158,6 +160,20 @@
   }
 
   const trusted = () => connections.map((c) => c.login);
+  // Everyone you can ask: "*" for everyone, "#Tag" for one of your tags (with
+  // someone askable in it), then each person.
+  function targets() {
+    const able = connections.filter((c) => c.mutual).map((c) => c.login);
+    const tagged = Object.keys(tags).sort().filter((t) => tags[t].some((l) => able.includes(l)));
+    return [...(able.length > 1 ? ["*"] : []), ...tagged.map((t) => `#${t}`), ...able];
+  }
+  function targetLabel(t) {
+    const able = connections.filter((c) => c.mutual).map((c) => c.login);
+    if (t === "*") return `Everyone (${able.length})`;
+    if (t.startsWith("#")) return `${t.slice(1)} (${tags[t.slice(1)].filter((l) => able.includes(l)).length})`;
+    return t;
+  }
+  const askedWho = (q) => (q.toTag === "everyone" || !q.toTag ? "everyone" : q.toTag);
   const conn = (login) => connections.find((c) => c.login === login);
 
   function el(tag, className, text) {
@@ -373,6 +389,7 @@
     const first = !ready;
     connections = m.connections || [];
     requests = m.requests || [];
+    tags = m.tags || {};
     const had = new Set(Object.keys(questions));
     for (const k of Object.keys(questions)) delete questions[k];
     for (const q of m.questions || []) questions[q.id] = q;
@@ -553,10 +570,11 @@
     quickAsk.hidden = askFull.hidden = !inBar;
     askBtn.hidden = inBar || !me;
     if (!inBar) return;
-    const choices = able.length > 1 ? ["*", ...able] : able;
+    const choices = targets();
     const want = choices.includes(quickTo.value) ? quickTo.value : choices[0];
-    if ([...quickTo.options].map((o) => o.value).join() !== choices.join()) {
-      quickTo.replaceChildren(...choices.map((l) => new Option(l === "*" ? `Everyone (${able.length})` : l, l)));
+    const labels = choices.map(targetLabel);
+    if ([...quickTo.options].map((o) => o.text).join() !== labels.join()) {
+      quickTo.replaceChildren(...choices.map((l, k) => new Option(labels[k], l)));
     }
     quickTo.value = want;
   }
@@ -645,7 +663,7 @@
     const q = inbox[id];
     const card = el("div", "qcard");
     card.setAttribute("role", "alertdialog");
-    card.append(el("div", "qcard__head", `${q.name} asks${q.group ? " everyone" : ""}`), el("div", "qcard__text", q.text));
+    card.append(el("div", "qcard__head", `${q.name} asks${q.group ? ` ${askedWho(q)}` : ""}`), el("div", "qcard__text", q.text));
     const buttons = el("div", "qcard__answers");
     for (const { code, label } of optionsOf(q)) {
       const b = el("button", `qcard__answer answer--${code}${code === "x" ? " qcard__answer--own" : ""}`);
@@ -688,7 +706,7 @@
     body.append(
       el("div", "acard__who", `${q.to} answered`),
       el("div", "acard__head", said(q.answer)),
-      el("div", "acard__question", q.group ? `${q.text} (asked everyone)` : q.text),
+      el("div", "acard__question", q.group ? `${q.text} (asked ${askedWho(q)})` : q.text),
     );
     body.append(seenControl(id, q.answer, "receipt receipt--btn"));
     card.append(icon, body, closeButton(() => setUi(id, { closed: true })));
@@ -817,7 +835,7 @@
     const answered = copies.filter(([, c]) => c.answer).length;
     const row = el("div", "waiting");
     const text = el("div", "waiting__text");
-    const who = q.group ? `Waiting on everyone (${answered} of ${copies.length} answered): ` : `Waiting on ${q.to}: `;
+    const who = q.group ? `Waiting on ${askedWho(q)} (${answered} of ${copies.length} answered): ` : `Waiting on ${q.to}: `;
     text.append(el("span", "waiting__who", who), document.createTextNode(q.text));
     row.append(text, closeButton(() => {
       for (const [cid] of copies) ui[cid] = { ...ui[cid], waitClosed: true };
@@ -858,10 +876,10 @@
   function personChip(login, className) {
     const chip = el("button", className);
     chip.type = "button";
-    if (login === "*") {
-      const icon = el("span", "ask__everyone");
-      icon.innerHTML = PEOPLE_ICON;
-      chip.append(icon, el("span", "ask__name", `Everyone (${connections.filter((c) => c.mutual).length})`));
+    if (login === "*" || login.startsWith("#")) {
+      const icon = el("span", `ask__everyone${login === "*" ? "" : " ask__everyone--tag"}`);
+      icon.innerHTML = login === "*" ? PEOPLE_ICON : TAG_ICON;
+      chip.append(icon, el("span", "ask__name", targetLabel(login)));
       return chip;
     }
     if (HIGHLIGHT[login]) chip.style.setProperty("--ring", HIGHLIGHT[login]);
@@ -910,7 +928,7 @@
 
     // Who to ask: the chosen person, with a caret that drops down the rest.
     if (!fixedTo) {
-      if (!able.includes(askDraft.to) && !(askDraft.to === "*" && able.length > 1)) askDraft.to = able[0];
+      if (!targets().includes(askDraft.to)) askDraft.to = targets()[0];
       const who = el("div", "ask__who");
       const pick = personChip(askDraft.to, "ask__person ask__person--on");
       pick.append(el("span", `ask__caret${pickerOpen ? " ask__caret--open" : ""}`));
@@ -922,7 +940,7 @@
       who.append(pick);
       if (pickerOpen) {
         const list = el("div", "ask__menu");
-        for (const login of able.length > 1 ? ["*", ...able] : able) {
+        for (const login of targets()) {
           const row = personChip(login, `ask__menuitem${login === askDraft.to ? " ask__menuitem--on" : ""}`);
           row.addEventListener("click", () => {
             askDraft.to = login;
@@ -1125,7 +1143,7 @@
     const panel = el("div", "panel");
     panel.append(
       el("div", "panel__head", "Connections"),
-      el("p", "panel__sub", "You can ask each other once you've both added each other."),
+      el("p", "panel__sub", "You can ask each other once you've both added each other. Tag people (Mods, Lead mods, Tech…) to ask a whole group at once; only you see your tags."),
     );
     const form = el("form", "panel__form");
     const input = textBox("Their Twitch name");
@@ -1158,6 +1176,11 @@
       row.append(el("span", "people__name", login), el("span", "people__state", "wants to connect"), back);
       list.append(row);
     }
+    // Tag suggestions: your own tags, plus a few common ones.
+    const names = el("datalist");
+    names.id = "tag-names";
+    for (const t of [...new Set([...Object.keys(tags).sort(), "Mods", "Lead mods", "Tech"])]) names.append(new Option(t));
+    panel.append(names);
     for (const { login, mutual, online } of connections) {
       const row = el("div", "people__row");
       row.append(
@@ -1165,7 +1188,31 @@
         el("span", `people__state${online ? " people__state--on" : ""}`, !mutual ? "hasn't added you yet" : online ? "online" : "offline"),
         closeButton(() => relay({ t: "disconnect", login }), `Remove ${login}`),
       );
-      list.append(row);
+      // Their tags, each with ×, and a box to add one.
+      const tagRow = el("div", "people__tags");
+      for (const t of Object.keys(tags).sort().filter((t) => tags[t].includes(login))) {
+        const chip = el("span", "tagchip", t);
+        const x = el("button", "tagchip__x", "×");
+        x.type = "button";
+        x.title = `Take ${login} out of ${t}`;
+        x.addEventListener("click", () => relay({ t: "tag", login, tag: t, on: false }));
+        chip.append(x);
+        tagRow.append(chip);
+      }
+      const addTag = el("form", "tagadd");
+      const box = textBox("+ Tag");
+      box.dataset.key = `tag-${login}`;
+      box.maxLength = 20;
+      box.setAttribute("list", "tag-names");
+      addTag.append(box);
+      addTag.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const tag = clean(box.value).slice(0, 20);
+        if (tag) relay({ t: "tag", login, tag, on: true });
+        box.value = "";
+      });
+      tagRow.append(addTag);
+      list.append(row, tagRow);
     }
     if (!connections.length && !requests.length) list.append(el("p", "panel__sub", "Nobody yet."));
     panel.append(list);
@@ -1239,8 +1286,13 @@
     else if (m.t === "answer" && q) gotQuestion({ ...q, answer: { code: m.code, text: m.text, at: now } });
     else if (m.t === "dismiss" && q) gotQuestion({ ...q, dismissed: now });
     else if (m.t === "seen" && q) gotQuestion({ ...q, seenAt: now });
-    else if (m.t === "connect") gotState({ connections: [...connections, { login: m.login, mutual: requests.includes(m.login), online: false }], requests: requests.filter((l) => l !== m.login), questions: Object.values(questions) });
-    else if (m.t === "disconnect") gotState({ connections: connections.filter((c) => c.login !== m.login), requests, questions: Object.values(questions) });
+    else if (m.t === "connect") gotState({ connections: [...connections, { login: m.login, mutual: requests.includes(m.login), online: false }], requests: requests.filter((l) => l !== m.login), tags, questions: Object.values(questions) });
+    else if (m.t === "disconnect") gotState({ connections: connections.filter((c) => c.login !== m.login), requests, tags, questions: Object.values(questions) });
+    else if (m.t === "tag") {
+      const next = { ...tags, [m.tag]: [...new Set([...(tags[m.tag] || []), m.login])].filter((l) => m.on || l !== m.login) };
+      if (!next[m.tag].length) delete next[m.tag];
+      gotState({ connections, requests, tags: next, questions: Object.values(questions) });
+    }
     return true;
   }
 
@@ -1248,8 +1300,9 @@
     me = { login: "you" };
     const now = Date.now();
     gotState({
-      connections: [{ login: "tallglassofwasps", mutual: true, online: true }],
+      connections: [{ login: "tallglassofwasps", mutual: true, online: true }, { login: "techbuddy", mutual: true, online: false }],
       requests: ["somemod"],
+      tags: { Mods: ["tallglassofwasps"], Tech: ["techbuddy"] },
       questions: [
         { id: "demo01", from: "tallglassofwasps", to: "you", text: "Can I clip that last play for TikTok?", at: now, answer: null, dismissed: 0, seenAt: 0 },
         { id: "demo02", from: "you", to: "tallglassofwasps", text: "Can you mod tonight?", at: now - 60000, answer: { code: "y", text: "", at: now }, dismissed: 0, seenAt: 0 },

@@ -1211,3 +1211,63 @@ main:has(> .cards:empty) {
 @media (max-width: 700px) {
   .qa { display: none; }
 }
+
+/* Tags: in the Ask picker, and on each person under Connections. */
+.ask__everyone--tag {
+  background: rgba(63, 178, 255, 0.22);
+  color: #8fd0ff;
+}
+.people__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  padding: 0 2px 8px;
+  border-bottom: 1px solid #26262c;
+}
+.people__row {
+  border-bottom: 0;
+}
+.tagchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 22px;
+  padding: 0 2px 0 9px;
+  border-radius: 11px;
+  background: rgba(63, 178, 255, 0.16);
+  color: #8fd0ff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.tagchip__x {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: #8fd0ff;
+  font-size: 13px;
+  line-height: 16px;
+}
+.tagchip__x:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.tagadd input {
+  width: 80px;
+  height: 22px;
+  padding: 0 9px;
+  border: 1px dashed var(--field);
+  border-radius: 11px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+}
+.tagadd input:focus {
+  border-style: solid;
+  border-color: #3fb2ff;
+  outline: none;
+  width: 120px;
+}
