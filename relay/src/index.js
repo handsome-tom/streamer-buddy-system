@@ -28,6 +28,12 @@
 // mutual connections get it so the line can glow in their chat, in the colour
 // of whoever flagged it.
 //
+// Stats: Twitch keeps no viewer history and keeps subs private, so a streamer's
+// own panel sends its numbers here while it's open: a sample a minute, and
+// events as they happen. Only your own panel can write your stats. They're
+// recorded from then on, and shared with your mutual connections only if you
+// switch sharing on. Daily viewer figures are kept 40 days.
+//
 // Tags: each person's own labels for their connections ({ "Mods": [logins] }),
 // e.g. Mods, Lead mods, Tech; only they see them. options are the answer buttons the asker chose: any of
 // the six standard ones by letter (y n m s o t) and their own, as "+label"; a
@@ -45,14 +51,18 @@
 //   say { owner, text }     post in someone's room (yours: owner is you)
 //   flash { kind, to, text, chatter, color, channel }  something quick that
 //                           shows for a moment; see Flashes below
+//   statsShare { on }       share your stream stats with your connections
+//   sample { s }            your panel's latest numbers; see Stats below
+//   statEvent { kind, n, who, viewers }  a sub, gift, cheer, follow or raid
 //   seen { id }
 // Messages to a page:
-//   state { me, connections, requests, tags, questions, rooms, chat }   (on sign-in, and whenever
+//   state { me, connections, requests, tags, questions, rooms, chat, statsOn, stats }   (on sign-in, and whenever
 //                                                       connections or who's online change)
 //   q { q }                 a question that's new or changed
 //   msg { m }               a new chat message { id, owner, from, text, at }
 //   flash { f }             a flash { id, kind, from, to, text, chatter, color, channel, at }
 //   flashed { kind, reached }  how many people yours reached
+//   stats { owner, s }      someone's worked-out stats changed
 //   error { why }
 // A plain "ping" gets "pong" without waking the hub (keeps idle pages cheap).
 
@@ -70,6 +80,7 @@ const MAX_SAYS_PER_MINUTE = 20;
 const CHAT_BACKLOG = 50;
 const MAX_LOVE_LEN = 80;
 const MAX_FLASHES_PER_MINUTE = 20;
+const STAT_DAYS_KEPT = 40;
 
 export default {
   async fetch(req, env) {
@@ -114,6 +125,9 @@ export class Hub {
       else if (m.t === "room") await this.setRoom(who.login, m);
       else if (m.t === "say") await this.say(ws, who, m);
       else if (m.t === "flash") await this.flash(ws, who, m);
+      else if (m.t === "statsShare") await this.statsShare(who.login, m);
+      else if (m.t === "sample") await this.sample(who.login, m.s);
+      else if (m.t === "statEvent") await this.statEvent(who.login, m);
       else if (m.t === "answer") await this.answer(ws, who, m);
       else if (m.t === "dismiss") await this.update(ws, who, m.id, (q) => q.to === who.login && !q.answer && !q.dismissed, (q) => (q.dismissed = Date.now()));
       else if (m.t === "seen") await this.update(ws, who, m.id, (q) => q.from === who.login && q.answer && !q.seenAt, (q) => (q.seenAt = Date.now()));
@@ -208,7 +222,12 @@ export class Hub {
     const rooms = this.roomsFor(login, users);
     const chat = {};
     for (const r of rooms) chat[r.owner] = [...(await this.ctx.storage.list({ prefix: `m:${r.owner}:`, reverse: true, limit: CHAT_BACKLOG })).values()].reverse();
-    this.sendTo(login, { t: "state", me: login, connections, requests, tags: users[login]?.tags || {}, questions, rooms, chat });
+    const stats = {};
+    for (const l of [login, ...connections.filter((c) => c.mutual && users[c.login]?.statsOn).map((c) => c.login)]) {
+      const rec = await this.ctx.storage.get(`s:${l}`);
+      if (rec) stats[l] = workOut(rec);
+    }
+    this.sendTo(login, { t: "state", me: login, connections, requests, tags: users[login]?.tags || {}, questions, rooms, chat, statsOn: !!users[login]?.statsOn, stats });
   }
 
   // Who's in an owner's room: them, plus their mutual connections in the
@@ -300,6 +319,84 @@ export class Hub {
     // A week is plenty: drop older messages in this room.
     const old = [...(await this.ctx.storage.list({ prefix: `m:${owner}:`, limit: 50 }))].filter(([, v]) => at - v.at > WEEK_MS).map(([k]) => k);
     if (old.length) await this.ctx.storage.delete(old);
+  }
+
+  // ===== Stats ===============================================================================
+
+  async statsShare(login, m) {
+    const user = (await this.ctx.storage.get(`u:${login}`)) || { list: [] };
+    user.statsOn = !!m.on;
+    await this.ctx.storage.put(`u:${login}`, user);
+    await this.sendState(login);
+    await this.tellConnections(login);
+  }
+
+  // Tell the owner, and their mutual connections if they share.
+  async shareStats(login, rec) {
+    const users = await this.users();
+    const s = workOut(rec);
+    this.sendTo(login, { t: "stats", owner: login, s });
+    if (!users[login]?.statsOn) return;
+    for (const l of users[login].list) {
+      if (users[l]?.list.includes(login)) this.sendTo(l, { t: "stats", owner: login, s });
+    }
+  }
+
+  async sample(login, raw) {
+    if (!raw || typeof raw !== "object") return;
+    const rec = (await this.ctx.storage.get(`s:${login}`)) || { days: {}, months: {} };
+    const startedAt = short(raw.startedAt, 40);
+    const viewers = count(raw.viewers);
+    const live = !!raw.live;
+    rec.now = {
+      live, viewers, startedAt, game: short(raw.game, 80), title: short(raw.title, 140),
+      followers: count(raw.followers), subsTotal: raw.subsTotal == null ? null : count(raw.subsTotal),
+      adNext: short(raw.adNext, 40), chatMode: short(raw.chatMode, 60), nextStream: short(raw.nextStream, 120),
+      clip: raw.clip && { title: short(raw.clip.title, 100), url: /^https:\/\/[a-z.]*twitch\.tv\//.test(raw.clip.url || "") ? raw.clip.url : "", at: short(raw.clip.at, 40) },
+      at: Date.now(),
+    };
+    if (live) {
+      if (rec.stream?.startedAt !== startedAt) rec.stream = { startedAt, subs: 0, gifts: 0, gifters: {}, bits: 0, follows: 0, peak: 0, sum: 0, n: 0 };
+      rec.stream.peak = Math.max(rec.stream.peak, viewers);
+      rec.stream.sum += viewers;
+      rec.stream.n++;
+      const day = /^\d{4}-\d{2}-\d{2}$/.test(raw.day || "") ? raw.day : new Date().toISOString().slice(0, 10);
+      const d = (rec.days[day] ||= { peak: 0, sum: 0, n: 0 });
+      d.peak = Math.max(d.peak, viewers);
+      d.sum += viewers;
+      d.n++;
+      for (const k of Object.keys(rec.days).sort().slice(0, -STAT_DAYS_KEPT)) delete rec.days[k];
+    }
+    await this.ctx.storage.put(`s:${login}`, rec);
+    await this.shareStats(login, rec);
+  }
+
+  async statEvent(login, m) {
+    const rec = (await this.ctx.storage.get(`s:${login}`)) || { days: {}, months: {} };
+    const n = count(m.n) || 1;
+    const who = short(m.who, 30);
+    const stream = rec.now?.live ? rec.stream : null;
+    const month = new Date().toISOString().slice(0, 7);
+    const addSubs = () => {
+      if (stream) stream.subs += n;
+      rec.months[month] = (rec.months[month] || 0) + n;
+      for (const k of Object.keys(rec.months).sort().slice(0, -13)) delete rec.months[k];
+    };
+    if (m.kind === "sub") addSubs();
+    else if (m.kind === "gift") {
+      addSubs();
+      if (stream) {
+        stream.gifts += n;
+        if (who) stream.gifters[who] = (stream.gifters[who] || 0) + n;
+      }
+    } else if (m.kind === "bits" && stream) stream.bits += n;
+    else if (m.kind === "follow" && stream) stream.follows += 1;
+    else if (m.kind === "raidOut") rec.lastRaidOut = { who, viewers: count(m.viewers), at: Date.now() };
+    else if (m.kind === "raidIn") rec.lastRaidIn = { who, viewers: count(m.viewers), at: Date.now() };
+    else if (m.kind === "hype") rec.hype = m.hype && { level: count(m.hype.level), progress: count(m.hype.progress), goal: count(m.hype.goal), ends: short(m.hype.ends, 40) };
+    else return;
+    await this.ctx.storage.put(`s:${login}`, rec);
+    await this.shareStats(login, rec);
   }
 
   // ===== Flashes =============================================================================
@@ -415,6 +512,35 @@ export class Hub {
     this.sendTo(q.from, { t: "q", q });
     this.sendTo(q.to, { t: "q", q });
   }
+}
+
+const count = (x) => (Number.isFinite(Number(x)) && Number(x) > 0 ? Math.floor(Number(x)) : 0);
+const short = (x, n) => (typeof x === "string" ? clean(x).slice(0, n) : "");
+
+// What people see: the latest numbers, plus averages and highs over time.
+function workOut(rec) {
+  const now = Date.now();
+  const days = Object.entries(rec.days || {});
+  const within = (ms) => days.filter(([k]) => now - Date.parse(k) <= ms).map(([, d]) => d);
+  const sum = (list) => {
+    const n = list.reduce((a, d) => a + d.n, 0);
+    return { peak: Math.max(0, ...list.map((d) => d.peak)), avg: n ? Math.round(list.reduce((a, d) => a + d.sum, 0) / n) : 0 };
+  };
+  const monthKey = new Date(now).toISOString().slice(0, 7);
+  const stream = rec.stream;
+  const top = stream && Object.entries(stream.gifters || {}).sort((a, b) => b[1] - a[1])[0];
+  return {
+    now: rec.now || null,
+    stream: stream && rec.now?.live ? {
+      subs: stream.subs, gifts: stream.gifts, topGifter: top ? { who: top[0], n: top[1] } : null,
+      bits: stream.bits, follows: stream.follows, peak: stream.peak, avg: stream.n ? Math.round(stream.sum / stream.n) : 0,
+    } : null,
+    week: sum(within(7 * 86400000)),
+    month: { ...sum(days.filter(([k]) => k.startsWith(monthKey)).map(([, d]) => d)), subs: rec.months?.[monthKey] || 0 },
+    lastRaidOut: rec.lastRaidOut || null,
+    lastRaidIn: rec.lastRaidIn || null,
+    hype: rec.hype || null,
+  };
 }
 
 // The asker's answer buttons: standard letters and "+label"s, no repeats.

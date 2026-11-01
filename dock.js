@@ -25,6 +25,10 @@
 //     minutes), lines of Twitch chat a mod flagged (2 minutes) and "Love notes"
 //     (30 seconds, fading in and out fuzzily); nothing's stored, so only people
 //     online get them
+//   - Stats: for each connection, what's public from Twitch (live, viewers,
+//     followers, chat mode, next stream, latest clip) plus, if they share, what
+//     their own OBS panel records: subs, gifts, bits, follows, raids, ad timing,
+//     hype trains and viewer averages and highs (from the day it's switched on)
 //   - cards below the bar when there's room: questions to you with six
 //     one-tap answers or your own reply; answers to yours with "Mark as seen"
 //     (the person who answered sees "✓ Seen"); nothing clears by itself
@@ -49,6 +53,9 @@
 
 (() => {
   const SCOPES = ""; // signing in only says who you are
+  // What sharing stream stats needs from Twitch (a streamer grants it once).
+  const STATS_SCOPES = ["channel:read:subscriptions", "bits:read", "channel:read:ads", "channel:read:hype_train", "moderator:read:followers"];
+  const SAMPLE_MS = 60 * 1000;
   const HELIX = "https://api.twitch.tv/helix";
   const MAX_LEN = 200;
   const UPDATE_CHECK_MS = 60 * 1000;
@@ -98,11 +105,12 @@
   const quickTo = document.getElementById("quickTo");
   const quickText = document.getElementById("quickText");
   const askFull = document.getElementById("askFull");
+  const statsBtn = document.getElementById("statsBtn");
   const chatBtn = document.getElementById("chatBtn");
   const chatCount = document.getElementById("chatCount");
 
   let me = null; // { login, id }
-  let view = POPOUT && /^(ask|people|person|chat)$/.test(params.get("view")) ? params.get("view") : "cards"; // "cards" | "ask" | "people" | "person"
+  let view = POPOUT && /^(ask|people|person|chat|stats)$/.test(params.get("view")) ? params.get("view") : "cards"; // "cards" | "ask" | "people" | "person"
   const drafts = {}; // question id -> reply being typed (kept if things redraw)
   // The Ask box: who to, the question, and its answer buttons (the six
   // standard ones until some are taken off; "+label" for your own).
@@ -131,6 +139,12 @@
   // and each room's recent messages ({ owner: [{ id, from, text, at }] }).
   let rooms = [];
   let chat = {};
+  // Stats: what the relay has ({ login: worked-out stats }), whether you share
+  // yours, and what Twitch says publicly ({ login: { ..., at } }).
+  let stats = {};
+  let statsOn = false;
+  const publicStats = {};
+  const statsDraft = { who: (POPOUT && params.get("view") === "stats" && params.get("to")) || "" };
   const chatDraft = { owner: (POPOUT && params.get("view") === "chat" && params.get("to")) || "", text: "" };
   const questions = {}; // id -> { id, from, to, text, at, answer, dismissed, seenAt }
   const pending = {}; // id -> true while an answer / seen / dismiss is on its way
@@ -231,7 +245,7 @@
       response_type: "token",
       client_id: TWITCH_CLIENT_ID,
       redirect_uri: location.origin + location.pathname,
-      scope: SCOPES,
+      scope: get("statsWanted", false) ? STATS_SCOPES.join(" ") : SCOPES,
       state,
     });
     location.href = `https://id.twitch.tv/oauth2/authorize?${q}`;
@@ -267,7 +281,7 @@
     }
     if (!r.ok) throw new Error(`Twitch said ${r.status}`);
     const j = await r.json();
-    return { login: j.login, id: j.user_id, expiresAt: j.expires_in ? Date.now() + j.expires_in * 1000 : 0 };
+    return { login: j.login, id: j.user_id, scopes: j.scopes || [], expiresAt: j.expires_in ? Date.now() + j.expires_in * 1000 : 0 };
   }
 
   // Twitch sign-ins run out; a few days before, the bar says so (in red once
@@ -385,6 +399,10 @@
       else if (m.t === "msg") gotMessage(m.m);
       else if (m.t === "flash") gotFlash(m.f);
       else if (m.t === "flashed") gotFlashed(m);
+      else if (m.t === "stats") {
+        stats[m.owner] = m.s;
+        if (view === "stats") render();
+      }
       else if (m.t === "error") gotError(m);
     };
     ws.onclose = (e) => {
@@ -416,12 +434,20 @@
     tags = m.tags || {};
     rooms = m.rooms || [];
     chat = m.chat || {};
+    stats = m.stats || {};
+    statsOn = !!m.statsOn;
+    collect();
     const had = new Set(Object.keys(questions));
     for (const k of Object.keys(questions)) delete questions[k];
     for (const q of m.questions || []) questions[q.id] = q;
     ready = true;
     setStatus("Online", "ok");
     if (first) moveOldList();
+    // Back from granting the stats permission: switch sharing on.
+    if (first && !statsOn && get("statsAfterSignin", false) && STATS_SCOPES.every((sc) => me.scopes?.includes(sc))) {
+      localStorage.removeItem("statsAfterSignin");
+      relay({ t: "statsShare", on: true });
+    }
     else if ((m.questions || []).some((q) => !had.has(q.id) && q.to === me.login)) arrived();
     loadPics();
     render();
@@ -629,6 +655,7 @@
   // Ask / Connections / someone's page: here, or popped out if the dock is just the bar.
   function show(next, to = "") {
     if (next === "chat" && to) chatDraft.owner = to;
+    if (next === "stats" && to) statsDraft.who = to;
     if (next === "ask" || next === "person") {
       askDraft.to = to || askDraft.to;
       askDraft.note = "";
@@ -645,7 +672,7 @@
     derive();
     // Keep typing where it was if things are redrawn under you.
     const typingIn = document.activeElement?.dataset?.key;
-    main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : cardList());
+    main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : cardList());
     if (view === "chat") main.querySelector(".chat__log")?.scrollTo(0, 1e9);
     drawDots();
     drawPeek();
@@ -660,6 +687,8 @@
     peopleBtn.title = requests.length ? `Connections (${requests.length} waiting for you to add them back)` : "Connections";
     askBtn.textContent = view === "ask" ? "Cancel" : "Ask";
     drawQuickAsk();
+    statsBtn.hidden = !connections.length && !statsOn;
+    statsBtn.classList.toggle("pill--on", view === "stats");
     // The chat button: shown once you're in a room or have tags to open one with.
     chatBtn.hidden = !(rooms.length || Object.keys(tags).length);
     chatBtn.classList.toggle("pill--on", view === "chat");
@@ -1550,7 +1579,7 @@
     me = null;
     socket?.close();
     socket = null;
-    askBtn.hidden = peopleBtn.hidden = quickAsk.hidden = askFull.hidden = chatBtn.hidden = true;
+    askBtn.hidden = peopleBtn.hidden = quickAsk.hidden = askFull.hidden = chatBtn.hidden = statsBtn.hidden = true;
     dotsEl.replaceChildren();
     const again = el("button", "pill pill--warn pill--bad", message ? "Signed out · Sign in with Twitch" : "Sign in with Twitch");
     again.type = "button";
@@ -1571,6 +1600,308 @@
     const box = el("div", "signin");
     box.append(el("div", "signin__head", head), el("p", "signin__sub", sub));
     main.replaceChildren(box);
+  }
+
+  // ===== Stats: what's public ==============================================================
+  // Anyone signed in can read these for any channel.
+
+  async function fetchPublic(id) {
+    const out = { at: Date.now() };
+    const json = async (path) => (await helix(path)).json();
+    const [streams, followers, chatSet, schedule, clips] = await Promise.allSettled([
+      json(`/streams?user_id=${id}`),
+      json(`/channels/followers?broadcaster_id=${id}&first=1`),
+      json(`/chat/settings?broadcaster_id=${id}`),
+      json(`/schedule?broadcaster_id=${id}&first=1`),
+      json(`/clips?broadcaster_id=${id}&first=20&started_at=${new Date(Date.now() - 30 * 86400000).toISOString()}`),
+    ]);
+    const st = streams.value?.data?.[0];
+    Object.assign(out, { live: !!st, viewers: st?.viewer_count || 0, startedAt: st?.started_at || "", game: st?.game_name || "", title: st?.title || "" });
+    if (followers.value?.total != null) out.followers = followers.value.total;
+    const c = chatSet.value?.data?.[0];
+    if (c) {
+      const modes = [];
+      if (c.slow_mode) modes.push(`Slow (${c.slow_mode_wait_time}s)`);
+      if (c.follower_mode) modes.push("Followers only");
+      if (c.subscriber_mode) modes.push("Subs only");
+      if (c.emote_mode) modes.push("Emotes only");
+      out.chatMode = modes.join(", ") || "Normal";
+    }
+    const seg = schedule.value?.data?.segments?.[0];
+    if (seg) out.nextStream = `${seg.start_time}|${seg.title || ""}`;
+    const clip = (clips.value?.data || []).sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+    if (clip) out.clip = { title: clip.title, url: clip.url, at: clip.created_at };
+    return out;
+  }
+
+  // ===== Stats: the streamer's own panel collects =========================================
+  // Only the OBS dock itself (not pop-outs or the side panel, so nothing's
+  // counted twice), once sharing is on and Twitch has granted the permission.
+
+  let collecting = false;
+  function collect() {
+    if (collecting || !statsOn || POPOUT || EMBED || DEV || DEMO || !me?.id) return;
+    if (!STATS_SCOPES.every((sc) => me.scopes?.includes(sc))) return;
+    collecting = true;
+    takeSample();
+    setInterval(takeSample, SAMPLE_MS);
+    listenForEvents();
+  }
+
+  async function takeSample() {
+    if (!me) return;
+    try {
+      const s = await fetchPublic(me.id);
+      const subs = await (await helix(`/subscriptions?broadcaster_id=${me.id}&first=1`)).json();
+      if (subs.total != null) s.subsTotal = subs.total;
+      const ads = await (await helix(`/channels/ads?broadcaster_id=${me.id}`)).json();
+      s.adNext = ads.data?.[0]?.next_ad_at || "";
+      const d = new Date();
+      s.day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      relay({ t: "sample", s });
+    } catch {}
+  }
+
+  // Twitch's live events for her channel; the relay does the adding up.
+  let eventSocket = null;
+  function listenForEvents(url = "wss://eventsub.wss.twitch.tv/ws", isReconnect = false) {
+    const ws = new WebSocket(url);
+    if (!eventSocket) eventSocket = ws;
+    let quiet = 0;
+    const feed = (sec = 10) => {
+      clearTimeout(quiet);
+      quiet = setTimeout(() => ws.close(), (sec + 10) * 1000); // Twitch went quiet
+    };
+    ws.onmessage = (e) => {
+      const m = JSON.parse(e.data);
+      const type = m.metadata?.message_type;
+      feed();
+      if (type === "session_welcome") {
+        feed(m.payload.session.keepalive_timeout_seconds || 10);
+        const old = eventSocket;
+        eventSocket = ws;
+        if (isReconnect && old !== ws) old?.close(); // subscriptions carry over
+        else subscribeEvents(m.payload.session.id);
+      } else if (type === "session_reconnect") {
+        listenForEvents(m.payload.session.reconnect_url, true);
+      } else if (type === "notification") {
+        gotEvent(m.metadata.subscription_type, m.payload.event);
+      }
+    };
+    ws.onclose = () => {
+      clearTimeout(quiet);
+      if (ws !== eventSocket) return; // an old one being swapped out
+      eventSocket = null;
+      if (me) setTimeout(() => listenForEvents(), 5000);
+    };
+  }
+
+  async function subscribeEvents(session) {
+    const id = me.id;
+    const wanted = [
+      ["channel.subscribe", "1", { broadcaster_user_id: id }],
+      ["channel.subscription.message", "1", { broadcaster_user_id: id }],
+      ["channel.subscription.gift", "1", { broadcaster_user_id: id }],
+      ["channel.cheer", "1", { broadcaster_user_id: id }],
+      ["channel.follow", "2", { broadcaster_user_id: id, moderator_user_id: id }],
+      ["channel.raid", "1", { from_broadcaster_user_id: id }],
+      ["channel.raid", "1", { to_broadcaster_user_id: id }],
+      ["channel.hype_train.begin", "2", { broadcaster_user_id: id }],
+      ["channel.hype_train.progress", "2", { broadcaster_user_id: id }],
+      ["channel.hype_train.end", "2", { broadcaster_user_id: id }],
+    ];
+    for (const [type, version, condition] of wanted) {
+      fetch(`${HELIX}/eventsub/subscriptions`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${get("token")}`, "Client-Id": TWITCH_CLIENT_ID, "Content-Type": "application/json" },
+        body: JSON.stringify({ type, version, condition, transport: { method: "websocket", session_id: session } }),
+      }).catch(() => {});
+    }
+  }
+
+  function gotEvent(type, ev) {
+    const send = (m) => relay({ t: "statEvent", ...m });
+    if (type === "channel.subscribe") {
+      if (!ev.is_gift) send({ kind: "sub", n: 1 }); // a gifted sub is counted by its gift
+    } else if (type === "channel.subscription.message") send({ kind: "sub", n: 1 });
+    else if (type === "channel.subscription.gift") send({ kind: "gift", n: ev.total, who: ev.is_anonymous ? "Anonymous" : ev.user_name });
+    else if (type === "channel.cheer") send({ kind: "bits", n: ev.bits });
+    else if (type === "channel.follow") send({ kind: "follow", n: 1 });
+    else if (type === "channel.raid") {
+      if (ev.from_broadcaster_user_id === me.id) send({ kind: "raidOut", who: ev.to_broadcaster_user_name, viewers: ev.viewers });
+      else send({ kind: "raidIn", who: ev.from_broadcaster_user_name, viewers: ev.viewers });
+    } else if (type === "channel.hype_train.end") send({ kind: "hype", hype: null });
+    else if (type.startsWith("channel.hype_train")) send({ kind: "hype", hype: { level: ev.level, progress: ev.progress, goal: ev.goal, ends: ev.expires_at } });
+  }
+
+  // ===== Stats: the tab ====================================================================
+
+  // Whose stats: the one picked, else someone sharing, else the first connection, else you.
+  function statsWho() {
+    const people = statsPeople();
+    if (people.includes(statsDraft.who)) return statsDraft.who;
+    return people.find((l) => l !== me.login && stats[l]) || people.find((l) => l !== me.login) || people[0];
+  }
+  const statsPeople = () => [...connections.filter((c) => c.mutual).map((c) => c.login), me.login];
+
+  // Twitch's public numbers for whoever's showing, at most once a minute.
+  const fetchingPublic = {};
+  async function refreshPublic(login) {
+    if (DEMO || DEV || fetchingPublic[login] || Date.now() - (publicStats[login]?.at || 0) < SAMPLE_MS) return;
+    const id = login === me.login ? me.id : ids[login];
+    if (!id) return;
+    fetchingPublic[login] = true;
+    try {
+      publicStats[login] = await fetchPublic(id);
+      if (view === "stats") render();
+    } catch {}
+    fetchingPublic[login] = false;
+  }
+  setInterval(() => {
+    if (view === "stats" && me) render(); // keeps the clocks moving
+  }, 30000);
+
+  const num = (n) => (n == null ? "–" : Number(n).toLocaleString());
+  function untilWhen(iso) {
+    const ms = Date.parse(iso) - Date.now();
+    if (!iso || Number.isNaN(ms)) return "";
+    if (ms <= 0) return "now";
+    const m = Math.round(ms / 60000);
+    if (m < 60) return `in ${m} min`;
+    const h = Math.round(m / 60);
+    return h < 48 ? `in ${h} h` : `in ${Math.round(h / 24)} days`;
+  }
+  function uptime(iso) {
+    const m = Math.floor((Date.now() - Date.parse(iso)) / 60000);
+    return Number.isNaN(m) ? "" : `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
+  }
+
+  function statsPanel() {
+    const panel = el("div", "panel stats");
+    const who = statsWho();
+    statsDraft.who = who;
+    refreshPublic(who);
+    const shared = stats[who];
+    const pub = publicStats[who] || {};
+    // Newest of what Twitch says now and what their panel last sent.
+    const now = { ...(shared?.now || {}), ...(pub.at && pub.at > (shared?.now?.at || 0) ? pub : {}) };
+
+    // Everyone you can see, to switch between.
+    const people = el("div", "stats__people");
+    for (const login of statsPeople()) {
+      const chip = personChip(login, `ask__person${login === who ? " ask__person--on" : ""}`);
+      if (login === me.login) chip.querySelector(".ask__name").textContent = "You";
+      chip.addEventListener("click", () => {
+        statsDraft.who = login;
+        render();
+      });
+      people.append(chip);
+    }
+    panel.append(people);
+
+    // Now.
+    const head = el("div", "stats__now");
+    head.append(el("span", `stats__live${now.live ? " stats__live--on" : ""}`, now.live ? "LIVE" : "Offline"));
+    if (now.live) head.append(el("span", "stats__big", `${num(now.viewers)} watching`), el("span", "stats__muted", uptime(now.startedAt)));
+    panel.append(head);
+    if (now.live && (now.game || now.title)) panel.append(el("div", "stats__title", [now.game, now.title].filter(Boolean).join(" · ")));
+
+    const grid = (title, rows) => {
+      const shown = rows.filter(([, v]) => v !== "" && v != null);
+      if (!shown.length) return;
+      panel.append(el("div", "ask__label", title));
+      const box = el("div", "stats__grid");
+      for (const [label, value, link] of shown) {
+        const cell = el("div", "stats__cell");
+        const v = link ? el("a", "stats__value", value) : el("div", "stats__value", value);
+        if (link) {
+          v.href = link;
+          v.target = "_blank";
+          v.rel = "noopener";
+        }
+        cell.append(v, el("div", "stats__label", label));
+        box.append(cell);
+      }
+      panel.append(box);
+    };
+
+    const st = shared?.stream;
+    if (st) {
+      grid("This stream", [
+        ["Subs", num(st.subs)],
+        ["Gift subs", num(st.gifts)],
+        ["Top gifter", st.topGifter ? `${st.topGifter.who} (${st.topGifter.n})` : "–"],
+        ["Bits", num(st.bits)],
+        ["New followers", num(st.follows)],
+        ["Average viewers", num(st.avg)],
+        ["Highest viewers", num(st.peak)],
+      ]);
+    }
+    if (shared) {
+      grid("Records", [
+        ["Highest this week", num(shared.week?.peak)],
+        ["Average this week", num(shared.week?.avg)],
+        ["Highest this month", num(shared.month?.peak)],
+        ["Average this month", num(shared.month?.avg)],
+        ["Subs this month", num(shared.month?.subs)],
+        ["Active subs", now.subsTotal == null ? "" : num(now.subsTotal)],
+      ]);
+      grid("Raids", [
+        ["Last raided", shared.lastRaidOut ? `${shared.lastRaidOut.who} (${num(shared.lastRaidOut.viewers)})` : "–"],
+        ["Last raided by", shared.lastRaidIn ? `${shared.lastRaidIn.who} (${num(shared.lastRaidIn.viewers)})` : "–"],
+      ]);
+    }
+    const [nextAt, nextTitle] = (now.nextStream || "").split("|");
+    grid("Channel", [
+      ["Followers", now.followers == null ? "" : num(now.followers)],
+      ["Chat mode", now.chatMode || ""],
+      ["Next ad", now.live && now.adNext ? untilWhen(now.adNext) : ""],
+      ["Hype train", shared?.hype ? `Level ${shared.hype.level} (${num(shared.hype.progress)} / ${num(shared.hype.goal)})` : ""],
+      ["Next stream", nextAt ? `${untilWhen(nextAt)}${nextTitle ? `: ${nextTitle}` : ""}` : ""],
+      ["Latest clip", now.clip?.url ? now.clip.title || "Watch" : "", now.clip?.url],
+    ]);
+
+    if (who !== me.login && !shared) {
+      panel.append(el("p", "panel__sub", `${who} hasn't switched on sharing, so this is what's public. Subs, raids, bits and viewer records need them to share from their OBS panel.`));
+    } else if (shared?.now?.at) {
+      panel.append(el("p", "panel__sub", `Their panel last reported ${ago(shared.now.at)}. Records start from when sharing was switched on.`));
+    }
+    if (who === me.login) panel.append(shareControl());
+    return panel;
+  }
+
+  // Your own stats: the switch to record and share them.
+  function shareControl() {
+    const box = el("div", "stats__share");
+    const granted = STATS_SCOPES.every((sc) => me.scopes?.includes(sc));
+    if (EMBED) {
+      box.append(el("p", "panel__sub", "Streamers switch on sharing from their OBS panel, which does the recording while they're live."));
+      return box;
+    }
+    box.append(el("div", "panel__head", "Share my stream stats"));
+    box.append(el("p", "panel__sub", "While this panel is open, it records your viewers, subs, gifts, bits, follows and raids, and shows them to the people you're connected with."));
+    if (!granted && !DEMO && !DEV) {
+      const b = el("button", "pill pill--on", "Turn on (sign in once more)");
+      b.type = "button";
+      b.addEventListener("click", () => {
+        put("statsWanted", true);
+        put("statsAfterSignin", true);
+        signIn();
+      });
+      box.append(b);
+      return box;
+    }
+    const b = el("button", `pill${statsOn ? "" : " pill--on"}`, statsOn ? "Stop sharing" : "Share with my connections");
+    b.type = "button";
+    b.addEventListener("click", () => {
+      relay({ t: "statsShare", on: !statsOn });
+      if (DEMO) {
+        statsOn = !statsOn;
+        render();
+      }
+    });
+    box.append(b);
+    return box;
   }
 
   // ===== Updates ===========================================================================
@@ -1618,6 +1949,16 @@
       requests: ["somemod"],
       tags: { Mods: ["tallglassofwasps"], Tech: ["techbuddy"] },
       rooms: [{ owner: "you", tag: "Mods", members: [{ login: "you", online: true }, { login: "tallglassofwasps", online: true }] }],
+      statsOn: true,
+      stats: {
+        tallglassofwasps: {
+          now: { live: true, viewers: 212, startedAt: new Date(now - 7380000).toISOString(), game: "Baldur's Gate 3", title: "Act 3 tonight", followers: 18432, subsTotal: 311, adNext: new Date(now - 7380000 + 7380000 + 840000).toISOString(), chatMode: "Followers only", nextStream: `${new Date(now + 90000000).toISOString()}|Friday chill`, clip: { title: "The barrel incident", url: "https://clips.twitch.tv/demo", at: "" }, at: now - 20000 },
+          stream: { subs: 14, gifts: 10, topGifter: { who: "TallGlassOfWasps", n: 5 }, bits: 1250, follows: 37, avg: 188, peak: 241 },
+          week: { peak: 302, avg: 176 }, month: { peak: 340, avg: 169, subs: 96 },
+          lastRaidOut: { who: "OH_MANNY", viewers: 198, at: now - 90000000 }, lastRaidIn: { who: "dampeyes", viewers: 41, at: now - 3000000 },
+          hype: { level: 2, progress: 640, goal: 1200, ends: "" },
+        },
+      },
       chat: { you: [{ id: "c1", owner: "you", from: "tallglassofwasps", text: "Raid target after this game?", at: now - 300000 }, { id: "c2", owner: "you", from: "tallglassofwasps", text: "@you also the poll is ready", at: now - 60000 }] },
       questions: [
         { id: "demo01", from: "tallglassofwasps", to: "you", text: "Can I clip that last play for TikTok?", at: now, answer: null, dismissed: 0, seenAt: 0 },
@@ -1632,6 +1973,7 @@
 
   peopleBtn.addEventListener("click", () => show("people"));
   chatBtn.addEventListener("click", () => show("chat", chatRoom()));
+  statsBtn.addEventListener("click", () => show("stats", statsWho()));
   quickAsk.addEventListener("submit", (e) => {
     e.preventDefault();
     const question = clean(quickText.value);
