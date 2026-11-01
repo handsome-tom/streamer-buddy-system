@@ -17,6 +17,10 @@
 * {
   box-sizing: border-box;
 }
+/* Hidden means hidden, whatever the element's own display. */
+[hidden] {
+  display: none !important;
+}
 html,
 body {
   margin: 0;
@@ -1153,4 +1157,57 @@ main:has(> .cards:empty) {
 }
 .cards > .pill--warn {
   align-self: flex-start;
+}
+
+/* Asking right in a one-row bar: who, then the text; Enter sends. */
+.qa {
+  flex: 0 1 300px;
+  display: flex;
+  align-items: center;
+  min-width: 150px;
+  height: 28px;
+  border: 1px solid var(--field);
+  border-radius: 14px;
+  background: var(--bg);
+}
+.qa:focus-within {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 2px rgba(145, 71, 255, 0.25);
+}
+.qa[hidden] {
+  display: none;
+}
+.qa__to {
+  flex: none;
+  max-width: 120px;
+  height: 100%;
+  padding: 0 4px 0 10px;
+  border: 0;
+  border-right: 1px solid #3a3a3d;
+  border-radius: 14px 0 0 14px;
+  background: none;
+  color: #d4bbff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  outline: none;
+}
+.qa__to option {
+  background: var(--panel);
+  color: var(--text);
+}
+.qa__text {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 12px 0 8px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+@media (max-width: 700px) {
+  .qa { display: none; }
 }

@@ -87,6 +87,10 @@
   const peekEl = document.getElementById("peek");
   const askBtn = document.getElementById("askBtn");
   const peopleBtn = document.getElementById("peopleBtn");
+  const quickAsk = document.getElementById("quickAsk");
+  const quickTo = document.getElementById("quickTo");
+  const quickText = document.getElementById("quickText");
+  const askFull = document.getElementById("askFull");
 
   let me = null; // { login, id }
   let view = POPOUT && /^(ask|people|person)$/.test(params.get("view")) ? params.get("view") : "cards"; // "cards" | "ask" | "people" | "person"
@@ -528,6 +532,7 @@
     peopleBtn.classList.toggle("pill--badge", requests.length > 0);
     peopleBtn.title = requests.length ? `Connections (${requests.length} waiting for you to add them back)` : "Connections";
     askBtn.textContent = view === "ask" ? "Cancel" : "Ask";
+    drawQuickAsk();
     if (POPOUT) closeWhenDone();
   }
 
@@ -537,6 +542,23 @@
     const waiting = Object.values(inbox).some((q) => !q.done) || Object.values(sent).some((q) => q.answer && !q.answer.seen);
     clearTimeout(closing);
     if (ready && !waiting && view === "cards") closing = setTimeout(() => window.close(), 1500);
+  }
+
+  // A one-row dock asks right in the bar: who (Everyone, or one person) and a
+  // text field; Enter sends with the standard answers. The full Ask window
+  // (pick answers, quick questions) is the button beside it.
+  function drawQuickAsk() {
+    const able = connections.filter((c) => c.mutual).map((c) => c.login);
+    const inBar = short() && able.length > 0;
+    quickAsk.hidden = askFull.hidden = !inBar;
+    askBtn.hidden = inBar || !me;
+    if (!inBar) return;
+    const choices = able.length > 1 ? ["*", ...able] : able;
+    const want = choices.includes(quickTo.value) ? quickTo.value : choices[0];
+    if ([...quickTo.options].map((o) => o.value).join() !== choices.join()) {
+      quickTo.replaceChildren(...choices.map((l) => new Option(l === "*" ? `Everyone (${able.length})` : l, l)));
+    }
+    quickTo.value = want;
   }
 
   // The dots: one per connection; green ring while online, faded until they've
@@ -1171,7 +1193,7 @@
     me = null;
     socket?.close();
     socket = null;
-    askBtn.hidden = peopleBtn.hidden = true;
+    askBtn.hidden = peopleBtn.hidden = quickAsk.hidden = askFull.hidden = true;
     dotsEl.replaceChildren();
     const again = el("button", "pill pill--warn pill--bad", message ? "Signed out · Sign in with Twitch" : "Sign in with Twitch");
     again.type = "button";
@@ -1240,6 +1262,17 @@
   // ===== Start =============================================================================
 
   peopleBtn.addEventListener("click", () => show("people"));
+  quickAsk.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const question = clean(quickText.value);
+    if (!question || !relay({ t: "ask", to: quickTo.value, text: question, options: STANDARD })) return;
+    quickText.value = "";
+    quickText.placeholder = "Sent ✓";
+    setTimeout(() => (quickText.placeholder = "Ask…"), 2500);
+  });
+  askFull.addEventListener("click", () => show("ask", quickTo.value));
+  // The dock being resized can change it between one row and full.
+  addEventListener("resize", () => me && render());
   askBtn.addEventListener("click", () => {
     if (short()) return show("ask");
     put("askOpen", true);
