@@ -1483,3 +1483,133 @@ main:has(> .cards:empty) {
   color: var(--muted);
   font-size: 12px;
 }
+
+/* ===== The quick strip: info, flagged chat and love notes ===== */
+.flashes {
+  flex: 0 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.flashes:empty {
+  display: none;
+}
+/* On a narrower one-row bar the strip takes the quick questions' place while it shows. */
+@media (max-width: 1499px) {
+  .bar:has(.flashes:not(:empty)) .quick {
+    display: none !important;
+  }
+}
+.qflash {
+  --c: #3fb2ff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 560px;
+  height: 30px;
+  padding: 0 2px 0 10px;
+  border: 1px solid var(--c);
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--c) 14%, var(--bg));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--c) 45%, transparent);
+  animation: flashIn 0.25s ease-out;
+}
+.qflash__icon {
+  flex: none;
+  display: flex;
+  color: var(--c);
+}
+.qflash__body {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.qflash__who {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.qflash .x {
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
+}
+.qflash--leaving {
+  animation: flashOut 1.4s ease-in forwards;
+}
+@keyframes flashIn {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes flashOut {
+  to { opacity: 0; }
+}
+/* Love notes: soft pink, and they fade in and out through a blur. */
+.qflash--love {
+  --c: #ff7ab8;
+  animation: fuzzyIn 1.4s ease-out;
+}
+.qflash--love.qflash--leaving {
+  animation: fuzzyOut 1.4s ease-in forwards;
+}
+@keyframes fuzzyIn {
+  from { opacity: 0; filter: blur(12px); }
+  to { opacity: 1; filter: blur(0); }
+}
+@keyframes fuzzyOut {
+  from { opacity: 1; filter: blur(0); }
+  to { opacity: 0; filter: blur(12px); }
+}
+/* With room below the bar, the strip gets its own row and can wrap. */
+@media (min-height: 120px) {
+  .bar {
+    flex-wrap: wrap;
+  }
+  .flashes {
+    order: 10;
+    flex: 1 0 100%;
+    flex-wrap: wrap;
+  }
+  .qflash {
+    max-width: 100%;
+    height: auto;
+    min-height: 30px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+  }
+  .qflash__body {
+    white-space: normal;
+  }
+}
+
+/* The Ask box's sections. */
+.ask__modes {
+  display: flex;
+  gap: 2px;
+  margin-top: 8px;
+  padding: 2px;
+  border-radius: 10px;
+  background: var(--bg);
+}
+.ask__mode {
+  flex: 1;
+  height: 26px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.ask__mode:hover {
+  color: var(--text);
+}
+.ask__mode--on {
+  background: #2f2f35;
+  color: var(--text);
+}

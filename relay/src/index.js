@@ -21,6 +21,13 @@
 // of their tags (e.g. Mods): they and the mutual connections in that tag can
 // talk there. Messages are kept a week (the last 50 come with the state).
 //
+// Flashes: quick things for the streamer's bar, never stored, so only people
+// online get them. "info" is a fast note (shows 2 minutes), "love" a love note
+// (30 seconds), both to a person, tag or everyone. "chat" flags a line of
+// Twitch chat in a channel: its owner gets it in their bar, and that channel's
+// mutual connections get it so the line can glow in their chat, in the colour
+// of whoever flagged it.
+//
 // Tags: each person's own labels for their connections ({ "Mods": [logins] }),
 // e.g. Mods, Lead mods, Tech; only they see them. options are the answer buttons the asker chose: any of
 // the six standard ones by letter (y n m s o t) and their own, as "+label"; a
@@ -36,12 +43,16 @@
 //   tag { login, tag, on }  put a connection in (or out of) one of your tags
 //   room { tag }            open your chat room to one of your tags (null closes it)
 //   say { owner, text }     post in someone's room (yours: owner is you)
+//   flash { kind, to, text, chatter, color, channel }  something quick that
+//                           shows for a moment; see Flashes below
 //   seen { id }
 // Messages to a page:
 //   state { me, connections, requests, tags, questions, rooms, chat }   (on sign-in, and whenever
 //                                                       connections or who's online change)
 //   q { q }                 a question that's new or changed
 //   msg { m }               a new chat message { id, owner, from, text, at }
+//   flash { f }             a flash { id, kind, from, to, text, chatter, color, channel, at }
+//   flashed { kind, reached }  how many people yours reached
 //   error { why }
 // A plain "ping" gets "pong" without waking the hub (keeps idle pages cheap).
 
@@ -57,6 +68,8 @@ const MAX_TAG_LEN = 20;
 const MAX_SAY_LEN = 500;
 const MAX_SAYS_PER_MINUTE = 20;
 const CHAT_BACKLOG = 50;
+const MAX_LOVE_LEN = 80;
+const MAX_FLASHES_PER_MINUTE = 20;
 
 export default {
   async fetch(req, env) {
@@ -100,6 +113,7 @@ export class Hub {
       else if (m.t === "tag") await this.setTag(who.login, m);
       else if (m.t === "room") await this.setRoom(who.login, m);
       else if (m.t === "say") await this.say(ws, who, m);
+      else if (m.t === "flash") await this.flash(ws, who, m);
       else if (m.t === "answer") await this.answer(ws, who, m);
       else if (m.t === "dismiss") await this.update(ws, who, m.id, (q) => q.to === who.login && !q.answer && !q.dismissed, (q) => (q.dismissed = Date.now()));
       else if (m.t === "seen") await this.update(ws, who, m.id, (q) => q.from === who.login && q.answer && !q.seenAt, (q) => (q.seenAt = Date.now()));
@@ -286,6 +300,48 @@ export class Hub {
     // A week is plenty: drop older messages in this room.
     const old = [...(await this.ctx.storage.list({ prefix: `m:${owner}:`, limit: 50 }))].filter(([, v]) => at - v.at > WEEK_MS).map(([k]) => k);
     if (old.length) await this.ctx.storage.delete(old);
+  }
+
+  // ===== Flashes =============================================================================
+
+  async flash(ws, who, m) {
+    const kind = m.kind;
+    if (!["info", "love", "chat"].includes(kind)) return;
+    const text = clean(m.text).slice(0, kind === "love" ? MAX_LOVE_LEN : MAX_LEN);
+    if (!text) return;
+    this.flashedAt ||= {};
+    const recent = (this.flashedAt[who.login] || []).filter((t) => Date.now() - t < 60000);
+    if (recent.length >= MAX_FLASHES_PER_MINUTE) return this.send(ws, { t: "error", why: "Slow down a little" });
+    this.flashedAt[who.login] = [...recent, Date.now()];
+
+    const users = await this.users();
+    const mine = users[who.login] || { list: [] };
+    const mutual = (l) => mine.list.includes(l) && users[l]?.list.includes(who.login);
+    const f = { id: crypto.randomUUID().slice(0, 8), kind, from: who.login, text, at: Date.now() };
+    if (/^#[0-9a-f]{6}$/i.test(m.color || "")) f.color = m.color;
+
+    let targets;
+    if (kind === "chat") {
+      const channel = String(m.channel || "").toLowerCase();
+      if (channel !== who.login && !mutual(channel)) return this.send(ws, { t: "error", why: `You and ${channel} need to add each other first` });
+      Object.assign(f, { channel, to: channel, chatter: clean(m.chatter).slice(0, 25) });
+      // The owner, their mutual connections, and whoever flagged it.
+      const owner = users[channel] || { list: [] };
+      targets = [...new Set([channel, who.login, ...owner.list.filter((l) => users[l]?.list.includes(channel))])];
+      for (const l of targets) this.sendTo(l, { t: "flash", f });
+      return this.send(ws, { t: "flashed", kind, reached: this.isOnline(channel) ? 1 : 0, to: channel });
+    }
+
+    if (m.to === "*") targets = mine.list.filter(mutual);
+    else if (String(m.to || "").startsWith("#")) targets = (mine.tags?.[String(m.to).slice(1)] || []).filter(mutual);
+    else {
+      const to = String(m.to || "").toLowerCase();
+      if (!mutual(to)) return this.send(ws, { t: "error", why: `You and ${to} need to add each other first` });
+      targets = [to];
+    }
+    const online = targets.filter((l) => this.isOnline(l));
+    for (const l of online) this.sendTo(l, { t: "flash", f: { ...f, to: l } });
+    this.send(ws, { t: "flashed", kind, reached: online.length });
   }
 
   // ===== Questions ===========================================================================

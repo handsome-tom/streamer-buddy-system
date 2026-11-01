@@ -21,6 +21,10 @@
 //   - the newest question (or answer to yours, or connection request) right in
 //     the bar with its buttons, so an OBS dock kept one row tall works on its
 //     own; a bar that short opens Ask and Connections as pop-outs too
+//   - the bar's quick strip: fast notes from the Ask box's "Quick info" (2
+//     minutes), lines of Twitch chat a mod flagged (2 minutes) and "Love notes"
+//     (30 seconds, fading in and out fuzzily); nothing's stored, so only people
+//     online get them
 //   - cards below the bar when there's room: questions to you with six
 //     one-tap answers or your own reply; answers to yours with "Mark as seen"
 //     (the person who answered sees "✓ Seen"); nothing clears by itself
@@ -90,6 +94,7 @@
   const peopleBtn = document.getElementById("peopleBtn");
   const quickAsk = document.getElementById("quickAsk");
   const quickEl = document.getElementById("quick");
+  const flashesEl = document.getElementById("flashes");
   const quickTo = document.getElementById("quickTo");
   const quickText = document.getElementById("quickText");
   const askFull = document.getElementById("askFull");
@@ -101,7 +106,7 @@
   const drafts = {}; // question id -> reply being typed (kept if things redraw)
   // The Ask box: who to, the question, and its answer buttons (the six
   // standard ones until some are taken off; "+label" for your own).
-  const askDraft = { to: (POPOUT && params.get("to")) || "", text: "", note: "", options: [...STANDARD], adding: "" };
+  const askDraft = { to: (POPOUT && params.get("to")) || "", text: "", note: "", options: [...STANDARD], adding: "", mode: "ask" }; // mode: "ask" | "info" | "love"
 
   // ===== Saved data ========================================================================
 
@@ -283,8 +288,16 @@
     return b;
   }
 
+  // In the side panel: Twitch Space keeps its own copy of the sign-in, for
+  // flagging chat lines from Twitch's page. Only ever to our own extension page.
+  function shareSignin(token) {
+    const origin = location.ancestorOrigins?.[0] || "";
+    if (EMBED && origin.startsWith("chrome-extension://")) parent.postMessage({ t: "hub-signed-in", token }, origin);
+  }
+
   function signOut() {
     const token = get("token");
+    shareSignin(null);
     localStorage.removeItem("token");
     if (token && !DEV) {
       fetch("https://id.twitch.tv/oauth2/revoke", {
@@ -370,6 +383,8 @@
       if (m.t === "state") gotState(m);
       else if (m.t === "q") gotQuestion(m.q);
       else if (m.t === "msg") gotMessage(m.m);
+      else if (m.t === "flash") gotFlash(m.f);
+      else if (m.t === "flashed") gotFlashed(m);
       else if (m.t === "error") gotError(m);
     };
     ws.onclose = (e) => {
@@ -425,6 +440,62 @@
       askDraft.adding = "";
       if (view === "ask") view = "cards"; // their page shows it in the log
     }
+    render();
+  }
+
+  // ===== The quick strip ===================================================================
+  // Each flash removes itself: info and flagged chat after 2 minutes, love
+  // notes after 30 seconds, fuzzily. They're drawn once and left alone, so
+  // redrawing the rest of the page doesn't restart their fade.
+  const FLASH_MS = { info: 120000, chat: 120000, love: 30000 };
+  const FUZZ_MS = 1400;
+  const FLASH_ICONS = {
+    info: `<path d="M11 2 4 11.5h5L8 18l7-9.5h-5z" ${LINE} stroke-width="1.7"/>`,
+    love: '<path d="M10 17s-6.5-4-6.5-8.6A3.6 3.6 0 0 1 10 6.2a3.6 3.6 0 0 1 6.5 2.2C16.5 13 10 17 10 17z" fill="currentColor"/>',
+    chat: `<path d="M3 4h14v9H8l-4 3v-3H3z" ${LINE} stroke-width="1.8"/>`,
+  };
+  const seenFlashes = new Set();
+
+  function gotFlash(f) {
+    if (f.to !== me.login || seenFlashes.has(f.id)) return; // flagged chat also goes out for glowing in Twitch chat
+    seenFlashes.add(f.id);
+    if (f.kind !== "love") arrived();
+    const chip = el("div", `qflash qflash--${f.kind}`);
+    const color = f.color || colorOf(f.from);
+    if (color && f.kind !== "love") chip.style.setProperty("--c", color);
+    const icon = el("span", "qflash__icon");
+    icon.innerHTML = svg(FLASH_ICONS[f.kind], 15);
+    const body = el("div", "qflash__body");
+    body.title = f.kind === "chat" ? `${f.chatter}: ${f.text} (flagged by ${f.from})` : `${f.text} (${f.from})`;
+    if (f.kind === "chat") {
+      body.append(el("b", null, `${f.chatter}: `), document.createTextNode(f.text), el("span", "qflash__who", ` flagged by ${f.from}`));
+    } else {
+      body.append(document.createTextNode(f.text), el("span", "qflash__who", ` ${f.from}`));
+    }
+    const leave = () => {
+      if (chip.classList.contains("qflash--leaving")) return;
+      chip.classList.add("qflash--leaving");
+      setTimeout(() => chip.remove(), FUZZ_MS);
+    };
+    chip.append(icon, body, closeButton(leave, "Clear this"));
+    flashesEl.append(chip);
+    setTimeout(leave, FLASH_MS[f.kind] - FUZZ_MS);
+  }
+
+  function gotFlashed(m) {
+    askDraft.note = m.reached ? "" : "They're not online right now, so it didn't go: quick notes don't wait.";
+    if (m.reached) {
+      askDraft.sent = m.kind;
+      setTimeout(() => {
+        askDraft.sent = "";
+        render();
+      }, 2500);
+    }
+    render();
+  }
+
+  function sendFlash(kind, to, text) {
+    if (relay({ t: "flash", kind, to, text })) askDraft.text = "";
     render();
   }
 
@@ -1007,7 +1078,7 @@
     const open = alwaysOpen || get("askOpen", true);
     const head = el("button", "ask__head");
     head.type = "button";
-    head.append(el("span", "ask__title", fixedTo ? `Ask ${fixedTo}` : "Ask"));
+    head.append(el("span", "ask__title", fixedTo ? `To ${fixedTo}` : "Send"));
     if (!alwaysOpen) head.append(el("span", `ask__chev${open ? " ask__chev--open" : ""}`));
     head.addEventListener("click", () => {
       if (alwaysOpen) return;
@@ -1016,6 +1087,19 @@
     });
     box.append(head);
     if (!open) return box;
+    // What you're sending: a question, a fast note, or a love note.
+    const modes = el("div", "ask__modes");
+    for (const [mode, label] of [["ask", "Ask"], ["info", "Quick info"], ["love", "Love note"]]) {
+      const b = el("button", `ask__mode${askDraft.mode === mode ? " ask__mode--on" : ""}`, label);
+      b.type = "button";
+      b.addEventListener("click", () => {
+        askDraft.mode = mode;
+        askDraft.note = "";
+        render();
+      });
+      modes.append(b);
+    }
+    box.append(modes);
     if (!fixedTo && !able.length) {
       box.append(el("p", "ask__hint", "Add someone under Connections first. You can ask each other once you've both added each other."));
       return box;
@@ -1052,10 +1136,11 @@
     const to = () => fixedTo || askDraft.to;
 
     const form = el("form", "ask__form");
-    const input = textBox("What do you want to ask?", askDraft.text);
+    const mode = askDraft.mode;
+    const input = textBox(mode === "love" ? "Leave a little love (or poke some fun)" : mode === "info" ? "What do they need to know?" : "What do you want to ask?", askDraft.text);
     input.dataset.key = fixedTo ? `ask-${fixedTo}` : "ask";
     input.className = "ask__input";
-    input.maxLength = MAX_LEN;
+    input.maxLength = mode === "love" ? 80 : MAX_LEN;
     input.addEventListener("input", () => (askDraft.text = input.value));
     const send = el("button", "ask__send");
     send.type = "submit";
@@ -1072,13 +1157,26 @@
       put("presets", [...presets(), question].slice(-MAX_PRESETS));
       render();
     });
-    form.append(input, save, send);
+    form.append(input);
+    if (mode === "ask") form.append(save);
+    form.append(send);
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const question = clean(input.value);
-      if (question) ask(to(), question);
+      if (!question) return;
+      if (mode === "ask") ask(to(), question);
+      else sendFlash(mode, to(), question);
     });
     box.append(form);
+
+    // Quick info and love notes are just the text; say how long they show.
+    if (mode !== "ask") {
+      box.append(el("p", "ask__hint", askDraft.sent === mode ? "Sent ✓"
+        : mode === "love" ? "Fades in on their bar with your name, and fades away after 30 seconds."
+        : "Shows on their bar with your name for 2 minutes. Only reaches people who are online."));
+      if (askDraft.note) box.append(el("p", "ask__note", askDraft.note));
+      return box;
+    }
 
     // Quick questions: tap one to put it in the box; × forgets it.
     if (presets().length) {
@@ -1500,7 +1598,10 @@
     else if (m.t === "seen" && q) gotQuestion({ ...q, seenAt: now });
     else if (m.t === "connect") gotState({ connections: [...connections, { login: m.login, mutual: requests.includes(m.login), online: false }], requests: requests.filter((l) => l !== m.login), tags, questions: Object.values(questions) });
     else if (m.t === "disconnect") gotState({ connections: connections.filter((c) => c.login !== m.login), requests, tags, questions: Object.values(questions) });
-    else if (m.t === "say") gotMessage({ id: `d${now}`, owner: m.owner, from: me.login, text: m.text, at: now });
+    else if (m.t === "flash") {
+      gotFlash({ id: `f${now}`, kind: m.kind, from: "tallglassofwasps", to: me.login, text: m.text, at: now });
+      gotFlashed({ kind: m.kind, reached: 1 });
+    } else if (m.t === "say") gotMessage({ id: `d${now}`, owner: m.owner, from: me.login, text: m.text, at: now });
     else if (m.t === "tag") {
       const next = { ...tags, [m.tag]: [...new Set([...(tags[m.tag] || []), m.login])].filter((l) => m.on || l !== m.login) };
       if (!next[m.tag].length) delete next[m.tag];
@@ -1575,6 +1676,7 @@
     }
     if (!me) return showSignedOut(error ? `Twitch said: ${error}` : "");
     askBtn.hidden = peopleBtn.hidden = false;
+    shareSignin(get("token"));
     setStatus("Connecting…", "wait");
     render();
     connect();
