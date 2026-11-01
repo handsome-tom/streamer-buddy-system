@@ -89,6 +89,7 @@
   const askBtn = document.getElementById("askBtn");
   const peopleBtn = document.getElementById("peopleBtn");
   const quickAsk = document.getElementById("quickAsk");
+  const quickEl = document.getElementById("quick");
   const quickTo = document.getElementById("quickTo");
   const quickText = document.getElementById("quickText");
   const askFull = document.getElementById("askFull");
@@ -567,7 +568,7 @@
   function drawQuickAsk() {
     const able = connections.filter((c) => c.mutual).map((c) => c.login);
     const inBar = short() && able.length > 0;
-    quickAsk.hidden = askFull.hidden = !inBar;
+    quickAsk.hidden = askFull.hidden = quickEl.hidden = !inBar;
     askBtn.hidden = inBar || !me;
     if (!inBar) return;
     const choices = targets();
@@ -577,6 +578,68 @@
       quickTo.replaceChildren(...choices.map((l, k) => new Option(labels[k], l)));
     }
     quickTo.value = want;
+    drawQuick();
+  }
+
+  // Quick questions beside the bar's Ask field: one tap asks whoever the
+  // field's picker is set to. × (on hover) forgets one; + adds one.
+  let addingQuick = false;
+  function drawQuick() {
+    const parts = presets().map((text) => {
+      const sentNow = quickSent === text;
+      const b = el("button", `pill pill--quick${sentNow ? " pill--sent" : ""}`);
+      b.type = "button";
+      b.title = `Ask ${targetLabel(quickTo.value || "*")}: ${text}`;
+      b.append(el("span", null, sentNow ? "Sent ✓" : text));
+      const x = el("span", "pill__x", "×");
+      x.title = "Forget this quick question";
+      x.addEventListener("click", (e) => {
+        e.stopPropagation();
+        put("presets", presets().filter((p) => p !== text));
+        render();
+      });
+      if (!sentNow) b.append(x);
+      b.addEventListener("click", () => sendQuick(text));
+      return b;
+    });
+    if (addingQuick) {
+      const form = el("form", "quick__add");
+      const box = textBox("New quick question");
+      box.dataset.key = "quick-add";
+      box.maxLength = MAX_LEN;
+      box.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          addingQuick = false;
+          render();
+        }
+      });
+      box.addEventListener("blur", () => setTimeout(() => {
+        if (addingQuick && !box.value.trim()) {
+          addingQuick = false;
+          render();
+        }
+      }, 150));
+      form.append(box);
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const text = clean(box.value);
+        if (text && !presets().includes(text)) put("presets", [...presets(), text].slice(-MAX_PRESETS));
+        addingQuick = false;
+        render();
+      });
+      parts.push(form);
+      setTimeout(() => box.focus());
+    } else if (presets().length < MAX_PRESETS) {
+      const add = el("button", "pill pill--icon pill--add", "+");
+      add.type = "button";
+      add.title = "Add a quick question";
+      add.addEventListener("click", () => {
+        addingQuick = true;
+        render();
+      });
+      parts.push(add);
+    }
+    quickEl.replaceChildren(...parts);
   }
 
   // The dots: one per connection; green ring while online, faded until they've
@@ -801,16 +864,6 @@
       add.addEventListener("click", () => relay({ t: "connect", login }));
       parts.push(line, add);
     }
-    else if (connections.some((c) => c.mutual) && presets().length) {
-      parts.push(el("span", "peek__label", "Ask everyone:"));
-      for (const text of presets()) {
-        const b = el("button", `pill pill--quick${quickSent === text ? " pill--sent" : ""}`, quickSent === text ? "Sent ✓" : text);
-        b.type = "button";
-        b.title = `Ask everyone: ${text}`;
-        b.addEventListener("click", () => sendQuick(text));
-        parts.push(b);
-      }
-    }
     if (signinNote()) parts.unshift(signinPill());
     const more = open.length + answers.length - (open.length || answers.length ? 1 : 0);
     if (more > 0) {
@@ -861,8 +914,7 @@
   let quickSent = ""; // the quick question just sent, shown as "Sent" for a moment
 
   function sendQuick(text) {
-    askDraft.options = [...STANDARD];
-    if (relay({ t: "ask", to: "*", text, options: STANDARD })) {
+    if (relay({ t: "ask", to: quickTo.value || "*", text, options: STANDARD })) {
       quickSent = text;
       render();
       setTimeout(() => {
@@ -1324,6 +1376,7 @@
     setTimeout(() => (quickText.placeholder = "Ask…"), 2500);
   });
   askFull.addEventListener("click", () => show("ask", quickTo.value));
+  quickTo.addEventListener("change", drawQuick);
   // The dock being resized can change it between one row and full.
   addEventListener("resize", () => me && render());
   askBtn.addEventListener("click", () => {

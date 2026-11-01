@@ -1271,3 +1271,55 @@ main:has(> .cards:empty) {
   outline: none;
   width: 120px;
 }
+
+/* Quick questions beside the bar's Ask field. */
+.quick {
+  flex: 0 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+}
+.pill--quick {
+  position: relative;
+}
+.pill__x {
+  display: none;
+  margin: 0 -6px 0 2px;
+  padding: 0 4px;
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 16px;
+}
+.pill--quick:hover .pill__x {
+  display: inline;
+}
+.pill__x:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+}
+.pill--add {
+  width: 28px;
+  border: 1px dashed var(--field);
+  background: none;
+  color: var(--muted);
+  font-size: 16px;
+}
+.pill--add:hover:not(:disabled) {
+  border-color: var(--purple);
+  color: var(--text);
+}
+.quick__add input {
+  width: 190px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--purple);
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}

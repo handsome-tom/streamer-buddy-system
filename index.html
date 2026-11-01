@@ -11,15 +11,16 @@
     <!-- One profile-picture dot per connection (OBS's dock title already says
          Streamer Buddy System). -->
     <div class="dots" id="dots"></div>
-    <span class="bar__status" id="status" title=""></span>
-    <!-- The newest question (or answer), with its answers, right in the bar. -->
-    <div class="peek" id="peek"></div>
-    <!-- In a one-row dock: ask right here (Enter sends), and a button for the full Ask window. -->
+    <!-- In a one-row dock: ask right here (Enter sends); quick questions beside it. -->
     <form class="qa" id="quickAsk" hidden>
       <select class="qa__to" id="quickTo" title="Who to ask"></select>
       <input class="qa__text" id="quickText" type="text" maxlength="200" placeholder="Ask…" autocomplete="off" spellcheck="false"
              name="hub-quick-ask" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
     </form>
+    <div class="quick" id="quick" hidden></div>
+    <span class="bar__status" id="status" title=""></span>
+    <!-- The newest question (or answer), with its answers, right in the bar. -->
+    <div class="peek" id="peek"></div>
     <button class="pill pill--icon" id="askFull" type="button" title="Open the full Ask window" aria-label="Open the full Ask window" hidden>
       <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M11 3h6v6M17 3l-7 7M8 4H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-4"/>
