@@ -1,2 +1,5 @@
 .DS_Store
 .claude/
+# Cloudflare tool caches and local test data (relay/)
+node_modules/
+.wrangler/
