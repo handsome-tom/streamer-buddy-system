@@ -1323,3 +1323,45 @@ main:has(> .cards:empty) {
   font-size: 12px;
   outline: none;
 }
+
+/* The question field takes the whole width; save (☆) and send (↑) sit small
+   inside its right end. */
+.ask__form {
+  align-items: center;
+  gap: 2px;
+  height: 38px;
+  padding: 0 4px 0 0;
+  border: 1px solid var(--field);
+  border-radius: 19px;
+  background: var(--bg);
+}
+.ask__form:focus-within {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px rgba(145, 71, 255, 0.25);
+}
+.ask__form .ask__input,
+.ask__form .ask__input:focus {
+  height: 100%;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.ask__form .ask__save {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  font-size: 14px;
+  line-height: 1;
+}
+.ask__form .ask__save:hover {
+  background: rgba(255, 179, 26, 0.12);
+}
+.ask__form .ask__send {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+}

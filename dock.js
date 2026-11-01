@@ -1014,9 +1014,13 @@
     input.className = "ask__input";
     input.maxLength = MAX_LEN;
     input.addEventListener("input", () => (askDraft.text = input.value));
-    const send = el("button", "ask__send", "Send");
+    const send = el("button", "ask__send");
     send.type = "submit";
+    send.title = "Send";
+    send.setAttribute("aria-label", "Send");
+    send.innerHTML = `<svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 16V4M5 9l5-5 5 5"/></svg>`;
     const save = el("button", "ask__save", "☆");
+    save.setAttribute("aria-label", "Save as a quick question");
     save.type = "button";
     save.title = "Save as a quick question";
     save.addEventListener("click", () => {
