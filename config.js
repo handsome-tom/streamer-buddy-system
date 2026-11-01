@@ -10,4 +10,4 @@ const TWITCH_CLIENT_ID = "v6pt264d6puelgyjk5nqbph90j25zz";
 // --port 8788 --var DEV_AUTH:1` in relay/) is used instead.
 const RELAY_URL = location.hostname === "localhost"
   ? "ws://localhost:8788/ws"
-  : "";
+  : "wss://streamer-buddy-relay.handsome-tom.workers.dev/ws";
