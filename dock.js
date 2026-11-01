@@ -69,6 +69,9 @@
     x: { label: "", icon: `<path d="M3 10.6V4a1 1 0 0 1 1-1h6.6l6.7 6.7a1 1 0 0 1 0 1.4l-5.6 5.6a1 1 0 0 1-1.4 0z" ${LINE} stroke-width="1.7"/><circle cx="7" cy="7" r="1.3" fill="currentColor"/>` }, // one of the asker's own options
   };
   const STANDARD = ["y", "n", "m", "s", "o", "t"];
+  // Accounts whose picture gets a bright ring everywhere, so they stand out
+  // (Alex's own channel).
+  const HIGHLIGHT = { myspacetomofficial: "#3fb2ff" };
   const MAX_OPTIONS = 8;
 
   // A question's answer buttons, in the asker's order: { code, label }. The
@@ -530,6 +533,10 @@
         dot.style.setProperty("--c", colorOf(login));
         dot.style.setProperty("--ink", inkOn(colorOf(login)));
       }
+      if (HIGHLIGHT[login]) {
+        dot.style.setProperty("--ring", HIGHLIGHT[login]);
+        dot.classList.add("dot--highlight");
+      }
       dot.title = !mutual ? `Waiting for ${login} to add you back`
         : asks ? `${login} asked you something`
         : answers ? `${login} answered you`
@@ -761,6 +768,24 @@
     return x;
   }
 
+  let pickerOpen = false; // the Ask box's who-to drop-down
+
+  // A person as a chip: picture (bright ring if highlighted), name, online dot.
+  function personChip(login, className) {
+    const chip = el("button", className);
+    chip.type = "button";
+    if (HIGHLIGHT[login]) chip.style.setProperty("--ring", HIGHLIGHT[login]);
+    if (pics[login]) {
+      const img = el("img");
+      img.src = pics[login];
+      img.alt = "";
+      chip.append(img);
+    }
+    chip.append(el("span", "ask__name", login));
+    if (conn(login)?.online) chip.append(el("span", "ask__online"));
+    return chip;
+  }
+
   // Ask one of your connections a question (a pop-out from a one-row bar).
   function askPanel() {
     const panel = el("div", "panel");
@@ -793,26 +818,31 @@
       return box;
     }
 
+    // Who to ask: the chosen person, with a caret that drops down the rest.
     if (!fixedTo) {
       if (!able.includes(askDraft.to)) askDraft.to = able[0];
       const who = el("div", "ask__who");
-      for (const login of able) {
-        const c = conn(login);
-        const chip = el("button", `ask__person${login === askDraft.to ? " ask__person--on" : ""}`);
-        chip.type = "button";
-        if (pics[login]) {
-          const img = el("img");
-          img.src = pics[login];
-          img.alt = "";
-          chip.append(img);
+      const pick = personChip(askDraft.to, "ask__person ask__person--on");
+      pick.append(el("span", `ask__caret${pickerOpen ? " ask__caret--open" : ""}`));
+      pick.title = "Ask someone else";
+      pick.addEventListener("click", () => {
+        pickerOpen = !pickerOpen;
+        render();
+      });
+      who.append(pick);
+      if (pickerOpen) {
+        const list = el("div", "ask__menu");
+        for (const login of able) {
+          const row = personChip(login, `ask__menuitem${login === askDraft.to ? " ask__menuitem--on" : ""}`);
+          row.addEventListener("click", () => {
+            askDraft.to = login;
+            pickerOpen = false;
+            render();
+          });
+          list.append(row);
         }
-        chip.append(el("span", null, login));
-        if (c?.online) chip.append(el("span", "ask__online"));
-        chip.addEventListener("click", () => {
-          askDraft.to = login;
-          render();
-        });
-        who.append(chip);
+        if (able.length === 1) list.append(el("div", "ask__menuhint", "Add more people under Connections."));
+        who.append(list);
       }
       box.append(who);
     }
