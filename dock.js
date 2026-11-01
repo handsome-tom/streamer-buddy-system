@@ -4,6 +4,10 @@
 //     windows (?popout)
 //   - the hub in Twitch Space's Chrome side panel (?embed=ext, inside an
 //     iframe: sign-in is handed over by the extension, see below)
+//   - a phone deck (?deck), added to a home screen like an app: big tiles that
+//     send a question, quick info or a love note in one tap, like a Stream
+//     Deck. It signs in with Twitch's code sign-in (twitch.tv/activate), since
+//     home-screen apps can't always come back from a sign-in page
 // Everyone talks through the relay (relay/ in this repo, on Cloudflare): a
 // WebSocket that signs in with your Twitch sign-in, keeps connections and the
 // week's questions, and says who's online. Questions wait there for anyone
@@ -66,6 +70,7 @@
   const POPOUT = params.has("popout");
   // Inside Twitch Space's side panel: sign-in comes from the extension.
   const EMBED = params.get("embed") === "ext";
+  const DECK = params.has("deck");
 
   const svg = (paths, size = 18) => `<svg viewBox="0 0 20 20" width="${size}" height="${size}" aria-hidden="true">${paths}</svg>`;
   const LINE = 'fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"';
@@ -110,7 +115,8 @@
   const chatCount = document.getElementById("chatCount");
 
   let me = null; // { login, id }
-  let view = POPOUT && /^(ask|people|person|chat|stats)$/.test(params.get("view")) ? params.get("view") : "cards"; // "cards" | "ask" | "people" | "person"
+  const HOME_VIEW = DECK ? "deck" : "cards";
+  let view = POPOUT && /^(ask|people|person|chat|stats)$/.test(params.get("view")) ? params.get("view") : HOME_VIEW; // "cards" | "deck" | "ask" | "people" | "person" | "chat" | "stats"
   const drafts = {}; // question id -> reply being typed (kept if things redraw)
   // The Ask box: who to, the question, and its answer buttons (the six
   // standard ones until some are taken off; "+label" for your own).
@@ -238,6 +244,7 @@
   // the extension does it in a window of its own and hands the token over.
 
   function signIn() {
+    if (DECK) return codeSignIn();
     if (EMBED) return parent.postMessage({ t: "hub-signin" }, "*");
     const state = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
     put("signinState", state);
@@ -249,6 +256,59 @@
       state,
     });
     location.href = `https://id.twitch.tv/oauth2/authorize?${q}`;
+  }
+
+  // The phone deck: Twitch shows nothing here; you enter a code at
+  // twitch.tv/activate (on this phone or anything else) and this waits for it.
+  // It comes with a refresh token, so the sign-in renews itself.
+  const TWITCH_TOKEN = "https://id.twitch.tv/oauth2/token";
+  const form = (o) => ({ method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(o) });
+
+  async function codeSignIn() {
+    const scopes = get("statsWanted", false) ? STATS_SCOPES.join(" ") : SCOPES;
+    let d;
+    try {
+      d = await (await fetch("https://id.twitch.tv/oauth2/device", form({ client_id: TWITCH_CLIENT_ID, scopes }))).json();
+    } catch {}
+    if (!d?.user_code) return showSignedOut("Couldn't reach Twitch. Try again.");
+    const box = el("div", "signin");
+    const link = el("a", "signin__btn signin__link", "Open twitch.tv/activate");
+    link.href = d.verification_uri;
+    link.target = "_blank";
+    link.rel = "noopener";
+    box.append(el("div", "signin__head", "Enter this code on Twitch"), el("div", "signin__code", d.user_code), link, el("p", "signin__sub", "Then come back here. This page signs in by itself."));
+    main.replaceChildren(box);
+    const stopAt = Date.now() + d.expires_in * 1000;
+    const poll = async () => {
+      if (Date.now() > stopAt) return showSignedOut("That code ran out. Try again.");
+      try {
+        const j = await (await fetch(TWITCH_TOKEN, form({ client_id: TWITCH_CLIENT_ID, scopes, device_code: d.device_code, grant_type: "urn:ietf:params:oauth:grant-type:device_code" }))).json();
+        if (j.access_token) {
+          put("token", j.access_token);
+          put("refresh", j.refresh_token);
+          return start();
+        }
+      } catch {}
+      setTimeout(poll, (d.interval || 5) * 1000);
+    };
+    poll();
+  }
+
+  // A fresh sign-in from the refresh token, if there is one.
+  async function renewSignin() {
+    const refresh = get("refresh");
+    if (!refresh) return false;
+    try {
+      const r = await fetch(TWITCH_TOKEN, form({ client_id: TWITCH_CLIENT_ID, grant_type: "refresh_token", refresh_token: refresh }));
+      const j = await r.json();
+      if (j.access_token) {
+        put("token", j.access_token);
+        put("refresh", j.refresh_token);
+        return true;
+      }
+      if (r.status === 400 || r.status === 401) localStorage.removeItem("refresh");
+    } catch {}
+    return false;
   }
 
   // Back from Twitch: keep the token and clear it out of the address.
@@ -276,6 +336,7 @@
     if (!token) return null;
     const r = await fetch("https://id.twitch.tv/oauth2/validate", { headers: { Authorization: `OAuth ${token}` } });
     if (r.status === 401) {
+      if (await renewSignin()) return validate();
       localStorage.removeItem("token");
       return null;
     }
@@ -288,7 +349,7 @@
   // it has), with a button to sign in again.
   const RENEW_MS = 3 * 24 * 60 * 60 * 1000;
   function signinNote() {
-    if (!me?.expiresAt || DEMO) return "";
+    if (!me?.expiresAt || DEMO || get("refresh")) return ""; // a refresh token renews by itself
     const left = me.expiresAt - Date.now();
     if (left <= 0) return "Twitch sign-in ran out";
     if (left > RENEW_MS) return "";
@@ -313,6 +374,7 @@
     const token = get("token");
     shareSignin(null);
     localStorage.removeItem("token");
+    localStorage.removeItem("refresh");
     if (token && !DEV) {
       fetch("https://id.twitch.tv/oauth2/revoke", {
         method: "POST",
@@ -408,7 +470,10 @@
     ws.onclose = (e) => {
       if (ws !== socket) return;
       socket = null;
-      if (e.code === 4001) return showSignedOut("Your Twitch sign-in ran out. Sign in again.");
+      if (e.code === 4001) {
+        renewSignin().then((ok) => (ok ? connect() : showSignedOut("Your Twitch sign-in ran out. Sign in again.")));
+        return;
+      }
       setStatus("Reconnecting…", "wait");
       setTimeout(connect, retryMs);
       retryMs = Math.min(retryMs * 2, 30000);
@@ -553,7 +618,7 @@
 
   function gotError(m) {
     for (const k of Object.keys(pending)) delete pending[k];
-    if (m.why === "signin") return showSignedOut("Your Twitch sign-in ran out. Sign in again.");
+    if (m.why === "signin") return; // the socket closing next deals with it
     askDraft.note = `${m.why}.`;
     setStatus(m.why, "bad");
     setTimeout(() => ready && setStatus("Online", "ok"), 6000);
@@ -574,6 +639,7 @@
     document.body.classList.remove("flash");
     void document.body.offsetWidth;
     document.body.classList.add("flash");
+    if (DECK) navigator.vibrate?.([80, 40, 80]);
     chime();
   }
 
@@ -640,7 +706,7 @@
   let popWin = null;
   function popOut(show = "cards", to = "") {
     if (POPOUT) return window;
-    if (EMBED) return null;
+    if (EMBED || DECK) return null;
     const q = new URLSearchParams({ popout: "", view: show, to });
     if (DEMO) q.set("demo", "");
     if (DEV) q.set("dev", DEV);
@@ -650,7 +716,7 @@
   }
 
   // Kept to one row: no room below the bar, so Ask and Connections pop out.
-  const short = () => !POPOUT && !EMBED && innerHeight < 120;
+  const short = () => !POPOUT && !EMBED && !DECK && innerHeight < 120;
 
   // Ask / Connections / someone's page: here, or popped out if the dock is just the bar.
   function show(next, to = "") {
@@ -661,7 +727,7 @@
       askDraft.note = "";
     }
     if (next !== "cards" && short() && popOut(next, to)) return;
-    view = view === next && next !== "person" ? "cards" : next;
+    view = view === next && next !== "person" ? HOME_VIEW : next;
     render();
   }
 
@@ -672,7 +738,7 @@
     derive();
     // Keep typing where it was if things are redrawn under you.
     const typingIn = document.activeElement?.dataset?.key;
-    main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : cardList());
+    main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : view === "deck" ? deckPanel() : cardList());
     if (view === "chat") main.querySelector(".chat__log")?.scrollTo(0, 1e9);
     drawDots();
     drawPeek();
@@ -681,11 +747,11 @@
       again?.focus();
       again?.setSelectionRange?.(again.value.length, again.value.length);
     }
-    askBtn.classList.toggle("pill--on", view === "ask" || (view === "cards" && !short() && get("askOpen", true)));
+    askBtn.classList.toggle("pill--on", DECK ? view === "deck" : view === "ask" || (view === "cards" && !short() && get("askOpen", true)));
     peopleBtn.classList.toggle("pill--on", view === "people");
     peopleBtn.classList.toggle("pill--badge", requests.length > 0);
     peopleBtn.title = requests.length ? `Connections (${requests.length} waiting for you to add them back)` : "Connections";
-    askBtn.textContent = view === "ask" ? "Cancel" : "Ask";
+    askBtn.textContent = DECK ? "Deck" : view === "ask" ? "Cancel" : "Ask";
     drawQuickAsk();
     statsBtn.hidden = !connections.length && !statsOn;
     statsBtn.classList.toggle("pill--on", view === "stats");
@@ -833,7 +899,7 @@
   function cardList() {
     const wrap = el("div", "cards");
     if (signinNote()) wrap.append(signinPill());
-    if (!POPOUT) wrap.append(composer(null));
+    if (!POPOUT && !DECK) wrap.append(composer(null));
     const answers = Object.keys(sent).filter((id) => sent[id].answer && !sent[id].answer.seen).sort((a, b) => sent[a].answer.at - sent[b].answer.at);
     const waiting = Object.keys(sent).filter((id) => !sent[id].answer && !sent[id].seen).sort((a, b) => sent[a].at - sent[b].at);
     const open = Object.keys(inbox).filter((id) => !inbox[id].done).sort((a, b) => inbox[a].at - inbox[b].at);
@@ -1054,6 +1120,7 @@
   // to everyone.
   const MAX_PRESETS = 8;
   const presets = () => get("presets", ["Clip that!", "Anyone free to help?"]);
+  if (DECK && localStorage.getItem("askOpen") === null) put("askOpen", false);
   let quickSent = ""; // the quick question just sent, shown as "Sent" for a moment
 
   function sendQuick(text) {
@@ -1602,6 +1669,125 @@
     main.replaceChildren(box);
   }
 
+  // ===== The phone deck ====================================================================
+  // Big tiles, each one tap: a question, quick info or a love note to whoever's
+  // picked at the top. "Edit" adds and removes tiles (saved on this phone).
+
+  const DECK_TILES = [
+    { kind: "ask", text: "Clip that!" },
+    { kind: "ask", text: "Anyone free to help?" },
+    { kind: "info", text: "Your mic is muted" },
+    { kind: "info", text: "Game audio is loud" },
+    { kind: "info", text: "Stream is lagging" },
+    { kind: "info", text: "Check chat" },
+    { kind: "love", text: "You've got this" },
+    { kind: "love", text: "Looking good today" },
+  ];
+  const DECK_KINDS = { ask: "Question", info: "Quick info", love: "Love note" };
+  const deckTiles = () => get("deckTiles", DECK_TILES);
+  const deckState = { editing: false, sent: -1, kind: "info", text: "" };
+
+  function sendTile(tile, i, to) {
+    const sentOk = tile.kind === "ask"
+      ? relay({ t: "ask", to, text: tile.text, options: STANDARD })
+      : relay({ t: "flash", kind: tile.kind, to, text: tile.text });
+    if (!sentOk) return;
+    navigator.vibrate?.(30);
+    deckState.sent = i;
+    render();
+    setTimeout(() => {
+      if (deckState.sent === i) deckState.sent = -1;
+      render();
+    }, 1500);
+  }
+
+  function deckPanel() {
+    const panel = el("div", "deckp");
+    const choices = targets();
+    if (!choices.length) {
+      panel.append(el("p", "panel__sub", "Nobody to send to yet. Add people with the two-people icon; you can reach each other once you've both added each other."));
+      return panel;
+    }
+
+    // Who gets it.
+    const want = get("deckTo", "");
+    const to = choices.includes(want) ? want : choices[0];
+    const who = el("label", "deckp__who");
+    who.append(el("span", null, "To"));
+    const pick = el("select");
+    for (const t of choices) pick.append(new Option(targetLabel(t), t, false, t === to));
+    pick.addEventListener("change", () => put("deckTo", pick.value));
+    const edit = el("button", `pill${deckState.editing ? " pill--on" : ""}`, deckState.editing ? "Done" : "Edit");
+    edit.type = "button";
+    edit.addEventListener("click", () => {
+      deckState.editing = !deckState.editing;
+      render();
+    });
+    who.append(pick, edit);
+    panel.append(who);
+
+    // Anything waiting on you comes first.
+    const answers = Object.keys(sent).filter((id) => sent[id].answer && !sent[id].answer.seen);
+    const open = Object.keys(inbox).filter((id) => !inbox[id].done);
+    for (const id of open) panel.append(questionCard(id));
+    for (const id of answers) panel.append(answerCard(id));
+    for (const login of requests) panel.append(requestRow(login));
+
+    // The tiles.
+    const grid = el("div", "deckp__grid");
+    deckTiles().forEach((tile, i) => {
+      const b = el("button", `tile tile--${tile.kind}${deckState.sent === i ? " tile--sent" : ""}`);
+      b.type = "button";
+      const icon = el("span", "tile__icon");
+      icon.innerHTML = svg(tile.kind === "ask" ? ANSWERS.m.icon : FLASH_ICONS[tile.kind], 20);
+      b.append(icon, el("span", "tile__text", deckState.sent === i ? "Sent ✓" : tile.text));
+      b.addEventListener("click", () => {
+        if (deckState.editing) return;
+        sendTile(tile, i, pick.value);
+      });
+      if (deckState.editing) {
+        const x = el("span", "tile__x", "×");
+        x.addEventListener("click", () => {
+          put("deckTiles", deckTiles().filter((_, k) => k !== i));
+          render();
+        });
+        b.append(x);
+      }
+      grid.append(b);
+    });
+    panel.append(grid);
+
+    // Adding a tile.
+    if (deckState.editing) {
+      const add = el("form", "deckp__add");
+      const kind = el("select");
+      for (const [k, label] of Object.entries(DECK_KINDS)) kind.append(new Option(label, k, false, k === deckState.kind));
+      kind.addEventListener("change", () => (deckState.kind = kind.value));
+      const text = textBox("What the tile sends", deckState.text);
+      text.dataset.key = "deck-add";
+      text.maxLength = 80;
+      text.addEventListener("input", () => (deckState.text = text.value));
+      const go = el("button", "pill pill--on", "Add");
+      go.type = "submit";
+      add.append(kind, text, go);
+      add.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const words = clean(text.value);
+        if (!words) return;
+        put("deckTiles", [...deckTiles(), { kind: kind.value, text: words }]);
+        deckState.text = "";
+        render();
+      });
+      panel.append(add);
+      panel.append(el("p", "panel__sub", "Tiles are saved on this phone. Questions offer the six standard answers."));
+    }
+    if (askDraft.note) panel.append(el("p", "ask__note", askDraft.note));
+
+    // Type something once, without a tile.
+    panel.append(composer(null));
+    return panel;
+  }
+
   // ===== Stats: what's public ==============================================================
   // Anyone signed in can read these for any channel.
 
@@ -1987,6 +2173,10 @@
   // The dock being resized can change it between one row and full.
   addEventListener("resize", () => me && render());
   askBtn.addEventListener("click", () => {
+    if (DECK) {
+      view = "deck";
+      return render();
+    }
     if (short()) return show("ask");
     put("askOpen", true);
     view = "cards";
@@ -1994,8 +2184,14 @@
     document.querySelector('[data-key="ask"]')?.focus();
   });
 
+  // A phone puts pages to sleep: reconnect as soon as it's back.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && me && !DEMO && !socket) connect();
+  });
+
   let started = false;
   async function start() {
+    if (DECK) document.body.classList.add("deck");
     if (POPOUT) document.body.classList.add("popout");
     if (EMBED) document.body.classList.add("embed");
     if (DEMO) {

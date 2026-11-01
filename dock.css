@@ -1689,3 +1689,137 @@ a.stats__value {
 .stats {
   overflow-y: auto;
 }
+
+/* ===== The phone deck (?deck) ===== */
+.deck {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  -webkit-tap-highlight-color: transparent;
+}
+.deck .bar {
+  flex-wrap: wrap;
+}
+.deck button,
+.deck select,
+.deck input {
+  touch-action: manipulation;
+}
+/* Phones zoom in on small text fields; 16px stops that. */
+.deck input,
+.deck select {
+  font-size: 16px !important;
+}
+.deckp {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.deckp__who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.deckp__who select {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--field);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 700;
+}
+.deckp__who .pill {
+  height: 40px;
+  border-radius: 10px;
+}
+.deckp__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px;
+}
+.tile {
+  --c: #bf94ff;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 96px;
+  padding: 11px;
+  border: 1px solid color-mix(in srgb, var(--c) 45%, #26262c);
+  border-radius: 14px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--c) 16%, var(--panel)), var(--panel));
+  color: var(--text);
+  text-align: left;
+  transition: transform 0.08s;
+}
+.tile:active {
+  transform: scale(0.96);
+}
+.tile--info { --c: #3fb2ff; }
+.tile--love { --c: #ff7ab8; }
+.tile--sent {
+  --c: var(--good);
+  border-color: var(--good);
+}
+.tile__icon {
+  display: flex;
+  color: var(--c);
+}
+.tile__text {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.tile__x {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--text);
+  font-size: 18px;
+  line-height: 28px;
+  text-align: center;
+}
+.deckp__add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.deckp__add select,
+.deckp__add input {
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--field);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+}
+.deckp__add input {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.deckp__add .pill {
+  height: 40px;
+  border-radius: 10px;
+}
+.signin__code {
+  margin: 12px 0;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 4px;
+}
+.signin__link {
+  display: inline-block;
+  color: #fff;
+  text-decoration: none;
+}
