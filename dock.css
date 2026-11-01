@@ -790,3 +790,225 @@ main:has(> .cards:empty) {
   border-left-color: var(--amber);
   color: var(--text);
 }
+
+/* ===== The Ask box: open at the top, folds away ===== */
+.ask {
+  margin-bottom: 4px;
+  padding: 10px 12px 12px;
+  border: 1px solid #2f2f35;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #1f1f23 0%, var(--panel) 100%);
+}
+.ask__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  text-align: left;
+}
+.ask__title {
+  font-size: 14px;
+  font-weight: 700;
+}
+.ask__chev {
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+.ask__chev--open {
+  transform: rotate(45deg);
+}
+.ask__who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.ask__person {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px 0 3px;
+  border: 1px solid #3a3a3d;
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.ask__person img {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+.ask__person--on {
+  border-color: var(--purple);
+  background: rgba(145, 71, 255, 0.16);
+  color: var(--text);
+}
+.ask__online {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--good);
+}
+.ask__form {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+.ask__input {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--field);
+  border-radius: 19px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+.ask__input:focus {
+  border-color: var(--purple);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(145, 71, 255, 0.25);
+}
+.ask__send {
+  flex: none;
+  height: 38px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 19px;
+  background: var(--purple);
+  color: #fff;
+  font-weight: 700;
+}
+.ask__send:hover {
+  background: var(--purple-dark);
+}
+.ask__label {
+  margin: 12px 0 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.ask__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ask__option {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 4px 0 10px;
+  border-radius: 13px;
+  background: #2f2f35;
+  font-size: 12px;
+  font-weight: 600;
+}
+.ask__option > span:first-child {
+  display: flex;
+}
+.ask__option--own {
+  background: rgba(145, 71, 255, 0.2);
+  color: #d4bbff;
+}
+.ask__optx {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 18px;
+}
+.ask__optx:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+}
+.ask__add input {
+  width: 118px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px dashed var(--field);
+  border-radius: 13px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+.ask__add input:focus {
+  border-style: solid;
+  border-color: var(--purple);
+  outline: none;
+}
+.ask__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+.ask__hint,
+.ask__note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.ask__foot .ask__hint {
+  margin: 0;
+}
+.ask__note {
+  color: var(--bad);
+}
+.ask__reset {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #bf94ff;
+  font-size: 12px;
+}
+.ask__reset:hover {
+  text-decoration: underline;
+}
+
+/* The asker's own options, on cards and in the bar: words, no icon. */
+.qcard__answer--own {
+  justify-content: center;
+  color: #d4bbff;
+}
+.pill--own .pill__label {
+  display: inline !important;
+}
+.pill--own {
+  width: auto !important;
+  padding: 0 12px !important;
+}
+.person .ask {
+  margin-top: 6px;
+}
+
+/* With room below the bar, the cards show it all; the bar's preview is for
+   a dock kept one row tall. */
+@media (min-height: 120px) {
+  .peek { display: none; }
+  .bar__status { flex: 1; }
+  .bar:has(.peek:not(:empty)) .bar__status:not(.bar__status--bad) { display: inline; }
+}

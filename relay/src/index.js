@@ -12,14 +12,18 @@
 // other side sees the request. Whether someone's online is only shared
 // between mutual connections.
 //
-// Questions: { id, from, to, text, at, answer: { code, text, at } | null,
-// dismissed, seenAt }. Only the person asked can answer or dismiss; only the
+// Questions: { id, from, to, text, at, options, answer: { code, text, at } | null,
+// dismissed, seenAt }. options are the answer buttons the asker chose: any of
+// the six standard ones by letter (y n m s o t) and their own, as "+label"; a
+// typed reply ("c") is always allowed. A question without options (from before
+// options) offers the six standard ones. Answering with your own option is
+// code "x" with its label as the text. Only the person asked can answer or dismiss; only the
 // asker can mark the answer seen. Kept a week, and waiting here for anyone
 // who's offline, so nothing's lost while OBS is closed.
 //
 // Messages from a page:
 //   auth { token }          connect { login }        disconnect { login }
-//   ask { to, text }        answer { id, code, text } dismiss { id }
+//   ask { to, text, options }  answer { id, code, text }  dismiss { id }
 //   seen { id }
 // Messages to a page:
 //   state { me, connections, requests, questions }   (on sign-in, and whenever
@@ -32,7 +36,9 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_LEN = 200;
 const MAX_OPEN_PER_PAIR = 3;
 const MAX_ASKS_PER_MINUTE = 10;
-const ANSWER_CODES = "ynmsotc";
+const STANDARD = ["y", "n", "m", "s", "o", "t"];
+const MAX_OPTIONS = 8;
+const MAX_OPTION_LEN = 30;
 
 export default {
   async fetch(req, env) {
@@ -199,17 +205,22 @@ export class Hub {
     if (all.filter((q) => q.from === who.login && q.to === to && !q.answer && !q.dismissed).length >= MAX_OPEN_PER_PAIR) {
       return this.send(ws, { t: "error", why: `${to} already has ${MAX_OPEN_PER_PAIR} unanswered questions from you` });
     }
-    const q = { id: crypto.randomUUID().slice(0, 8), from: who.login, to, text, at: Date.now(), answer: null, dismissed: 0, seenAt: 0 };
+    const q = { id: crypto.randomUUID().slice(0, 8), from: who.login, to, text, at: Date.now(), options: cleanOptions(m.options), answer: null, dismissed: 0, seenAt: 0 };
     await this.ctx.storage.put(`q:${q.id}`, q);
     this.share(q);
   }
 
+  // Only with one of the question's own options, or a typed reply.
   async answer(ws, who, m) {
     const code = String(m.code || "");
-    if (code.length !== 1 || !ANSWER_CODES.includes(code)) return;
-    const text = code === "c" ? clean(m.text) : "";
-    if (code === "c" && !text) return;
-    await this.update(ws, who, m.id, (q) => q.to === who.login && !q.answer && !q.dismissed, (q) => (q.answer = { code, text, at: Date.now() }));
+    const text = code === "c" || code === "x" ? clean(m.text) : "";
+    const offered = (q) => {
+      const options = q.options || STANDARD;
+      if (code === "c") return !!text;
+      if (code === "x") return options.includes(`+${text}`);
+      return STANDARD.includes(code) && options.includes(code);
+    };
+    await this.update(ws, who, m.id, (q) => q.to === who.login && !q.answer && !q.dismissed && offered(q), (q) => (q.answer = { code, text, at: Date.now() }));
   }
 
   // Change a question if this person's allowed to; both sides hear.
@@ -225,6 +236,17 @@ export class Hub {
     this.sendTo(q.from, { t: "q", q });
     this.sendTo(q.to, { t: "q", q });
   }
+}
+
+// The asker's answer buttons: standard letters and "+label"s, no repeats.
+function cleanOptions(list) {
+  if (!Array.isArray(list)) return STANDARD;
+  const out = [];
+  for (const o of list) {
+    const v = STANDARD.includes(o) ? o : String(o).startsWith("+") ? `+${clean(String(o).slice(1)).slice(0, MAX_OPTION_LEN)}` : "";
+    if (v && v !== "+" && !out.includes(v)) out.push(v);
+  }
+  return out.slice(0, MAX_OPTIONS);
 }
 
 function clean(s) {

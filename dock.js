@@ -66,7 +66,16 @@
     o: { label: "OK", icon: '<path d="M7 9l3-6c1.2 0 2 .8 2 2v3h3.5a1.5 1.5 0 0 1 1.5 1.8l-1.1 6A1.5 1.5 0 0 1 14.4 17H7zM3 9h3v8H3z" fill="currentColor"/>' },
     t: { label: "Thank you", icon: '<path d="M10 17s-6.5-4-6.5-8.6A3.6 3.6 0 0 1 10 6.2a3.6 3.6 0 0 1 6.5 2.2C16.5 13 10 17 10 17z" fill="currentColor"/>' },
     c: { label: "Replied", icon: `<path d="M3 4h14v9H8l-4 3v-3H3z" ${LINE} stroke-width="1.8"/>` }, // a typed reply
+    x: { label: "", icon: `<path d="M3 10.6V4a1 1 0 0 1 1-1h6.6l6.7 6.7a1 1 0 0 1 0 1.4l-5.6 5.6a1 1 0 0 1-1.4 0z" ${LINE} stroke-width="1.7"/><circle cx="7" cy="7" r="1.3" fill="currentColor"/>` }, // one of the asker's own options
   };
+  const STANDARD = ["y", "n", "m", "s", "o", "t"];
+  const MAX_OPTIONS = 8;
+
+  // A question's answer buttons, in the asker's order: { code, label }. The
+  // asker's own options are code "x" with their label.
+  const optionsOf = (q) => (q.options || STANDARD).map((o) => (o.startsWith("+") ? { code: "x", label: o.slice(1) } : { code: o, label: ANSWERS[o].label }));
+  // What an answer says: a typed reply or own option's words, else its label.
+  const said = (a) => (a.code === "c" || a.code === "x" ? a.text : ANSWERS[a.code].label);
 
   const main = document.getElementById("main");
   const statusEl = document.getElementById("status");
@@ -78,7 +87,9 @@
   let me = null; // { login, id }
   let view = POPOUT && /^(ask|people|person)$/.test(params.get("view")) ? params.get("view") : "cards"; // "cards" | "ask" | "people" | "person"
   const drafts = {}; // question id -> reply being typed (kept if things redraw)
-  const askDraft = { to: (POPOUT && params.get("to")) || "", text: "", note: "" };
+  // The Ask box: who to, the question, and its answer buttons (the six
+  // standard ones until some are taken off; "+label" for your own).
+  const askDraft = { to: (POPOUT && params.get("to")) || "", text: "", note: "", options: [...STANDARD], adding: "" };
 
   // ===== Saved data ========================================================================
 
@@ -125,7 +136,7 @@
       const u = ui[q.id] || {};
       if (q.to === me?.login) {
         inbox[q.id] = {
-          from: q.from, name: q.from, text: q.text, at: q.at,
+          from: q.from, name: q.from, text: q.text, at: q.at, options: q.options,
           done: !!(q.answer || q.dismissed), answered: q.answer, seenAt: q.seenAt,
           sending: !!pending[q.id], cleared: !!u.cleared, gone: !!u.gone,
         };
@@ -356,6 +367,8 @@
     if (!old && q.from === me.login) {
       askDraft.text = "";
       askDraft.note = "";
+      askDraft.options = [...STANDARD]; // options are per question
+      askDraft.adding = "";
       if (view === "ask") view = "cards"; // their page shows it in the log
     }
     render();
@@ -440,7 +453,7 @@
 
   function ask(to, question) {
     askDraft.note = "";
-    relay({ t: "ask", to, text: question });
+    relay({ t: "ask", to, text: question, options: askDraft.options });
   }
 
   // ===== Pop-outs (OBS) ====================================================================
@@ -488,7 +501,7 @@
       again?.focus();
       again?.setSelectionRange?.(again.value.length, again.value.length);
     }
-    askBtn.classList.toggle("pill--on", view === "ask");
+    askBtn.classList.toggle("pill--on", view === "ask" || (view === "cards" && !short() && get("askOpen", true)));
     peopleBtn.classList.toggle("pill--on", view === "people");
     peopleBtn.classList.toggle("pill--badge", requests.length > 0);
     peopleBtn.title = requests.length ? `Connections (${requests.length} waiting for you to add them back)` : "Connections";
@@ -547,6 +560,7 @@
 
   function cardList() {
     const wrap = el("div", "cards");
+    if (!POPOUT) wrap.append(composer(null));
     const answers = Object.keys(sent).filter((id) => sent[id].answer && !sent[id].answer.seen).sort((a, b) => sent[a].answer.at - sent[b].answer.at);
     const waiting = Object.keys(sent).filter((id) => !sent[id].answer && !sent[id].seen).sort((a, b) => sent[a].at - sent[b].at);
     const open = Object.keys(inbox).filter((id) => !inbox[id].done).sort((a, b) => inbox[a].at - inbox[b].at);
@@ -557,7 +571,7 @@
     for (const id of replied) wrap.append(repliedCard(id));
     for (const id of waiting) wrap.append(waitingRow(id));
     // With connections, the dots say it all: nothing here, so the dock can be one row.
-    if (!wrap.children.length && !connections.length) wrap.append(el("div", "empty", "Add people under Connections"));
+
     return wrap;
   }
 
@@ -578,14 +592,13 @@
     card.setAttribute("role", "alertdialog");
     card.append(el("div", "qcard__head", `${q.name} asks`), el("div", "qcard__text", q.text));
     const buttons = el("div", "qcard__answers");
-    for (const [code, a] of Object.entries(ANSWERS)) {
-      if (code === "c") continue;
-      const b = el("button", `qcard__answer answer--${code}`);
+    for (const { code, label } of optionsOf(q)) {
+      const b = el("button", `qcard__answer answer--${code}${code === "x" ? " qcard__answer--own" : ""}`);
       b.type = "button";
       b.disabled = q.sending;
-      b.innerHTML = svg(a.icon);
-      b.append(el("span", null, a.label));
-      b.addEventListener("click", () => answer(id, code));
+      if (code !== "x") b.innerHTML = svg(ANSWERS[code].icon);
+      b.append(el("span", null, label));
+      b.addEventListener("click", () => answer(id, code, code === "x" ? label : ""));
       buttons.append(b);
     }
     const own = el("form", "qcard__own");
@@ -619,7 +632,7 @@
     const body = el("div", "acard__body");
     body.append(
       el("div", "acard__who", `${q.to} answered`),
-      el("div", "acard__head", q.answer.code === "c" ? q.answer.text : a.label),
+      el("div", "acard__head", said(q.answer)),
       el("div", "acard__question", q.text),
     );
     body.append(seenControl(id, q.answer, "receipt receipt--btn"));
@@ -648,7 +661,7 @@
     icon.innerHTML = svg(a.icon, 16);
     const body = el("div", "rcard__body");
     const head = el("div", "rcard__head");
-    head.append(el("span", null, `You answered ${q.name}: `), el("b", null, q.answered.code === "c" ? q.answered.text : a.label));
+    head.append(el("span", null, `You answered ${q.name}: `), el("b", null, said(q.answered)));
     body.append(head, el("div", "rcard__question", q.text));
     body.append(q.seenAt ? el("span", "receipt receipt--seen", "✓ Seen") : el("span", "receipt", "Sent"));
     card.append(icon, body, closeButton(() => setUi(id, { cleared: true })));
@@ -674,15 +687,14 @@
       line.title = q.text;
       line.append(who(q.from, q.name), el("span", "peek__text", q.text));
       const buttons = el("div", "peek__answers");
-      for (const [code, a] of Object.entries(ANSWERS)) {
-        if (code === "c") continue;
-        const b = el("button", `pill pill--answer answer--${code}`);
+      for (const { code, label } of optionsOf(q)) {
+        const b = el("button", `pill pill--answer answer--${code}${code === "x" ? " pill--own" : ""}`);
         b.type = "button";
-        b.title = a.label;
+        b.title = label;
         b.disabled = q.sending;
-        b.innerHTML = svg(a.icon, 15);
-        b.append(el("span", "pill__label", a.label));
-        b.addEventListener("click", () => answer(id, code));
+        if (code !== "x") b.innerHTML = svg(ANSWERS[code].icon, 15);
+        b.append(el("span", "pill__label", label));
+        b.addEventListener("click", () => answer(id, code, code === "x" ? label : ""));
         buttons.append(b);
       }
       const own = el("form", "peek__own");
@@ -705,7 +717,7 @@
       line.title = q.text;
       const icon = el("span", `peek__icon answer--${q.answer.code}`);
       icon.innerHTML = svg(a.icon, 15);
-      line.append(who(q.to, `${q.to} answered`), icon, el("b", "peek__answer", q.answer.code === "c" ? q.answer.text : a.label), el("span", "peek__text peek__text--muted", q.text));
+      line.append(who(q.to, `${q.to} answered`), icon, el("b", "peek__answer", said(q.answer)), el("span", "peek__text peek__text--muted", q.text));
       parts.push(line, seenControl(id, q.answer, "pill"), closeButton(() => setUi(id, { closed: true })));
     } else if (requests.length) {
       const login = requests[0];
@@ -749,31 +761,70 @@
     return x;
   }
 
-  // Ask one of your connections a question.
+  // Ask one of your connections a question (a pop-out from a one-row bar).
   function askPanel() {
     const panel = el("div", "panel");
-    panel.append(el("div", "panel__head", "Ask a connection"));
-    const able = connections.filter((c) => c.mutual).map((c) => c.login);
-    if (!able.length) {
-      panel.append(el("p", "panel__sub", "Add someone under Connections first (they need to add you too)."));
-      return panel;
-    }
-    panel.append(el("p", "panel__sub", "They see it right away if they're online, or as soon as they are."));
-    const pick = el("select", "panel__select");
-    for (const login of able) pick.append(new Option(login, login, false, login === askDraft.to));
-    askDraft.to = pick.value;
-    pick.addEventListener("change", () => (askDraft.to = pick.value));
-    panel.append(pick, askForm(() => pick.value), el("p", "panel__note", askDraft.note));
+    panel.append(composer(null, true));
     return panel;
   }
 
-  function askForm(to) {
-    const form = el("form", "panel__form");
-    const input = textBox("Ask them something", askDraft.text);
-    input.dataset.key = "ask";
+  // The Ask box, open at the top unless you fold it away (remembered). Pick
+  // who (a row of their pictures; fixed on someone's page), write the
+  // question, and choose its answer buttons: × takes a standard one off for
+  // this question, "Add option" puts your own on. Typing a reply is always
+  // open to them.
+  function composer(fixedTo, alwaysOpen = false) {
+    const box = el("section", "ask");
+    const able = connections.filter((c) => c.mutual).map((c) => c.login);
+    const open = alwaysOpen || get("askOpen", true);
+    const head = el("button", "ask__head");
+    head.type = "button";
+    head.append(el("span", "ask__title", fixedTo ? `Ask ${fixedTo}` : "Ask"));
+    if (!alwaysOpen) head.append(el("span", `ask__chev${open ? " ask__chev--open" : ""}`));
+    head.addEventListener("click", () => {
+      if (alwaysOpen) return;
+      put("askOpen", !open);
+      render();
+    });
+    box.append(head);
+    if (!open) return box;
+    if (!fixedTo && !able.length) {
+      box.append(el("p", "ask__hint", "Add someone under Connections first. You can ask each other once you've both added each other."));
+      return box;
+    }
+
+    if (!fixedTo) {
+      if (!able.includes(askDraft.to)) askDraft.to = able[0];
+      const who = el("div", "ask__who");
+      for (const login of able) {
+        const c = conn(login);
+        const chip = el("button", `ask__person${login === askDraft.to ? " ask__person--on" : ""}`);
+        chip.type = "button";
+        if (pics[login]) {
+          const img = el("img");
+          img.src = pics[login];
+          img.alt = "";
+          chip.append(img);
+        }
+        chip.append(el("span", null, login));
+        if (c?.online) chip.append(el("span", "ask__online"));
+        chip.addEventListener("click", () => {
+          askDraft.to = login;
+          render();
+        });
+        who.append(chip);
+      }
+      box.append(who);
+    }
+    const to = () => fixedTo || askDraft.to;
+
+    const form = el("form", "ask__form");
+    const input = textBox("What do you want to ask?", askDraft.text);
+    input.dataset.key = fixedTo ? `ask-${fixedTo}` : "ask";
+    input.className = "ask__input";
     input.maxLength = MAX_LEN;
     input.addEventListener("input", () => (askDraft.text = input.value));
-    const send = el("button", null, "Send");
+    const send = el("button", "ask__send", "Send");
     send.type = "submit";
     form.append(input, send);
     form.addEventListener("submit", (e) => {
@@ -781,8 +832,62 @@
       const question = clean(input.value);
       if (question) ask(to(), question);
     });
-    setTimeout(() => document.activeElement === document.body && input.focus());
-    return form;
+    box.append(form);
+
+    // Their answer buttons for this question.
+    box.append(el("div", "ask__label", "Answer buttons"));
+    const chips = el("div", "ask__options");
+    for (const o of askDraft.options) {
+      const own = o.startsWith("+");
+      const chip = el("span", `ask__option${own ? " ask__option--own" : ""}`);
+      if (!own) {
+        const icon = el("span", `answer--${o}`);
+        icon.innerHTML = svg(ANSWERS[o].icon, 13);
+        chip.append(icon);
+      }
+      chip.append(el("span", null, own ? o.slice(1) : ANSWERS[o].label));
+      const x = el("button", "ask__optx", "×");
+      x.type = "button";
+      x.title = "Take this off for this question";
+      x.addEventListener("click", () => {
+        askDraft.options = askDraft.options.filter((v) => v !== o);
+        render();
+      });
+      chip.append(x);
+      chips.append(chip);
+    }
+    if (askDraft.options.length < MAX_OPTIONS) {
+      const addForm = el("form", "ask__add");
+      const add = textBox("+ Add option", askDraft.adding);
+      add.dataset.key = "ask-add";
+      add.maxLength = 30;
+      add.addEventListener("input", () => (askDraft.adding = add.value));
+      addForm.append(add);
+      addForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const label = clean(add.value).slice(0, 30);
+        if (label && !askDraft.options.includes(`+${label}`)) askDraft.options = [...askDraft.options, `+${label}`];
+        askDraft.adding = "";
+        render();
+      });
+      chips.append(addForm);
+    }
+    box.append(chips);
+    const changed = askDraft.options.join() !== STANDARD.join();
+    const foot = el("div", "ask__foot");
+    foot.append(el("span", "ask__hint", askDraft.options.length ? "They can also type their own reply." : "They'll type their reply."));
+    if (changed) {
+      const reset = el("button", "ask__reset", "Back to the standard six");
+      reset.type = "button";
+      reset.addEventListener("click", () => {
+        askDraft.options = [...STANDARD];
+        render();
+      });
+      foot.append(reset);
+    }
+    box.append(foot);
+    if (askDraft.note) box.append(el("p", "ask__note", askDraft.note));
+    return box;
   }
 
   // One person's page: ask them something, and the log of everything between
@@ -801,7 +906,7 @@
     if (colorOf(login)) name.style.color = colorOf(login);
     head.append(name, el("span", `person__state${c.online ? " person__state--on" : ""}`, !c.mutual ? "hasn't added you yet" : c.online ? "online" : "offline"));
     panel.append(head);
-    if (c.mutual) panel.append(askForm(() => login), el("p", "panel__note", askDraft.note));
+    if (c.mutual) panel.append(composer(login));
 
     for (const id of Object.keys(inbox).filter((id) => inbox[id].from === login && !inbox[id].done)) panel.append(questionCard(id));
 
@@ -838,7 +943,7 @@
       const a = ANSWERS[reply.code];
       const icon = el("span", `log__icon answer--${reply.code}`);
       icon.innerHTML = svg(a.icon, 13);
-      out.append(icon, el("b", null, reply.code === "c" ? reply.text : a.label));
+      out.append(icon, el("b", null, said(reply)));
       // Seen: on their answer, that you marked it; on yours, that they did.
       if (mine) out.append(seenControl(id, reply, "pill"));
       else out.append(el("span", `receipt${q.seenAt ? " receipt--seen" : ""}`, q.seenAt ? "✓ Seen" : "Not seen yet"));
@@ -998,7 +1103,13 @@
   // ===== Start =============================================================================
 
   peopleBtn.addEventListener("click", () => show("people"));
-  askBtn.addEventListener("click", () => show("ask"));
+  askBtn.addEventListener("click", () => {
+    if (short()) return show("ask");
+    put("askOpen", true);
+    view = "cards";
+    render();
+    document.querySelector('[data-key="ask"]')?.focus();
+  });
 
   let started = false;
   async function start() {
