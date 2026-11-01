@@ -69,6 +69,7 @@
     x: { label: "", icon: `<path d="M3 10.6V4a1 1 0 0 1 1-1h6.6l6.7 6.7a1 1 0 0 1 0 1.4l-5.6 5.6a1 1 0 0 1-1.4 0z" ${LINE} stroke-width="1.7"/><circle cx="7" cy="7" r="1.3" fill="currentColor"/>` }, // one of the asker's own options
   };
   const STANDARD = ["y", "n", "m", "s", "o", "t"];
+  const PEOPLE_ICON = `<svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="7.5" cy="6.5" r="3"/><path d="M2 17c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="14" cy="7.5" r="2.4"/><path d="M14.5 12.2c2.2.3 3.8 2 3.8 4.3"/></svg>`;
   // Accounts whose picture gets a bright ring everywhere, so they stand out
   // (Alex's own channel).
   const HIGHLIGHT = { myspacetomofficial: "#3fb2ff" };
@@ -139,13 +140,13 @@
       const u = ui[q.id] || {};
       if (q.to === me?.login) {
         inbox[q.id] = {
-          from: q.from, name: q.from, text: q.text, at: q.at, options: q.options,
+          from: q.from, name: q.from, text: q.text, at: q.at, options: q.options, group: q.group,
           done: !!(q.answer || q.dismissed), answered: q.answer, seenAt: q.seenAt,
           sending: !!pending[q.id], cleared: !!u.cleared, gone: !!u.gone,
         };
       } else if (q.from === me?.login) {
         sent[q.id] = {
-          to: q.to, text: q.text, at: q.at, seen: !!u.waitClosed || !!q.dismissed, gone: !!u.gone,
+          to: q.to, text: q.text, at: q.at, group: q.group, seen: !!u.waitClosed || !!q.dismissed, gone: !!u.gone,
           answer: q.answer && { ...q.answer, acked: q.seenAt ? true : pending[q.id] ? "sending" : false, seen: !!u.closed },
         };
       }
@@ -233,7 +234,25 @@
     }
     if (!r.ok) throw new Error(`Twitch said ${r.status}`);
     const j = await r.json();
-    return { login: j.login, id: j.user_id };
+    return { login: j.login, id: j.user_id, expiresAt: j.expires_in ? Date.now() + j.expires_in * 1000 : 0 };
+  }
+
+  // Twitch sign-ins run out; a few days before, the bar says so (in red once
+  // it has), with a button to sign in again.
+  const RENEW_MS = 3 * 24 * 60 * 60 * 1000;
+  function signinNote() {
+    if (!me?.expiresAt || DEMO) return "";
+    const left = me.expiresAt - Date.now();
+    if (left <= 0) return "Twitch sign-in ran out";
+    if (left > RENEW_MS) return "";
+    const days = Math.max(1, Math.round(left / 86400000));
+    return `Twitch sign-in ends in ${days} day${days === 1 ? "" : "s"}`;
+  }
+  function signinPill() {
+    const b = el("button", `pill pill--warn${me.expiresAt <= Date.now() ? " pill--bad" : ""}`, `${signinNote()} · Renew`);
+    b.type = "button";
+    b.addEventListener("click", signIn);
+    return b;
   }
 
   function signOut() {
@@ -567,6 +586,7 @@
 
   function cardList() {
     const wrap = el("div", "cards");
+    if (signinNote()) wrap.append(signinPill());
     if (!POPOUT) wrap.append(composer(null));
     const answers = Object.keys(sent).filter((id) => sent[id].answer && !sent[id].answer.seen).sort((a, b) => sent[a].answer.at - sent[b].answer.at);
     const waiting = Object.keys(sent).filter((id) => !sent[id].answer && !sent[id].seen).sort((a, b) => sent[a].at - sent[b].at);
@@ -576,7 +596,13 @@
     for (const id of answers) wrap.append(answerCard(id));
     for (const id of open) wrap.append(questionCard(id));
     for (const id of replied) wrap.append(repliedCard(id));
-    for (const id of waiting) wrap.append(waitingRow(id));
+    // One row per question; asking everyone shows as one row.
+    const shown = new Set();
+    for (const id of waiting) {
+      const key = sent[id].group || id;
+      if (!shown.has(key)) wrap.append(waitingRow(id));
+      shown.add(key);
+    }
     // With connections, the dots say it all: nothing here, so the dock can be one row.
 
     return wrap;
@@ -597,7 +623,7 @@
     const q = inbox[id];
     const card = el("div", "qcard");
     card.setAttribute("role", "alertdialog");
-    card.append(el("div", "qcard__head", `${q.name} asks`), el("div", "qcard__text", q.text));
+    card.append(el("div", "qcard__head", `${q.name} asks${q.group ? " everyone" : ""}`), el("div", "qcard__text", q.text));
     const buttons = el("div", "qcard__answers");
     for (const { code, label } of optionsOf(q)) {
       const b = el("button", `qcard__answer answer--${code}${code === "x" ? " qcard__answer--own" : ""}`);
@@ -640,7 +666,7 @@
     body.append(
       el("div", "acard__who", `${q.to} answered`),
       el("div", "acard__head", said(q.answer)),
-      el("div", "acard__question", q.text),
+      el("div", "acard__question", q.group ? `${q.text} (asked everyone)` : q.text),
     );
     body.append(seenControl(id, q.answer, "receipt receipt--btn"));
     card.append(icon, body, closeButton(() => setUi(id, { closed: true })));
@@ -735,6 +761,17 @@
       add.addEventListener("click", () => relay({ t: "connect", login }));
       parts.push(line, add);
     }
+    else if (connections.some((c) => c.mutual) && presets().length) {
+      parts.push(el("span", "peek__label", "Ask everyone:"));
+      for (const text of presets()) {
+        const b = el("button", `pill pill--quick${quickSent === text ? " pill--sent" : ""}`, quickSent === text ? "Sent ✓" : text);
+        b.type = "button";
+        b.title = `Ask everyone: ${text}`;
+        b.addEventListener("click", () => sendQuick(text));
+        parts.push(b);
+      }
+    }
+    if (signinNote()) parts.unshift(signinPill());
     const more = open.length + answers.length - (open.length || answers.length ? 1 : 0);
     if (more > 0) {
       const b = el("button", "pill pill--more", `+${more}`);
@@ -750,13 +787,20 @@
     peekEl.replaceChildren(...parts);
   }
 
-  // A question you asked that hasn't been answered yet.
+  // A question you asked that hasn't been answered yet (for everyone: how
+  // many have answered so far).
   function waitingRow(id) {
     const q = sent[id];
+    const copies = q.group ? Object.entries(sent).filter(([, c]) => c.group === q.group) : [[id, q]];
+    const answered = copies.filter(([, c]) => c.answer).length;
     const row = el("div", "waiting");
     const text = el("div", "waiting__text");
-    text.append(el("span", "waiting__who", `Waiting on ${q.to}: `), document.createTextNode(q.text));
-    row.append(text, closeButton(() => setUi(id, { waitClosed: true }), "Stop showing this"));
+    const who = q.group ? `Waiting on everyone (${answered} of ${copies.length} answered): ` : `Waiting on ${q.to}: `;
+    text.append(el("span", "waiting__who", who), document.createTextNode(q.text));
+    row.append(text, closeButton(() => {
+      for (const [cid] of copies) ui[cid] = { ...ui[cid], waitClosed: true };
+      setUi(id, {});
+    }, "Stop showing this"));
     return row;
   }
 
@@ -770,10 +814,34 @@
 
   let pickerOpen = false; // the Ask box's who-to drop-down
 
+  // Quick questions: saved on this device; in a one-row bar they're one tap
+  // to everyone.
+  const MAX_PRESETS = 8;
+  const presets = () => get("presets", ["Clip that!", "Anyone free to help?"]);
+  let quickSent = ""; // the quick question just sent, shown as "Sent" for a moment
+
+  function sendQuick(text) {
+    askDraft.options = [...STANDARD];
+    if (relay({ t: "ask", to: "*", text, options: STANDARD })) {
+      quickSent = text;
+      render();
+      setTimeout(() => {
+        quickSent = "";
+        render();
+      }, 2500);
+    }
+  }
+
   // A person as a chip: picture (bright ring if highlighted), name, online dot.
   function personChip(login, className) {
     const chip = el("button", className);
     chip.type = "button";
+    if (login === "*") {
+      const icon = el("span", "ask__everyone");
+      icon.innerHTML = PEOPLE_ICON;
+      chip.append(icon, el("span", "ask__name", `Everyone (${connections.filter((c) => c.mutual).length})`));
+      return chip;
+    }
     if (HIGHLIGHT[login]) chip.style.setProperty("--ring", HIGHLIGHT[login]);
     if (pics[login]) {
       const img = el("img");
@@ -820,7 +888,7 @@
 
     // Who to ask: the chosen person, with a caret that drops down the rest.
     if (!fixedTo) {
-      if (!able.includes(askDraft.to)) askDraft.to = able[0];
+      if (!able.includes(askDraft.to) && !(askDraft.to === "*" && able.length > 1)) askDraft.to = able[0];
       const who = el("div", "ask__who");
       const pick = personChip(askDraft.to, "ask__person ask__person--on");
       pick.append(el("span", `ask__caret${pickerOpen ? " ask__caret--open" : ""}`));
@@ -832,7 +900,7 @@
       who.append(pick);
       if (pickerOpen) {
         const list = el("div", "ask__menu");
-        for (const login of able) {
+        for (const login of able.length > 1 ? ["*", ...able] : able) {
           const row = personChip(login, `ask__menuitem${login === askDraft.to ? " ask__menuitem--on" : ""}`);
           row.addEventListener("click", () => {
             askDraft.to = login;
@@ -856,13 +924,49 @@
     input.addEventListener("input", () => (askDraft.text = input.value));
     const send = el("button", "ask__send", "Send");
     send.type = "submit";
-    form.append(input, send);
+    const save = el("button", "ask__save", "☆");
+    save.type = "button";
+    save.title = "Save as a quick question";
+    save.addEventListener("click", () => {
+      const question = clean(input.value);
+      if (!question || presets().includes(question)) return;
+      put("presets", [...presets(), question].slice(-MAX_PRESETS));
+      render();
+    });
+    form.append(input, save, send);
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const question = clean(input.value);
       if (question) ask(to(), question);
     });
     box.append(form);
+
+    // Quick questions: tap one to put it in the box; × forgets it.
+    if (presets().length) {
+      box.append(el("div", "ask__label", "Quick questions"));
+      const quick = el("div", "ask__options");
+      for (const text of presets()) {
+        const chip = el("span", "ask__option ask__quick");
+        const use = el("button", "ask__quickuse", text);
+        use.type = "button";
+        use.title = "Put this in the box";
+        use.addEventListener("click", () => {
+          askDraft.text = text;
+          render();
+          document.querySelector(`[data-key="${input.dataset.key}"]`)?.focus();
+        });
+        const x = el("button", "ask__optx", "×");
+        x.type = "button";
+        x.title = "Forget this quick question";
+        x.addEventListener("click", () => {
+          put("presets", presets().filter((p) => p !== text));
+          render();
+        });
+        chip.append(use, x);
+        quick.append(chip);
+      }
+      box.append(quick);
+    }
 
     // Their answer buttons for this question.
     box.append(el("div", "ask__label", "Answer buttons"));
@@ -1069,7 +1173,10 @@
     socket = null;
     askBtn.hidden = peopleBtn.hidden = true;
     dotsEl.replaceChildren();
-    peekEl.replaceChildren();
+    const again = el("button", "pill pill--warn pill--bad", message ? "Signed out · Sign in with Twitch" : "Sign in with Twitch");
+    again.type = "button";
+    again.addEventListener("click", signIn);
+    peekEl.replaceChildren(again);
     setStatus("");
     const box = el("div", "signin");
     box.append(el("div", "signin__head", "Streamer Buddy System"), el("p", "signin__sub", "Quick questions between you and the people you've connected with."));
@@ -1152,7 +1259,8 @@
     if (!TWITCH_CLIENT_ID) return showMessage("Not set up yet", "Put the Twitch app's Client ID in config.js.");
     let error = "";
     if (DEV) {
-      me = { login: DEV.toLowerCase() };
+      // ?expires=<minutes> pretends the sign-in runs out then (testing the warning).
+      me = { login: DEV.toLowerCase(), expiresAt: params.has("expires") ? Date.now() + Number(params.get("expires")) * 60000 : 0 };
     } else {
       error = takeTokenFromAddress();
       try {
@@ -1171,7 +1279,11 @@
     started = true;
     // Twitch asks apps to re-check the sign-in every hour.
     setInterval(async () => {
-      if (me && !DEV && !(await validate().catch(() => me))) showSignedOut("Your Twitch sign-in ran out. Sign in again.");
+      if (!me || DEV) return;
+      const now = await validate().catch(() => me);
+      if (!now) return showSignedOut("Your Twitch sign-in ran out. Sign in again.");
+      me.expiresAt = now.expiresAt;
+      render();
     }, 60 * 60 * 1000);
     setInterval(checkForUpdate, UPDATE_CHECK_MS);
   }

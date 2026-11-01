@@ -1085,3 +1085,72 @@ main:has(> .cards:empty) {
 .dot--highlight:not(.dot--ask):not(.dot--answer) {
   box-shadow: 0 0 0 2px var(--ring), 0 0 8px color-mix(in srgb, var(--ring) 60%, transparent);
 }
+
+/* Ask everyone, quick questions, and sign-in warnings. */
+.ask__everyone {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(145, 71, 255, 0.3);
+  color: #d4bbff;
+}
+.ask__save {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--field);
+  border-radius: 19px;
+  background: none;
+  color: var(--muted);
+  font-size: 16px;
+}
+.ask__save:hover {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.ask__quick {
+  padding-left: 0;
+}
+.ask__quickuse {
+  height: 26px;
+  padding: 0 4px 0 10px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+}
+.peek__label {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.pill--quick {
+  border: 1px solid #3a3a3d;
+  background: var(--bg);
+}
+.pill--quick:hover:not(:disabled) {
+  border-color: var(--purple);
+  background: #1f1f23;
+}
+.pill--sent,
+.pill--sent:hover:not(:disabled) {
+  border-color: var(--good);
+  color: var(--good);
+}
+.pill--warn {
+  border: 1px solid var(--amber);
+  background: rgba(255, 179, 26, 0.12);
+  color: var(--amber);
+}
+.pill--bad {
+  border-color: var(--bad);
+  background: rgba(235, 4, 0, 0.16);
+  color: var(--bad);
+}
+.cards > .pill--warn {
+  align-self: flex-start;
+}

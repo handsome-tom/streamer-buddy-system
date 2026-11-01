@@ -13,7 +13,8 @@
 // between mutual connections.
 //
 // Questions: { id, from, to, text, at, options, answer: { code, text, at } | null,
-// dismissed, seenAt }. options are the answer buttons the asker chose: any of
+// dismissed, seenAt, group }. Asking everyone ("to": "*") makes one copy per
+// mutual connection, sharing a group id. options are the answer buttons the asker chose: any of
 // the six standard ones by letter (y n m s o t) and their own, as "+label"; a
 // typed reply ("c") is always allowed. A question without options (from before
 // options) offers the six standard ones. Answering with your own option is
@@ -193,21 +194,44 @@ export class Hub {
 
   // ===== Questions ===========================================================================
 
+  // To one person, or to "*": everyone you're mutually connected with, as one
+  // copy each sharing a group id (each answers on their own copy).
   async ask(ws, who, m) {
-    const to = String(m.to || "").toLowerCase();
     const text = clean(m.text);
     if (!text) return;
-    if (!(await this.mutual(who.login, to))) return this.send(ws, { t: "error", why: `You and ${to} need to add each other first` });
+    const everyone = m.to === "*";
+    let targets;
+    if (everyone) {
+      const users = await this.users();
+      targets = (users[who.login]?.list || []).filter((l) => users[l]?.list.includes(who.login));
+      if (!targets.length) return this.send(ws, { t: "error", why: "Nobody to ask yet: add people under Connections" });
+    } else {
+      const to = String(m.to || "").toLowerCase();
+      if (!(await this.mutual(who.login, to))) return this.send(ws, { t: "error", why: `You and ${to} need to add each other first` });
+      targets = [to];
+    }
     const all = [...(await this.ctx.storage.list({ prefix: "q:" })).values()];
-    if (all.filter((q) => q.from === who.login && Date.now() - q.at < 60000).length >= MAX_ASKS_PER_MINUTE) {
+    const recent = new Set(all.filter((q) => q.from === who.login && Date.now() - q.at < 60000).map((q) => q.group || q.id));
+    if (recent.size >= MAX_ASKS_PER_MINUTE) {
       return this.send(ws, { t: "error", why: "That's a lot of questions at once; try again in a minute" });
     }
-    if (all.filter((q) => q.from === who.login && q.to === to && !q.answer && !q.dismissed).length >= MAX_OPEN_PER_PAIR) {
-      return this.send(ws, { t: "error", why: `${to} already has ${MAX_OPEN_PER_PAIR} unanswered questions from you` });
+    const open = (to) => all.filter((q) => q.from === who.login && q.to === to && !q.answer && !q.dismissed).length;
+    const full = targets.filter((to) => open(to) >= MAX_OPEN_PER_PAIR);
+    if (!everyone && full.length) {
+      return this.send(ws, { t: "error", why: `${full[0]} already has ${MAX_OPEN_PER_PAIR} unanswered questions from you` });
     }
-    const q = { id: crypto.randomUUID().slice(0, 8), from: who.login, to, text, at: Date.now(), options: cleanOptions(m.options), answer: null, dismissed: 0, seenAt: 0 };
-    await this.ctx.storage.put(`q:${q.id}`, q);
-    this.share(q);
+    const group = everyone ? crypto.randomUUID().slice(0, 8) : null;
+    const options = cleanOptions(m.options);
+    let sent = 0;
+    for (const to of targets) {
+      if (full.includes(to)) continue; // asking everyone skips anyone already full up
+      const q = { id: crypto.randomUUID().slice(0, 8), from: who.login, to, text, at: Date.now(), options, answer: null, dismissed: 0, seenAt: 0 };
+      if (group) q.group = group;
+      await this.ctx.storage.put(`q:${q.id}`, q);
+      this.share(q);
+      sent++;
+    }
+    if (!sent) this.send(ws, { t: "error", why: `Everyone already has ${MAX_OPEN_PER_PAIR} unanswered questions from you` });
   }
 
   // Only with one of the question's own options, or a typed reply.
