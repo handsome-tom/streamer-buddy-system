@@ -136,14 +136,16 @@ button:disabled {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-/* How the connection is doing: a soft glow in the page's top-left corner. */
+/* How the connection is doing: a soft glow in the bar's top-left corner, behind
+   the pictures and buttons (the bar is what it's positioned against). */
 .bar__status::before {
   content: "";
-  position: fixed;
+  position: absolute;
+  z-index: -1;
   top: 0;
+  bottom: 0;
   left: 0;
   width: 96px;
-  height: 64px;
   background: radial-gradient(ellipse at top left, var(--glow), transparent 70%);
   opacity: 0.6;
   pointer-events: none;
