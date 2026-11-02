@@ -1269,7 +1269,7 @@
     if (mode !== "ask") {
       box.append(el("p", "ask__hint", askDraft.sent === mode ? "Sent ✓"
         : mode === "love" ? "Shows on their bar with your name, then disappears after 30 seconds."
-        : "Shows on their bar with your name for 2 minutes. Only reaches people who are online."));
+        : "For things like incoming raids or minor technical difficulties. Shows on their bar with your name for 2 minutes. Only reaches people who are online."));
       if (askDraft.note) box.append(el("p", "ask__note", askDraft.note));
       return box;
     }
