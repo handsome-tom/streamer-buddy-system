@@ -5,7 +5,7 @@
 //   - the hub in Twitch Space's Chrome side panel (?embed=ext, inside an
 //     iframe: sign-in is handed over by the extension, see below)
 //   - a phone deck (?deck), added to a home screen like an app: big tiles that
-//     send a question, quick info or a love note in one tap, like a Stream
+//     send a question, quick info or a !vanish note in one tap, like a Stream
 //     Deck. It signs in with Twitch's code sign-in (twitch.tv/activate), since
 //     home-screen apps can't always come back from a sign-in page
 // Everyone talks through the relay (relay/ in this repo, on Cloudflare): a
@@ -26,7 +26,7 @@
 //     the bar with its buttons, so an OBS dock kept one row tall works on its
 //     own; a bar that short opens Ask and Connections as pop-outs too
 //   - the bar's quick strip: fast notes from the Ask box's "Quick info" (2
-//     minutes), lines of Twitch chat a mod flagged (2 minutes) and "Love notes"
+//     minutes), lines of Twitch chat a mod flagged (2 minutes) and "!vanish notes"
 //     (30 seconds, fading in and out fuzzily); nothing's stored, so only people
 //     online get them
 //   - Stats: for each connection, what's public from Twitch (live, viewers,
@@ -535,7 +535,7 @@
   }
 
   // ===== The quick strip ===================================================================
-  // Each flash removes itself: info and flagged chat after 2 minutes, love
+  // Each flash removes itself: info and flagged chat after 2 minutes, !vanish
   // notes after 30 seconds, fuzzily. They're drawn once and left alone, so
   // redrawing the rest of the page doesn't restart their fade.
   const FLASH_MS = { info: 120000, chat: 120000, love: 30000 };
@@ -1183,9 +1183,9 @@
     });
     box.append(head);
     if (!open) return box;
-    // What you're sending: a question, a fast note, or a love note.
+    // What you're sending: a question, a fast note, or a !vanish note.
     const modes = el("div", "ask__modes");
-    for (const [mode, label] of [["ask", "Ask"], ["info", "Quick info"], ["love", "Love note"]]) {
+    for (const [mode, label] of [["ask", "Ask"], ["info", "Quick info"], ["love", "!vanish note"]]) {
       const b = el("button", `ask__mode${askDraft.mode === mode ? " ask__mode--on" : ""}`, label);
       b.type = "button";
       b.addEventListener("click", () => {
@@ -1233,7 +1233,7 @@
 
     const form = el("form", "ask__form");
     const mode = askDraft.mode;
-    const input = textBox(mode === "love" ? "Leave a little love (or poke some fun)" : mode === "info" ? "What do they need to know?" : "What do you want to ask?", askDraft.text);
+    const input = textBox(mode === "love" ? "Say something quick (it won't stick around)" : mode === "info" ? "What do they need to know?" : "What do you want to ask?", askDraft.text);
     input.dataset.key = fixedTo ? `ask-${fixedTo}` : "ask";
     input.className = "ask__input";
     input.maxLength = mode === "love" ? 80 : MAX_LEN;
@@ -1265,10 +1265,10 @@
     });
     box.append(form);
 
-    // Quick info and love notes are just the text; say how long they show.
+    // Quick info and !vanish notes are just the text; say how long they show.
     if (mode !== "ask") {
       box.append(el("p", "ask__hint", askDraft.sent === mode ? "Sent ✓"
-        : mode === "love" ? "Fades in on their bar with your name, and fades away after 30 seconds."
+        : mode === "love" ? "Shows on their bar with your name, then disappears after 30 seconds."
         : "Shows on their bar with your name for 2 minutes. Only reaches people who are online."));
       if (askDraft.note) box.append(el("p", "ask__note", askDraft.note));
       return box;
@@ -1670,7 +1670,7 @@
   }
 
   // ===== The phone deck ====================================================================
-  // Big tiles, each one tap: a question, quick info or a love note to whoever's
+  // Big tiles, each one tap: a question, quick info or a !vanish note to whoever's
   // picked at the top. "Edit" adds and removes tiles (saved on this phone).
 
   const DECK_TILES = [
@@ -1683,7 +1683,7 @@
     { kind: "love", text: "You've got this" },
     { kind: "love", text: "Looking good today" },
   ];
-  const DECK_KINDS = { ask: "Question", info: "Quick info", love: "Love note" };
+  const DECK_KINDS = { ask: "Question", info: "Quick info", love: "!vanish note" };
   const deckTiles = () => get("deckTiles", DECK_TILES);
   const deckState = { editing: false, sent: -1, kind: "info", text: "" };
 

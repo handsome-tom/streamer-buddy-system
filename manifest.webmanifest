@@ -1,7 +1,7 @@
 {
   "name": "Streamer Buddy System",
   "short_name": "Streamer Deck",
-  "description": "A phone deck for quick questions, quick info and love notes with your streamer and mods.",
+  "description": "A phone deck for quick questions, quick info and !vanish notes with your streamer and mods.",
   "start_url": "./?deck",
   "scope": "./",
   "display": "standalone",

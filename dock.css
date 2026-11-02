@@ -1484,7 +1484,7 @@ main:has(> .cards:empty) {
   font-size: 12px;
 }
 
-/* ===== The quick strip: info, flagged chat and love notes ===== */
+/* ===== The quick strip: info, flagged chat and !vanish notes ===== */
 .flashes {
   flex: 0 1 auto;
   display: flex;
@@ -1549,7 +1549,7 @@ main:has(> .cards:empty) {
 @keyframes flashOut {
   to { opacity: 0; }
 }
-/* Love notes: soft pink, and they fade in and out through a blur. */
+/* !vanish notes: soft pink, and they fade in and out through a blur. */
 .qflash--love {
   --c: #ff7ab8;
   animation: fuzzyIn 1.4s ease-out;
