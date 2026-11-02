@@ -14,7 +14,7 @@
 // who's offline.
 //
 // What's on screen:
-//   - the top bar: one profile-picture dot per connection, ringed green while
+//   - the top bar: one profile-picture dot per connection, ring glowing green while
 //     they're online, faded until they've added you back. Something waiting
 //     from someone makes their dot pulse in their Twitch chat colour with a
 //     count. Clicking a waiting dot shows the cards (popped out into a window
@@ -141,8 +141,9 @@
   let connections = []; // [{ login, mutual, online }]
   let requests = []; // [login] who added you
   let tags = {}; // { tag: [logins] } your own groups of connections (Mods, Lead mods, Tech…)
-  // Mod chat: the rooms you're in ({ owner, tag, members: [{ login, online }] })
-  // and each room's recent messages ({ owner: [{ id, from, text, at }] }).
+  // Chat: the rooms you're in ({ owner, tag, members: [{ login, online }] }), and a
+  // private chat with each mutual connection ({ owner, direct: true, with, members }),
+  // and each one's recent messages ({ owner: [{ id, from, text, at }] }).
   let rooms = [];
   let chat = {};
   // Stats: what the relay has ({ login: worked-out stats }), whether you share
@@ -218,7 +219,7 @@
 
   function setStatus(text, kind) {
     statusEl.textContent = text;
-    statusEl.title = text;
+    statusEl.parentElement.title = text; // the glow can't be hovered, so the bar says it
     statusEl.className = `bar__status${kind ? ` bar__status--${kind}` : ""}`;
   }
 
@@ -474,7 +475,7 @@
         renewSignin().then((ok) => (ok ? connect() : showSignedOut("Your Twitch sign-in ran out. Sign in again.")));
         return;
       }
-      setStatus("Reconnecting…", "wait");
+      setStatus("Reconnecting…", "retry");
       setTimeout(connect, retryMs);
       retryMs = Math.min(retryMs * 2, 30000);
     };
@@ -590,6 +591,8 @@
     render();
   }
 
+  const directWith = (login) => rooms.find((r) => r.direct && r.with === login);
+
   // A chat message. Quiet unless it @mentions you (then the edge glows and,
   // if it's on, the chime plays); the chat button counts what you haven't read.
   function gotMessage(msg) {
@@ -612,8 +615,8 @@
   }
   // The room on screen: the one picked, else your own, else the first.
   function chatRoom() {
-    if (rooms.some((r) => r.owner === chatDraft.owner)) return chatDraft.owner;
-    return (rooms.find((r) => r.owner === me.login) || rooms[0])?.owner || "";
+    if (chatDraft.owner === me.login || rooms.some((r) => r.owner === chatDraft.owner)) return chatDraft.owner;
+    return (rooms.find((r) => r.owner === me.login) || rooms.find((r) => !r.direct) || rooms.find((r) => chat[r.owner]?.length))?.owner || "";
   }
 
   function gotError(m) {
@@ -851,14 +854,16 @@
     quickEl.replaceChildren(...parts);
   }
 
-  // The dots: one per connection; green ring while online, faded until they've
+  // The dots: one per connection; glowing green ring while online, faded until they've
   // added you back; pulsing in their chat colour for a question from them,
   // ringed for their answer to yours, with how many.
   function drawDots() {
     const dots = connections.map(({ login, mutual, online }) => {
       const asks = Object.values(inbox).filter((q) => q.from === login && !q.done).length;
       const answers = Object.values(sent).filter((q) => q.to === login && q.answer && !q.answer.seen).length;
-      const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}`);
+      const direct = directWith(login);
+      const said = direct ? unread(direct.owner) : 0; // private messages only count; they don't pulse
+      const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}${online ? " dot--online" : ""}`);
       dot.type = "button";
       if (colorOf(login)) {
         dot.style.setProperty("--c", colorOf(login));
@@ -871,6 +876,7 @@
       dot.title = !mutual ? `Waiting for ${login} to add you back`
         : asks ? `${login} asked you something`
         : answers ? `${login} answered you`
+        : said ? `${login} sent you a message`
         : `${login}${online ? " (online)" : ""}`;
       if (pics[login]) {
         const img = el("img");
@@ -880,13 +886,14 @@
       } else {
         dot.append(el("span", "dot__letter", login[0].toUpperCase()));
       }
-      if (online) dot.append(el("span", "dot__online"));
-      if (asks + answers) dot.append(el("span", "dot__count", String(asks + answers)));
+      if (asks + answers + said) dot.append(el("span", "dot__count", String(asks + answers + said)));
       dot.addEventListener("click", () => {
         if (asks + answers) {
           view = "cards";
           popOut();
           render();
+        } else if (said) {
+          show("chat", direct.owner);
         } else {
           show("person", login);
         }
@@ -1374,6 +1381,16 @@
     head.append(name, el("span", `person__state${c.online ? " person__state--on" : ""}`, !c.mutual ? "hasn't added you yet" : c.online ? "online" : "offline"));
     panel.append(head);
     if (c.mutual) panel.append(composer(login));
+    const direct = directWith(login);
+    if (direct) {
+      const n = unread(direct.owner);
+      const talk = el("button", "pill person__chat", "Private chat");
+      talk.type = "button";
+      talk.title = `A chat only you and ${login} can see`;
+      if (n) talk.append(el("span", "pill__count", String(n)));
+      talk.addEventListener("click", () => show("chat", direct.owner));
+      panel.append(talk);
+    }
 
     for (const id of Object.keys(inbox).filter((id) => inbox[id].from === login && !inbox[id].done)) panel.append(questionCard(id));
 
@@ -1430,20 +1447,32 @@
     return h < 24 ? `${h} h ago` : `${Math.round(h / 24)} d ago`;
   }
 
-  // Mod chat: one room per streamer, open to one of their tags. Pick a room
-  // (if you're in more than one), read and post; the owner picks the tag or
-  // closes the room. @name pings someone.
+  // Chat: one room per streamer, open to one of their tags, plus a private chat
+  // between any two connections (opened from their page; listed once it's been
+  // used). Pick one, read and post; a room's owner picks the tag or closes it.
+  // @name pings someone.
   function chatPanel() {
     const panel = el("div", "panel chat");
     const owner = chatRoom();
     const room = rooms.find((r) => r.owner === owner);
     const mine = rooms.find((r) => r.owner === me.login);
 
-    if (rooms.length > 1) {
+    const listed = rooms.filter((r) => !r.direct || r.owner === owner || chat[r.owner]?.length);
+    const canOpen = !mine && Object.keys(tags).length;
+    if (listed.length + (canOpen ? 1 : 0) > 1) {
       const pick = el("div", "chat__rooms");
-      for (const r of rooms) {
+      if (canOpen) {
+        const b = el("button", `pill${owner === me.login ? " pill--on" : ""}`, "Your room");
+        b.type = "button";
+        b.addEventListener("click", () => {
+          chatDraft.owner = me.login;
+          render();
+        });
+        pick.append(b);
+      }
+      for (const r of listed) {
         const n = unread(r.owner);
-        const b = el("button", `pill${r.owner === owner ? " pill--on" : ""}`, r.owner === me.login ? "Your room" : `${r.owner}'s room`);
+        const b = el("button", `pill${r.owner === owner ? " pill--on" : ""}`, r.direct ? r.with : r.owner === me.login ? "Your room" : `${r.owner}'s room`);
         b.type = "button";
         if (n) b.append(el("span", "pill__count", String(n)));
         b.addEventListener("click", () => {
@@ -1456,10 +1485,10 @@
     }
 
     if (!room) {
-      panel.append(el("div", "panel__head", "Mod chat"));
+      panel.append(el("div", "panel__head", "Chat"));
       const names = Object.keys(tags).sort();
       if (!names.length) {
-        panel.append(el("p", "panel__sub", "No rooms yet. A streamer opens a room for a tag (like Mods) and everyone in it can talk here."));
+        panel.append(el("p", "panel__sub", "To talk privately with someone, click their picture, then Private chat. A streamer can also open a room for a tag (like Mods) and everyone in it can talk here."));
         return panel;
       }
       panel.append(el("p", "panel__sub", "Open a room for one of your tags. Everyone in it can talk to each other here, and you can read along (it stays quiet for you unless someone @mentions you)."));
@@ -1468,9 +1497,9 @@
     }
 
     const head = el("div", "chat__head");
-    head.append(el("span", "chat__title", room.owner === me.login ? `Your room · ${room.tag}` : `${room.owner}'s room · ${room.tag}`));
+    head.append(el("span", "chat__title", room.direct ? `Private chat · only you and ${room.with}` : room.owner === me.login ? `Your room · ${room.tag}` : `${room.owner}'s room · ${room.tag}`));
     const who = el("span", "chat__who");
-    for (const m of room.members) {
+    for (const m of room.members.filter((m) => !room.direct || m.login !== me.login)) {
       const dot = el("span", `chat__member${m.online ? " chat__member--on" : ""}`, m.login);
       if (colorOf(m.login)) dot.style.color = colorOf(m.login);
       who.append(dot);
@@ -1496,7 +1525,7 @@
     markRead(owner);
 
     const form = el("form", "ask__form chat__form");
-    const input = textBox("Message the room…", chatDraft.text);
+    const input = textBox(room.direct ? `Message ${room.with}…` : "Message the room…", chatDraft.text);
     input.className = "ask__input";
     input.dataset.key = "chat";
     input.maxLength = 500;
@@ -2134,7 +2163,11 @@
       connections: [{ login: "tallglassofwasps", mutual: true, online: true }, { login: "techbuddy", mutual: true, online: false }],
       requests: ["somemod"],
       tags: { Mods: ["tallglassofwasps"], Tech: ["techbuddy"] },
-      rooms: [{ owner: "you", tag: "Mods", members: [{ login: "you", online: true }, { login: "tallglassofwasps", online: true }] }],
+      rooms: [
+        { owner: "you", tag: "Mods", members: [{ login: "you", online: true }, { login: "tallglassofwasps", online: true }] },
+        { owner: "@tallglassofwasps+you", direct: true, with: "tallglassofwasps", members: [{ login: "tallglassofwasps", online: true }, { login: "you", online: true }] },
+        { owner: "@techbuddy+you", direct: true, with: "techbuddy", members: [{ login: "techbuddy", online: false }, { login: "you", online: true }] },
+      ],
       statsOn: true,
       stats: {
         tallglassofwasps: {

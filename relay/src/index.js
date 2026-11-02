@@ -21,6 +21,11 @@
 // of their tags (e.g. Mods): they and the mutual connections in that tag can
 // talk there. Messages are kept a week (the last 50 come with the state).
 //
+// Private chats: any two mutual connections also have a chat only they can see,
+// whoever they are (two streamers, say). It works like a room whose owner is
+// "@alice+bob", the two logins sorted; a login can't contain "@", so it can't
+// clash with a room. It ends if either of them removes the other.
+//
 // Flashes: quick things for the streamer's bar, never stored, so only people
 // online get them. "info" is a fast note (shows 2 minutes), "love" a love note
 // (30 seconds), both to a person, tag or everyone. "chat" flags a line of
@@ -221,7 +226,7 @@ export class Hub {
     }
     const rooms = this.roomsFor(login, users);
     const chat = {};
-    for (const r of rooms) chat[r.owner] = [...(await this.ctx.storage.list({ prefix: `m:${r.owner}:`, reverse: true, limit: CHAT_BACKLOG })).values()].reverse();
+    for (const r of rooms) chat[r.owner] = await this.recentChat(r.owner);
     const stats = {};
     for (const l of [login, ...connections.filter((c) => c.mutual && users[c.login]?.statsOn).map((c) => c.login)]) {
       const rec = await this.ctx.storage.get(`s:${l}`);
@@ -230,9 +235,22 @@ export class Hub {
     this.sendTo(login, { t: "state", me: login, connections, requests, tags: users[login]?.tags || {}, questions, rooms, chat, statsOn: !!users[login]?.statsOn, stats });
   }
 
+  // A room's latest messages. Anything over a week old is deleted, even if nobody
+  // has posted there since.
+  async recentChat(owner) {
+    const msgs = [...(await this.ctx.storage.list({ prefix: `m:${owner}:`, reverse: true, limit: CHAT_BACKLOG }))];
+    const old = msgs.filter(([, v]) => Date.now() - v.at > WEEK_MS).map(([k]) => k);
+    if (old.length) await this.ctx.storage.delete(old);
+    return msgs.filter(([k]) => !old.includes(k)).map(([, v]) => v).reverse();
+  }
+
   // Who's in an owner's room: them, plus their mutual connections in the
-  // room's tag.
+  // room's tag. A private chat is just its two people, while they're mutual.
   members(owner, users) {
+    if (owner.startsWith("@")) {
+      const [a, b] = owner.slice(1).split("+");
+      return users[a]?.list.includes(b) && users[b]?.list.includes(a) ? [a, b] : [];
+    }
     const o = users[owner];
     if (!o?.room?.tag) return [];
     const tagged = (o.tags?.[o.room.tag] || []).filter((l) => o.list.includes(l) && users[l]?.list.includes(owner));
@@ -240,10 +258,18 @@ export class Hub {
   }
 
   roomsFor(login, users) {
-    return Object.keys(users)
+    const online = (members) => members.map((l) => ({ login: l, online: this.isOnline(l) }));
+    const groups = Object.keys(users)
       .map((owner) => ({ owner, tag: users[owner].room?.tag, members: this.members(owner, users) }))
       .filter((r) => r.members.includes(login))
-      .map((r) => ({ owner: r.owner, tag: r.tag, members: r.members.map((l) => ({ login: l, online: this.isOnline(l) })) }));
+      .map((r) => ({ ...r, members: online(r.members) }));
+    const direct = (users[login]?.list || [])
+      .filter((l) => users[l]?.list.includes(login))
+      .map((l) => {
+        const owner = `@${[login, l].sort().join("+")}`;
+        return { owner, direct: true, with: l, members: online(this.members(owner, users)) };
+      });
+    return [...groups, ...direct];
   }
 
   // A room's members changed (or might have): everyone in it before or after hears.

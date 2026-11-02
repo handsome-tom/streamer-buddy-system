@@ -12,6 +12,9 @@
   --amber: #ffb31a;
   --bad: #ff8280;
   --good: #00c27a;
+  --yellow: #ffe14d;
+  --orange: #ff8a1f;
+  --red: #ff3b30;
 }
 
 * {
@@ -133,23 +136,26 @@ button:disabled {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+/* How the connection is doing: a soft glow in the page's top-left corner. */
 .bar__status::before {
   content: "";
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  margin-right: 5px;
-  border-radius: 50%;
-  vertical-align: 1px;
-  background: currentColor;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 96px;
+  height: 64px;
+  background: radial-gradient(ellipse at top left, var(--glow), transparent 70%);
+  opacity: 0.6;
+  pointer-events: none;
 }
 .bar__status:empty::before {
   display: none;
 }
-.bar__status--ok::before { background: var(--good); }
-.bar__status--wait::before { background: var(--amber); }
-.bar__status--bad { color: var(--bad); }
-/* Just the dot (its words show on hover), unless something's wrong. */
+.bar__status--ok { --glow: var(--good); }
+.bar__status--wait { --glow: var(--yellow); }
+.bar__status--retry { --glow: var(--orange); }
+.bar__status--bad { --glow: var(--red); color: var(--bad); }
+/* Just the glow (its words show on hover over the bar), unless something's wrong. */
 .bar__status:not(.bar__status--bad) {
   font-size: 0;
 }
@@ -633,12 +639,12 @@ main:has(> .cards:empty) {
 .peek .receipt {
   margin-top: 0;
 }
-/* With a question showing, the green light steps aside (problems still show). */
+/* With a question showing, the status takes no room of its own (the glow stays). */
 .bar:has(.peek:not(:empty)) .bar__status {
   flex: none;
 }
 .bar:has(.peek:not(:empty)) .bar__status:not(.bar__status--bad) {
-  display: none;
+  min-width: 0;
 }
 
 /* Narrower bars: answer buttons drop their words, then the reply box goes. */
@@ -744,15 +750,17 @@ main:has(> .cards:empty) {
 }
 
 /* Online, waiting to be added back, and connection requests. */
-.dot__online {
+.dot--online:not(:hover):not(.dot--answer) {
+  box-shadow: 0 0 0 2px var(--good);
+}
+/* The glow is its own layer, so it still shows around a highlighted or pulsing ring. */
+.dot--online::after {
+  content: "";
   position: absolute;
-  right: -1px;
-  bottom: -1px;
-  width: 9px;
-  height: 9px;
-  border: 2px solid var(--panel);
+  inset: -2px;
   border-radius: 50%;
-  background: var(--good);
+  box-shadow: 0 0 9px 2px color-mix(in srgb, var(--good) 75%, transparent);
+  pointer-events: none;
 }
 .dot--waiting img,
 .dot--waiting .dot__letter {
@@ -774,6 +782,10 @@ main:has(> .cards:empty) {
   height: 7px;
   border-radius: 50%;
   background: var(--amber);
+}
+.person__chat {
+  align-self: flex-start;
+  margin: 8px 0;
 }
 .person__state,
 .people__state {
@@ -1014,7 +1026,6 @@ main:has(> .cards:empty) {
 @media (min-height: 120px) {
   .peek { display: none; }
   .bar__status { flex: 1; }
-  .bar:has(.peek:not(:empty)) .bar__status:not(.bar__status--bad) { display: inline; }
 }
 
 /* The who-to chip's caret and its drop-down. */
