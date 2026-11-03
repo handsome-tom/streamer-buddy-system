@@ -54,6 +54,7 @@
 //   tag { login, tag, on }  put a connection in (or out of) one of your tags
 //   room { tag }            open your chat room to one of your tags (null closes it)
 //   say { owner, text }     post in someone's room (yours: owner is you)
+//   unflash { id }          clear a pinned flagged line, for everyone who has it
 //   flash { kind, to, text, chatter, color, channel }  something quick that
 //                           shows for a moment; see Flashes below
 //   statsShare { on }       share your stream stats with your connections
@@ -65,7 +66,9 @@
 //                                                       connections or who's online change)
 //   q { q }                 a question that's new or changed
 //   msg { m }               a new chat message { id, owner, from, text, at }
-//   flash { f }             a flash { id, kind, from, to, text, chatter, color, channel, at }
+//   flash { f }             a flash { id, kind, from, to, text, chatter, color, channel, at };
+//                           a flagged line also has chatterName, chatterColor, emotes { name: picture }
+//   unflash { id }          a pinned flagged line was cleared
 //   flashed { kind, reached }  how many people yours reached
 //   stats { owner, s }      someone's worked-out stats changed
 //   error { why }
@@ -73,6 +76,10 @@
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_LEN = 200;
+const MAX_FLAGGED_LEN = 500; // a whole Twitch chat message
+const PIN_MS = 5 * 60 * 1000;
+const MAX_PIN_EMOTES = 30;
+const EMOTE_HOSTS = ["static-cdn.jtvnw.net", "cdn.betterttv.net", "cdn.frankerfacez.com", "cdn.7tv.app"];
 const MAX_OPEN_PER_PAIR = 3;
 const MAX_ASKS_PER_MINUTE = 10;
 const STANDARD = ["y", "n", "m", "s", "o", "t"];
@@ -130,6 +137,7 @@ export class Hub {
       else if (m.t === "room") await this.setRoom(who.login, m);
       else if (m.t === "say") await this.say(ws, who, m);
       else if (m.t === "flash") await this.flash(ws, who, m);
+      else if (m.t === "unflash") await this.unflash(who, m);
       else if (m.t === "statsShare") await this.statsShare(who.login, m);
       else if (m.t === "sample") await this.sample(who.login, m.s);
       else if (m.t === "statEvent") await this.statEvent(who.login, m);
@@ -224,6 +232,11 @@ export class Hub {
       if (Date.now() - q.at > WEEK_MS) await this.ctx.storage.delete(k);
       else if (q.from === login || q.to === login) questions.push(q);
     }
+    const pins = [];
+    for (const [k, f] of await this.ctx.storage.list({ prefix: "p:" })) {
+      if (Date.now() - f.at > PIN_MS) await this.ctx.storage.delete(k);
+      else if (pinTargets(f, users).includes(login)) pins.push(f);
+    }
     const rooms = this.roomsFor(login, users);
     const chat = {};
     for (const r of rooms) chat[r.owner] = await this.recentChat(r.owner);
@@ -232,7 +245,7 @@ export class Hub {
       const rec = await this.ctx.storage.get(`s:${l}`);
       if (rec) stats[l] = workOut(rec);
     }
-    this.sendTo(login, { t: "state", me: login, connections, requests, tags: users[login]?.tags || {}, questions, rooms, chat, statsOn: !!users[login]?.statsOn, stats });
+    this.sendTo(login, { t: "state", me: login, connections, requests, tags: users[login]?.tags || {}, questions, pins, rooms, chat, statsOn: !!users[login]?.statsOn, stats });
   }
 
   // A room's latest messages. Anything over a week old is deleted, even if nobody
@@ -430,7 +443,7 @@ export class Hub {
   async flash(ws, who, m) {
     const kind = m.kind;
     if (!["info", "love", "chat"].includes(kind)) return;
-    const text = clean(m.text).slice(0, kind === "love" ? MAX_LOVE_LEN : MAX_LEN);
+    const text = kind === "chat" ? cleanTo(m.text, MAX_FLAGGED_LEN) : clean(m.text).slice(0, kind === "love" ? MAX_LOVE_LEN : MAX_LEN);
     if (!text) return;
     this.flashedAt ||= {};
     const recent = (this.flashedAt[who.login] || []).filter((t) => Date.now() - t < 60000);
@@ -447,11 +460,11 @@ export class Hub {
     if (kind === "chat") {
       const channel = String(m.channel || "").toLowerCase();
       if (channel !== who.login && !mutual(channel)) return this.send(ws, { t: "error", why: `You and ${channel} need to add each other first` });
-      Object.assign(f, { channel, to: channel, chatter: clean(m.chatter).slice(0, 25) });
-      // The owner, their mutual connections, and whoever flagged it.
-      const owner = users[channel] || { list: [] };
-      targets = [...new Set([channel, who.login, ...owner.list.filter((l) => users[l]?.list.includes(channel))])];
-      for (const l of targets) this.sendTo(l, { t: "flash", f });
+      Object.assign(f, { channel, to: channel, chatter: clean(m.chatter).slice(0, 25), chatterName: clean(m.chatterName).slice(0, 50), emotes: cleanEmotes(m.emotes) });
+      if (/^#[0-9a-f]{6}$/i.test(m.chatterColor || "")) f.chatterColor = m.chatterColor;
+      // Pinned for five minutes, so it's still there after a reload.
+      await this.ctx.storage.put(`p:${f.id}`, f);
+      for (const l of pinTargets(f, users)) this.sendTo(l, { t: "flash", f });
       return this.send(ws, { t: "flashed", kind, reached: this.isOnline(channel) ? 1 : 0, to: channel });
     }
 
@@ -465,6 +478,17 @@ export class Hub {
     const online = targets.filter((l) => this.isOnline(l));
     for (const l of online) this.sendTo(l, { t: "flash", f: { ...f, to: l } });
     this.send(ws, { t: "flashed", kind, reached: online.length });
+  }
+
+  // Clearing a pin clears it for everyone who has it; any of them can.
+  async unflash(who, m) {
+    const key = `p:${String(m.id || "").slice(0, 8)}`;
+    const f = await this.ctx.storage.get(key);
+    if (!f) return;
+    const targets = pinTargets(f, await this.users());
+    if (!targets.includes(who.login)) return;
+    await this.ctx.storage.delete(key);
+    for (const l of targets) this.sendTo(l, { t: "unflash", id: f.id });
   }
 
   // ===== Questions ===========================================================================
@@ -580,6 +604,29 @@ function cleanOptions(list) {
   return out.slice(0, MAX_OPTIONS);
 }
 
+function cleanTo(s, max) {
+  return String(s || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max);
+}
+
 function clean(s) {
-  return String(s || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, MAX_LEN);
+  return cleanTo(s, MAX_LEN);
+}
+
+// Who has a flagged line: the channel's owner, their mutual connections, and
+// whoever flagged it.
+function pinTargets(f, users) {
+  const owner = users[f.to] || { list: [] };
+  return [...new Set([f.to, f.from, ...owner.list.filter((l) => users[l]?.list.includes(f.to))])];
+}
+
+// A flagged line's emotes, { name: picture }, only from the emote sites.
+function cleanEmotes(emotes) {
+  const out = {};
+  for (const [name, url] of Object.entries(emotes && typeof emotes === "object" ? emotes : {}).slice(0, MAX_PIN_EMOTES)) {
+    try {
+      const u = new URL(String(url));
+      if (u.protocol === "https:" && EMOTE_HOSTS.includes(u.hostname) && name.length <= 50) out[name] = u.href;
+    } catch {}
+  }
+  return out;
 }

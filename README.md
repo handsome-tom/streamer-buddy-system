@@ -31,6 +31,12 @@ with Twitch Space; only the whisper format is shared.
 5. Click **Connections** and add the Twitch usernames of the people who may
    ask you. They need to have you in their Twitch Space connections too.
 
+To have Twitch chat in the same panel, use this address instead and close OBS's
+own chat dock: `https://handsome-tom.github.io/streamer-buddy-system/?livechat`.
+Questions and quick notes stay at the top; below them is Twitch's own embedded
+chat, unchanged. A line a mod flags in Chrome is pinned at the top, emotes included, for 5
+minutes; the streamer or a mod can clear it for everyone with its X.
+
 Things to know:
 
 - Questions only arrive **while OBS is open**. A question sent while OBS is

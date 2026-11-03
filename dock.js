@@ -8,6 +8,9 @@
 //     send a question, quick info or a !vanish note in one tap, like a Stream
 //     Deck. It signs in with Twitch's code sign-in (twitch.tv/activate), since
 //     home-screen apps can't always come back from a sign-in page
+//   - a chat dock (?livechat, to use in place of OBS's Twitch chat dock): all of
+//     the above at the top and Twitch's own embedded chat filling the rest.
+//     ?channel=<name> shows another channel's chat
 // Everyone talks through the relay (relay/ in this repo, on Cloudflare): a
 // WebSocket that signs in with your Twitch sign-in, keeps connections and the
 // week's questions, and says who's online. Questions wait there for anyone
@@ -26,7 +29,7 @@
 //     the bar with its buttons, so an OBS dock kept one row tall works on its
 //     own; a bar that short opens Ask and Connections as pop-outs too
 //   - the bar's quick strip: fast notes from the Ask box's "Quick info" (2
-//     minutes), lines of Twitch chat a mod flagged (2 minutes) and "!vanish notes"
+//     minutes) and "!vanish notes"
 //     (30 seconds, fading in and out fuzzily); nothing's stored, so only people
 //     online get them
 //   - Stats: for each connection, what's public from Twitch (live, viewers,
@@ -71,8 +74,11 @@
   // Inside Twitch Space's side panel: sign-in comes from the extension.
   const EMBED = params.get("embed") === "ext";
   const DECK = params.has("deck");
+  // Twitch only returns to the bare address after a sign-in, so the sign-in's
+  // state remembers this was the chat dock.
+  const LIVECHAT = !POPOUT && !EMBED && !DECK && (params.has("livechat") || (new URLSearchParams(location.hash.slice(1)).get("state") || params.get("state") || "").endsWith("-livechat"));
 
-  const svg = (paths, size = 18) => `<svg viewBox="0 0 20 20" width="${size}" height="${size}" aria-hidden="true">${paths}</svg>`;
+  const svg =(paths, size = 18) => `<svg viewBox="0 0 20 20" width="${size}" height="${size}" aria-hidden="true">${paths}</svg>`;
   const LINE = 'fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"';
   const ANSWERS = {
     y: { label: "Yes", icon: `<path d="M4 10.5l4 4 8-9" ${LINE} stroke-width="2.4"/>` },
@@ -107,6 +113,7 @@
   const quickAsk = document.getElementById("quickAsk");
   const quickEl = document.getElementById("quick");
   const flashesEl = document.getElementById("flashes");
+  const pinsEl = document.getElementById("pins");
   const quickTo = document.getElementById("quickTo");
   const quickText = document.getElementById("quickText");
   const askFull = document.getElementById("askFull");
@@ -247,7 +254,7 @@
   function signIn() {
     if (DECK) return codeSignIn();
     if (EMBED) return parent.postMessage({ t: "hub-signin" }, "*");
-    const state = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    const state = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + (LIVECHAT ? "-livechat" : "");
     put("signinState", state);
     const q = new URLSearchParams({
       response_type: "token",
@@ -319,7 +326,7 @@
     const state = h.get("state") || params.get("state");
     if (state && state === get("signinState") && h.get("access_token")) put("token", h.get("access_token"));
     localStorage.removeItem("signinState");
-    history.replaceState(null, "", location.pathname + (EMBED ? "?embed=ext" : ""));
+    history.replaceState(null, "", location.pathname + (EMBED ? "?embed=ext" : LIVECHAT ? "?livechat" : ""));
     if (params.get("error")) return params.get("error_description") || params.get("error");
   }
 
@@ -461,6 +468,7 @@
       else if (m.t === "q") gotQuestion(m.q);
       else if (m.t === "msg") gotMessage(m.m);
       else if (m.t === "flash") gotFlash(m.f);
+      else if (m.t === "unflash") pinLeaving.get(m.id)?.();
       else if (m.t === "flashed") gotFlashed(m);
       else if (m.t === "stats") {
         stats[m.owner] = m.s;
@@ -503,6 +511,7 @@
     stats = m.stats || {};
     statsOn = !!m.statsOn;
     collect();
+    gotPins(m.pins || []);
     const had = new Set(Object.keys(questions));
     for (const k of Object.keys(questions)) delete questions[k];
     for (const q of m.questions || []) questions[q.id] = q;
@@ -536,10 +545,15 @@
   }
 
   // ===== The quick strip ===================================================================
-  // Each flash removes itself: info and flagged chat after 2 minutes, !vanish
-  // notes after 30 seconds, fuzzily. They're drawn once and left alone, so
-  // redrawing the rest of the page doesn't restart their fade.
-  const FLASH_MS = { info: 120000, chat: 120000, love: 30000 };
+  // Each flash removes itself: info after 2 minutes, !vanish notes after 30
+  // seconds, fuzzily. They're drawn once and left alone, so redrawing the rest of
+  // the page doesn't restart their fade.
+  //
+  // A flagged chat line is a pin below the bar instead (in the strip if the dock
+  // is just the bar): a copy of the line with its emotes, for 5 minutes. The
+  // relay keeps it that long, and its X clears it for everyone who has it: the
+  // streamer, their connections, and whoever flagged it.
+  const FLASH_MS = { info: 120000, chat: 300000, love: 30000 };
   const FUZZ_MS = 1400;
   const FLASH_ICONS = {
     info: `<path d="M11 2 4 11.5h5L8 18l7-9.5h-5z" ${LINE} stroke-width="1.7"/>`,
@@ -547,31 +561,71 @@
     chat: `<path d="M3 4h14v9H8l-4 3v-3H3z" ${LINE} stroke-width="1.8"/>`,
   };
   const seenFlashes = new Set();
+  const pinLeaving = new Map(); // pinned line's id -> takes it away
+
+  function gotPins(pins) {
+    const still = new Set(pins.map((f) => f.id));
+    for (const [id, leave] of pinLeaving) if (!still.has(id)) leave(); // cleared while we were away
+    pins.forEach(gotFlash);
+  }
+
+  // Words, with emote names as their pictures.
+  function withEmotes(text, emotes = {}) {
+    return text.split(/(\s+)/).map((word) => {
+      if (!Object.hasOwn(emotes, word)) return word;
+      const img = el("img", "qflash__emote");
+      img.src = emotes[word];
+      img.alt = img.title = word;
+      return img;
+    });
+  }
 
   function gotFlash(f) {
-    if (f.to !== me.login || seenFlashes.has(f.id)) return; // flagged chat also goes out for glowing in Twitch chat
+    const mine = f.to === me.login;
+    if ((!mine && f.kind !== "chat") || seenFlashes.has(f.id)) return; // connections get flagged chat too
     seenFlashes.add(f.id);
-    if (f.kind !== "love") arrived();
+    const late = Date.now() - (f.at || Date.now());
+    if (f.kind !== "love" && mine && late < 5000) arrived(); // not when a reload brings back an old pin
     const chip = el("div", `qflash qflash--${f.kind}`);
     const color = f.color || colorOf(f.from);
     if (color && f.kind !== "love") chip.style.setProperty("--c", color);
     const icon = el("span", "qflash__icon");
     icon.innerHTML = svg(FLASH_ICONS[f.kind], 15);
+    if (f.kind === "chat") flaggerPicture(icon, f.from);
     const body = el("div", "qflash__body");
     body.title = f.kind === "chat" ? `${f.chatter}: ${f.text} (flagged by ${f.from})` : `${f.text} (${f.from})`;
     if (f.kind === "chat") {
-      body.append(el("b", null, `${f.chatter}: `), document.createTextNode(f.text), el("span", "qflash__who", ` flagged by ${f.from}`));
+      const name = el("b", null, f.chatterName || f.chatter);
+      if (f.chatterColor) name.style.color = f.chatterColor;
+      body.append(name, ": ", ...withEmotes(f.text, f.emotes), el("span", "qflash__who", ` flagged by ${f.from}${mine ? "" : ` in ${f.channel}`}`));
     } else {
       body.append(document.createTextNode(f.text), el("span", "qflash__who", ` ${f.from}`));
     }
     const leave = () => {
       if (chip.classList.contains("qflash--leaving")) return;
       chip.classList.add("qflash--leaving");
+      pinLeaving.delete(f.id);
       setTimeout(() => chip.remove(), FUZZ_MS);
     };
-    chip.append(icon, body, closeButton(leave, "Clear this"));
-    flashesEl.append(chip);
-    setTimeout(leave, FLASH_MS[f.kind] - FUZZ_MS);
+    const pinned = f.kind === "chat";
+    const clear = () => {
+      if (pinned) relay({ t: "unflash", id: f.id });
+      leave();
+    };
+    chip.append(icon, body, closeButton(clear, pinned ? "Clear this for everyone" : "Clear this"));
+    if (pinned) pinLeaving.set(f.id, leave);
+    (pinned && !short() ? pinsEl : flashesEl).append(chip);
+    setTimeout(leave, Math.max(0, FLASH_MS[f.kind] - FUZZ_MS - Math.max(0, late)));
+  }
+
+  // A flagged line's note shows who flagged it, once their picture's known.
+  async function flaggerPicture(icon, login) {
+    if (!pics[login]) await lookUp(login).catch(() => {});
+    if (!pics[login]) return;
+    const pic = el("img", "qflash__pic");
+    pic.src = pics[login];
+    pic.alt = "";
+    icon.replaceChildren(pic);
   }
 
   function gotFlashed(m) {
@@ -719,7 +773,7 @@
   }
 
   // Kept to one row: no room below the bar, so Ask and Connections pop out.
-  const short = () => !POPOUT && !EMBED && !DECK && innerHeight < 120;
+  const short = () => !POPOUT && !EMBED && !DECK && !LIVECHAT && innerHeight < 120;
 
   // Ask / Connections / someone's page: here, or popped out if the dock is just the bar.
   function show(next, to = "") {
@@ -1127,7 +1181,7 @@
   // to everyone.
   const MAX_PRESETS = 8;
   const presets = () => get("presets", ["Clip that!", "Anyone free to help?"]);
-  if (DECK && localStorage.getItem("askOpen") === null) put("askOpen", false);
+  if ((DECK || LIVECHAT) && localStorage.getItem("askOpen") === null) put("askOpen", false);
   let quickSent = ""; // the quick question just sent, shown as "Sent" for a moment
 
   function sendQuick(text) {
@@ -2119,6 +2173,23 @@
     return box;
   }
 
+  // ===== Twitch chat (?livechat) ===========================================================
+  // Twitch's own chat, embedded as it is, below the top section. A page can't
+  // reach inside it, so nothing here changes it; flagged lines show in the strip.
+  let liveChannel = "";
+
+  function liveStart() {
+    if (liveChannel) return;
+    const wanted = (params.get("channel") || me.login).toLowerCase();
+    if (!/^[a-z0-9_]+$/.test(wanted)) return;
+    liveChannel = wanted;
+    const frame = el("iframe", "live__frame");
+    frame.title = `${wanted}'s Twitch chat`;
+    frame.src = `https://www.twitch.tv/embed/${wanted}/chat?parent=${encodeURIComponent(location.hostname)}&darkpopout`;
+    document.getElementById("live").append(frame);
+    document.getElementById("live").hidden = false;
+  }
+
   // ===== Updates ===========================================================================
   // A newer version on GitHub: reload, unless something's being typed.
 
@@ -2227,9 +2298,12 @@
     if (DECK) document.body.classList.add("deck");
     if (POPOUT) document.body.classList.add("popout");
     if (EMBED) document.body.classList.add("embed");
+    if (LIVECHAT) document.body.classList.add("livechat");
     if (DEMO) {
       askBtn.hidden = peopleBtn.hidden = false;
-      return startDemo();
+      startDemo();
+      if (LIVECHAT) liveStart();
+      return;
     }
     if (!TWITCH_CLIENT_ID) return showMessage("Not set up yet", "Put the Twitch app's Client ID in config.js.");
     let error = "";
@@ -2251,6 +2325,7 @@
     setStatus("Connecting…", "wait");
     render();
     connect();
+    if (LIVECHAT) liveStart();
     if (started) return;
     started = true;
     // Twitch asks apps to re-check the sign-in every hour.

@@ -54,7 +54,13 @@
     </button>
   </header>
 
+  <!-- Flagged chat lines, pinned for a while (dock.js). -->
+  <div class="pins" id="pins"></div>
+
   <main id="main"></main>
+
+  <!-- ?livechat: Twitch's own chat, below everything above (dock.js adds it). -->
+  <section class="live" id="live" hidden></section>
 
   <!-- OBS keeps old copies of pages for a while, so the files are loaded under
        the current version.txt; a new version is picked up on the next load.
