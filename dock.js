@@ -2188,8 +2188,9 @@
   // reach inside it, so nothing here changes it; flagged lines pin above it.
   //
   // Who's in chat, for the pictures in the bar, comes from Twitch's public chat
-  // connection, as an anonymous viewer: who's there (it lists everyone in smaller
-  // chats, and the mods in big ones) and who says something.
+  // connection, as an anonymous viewer: who says something, and who's there. Twitch
+  // reports arrivals within about half a minute in small chats; a very big chat
+  // (xQc's, when tried) reported none, so only people chatting show there.
   let liveChannel = "";
   const liveChatters = new Set(); // logins Twitch says are in the chat
   let liveSaid = {}; // connection's login -> when they last chatted here (saved, for restarts)
