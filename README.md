@@ -15,10 +15,8 @@ the asker's side.
 | **Streamer Buddy System** | This project: a web page used as an OBS dock | this repo |
 | **Twitch Space** | The Chrome extension (formerly MytwitchTom) | its own repos |
 | **Ask the Streamer** | A feature of Twitch Space; Streamer Buddy System answers its questions | inside Twitch Space |
-| **Buddy System** | A different, private feature of Twitch Space (where your buddies chatted). Nothing to do with this project | inside Twitch Space |
 
-Always say the full name, **Streamer Buddy System**. "Buddy System" or
-"Buddy" on its own means the Twitch Space feature. This project shares no code
+Always say the full name, **Streamer Buddy System**. This project shares no code
 with Twitch Space; only the whisper format is shared.
 
 ## For the streamer: adding it to OBS
