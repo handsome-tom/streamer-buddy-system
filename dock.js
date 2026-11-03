@@ -63,8 +63,6 @@
 (() => {
   const SCOPES = ""; // signing in only says who you are
   // What sharing stream stats needs from Twitch (a streamer grants it once).
-  // What the chat dock needs to see who's in chat without chatting.
-  const CHATTERS_SCOPE = "moderator:read:chatters";
   const STATS_SCOPES = ["channel:read:subscriptions", "bits:read", "channel:read:ads", "channel:read:hype_train", "moderator:read:followers"];
   const SAMPLE_MS = 60 * 1000;
   const HELIX = "https://api.twitch.tv/helix";
@@ -265,7 +263,7 @@
       response_type: "token",
       client_id: TWITCH_CLIENT_ID,
       redirect_uri: location.origin + location.pathname,
-      scope: [get("statsWanted", false) ? STATS_SCOPES.join(" ") : SCOPES, LIVECHAT ? CHATTERS_SCOPE : ""].filter(Boolean).join(" "),
+      scope: get("statsWanted", false) ? STATS_SCOPES.join(" ") : SCOPES,
       state,
     });
     location.href = `https://id.twitch.tv/oauth2/authorize?${q}`;
@@ -971,16 +969,7 @@
   function cardList() {
     const wrap = el("div", "cards");
     if (signinNote()) wrap.append(signinPill());
-    if (LIVECHAT) {
-      // Everything else is in the bar, or pops out from a picture.
-      if (liveNeedsPermission()) {
-        const allow = el("button", "pill", "Show who's lurking in chat (asks Twitch once)");
-        allow.type = "button";
-        allow.addEventListener("click", signIn);
-        wrap.append(allow);
-      }
-      return wrap;
-    }
+    if (LIVECHAT) return wrap; // everything else is in the bar, or pops out from a picture
     if (!POPOUT && !DECK) wrap.append(composer(null));
     const answers = Object.keys(sent).filter((id) => sent[id].answer && !sent[id].answer.seen).sort((a, b) => sent[a].answer.at - sent[b].answer.at);
     const waiting = Object.keys(sent).filter((id) => !sent[id].answer && !sent[id].seen).sort((a, b) => sent[a].at - sent[b].at);
@@ -2198,62 +2187,57 @@
   // Twitch's own chat, embedded as it is, below the top section. A page can't
   // reach inside it, so nothing here changes it; flagged lines pin above it.
   //
-  // Who's in chat, for the pictures in the bar: Twitch's list of chatters (with
-  // your sign-in, once you've allowed it; it only works for your own channel), and
-  // who's said something, heard over Twitch's public chat connection as an
-  // anonymous viewer. Without the list, someone counts as there for 30 minutes
-  // after they last chatted, and lurkers don't show.
-  const LIVE_CHATTERS_MS = 60 * 1000;
+  // Who's in chat, for the pictures in the bar, comes from Twitch's public chat
+  // connection, as an anonymous viewer: who's there (it lists everyone in smaller
+  // chats, and the mods in big ones) and who says something.
   let liveChannel = "";
-  let liveChatters = null; // Set of logins from Twitch's list; null without it
+  const liveChatters = new Set(); // logins Twitch says are in the chat
   let liveSaid = {}; // connection's login -> when they last chatted here (saved, for restarts)
 
   // Their light: green within 5 minutes, orange 10, yellow 20, white after that
-  // or if they haven't chatted. Null if they aren't in the chat.
+  // or if they haven't chatted. Null if they aren't in the chat. Twitch's list can
+  // lag, so chatting in the last 30 minutes counts too, until Twitch says they left.
   function liveLight(login) {
     const min = liveSaid[login] ? (Date.now() - liveSaid[login]) / 60000 : Infinity;
-    const there = liveChatters ? liveChatters.has(login) || min <= 5 : min <= 30;
-    if (!there) return null;
+    if (!liveChatters.has(login) && min > 30) return null;
     const says = min === Infinity ? "in chat, lurking" : `chatted ${Math.max(1, Math.round(min))} min ago`;
     return { ring: min <= 5 ? "light5" : min <= 10 ? "light10" : min <= 20 ? "light20" : "lightold", says };
-  }
-
-  const liveNeedsPermission = () => !DEV && !DEMO && liveChannel === me?.login && !me?.scopes?.includes(CHATTERS_SCOPE);
-
-  async function liveLoadChatters() {
-    if (DEV || DEMO || liveNeedsPermission() || liveChannel !== me?.login) return;
-    try {
-      const found = new Set();
-      let after = "";
-      do {
-        const r = await helix(`/chat/chatters?broadcaster_id=${me.id}&moderator_id=${me.id}&first=1000${after ? `&after=${after}` : ""}`);
-        if (!r.ok) return;
-        const j = await r.json();
-        for (const u of j.data || []) found.add(u.user_login);
-        after = j.pagination?.cursor || "";
-      } while (after);
-      liveChatters = found;
-      drawDots();
-    } catch {}
   }
 
   function liveListen() {
     const ws = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
     ws.onopen = () => {
+      liveChatters.clear();
+      ws.send("CAP REQ :twitch.tv/membership");
       ws.send("PASS SCHMOOPIIE");
       ws.send(`NICK justinfan${Math.floor(Math.random() * 90000) + 10000}`);
       ws.send(`JOIN #${liveChannel}`);
     };
     ws.onmessage = (e) => {
+      let changed = false;
       for (const line of e.data.split("\r\n")) {
         if (line.startsWith("PING")) ws.send("PONG :tmi.twitch.tv");
         else if (line.includes(" RECONNECT")) ws.close();
-        const login = line.match(/^:(\w+)!\S+ PRIVMSG /)?.[1];
+        const names = line.match(/ 353 \S+ = #\S+ :(.*)$/)?.[1];
+        if (names) {
+          for (const login of names.split(" ")) liveChatters.add(login);
+          changed = true;
+        }
+        const [, login, what] = line.match(/^:(\w+)!\S+ (JOIN|PART|PRIVMSG) /) || [];
         if (!login || !trusted().includes(login)) continue;
-        liveSaid[login] = Date.now();
-        put(`chatSaid-${liveChannel}`, liveSaid);
-        drawDots();
+        changed = true;
+        if (what === "JOIN") liveChatters.add(login);
+        else if (what === "PART") {
+          liveChatters.delete(login);
+          delete liveSaid[login];
+          put(`chatSaid-${liveChannel}`, liveSaid);
+        } else {
+          liveChatters.add(login);
+          liveSaid[login] = Date.now();
+          put(`chatSaid-${liveChannel}`, liveSaid);
+        }
       }
+      if (changed) drawDots();
     };
     ws.onclose = () => setTimeout(liveListen, 5000);
   }
@@ -2271,12 +2255,10 @@
     liveSaid = get(`chatSaid-${wanted}`, {});
     setInterval(drawDots, 30 * 1000); // lights change with time
     if (DEMO) {
-      liveChatters = new Set(["tallglassofwasps", "techbuddy"]);
+      liveChatters.add("tallglassofwasps").add("techbuddy");
       liveSaid.tallglassofwasps = Date.now() - 2 * 60000;
     } else {
       liveListen();
-      liveLoadChatters();
-      setInterval(liveLoadChatters, LIVE_CHATTERS_MS);
     }
     render();
   }
