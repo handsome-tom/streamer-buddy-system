@@ -11,8 +11,8 @@
 //   - a chat dock (?livechat, to use in place of OBS's Twitch chat dock): for a
 //     streamer who's live, so just the one-row bar on top of Twitch's own embedded
 //     chat. It receives everything but only sends questions, and a connection's
-//     picture shows only while they're in the chat, lit by how recently they
-//     chatted. ?channel=<name> shows another channel's chat
+//     picture is lit by how recently they chatted, or gray if they aren't in the
+//     chat. ?channel=<name> shows another channel's chat
 // Everyone talks through the relay (relay/ in this repo, on Cloudflare): a
 // WebSocket that signs in with your Twitch sign-in, keeps connections and the
 // week's questions, and says who's online. Questions wait there for anyone
@@ -922,9 +922,9 @@
       const answers = Object.values(sent).filter((q) => q.to === login && q.answer && !q.answer.seen).length;
       const direct = directWith(login);
       const said = direct ? unread(direct.owner) : 0; // private messages only count; they don't pulse
-      // The chat dock: only who's in the chat, or has something waiting.
+      // The chat dock: everyone you're connected with, lit by whether they're in the chat.
       const light = LIVECHAT && mutual ? liveLight(login) : null;
-      if (LIVECHAT && !light && !(asks + answers + said)) return null;
+      if (LIVECHAT && !light && !(asks + answers + said)) return null; // hasn't added you back
       const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}${online && !LIVECHAT ? " dot--online" : ""}${light ? ` dot--${light.ring}` : ""}`);
       dot.type = "button";
       if (colorOf(login)) {
@@ -2189,30 +2189,66 @@
   //
   // Who's in chat, for the pictures in the bar, comes from Twitch's public chat
   // connection, as an anonymous viewer: who says something, and who's there. Twitch
-  // reports arrivals within about half a minute in small chats; a very big chat
-  // (xQc's, when tried) reported none, so only people chatting show there.
+  // reports arrivals within about a minute in small chats; a very big chat (xQc's,
+  // when tried) reported none, so only people chatting light up there. It doesn't
+  // always say when someone leaves, so a fresh connection takes attendance every few
+  // minutes: Twitch reports everyone there to a newcomer.
+  const LIVE_RECHECK_MS = DEV && params.has("recheck") ? Number(params.get("recheck")) : 3 * 60 * 1000; // ?recheck=<ms> for testing
+  const LIVE_ATTENDANCE_MS = 90 * 1000;
   let liveChannel = "";
   const liveChatters = new Set(); // logins Twitch says are in the chat
   let liveSaid = {}; // connection's login -> when they last chatted here (saved, for restarts)
+  let liveListed = false; // attendance named people here, so it can be trusted over who chatted
 
   // Their light: green within 5 minutes, orange 10, yellow 20, white after that
-  // or if they haven't chatted. Null if they aren't in the chat. Twitch's list can
-  // lag, so chatting in the last 30 minutes counts too, until Twitch says they left.
+  // or if they haven't chatted; gray if they aren't in the chat. Until attendance
+  // has named people (it never does in very big chats), chatting in the last 30
+  // minutes counts as being there.
   function liveLight(login) {
     const min = liveSaid[login] ? (Date.now() - liveSaid[login]) / 60000 : Infinity;
-    if (!liveChatters.has(login) && min > 30) return null;
+    if (!liveChatters.has(login) && (liveListed || min > 30)) return { ring: "away", says: "not in chat" };
     const says = min === Infinity ? "in chat, lurking" : `chatted ${Math.max(1, Math.round(min))} min ago`;
     return { ring: min <= 5 ? "light5" : min <= 10 ? "light10" : min <= 20 ? "light20" : "lightold", says };
+  }
+
+  function liveJoin(ws) {
+    ws.send("CAP REQ :twitch.tv/membership");
+    ws.send("PASS SCHMOOPIIE");
+    ws.send(`NICK justinfan${Math.floor(Math.random() * 90000) + 10000}`);
+    ws.send(`JOIN #${liveChannel}`);
+  }
+
+  function liveRecheck() {
+    const ws = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
+    const there = new Set();
+    ws.onopen = () => liveJoin(ws);
+    ws.onmessage = (e) => {
+      for (const line of e.data.split("\r\n")) {
+        if (line.startsWith("PING")) ws.send("PONG :tmi.twitch.tv");
+        const login = line.match(/^:(\w+)!\S+ JOIN /)?.[1];
+        if (login) there.add(login);
+      }
+    };
+    setTimeout(() => {
+      ws.close();
+      // Twitch always reports us joining, so empty means this connection failed.
+      if (there.size) {
+        liveListed = there.size > 1;
+        liveChatters.clear();
+        there.forEach((login) => liveChatters.add(login));
+        // Chatted in the last moments: here, whatever the list has caught up with.
+        for (const [login, at] of Object.entries(liveSaid)) if (Date.now() - at < LIVE_ATTENDANCE_MS) liveChatters.add(login);
+        drawDots();
+      }
+      setTimeout(liveRecheck, LIVE_RECHECK_MS);
+    }, LIVE_ATTENDANCE_MS);
   }
 
   function liveListen() {
     const ws = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
     ws.onopen = () => {
       liveChatters.clear();
-      ws.send("CAP REQ :twitch.tv/membership");
-      ws.send("PASS SCHMOOPIIE");
-      ws.send(`NICK justinfan${Math.floor(Math.random() * 90000) + 10000}`);
-      ws.send(`JOIN #${liveChannel}`);
+      liveJoin(ws);
     };
     ws.onmessage = (e) => {
       let changed = false;
@@ -2260,6 +2296,7 @@
       liveSaid.tallglassofwasps = Date.now() - 2 * 60000;
     } else {
       liveListen();
+      setTimeout(liveRecheck, LIVE_RECHECK_MS);
     }
     render();
   }

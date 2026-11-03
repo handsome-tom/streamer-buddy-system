@@ -1908,6 +1908,11 @@ body.livechat .peek__own input {
 .dot--light10:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px #ff8a00; }
 .dot--light20:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px #ffd400; }
 .dot--lightold:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px #fff; }
+.dot--away img,
+.dot--away .dot__letter {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
 body.livechat .pins {
   flex: none;
   max-height: 30vh;
