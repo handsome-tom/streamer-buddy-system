@@ -8,9 +8,11 @@
 //     send a question, quick info or a !vanish note in one tap, like a Stream
 //     Deck. It signs in with Twitch's code sign-in (twitch.tv/activate), since
 //     home-screen apps can't always come back from a sign-in page
-//   - a chat dock (?livechat, to use in place of OBS's Twitch chat dock): all of
-//     the above at the top and Twitch's own embedded chat filling the rest.
-//     ?channel=<name> shows another channel's chat
+//   - a chat dock (?livechat, to use in place of OBS's Twitch chat dock): for a
+//     streamer who's live, so just the one-row bar on top of Twitch's own embedded
+//     chat. It receives everything but only sends questions, and a connection's
+//     picture shows only while they're in the chat, lit by how recently they
+//     chatted. ?channel=<name> shows another channel's chat
 // Everyone talks through the relay (relay/ in this repo, on Cloudflare): a
 // WebSocket that signs in with your Twitch sign-in, keeps connections and the
 // week's questions, and says who's online. Questions wait there for anyone
@@ -61,6 +63,8 @@
 (() => {
   const SCOPES = ""; // signing in only says who you are
   // What sharing stream stats needs from Twitch (a streamer grants it once).
+  // What the chat dock needs to see who's in chat without chatting.
+  const CHATTERS_SCOPE = "moderator:read:chatters";
   const STATS_SCOPES = ["channel:read:subscriptions", "bits:read", "channel:read:ads", "channel:read:hype_train", "moderator:read:followers"];
   const SAMPLE_MS = 60 * 1000;
   const HELIX = "https://api.twitch.tv/helix";
@@ -77,6 +81,7 @@
   // Twitch only returns to the bare address after a sign-in, so the sign-in's
   // state remembers this was the chat dock.
   const LIVECHAT = !POPOUT && !EMBED && !DECK && (params.has("livechat") || (new URLSearchParams(location.hash.slice(1)).get("state") || params.get("state") || "").endsWith("-livechat"));
+  const STREAMER = LIVECHAT || params.has("streamer"); // and the windows it pops out
 
   const svg =(paths, size = 18) => `<svg viewBox="0 0 20 20" width="${size}" height="${size}" aria-hidden="true">${paths}</svg>`;
   const LINE = 'fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"';
@@ -260,7 +265,7 @@
       response_type: "token",
       client_id: TWITCH_CLIENT_ID,
       redirect_uri: location.origin + location.pathname,
-      scope: get("statsWanted", false) ? STATS_SCOPES.join(" ") : SCOPES,
+      scope: [get("statsWanted", false) ? STATS_SCOPES.join(" ") : SCOPES, LIVECHAT ? CHATTERS_SCOPE : ""].filter(Boolean).join(" "),
       state,
     });
     location.href = `https://id.twitch.tv/oauth2/authorize?${q}`;
@@ -614,7 +619,7 @@
     };
     chip.append(icon, body, closeButton(clear, pinned ? "Clear this for everyone" : "Clear this"));
     if (pinned) pinLeaving.set(f.id, leave);
-    (pinned && !short() ? pinsEl : flashesEl).append(chip);
+    (pinned && (LIVECHAT || !short()) ? pinsEl : flashesEl).append(chip);
     setTimeout(leave, Math.max(0, FLASH_MS[f.kind] - FUZZ_MS - Math.max(0, late)));
   }
 
@@ -765,6 +770,7 @@
     if (POPOUT) return window;
     if (EMBED || DECK) return null;
     const q = new URLSearchParams({ popout: "", view: show, to });
+    if (STREAMER) q.set("streamer", "");
     if (DEMO) q.set("demo", "");
     if (DEV) q.set("dev", DEV);
     popWin = window.open(`${location.pathname}?${q}`, "streamer-buddy-popout", "popup,width=360,height=520");
@@ -773,7 +779,7 @@
   }
 
   // Kept to one row: no room below the bar, so Ask and Connections pop out.
-  const short = () => !POPOUT && !EMBED && !DECK && !LIVECHAT && innerHeight < 120;
+  const short = () => !POPOUT && !EMBED && !DECK && (LIVECHAT || innerHeight < 120);
 
   // Ask / Connections / someone's page: here, or popped out if the dock is just the bar.
   function show(next, to = "") {
@@ -810,7 +816,7 @@
     peopleBtn.title = requests.length ? `Connections (${requests.length} waiting for you to add them back)` : "Connections";
     askBtn.textContent = DECK ? "Deck" : view === "ask" ? "Cancel" : "Ask";
     drawQuickAsk();
-    statsBtn.hidden = !connections.length && !statsOn;
+    statsBtn.hidden = STREAMER || (!connections.length && !statsOn);
     statsBtn.classList.toggle("pill--on", view === "stats");
     // The chat button: shown once you're in a room or have tags to open one with.
     chatBtn.hidden = !(rooms.length || Object.keys(tags).length);
@@ -834,7 +840,8 @@
   function drawQuickAsk() {
     const able = connections.filter((c) => c.mutual).map((c) => c.login);
     const inBar = short() && able.length > 0;
-    quickAsk.hidden = askFull.hidden = quickEl.hidden = !inBar;
+    quickAsk.hidden = quickEl.hidden = !inBar;
+    askFull.hidden = !inBar || LIVECHAT;
     askBtn.hidden = inBar || !me;
     if (!inBar) return;
     const choices = targets();
@@ -917,7 +924,10 @@
       const answers = Object.values(sent).filter((q) => q.to === login && q.answer && !q.answer.seen).length;
       const direct = directWith(login);
       const said = direct ? unread(direct.owner) : 0; // private messages only count; they don't pulse
-      const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}${online ? " dot--online" : ""}`);
+      // The chat dock: only who's in the chat, or has something waiting.
+      const light = LIVECHAT && mutual ? liveLight(login) : null;
+      if (LIVECHAT && !light && !(asks + answers + said)) return null;
+      const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}${online && !LIVECHAT ? " dot--online" : ""}${light ? ` dot--${light.ring}` : ""}`);
       dot.type = "button";
       if (colorOf(login)) {
         dot.style.setProperty("--c", colorOf(login));
@@ -931,6 +941,7 @@
         : asks ? `${login} asked you something`
         : answers ? `${login} answered you`
         : said ? `${login} sent you a message`
+        : light ? `${login}: ${light.says}`
         : `${login}${online ? " (online)" : ""}`;
       if (pics[login]) {
         const img = el("img");
@@ -954,12 +965,22 @@
       });
       return dot;
     });
-    dotsEl.replaceChildren(...dots);
+    dotsEl.replaceChildren(...dots.filter(Boolean));
   }
 
   function cardList() {
     const wrap = el("div", "cards");
     if (signinNote()) wrap.append(signinPill());
+    if (LIVECHAT) {
+      // Everything else is in the bar, or pops out from a picture.
+      if (liveNeedsPermission()) {
+        const allow = el("button", "pill", "Show who's lurking in chat (asks Twitch once)");
+        allow.type = "button";
+        allow.addEventListener("click", signIn);
+        wrap.append(allow);
+      }
+      return wrap;
+    }
     if (!POPOUT && !DECK) wrap.append(composer(null));
     const answers = Object.keys(sent).filter((id) => sent[id].answer && !sent[id].answer.seen).sort((a, b) => sent[a].answer.at - sent[b].answer.at);
     const waiting = Object.keys(sent).filter((id) => !sent[id].answer && !sent[id].seen).sort((a, b) => sent[a].at - sent[b].at);
@@ -1181,7 +1202,7 @@
   // to everyone.
   const MAX_PRESETS = 8;
   const presets = () => get("presets", ["Clip that!", "Anyone free to help?"]);
-  if ((DECK || LIVECHAT) && localStorage.getItem("askOpen") === null) put("askOpen", false);
+  if (DECK && localStorage.getItem("askOpen") === null) put("askOpen", false);
   let quickSent = ""; // the quick question just sent, shown as "Sent" for a moment
 
   function sendQuick(text) {
@@ -1256,7 +1277,7 @@
       });
       modes.append(b);
     }
-    box.append(modes);
+    if (!STREAMER) box.append(modes); // a streamer only asks
     if (!fixedTo && !able.length) {
       box.append(el("p", "ask__hint", "Add someone under Connections first. You can ask each other once you've both added each other."));
       return box;
@@ -2175,8 +2196,67 @@
 
   // ===== Twitch chat (?livechat) ===========================================================
   // Twitch's own chat, embedded as it is, below the top section. A page can't
-  // reach inside it, so nothing here changes it; flagged lines show in the strip.
+  // reach inside it, so nothing here changes it; flagged lines pin above it.
+  //
+  // Who's in chat, for the pictures in the bar: Twitch's list of chatters (with
+  // your sign-in, once you've allowed it; it only works for your own channel), and
+  // who's said something, heard over Twitch's public chat connection as an
+  // anonymous viewer. Without the list, someone counts as there for 30 minutes
+  // after they last chatted, and lurkers don't show.
+  const LIVE_CHATTERS_MS = 60 * 1000;
   let liveChannel = "";
+  let liveChatters = null; // Set of logins from Twitch's list; null without it
+  let liveSaid = {}; // connection's login -> when they last chatted here (saved, for restarts)
+
+  // Their light: green within 5 minutes, orange 10, yellow 20, white after that
+  // or if they haven't chatted. Null if they aren't in the chat.
+  function liveLight(login) {
+    const min = liveSaid[login] ? (Date.now() - liveSaid[login]) / 60000 : Infinity;
+    const there = liveChatters ? liveChatters.has(login) || min <= 5 : min <= 30;
+    if (!there) return null;
+    const says = min === Infinity ? "in chat, lurking" : `chatted ${Math.max(1, Math.round(min))} min ago`;
+    return { ring: min <= 5 ? "light5" : min <= 10 ? "light10" : min <= 20 ? "light20" : "lightold", says };
+  }
+
+  const liveNeedsPermission = () => !DEV && !DEMO && liveChannel === me?.login && !me?.scopes?.includes(CHATTERS_SCOPE);
+
+  async function liveLoadChatters() {
+    if (DEV || DEMO || liveNeedsPermission() || liveChannel !== me?.login) return;
+    try {
+      const found = new Set();
+      let after = "";
+      do {
+        const r = await helix(`/chat/chatters?broadcaster_id=${me.id}&moderator_id=${me.id}&first=1000${after ? `&after=${after}` : ""}`);
+        if (!r.ok) return;
+        const j = await r.json();
+        for (const u of j.data || []) found.add(u.user_login);
+        after = j.pagination?.cursor || "";
+      } while (after);
+      liveChatters = found;
+      drawDots();
+    } catch {}
+  }
+
+  function liveListen() {
+    const ws = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
+    ws.onopen = () => {
+      ws.send("PASS SCHMOOPIIE");
+      ws.send(`NICK justinfan${Math.floor(Math.random() * 90000) + 10000}`);
+      ws.send(`JOIN #${liveChannel}`);
+    };
+    ws.onmessage = (e) => {
+      for (const line of e.data.split("\r\n")) {
+        if (line.startsWith("PING")) ws.send("PONG :tmi.twitch.tv");
+        else if (line.includes(" RECONNECT")) ws.close();
+        const login = line.match(/^:(\w+)!\S+ PRIVMSG /)?.[1];
+        if (!login || !trusted().includes(login)) continue;
+        liveSaid[login] = Date.now();
+        put(`chatSaid-${liveChannel}`, liveSaid);
+        drawDots();
+      }
+    };
+    ws.onclose = () => setTimeout(liveListen, 5000);
+  }
 
   function liveStart() {
     if (liveChannel) return;
@@ -2188,6 +2268,17 @@
     frame.src = `https://www.twitch.tv/embed/${wanted}/chat?parent=${encodeURIComponent(location.hostname)}&darkpopout`;
     document.getElementById("live").append(frame);
     document.getElementById("live").hidden = false;
+    liveSaid = get(`chatSaid-${wanted}`, {});
+    setInterval(drawDots, 30 * 1000); // lights change with time
+    if (DEMO) {
+      liveChatters = new Set(["tallglassofwasps", "techbuddy"]);
+      liveSaid.tallglassofwasps = Date.now() - 2 * 60000;
+    } else {
+      liveListen();
+      liveLoadChatters();
+      setInterval(liveLoadChatters, LIVE_CHATTERS_MS);
+    }
+    render();
   }
 
   // ===== Updates ===========================================================================

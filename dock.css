@@ -1847,7 +1847,67 @@ body.livechat {
 }
 body.livechat .bar {
   flex: none;
+  flex-wrap: wrap;
 }
+/* The one-row bar's parts, in rows to fit a chat-width dock: pictures and buttons,
+   then asking, then what's come in. Wins over the size-based rules above and below,
+   which assume a bar this tall has cards under it. */
+body.livechat .bar__status {
+  order: 1;
+  flex: 1;
+}
+body.livechat #chatBtn,
+body.livechat #peopleBtn,
+body.livechat #askBtn {
+  order: 2;
+}
+body.livechat .qa {
+  order: 3;
+  display: flex;
+  flex: 1 1 100%;
+}
+body.livechat .quick,
+body.livechat .bar:has(.flashes:not(:empty)) .quick {
+  order: 4;
+  display: flex !important;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+}
+body.livechat .quick[hidden] {
+  display: none !important;
+}
+body.livechat .flashes {
+  order: 5;
+}
+body.livechat .peek:not(:empty) {
+  order: 6;
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+}
+body.livechat .peek__line {
+  display: block;
+  flex: 1 1 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+body.livechat .peek__who {
+  margin-right: 6px;
+}
+body.livechat .peek__own {
+  display: block;
+  flex: 1 1 120px;
+  min-width: 0;
+}
+body.livechat .peek__own input {
+  width: 100%;
+}
+/* Who's in chat, by how recently they chatted. */
+.dot--light5:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px #00c27a; }
+.dot--light10:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px #ff8a00; }
+.dot--light20:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px #ffd400; }
+.dot--lightold:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px #fff; }
 body.livechat .pins {
   flex: none;
   max-height: 30vh;

@@ -33,8 +33,11 @@ with Twitch Space; only the whisper format is shared.
 
 To have Twitch chat in the same panel, use this address instead and close OBS's
 own chat dock: `https://handsome-tom.github.io/streamer-buddy-system/?livechat`.
-Questions and quick notes stay at the top; below them is Twitch's own embedded
-chat, unchanged. A line a mod flags in Chrome is pinned at the top, emotes included, for 5
+A slim bar stays at the top, made for being live: it shows questions, quick
+info and !vanish notes as they come in and only sends questions. A connection's
+picture shows there while they're in the chat: green if they chatted in the last
+5 minutes, then orange (10), yellow (20), and white if they're just lurking. Below
+it is Twitch's own embedded chat, unchanged. A line a mod flags in Chrome is pinned at the top, emotes included, for 5
 minutes; the streamer or a mod can clear it for everyone with its X.
 
 Things to know:
