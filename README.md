@@ -39,8 +39,13 @@ your message or answer seen. A connection's picture shows once they've been in t
 chat this stream. While they're in the chat, its ring is how recently they chatted:
 green within 5 minutes, then orange (10), yellow (20) and white (30); after that, or if
 they're just lurking, no ring, just their picture lit up. Once they leave the chat the
-picture goes gray. Below it is Twitch's own embedded chat, unchanged. A line a mod flags in Chrome is pinned at the top, emotes included, for 5
-minutes; the streamer or a mod can clear it for everyone with its X.
+picture goes gray. Below it is Twitch's own embedded chat, unchanged. A line a mod flags in Chrome is pinned at the top of the chat, emotes included,
+for 10 seconds (5 minutes elsewhere), and with custom chat the line itself glows in the
+chat in the flagger's colour; the streamer or a mod can clear the pin for everyone with
+its X. With custom chat the streamer can also **bookmark** a message: double-click it (or
+its 🔖 button). As new messages push it up, the chat stops when it reaches the top so it
+stays in view, until "More messages below"; the 🔖 count in the chat bar goes back to
+bookmarks.
 
 ### Pings
 

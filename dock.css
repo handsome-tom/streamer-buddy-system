@@ -2510,3 +2510,153 @@ body.livechat .peek--5 { --ping: var(--red); }
 .nudge--warned { border-color: color-mix(in srgb, var(--red) 60%, var(--line)); }
 /* Counting taps towards a warning. */
 .nudge--arming { color: #fff; border-color: var(--red); background: color-mix(in srgb, var(--red) 22%, var(--panel)); }
+
+/* ===== Answers to your questions: a slim list ============================================ */
+/* One line each, the full width there's room for. Hovering one turns it into a pill
+   button with a heavy glow; clicking it marks the answer seen and clears it. */
+.alist { display: flex; flex-direction: column; gap: 3px; width: 100%; }
+.arow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-radius 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+.arow + .arow { box-shadow: 0 -1px 0 var(--line); }
+.arow:hover:not(:disabled),
+.arow:focus-visible {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--purple) 24%, var(--panel));
+  box-shadow: 0 8px 26px rgba(145, 71, 255, 0.5), 0 0 0 1px rgba(191, 148, 255, 0.55);
+  transform: translateY(-1px);
+  outline: none;
+}
+.arow:hover:not(:disabled) + .arow { box-shadow: none; }
+.arow__icon { flex: none; display: flex; }
+.arow__text { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.arow__who { margin-right: 6px; }
+.arow__said { margin-right: 8px; font-weight: 700; color: #fff; }
+.arow__q { color: var(--muted); }
+.arow__ago, .arow__act { flex: none; font-size: 11px; color: var(--muted); white-space: nowrap; }
+.arow__act { display: none; padding: 2px 9px; font-weight: 700; color: #fff; background: var(--purple); border-radius: 999px; }
+.arow:hover:not(:disabled) .arow__ago, .arow:focus-visible .arow__ago { display: none; }
+.arow:hover:not(:disabled) .arow__act, .arow:focus-visible .arow__act { display: inline; }
+
+/* ===== Questions and messages to you: a slim list ======================================== */
+/* One line each (the message wraps if it's long), small buttons on the right, a reply box
+   under it only when asked for. Hovering turns the line into a glowing pill. The dot is
+   its colour: green, then orange, yellow, white with nudges, red for a warning. */
+.ilist { display: flex; flex-direction: column; gap: 3px; width: 100%; }
+.irow__wrap + .irow__wrap { border-top: 1px solid var(--line); padding-top: 3px; }
+.irow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px 6px 12px;
+  font-size: 13px;
+  border-radius: 8px;
+  transition: border-radius 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+.irow:hover, .irow:focus-within, .irow--open {
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--purple) 20%, var(--panel));
+  box-shadow: 0 8px 26px rgba(145, 71, 255, 0.45), 0 0 0 1px rgba(191, 148, 255, 0.5);
+}
+.irow:hover { transform: translateY(-1px); }
+.irow .peek__ping { margin: 0; }
+.irow__text { flex: 1; min-width: 0; overflow-wrap: anywhere; line-height: 1.35; }
+.irow__who { margin-right: 6px; }
+.irow__msg { font-weight: 600; color: #fff; }
+.irow__to { color: var(--muted); font-size: 12px; }
+.irow__acts { display: flex; flex: none; align-items: center; gap: 3px; }
+.irow__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  border: 0;
+  border-radius: 13px;
+  cursor: pointer;
+}
+.irow__btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.16); }
+.irow__btn--seen { padding: 0 9px; }
+.irow__btn--own { padding: 0 9px; font-weight: 600; }
+.irow__btn--on { background: var(--purple); color: #fff; }
+.irow__btn--x { min-width: 22px; color: var(--muted); background: none; font-size: 16px; font-weight: 400; }
+.irow__btn--x:hover:not(:disabled) { color: var(--text); }
+.irow__reply { display: flex; gap: 6px; margin: 6px 4px 4px 30px; }
+.irow__reply input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--field);
+  border-radius: 15px;
+}
+.irow__reply input:focus { border-color: var(--purple); outline: none; }
+.irow__send { flex: none; width: 30px; height: 30px; color: #fff; background: var(--purple); border: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+.arow--mine .arow__who { color: var(--muted); }
+
+/* ===== Custom chat: bookmarks =========================================================== */
+/* A bookmarked message: a soft amber glow behind it and a little marker. */
+.oc-line--marked {
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--amber) 13%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--amber) 35%, transparent), 0 0 12px color-mix(in srgb, var(--amber) 18%, transparent);
+}
+.oc-line--marked::before { content: "🔖"; margin-right: 4px; font-size: 11px; }
+.oc-line--flash { animation: ocFlash 1.2s ease-out; }
+@keyframes ocFlash {
+  0% { background: color-mix(in srgb, var(--amber) 45%, transparent); }
+}
+.oc-marks {
+  margin-left: auto;
+  margin-right: 8px;
+  padding: 1px 8px;
+  font: inherit;
+  font-size: 11px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--amber) 22%, var(--panel));
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.oc-marks:hover { background: color-mix(in srgb, var(--amber) 38%, var(--panel)); }
+.oc-marks[hidden] { display: none; }
+.oc-marks:not([hidden]) + .oc-link { margin-left: 0; } /* the chat switch stays top right */
+
+/* A line a mod flagged: a glow round it in the flagger's colour (custom chat). */
+.oc-line--flagged {
+  --flag: #3fb2ff;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--flag) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--flag) 55%, transparent), 0 0 14px color-mix(in srgb, var(--flag) 35%, transparent);
+}
+
+/* The chat dock's message area showing an answer: icon, answer and question on one line. */
+body.livechat .peek__line .peek__icon { display: inline-flex; margin-right: 5px; vertical-align: -2px; }
+body.livechat .peek__line .peek__answer { margin-right: 8px; }

@@ -70,7 +70,9 @@
     const bar = el("div", "oc-bar");
     const statusEl = el("span", "oc-status oc-status--wait", "Connecting…");
     const twitchBtn = button("oc-link", "Use Twitch chat", () => host.onChoose?.(), "Switch to Twitch's own chat");
-    bar.append(statusEl, twitchBtn);
+    const marksBtn = button("oc-marks", "", () => showMark(), "Go to a bookmarked message (click again for the next)");
+    marksBtn.hidden = true;
+    bar.append(statusEl, marksBtn, twitchBtn);
     const heldEl = el("div", "oc-held");
     heldEl.hidden = true;
     const listWrap = el("div", "oc-listwrap");
@@ -78,6 +80,7 @@
     const moreBtn = button("oc-more", "More messages below", () => {
       follow = true;
       holdUntil = 0;
+      releaseStop();
       toBottom();
     });
     moreBtn.hidden = true;
@@ -409,6 +412,11 @@
     }
     list.addEventListener("scroll", () => {
       const nearEnd = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+      if (quietScroll) {
+        quietScroll = false;
+        return;
+      }
+      if (nearEnd && atMark) releaseStop(); // scrolled on down past it by hand
       if (nearEnd !== follow && (nearEnd || Date.now() >= holdUntil)) follow = nearEnd;
       if (follow && Date.now() >= holdUntil) {
         unseen = false;
@@ -433,9 +441,78 @@
         if (first.dataset.id) byId.delete(first.dataset.id);
         first.remove();
       }
-      if (!held()) toBottom();
+      if (!held() && !stopAtMark()) toBottom();
       else if (unseen) moreBtn.hidden = false;
     }
+
+    // ----- Bookmarks -------------------------------------------------------------------
+    // Double-click a message (or its bookmark button) to bookmark it; again to take it off.
+    // The newest bookmark holds its place: when new messages would push it up past the top,
+    // the chat stops there so it stays in view, until "More messages below" (or scrolling
+    // down by hand) lets it carry on. The bookmark count in the bar goes back to them.
+    const marks = []; // bookmarked message ids, oldest first
+    let stopId = null; // the bookmark that stops the chat when it reaches the top
+    let atMark = false; // it has: waiting for "More messages below"
+    let quietScroll = false;
+    let markShown = -1;
+    function drawMarks() {
+      const n = marks.filter((id) => byId.has(id)).length;
+      marksBtn.hidden = !n;
+      marksBtn.textContent = `🔖 ${n}`;
+    }
+    function toggleMark(line) {
+      const id = line?.dataset.id;
+      if (!id) return;
+      const at = marks.indexOf(id);
+      if (at >= 0) {
+        marks.splice(at, 1);
+        line.classList.remove("oc-line--marked");
+        if (stopId === id) releaseStop();
+      } else {
+        marks.push(id);
+        line.classList.add("oc-line--marked");
+        stopId = id;
+        atMark = false;
+      }
+      drawMarks();
+    }
+    // Would going to the newest message push the bookmark up past the top? Then stop with
+    // it at the top instead. Says whether it stopped.
+    function stopAtMark() {
+      const line = stopId && byId.get(stopId);
+      if (!line) return false;
+      const top = line.getBoundingClientRect().top - list.getBoundingClientRect().top;
+      const wouldMove = list.scrollHeight - list.clientHeight - list.scrollTop;
+      if (!atMark && top - wouldMove >= 0) return false; // still fits: carry on
+      quietScroll = true; // this scroll is ours, not the streamer's
+      list.scrollTop += top;
+      follow = false;
+      atMark = true;
+      return true;
+    }
+    function releaseStop() {
+      stopId = null;
+      atMark = false;
+    }
+    function showMark() {
+      const live = marks.filter((id) => byId.has(id));
+      if (!live.length) return drawMarks();
+      markShown = (markShown + 1) % live.length;
+      const line = byId.get(live[live.length - 1 - markShown]); // newest first
+      follow = false;
+      holdUntil = Date.now() + HOVER_HOLD_MS;
+      list.scrollTop += line.getBoundingClientRect().top - list.getBoundingClientRect().top - 8;
+      line.classList.remove("oc-line--flash");
+      void line.offsetWidth;
+      line.classList.add("oc-line--flash");
+      if (unseen) moreBtn.hidden = false;
+    }
+    list.addEventListener("dblclick", (e) => {
+      const line = e.target.closest?.(".oc-line[data-id]");
+      if (!line || e.target.closest("button, a, input")) return;
+      getSelection?.().removeAllRanges(); // a double-click also selects a word
+      toggleMark(line);
+    });
     timers.push(setInterval(flushLines, FLUSH_MS));
 
     function addLine(line) {
@@ -455,6 +532,7 @@
       line.dataset.uid = m.userId;
       line.dataset.login = m.login;
       line.dataset.name = m.name;
+      line.dataset.text = m.text || "";
       const ranks = (m.badges || []).map((b) => b.set_id);
       if (ranks.includes("broadcaster") || ranks.includes("moderator")) line.dataset.staff = "1";
       if (host.isConnection(m.login)) line.classList.add("oc-line--connection");
@@ -659,6 +737,7 @@
     const tools = el("div", "oc-tools");
     let toolsLine = null;
     tools.append(
+      button("oc-tool oc-tool--mark", "🔖", () => toolsLine && toggleMark(toolsLine), "Bookmark this message (or double-click it)"),
       button("oc-tool", "Reply", () => toolsLine && startReply(toolsLine), "Reply"),
       button("oc-tool oc-tool--mod", "Delete", () => toolsLine && deleteMessage(toolsLine), "Delete this message"),
     );
@@ -668,6 +747,7 @@
       toolsLine = line;
       const canDelete = isMod && !line.dataset.staff;
       tools.querySelector(".oc-tool--mod").hidden = !canDelete;
+      tools.querySelector(".oc-tool--mark").title = line.classList.contains("oc-line--marked") ? "Take the bookmark off" : "Bookmark this message (or double-click it)";
       line.append(tools);
     });
 
@@ -906,6 +986,17 @@
         return lastOk;
       },
       ircSaw,
+      // A mod flagged this chatter's line (dock.js): it glows in their colour from now on.
+      // The newest line from them that matches; says whether it found one.
+      glowLine({ chatter, text, color }) {
+        const login = String(chatter || "").toLowerCase();
+        const lines = [...list.querySelectorAll(".oc-line[data-login]")].filter((l) => l.dataset.login === login);
+        const line = lines.reverse().find((l) => !text || l.dataset.text === text || text.startsWith(l.dataset.text) || l.dataset.text.startsWith(text)) || null;
+        if (!line) return false;
+        if (color) line.style.setProperty("--flag", color);
+        line.classList.add("oc-line--flagged");
+        return true;
+      },
       // Closes everything and hands back anything typed but not sent.
       stop() {
         stopped = true;

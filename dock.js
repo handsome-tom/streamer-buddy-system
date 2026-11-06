@@ -641,7 +641,13 @@
   // is just the bar): a copy of the line with its emotes, for 5 minutes. The
   // relay keeps it that long, and its X clears it for everyone who has it: the
   // streamer, their connections, and whoever flagged it.
+  //
+  // In the streamer's chat dock the pin only sticks at the top of the chat for
+  // PIN_STICK_MS, and the line itself glows in the chat (custom chat), so it's easy to
+  // find again without taking up the top for long.
   const FLASH_MS = { info: 120000, chat: 300000, love: 30000, seen: 60000 };
+  const PIN_STICK_MS = 10 * 1000;
+  const flashMs = (kind) => (kind === "chat" && LIVECHAT ? PIN_STICK_MS : FLASH_MS[kind]);
   const FUZZ_MS = 1400;
   const FLASH_ICONS = {
     info: `<path d="M11 2 4 11.5h5L8 18l7-9.5h-5z" ${LINE} stroke-width="1.7"/>`,
@@ -674,6 +680,12 @@
     if ((!mine && f.kind !== "chat") || seenFlashes.has(f.id)) return; // connections get flagged chat too
     seenFlashes.add(f.id);
     const late = Date.now() - (f.at || Date.now());
+    if (f.kind === "chat" && LIVECHAT && f.channel === liveChannel) {
+      try {
+        ownChat?.glowLine?.({ chatter: f.chatter, text: f.text, color: f.color || colorOf(f.from) });
+      } catch {}
+      if (late > PIN_STICK_MS) return; // brought back by a reload: its moment at the top has passed
+    }
     if (f.kind !== "love" && mine && late < 5000) arrived(); // not when a reload brings back an old pin
     const chip = el("div", `qflash qflash--${f.kind}`);
     const color = f.color || colorOf(f.from);
@@ -712,7 +724,7 @@
     chip.append(icon, body, closeButton(clear, pinned ? "Clear this for everyone" : "Clear this"));
     if (pinned) pinLeaving.set(f.id, leave);
     (pinned && (LIVECHAT || !short()) ? pinsEl : flashesEl).append(chip);
-    setTimeout(leave, Math.max(0, FLASH_MS[f.kind] - FUZZ_MS - Math.max(0, late)));
+    setTimeout(leave, Math.max(0, flashMs(f.kind) - FUZZ_MS - Math.max(0, late)));
   }
 
   // A flagged line's note shows who flagged it, once their picture's known.
@@ -1525,9 +1537,9 @@
     const open = Object.keys(inbox).filter((id) => !inbox[id].done).sort((a, b) => inbox[a].at - inbox[b].at);
     const replied = Object.keys(inbox).filter((id) => inbox[id].answered && !inbox[id].cleared).sort((a, b) => inbox[a].answered.at - inbox[b].answered.at);
     for (const login of requests) wrap.append(requestRow(login));
-    for (const id of answers) wrap.append(answerCard(id));
-    for (const id of open) wrap.append(questionCard(id));
-    for (const id of replied) wrap.append(repliedCard(id));
+    if (open.length) wrap.append(inboxList(open)); // waiting on you: first
+    if (answers.length) wrap.append(answerList(answers));
+    if (replied.length) wrap.append(repliedList(replied));
     // One row per question; asking everyone shows as one row.
     const shown = new Set();
     for (const id of waiting) {
@@ -1555,6 +1567,120 @@
     return row;
   }
 
+  // Questions and messages to you: a slim list like the answers to yours. One line each:
+  // who, what they said, and small buttons on the right: their answers for a question
+  // (heart, check, X for the streamer), or Seen for a message; a reply button that opens
+  // a reply box under the line only when wanted; and × to dismiss. Hovering a line turns
+  // it into a glowing pill. (The phone deck keeps the big cards, for thumbs.)
+  const replyOpen = new Set(); // question ids with their reply box open
+  function inboxList(ids) {
+    const list = el("div", "ilist");
+    list.setAttribute("role", "list");
+    for (const id of ids) list.append(inboxRow(id));
+    return list;
+  }
+  function inboxRow(id) {
+    const q = inbox[id];
+    const wrap = el("div", "irow__wrap");
+    wrap.setAttribute("role", "listitem");
+    const row = el("div", `irow irow--${stageFor(q)}${replyOpen.has(id) ? " irow--open" : ""}`);
+    const dot = el("span", `peek__ping peek__ping--${stageFor(q)}`);
+    dot.title = q.warns ? "Sent as a warning: needs you now" : q.nudges ? `Nudged ${q.nudges} time${q.nudges === 1 ? "" : "s"}` : "";
+    const who = el("b", "irow__who", q.name);
+    if (colorOf(q.from)) who.style.color = colorOf(q.from);
+    const text = el("span", "irow__text");
+    text.append(who, el("span", "irow__msg", q.text));
+    if (q.group) text.append(el("span", "irow__to", ` to ${askedWho(q)}`));
+    const acts = el("div", "irow__acts");
+    const act = (cls, html, label, onClick) => {
+      const b = el("button", `irow__btn ${cls}`);
+      b.type = "button";
+      b.title = label;
+      b.setAttribute("aria-label", label);
+      b.disabled = q.sending;
+      if (html) b.innerHTML = html;
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        onClick();
+      });
+      return b;
+    };
+    if (q.note) {
+      const seen = act("irow__btn--seen", svg(ANSWERS.y.icon, 14), `Let ${q.name} know you've seen this`, () => ack(id));
+      seen.append(el("span", null, q.sending ? "Sending…" : "Seen"));
+      acts.append(seen);
+    } else {
+      for (const { code, label } of answerChoices(q)) {
+        const b = act(`answer--${code}${code === "x" ? " irow__btn--own" : ""}`, code === "x" ? "" : svg(ANSWERS[code].icon, 14), label, () => answer(id, code, code === "x" ? label : ""));
+        if (code === "x") b.textContent = label;
+        acts.append(b);
+      }
+    }
+    acts.append(
+      act(`irow__btn--reply${replyOpen.has(id) ? " irow__btn--on" : ""}`, svg(ANSWERS.c.icon, 14), "Type a reply", () => {
+        replyOpen.has(id) ? replyOpen.delete(id) : replyOpen.add(id);
+        render();
+        if (replyOpen.has(id)) document.querySelector(`[data-key="reply-${id}"]`)?.focus();
+      }),
+      act("irow__btn--x", "", q.note ? "Dismiss" : "Dismiss without answering", () => dismiss(id)),
+    );
+    acts.lastChild.textContent = "×";
+    row.append(dot, text, acts);
+    wrap.append(row);
+    if (replyOpen.has(id)) {
+      const own = el("form", "irow__reply");
+      const input = textBox(`Reply to ${q.name}…`, drafts[id] || "");
+      input.dataset.key = `reply-${id}`;
+      input.maxLength = MAX_LEN;
+      input.addEventListener("input", () => (drafts[id] = input.value));
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          replyOpen.delete(id);
+          render();
+        }
+      });
+      const send = el("button", "irow__send");
+      send.type = "submit";
+      send.title = "Send reply";
+      send.setAttribute("aria-label", "Send reply");
+      send.disabled = q.sending;
+      send.innerHTML = `<svg viewBox="0 0 20 20" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 16V4M5 9l5-5 5 5"/></svg>`;
+      own.append(input, send);
+      own.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const reply = clean(input.value);
+        if (!reply) return;
+        replyOpen.delete(id);
+        answer(id, "c", reply);
+      });
+      wrap.append(own);
+    }
+    return wrap;
+  }
+
+  // Your answers to their questions, until you clear them: the same slim line, with ✓ Seen
+  // once they've marked it seen. Hover for the pill; click clears it.
+  function repliedList(ids) {
+    const list = el("div", "alist");
+    for (const id of ids) {
+      const q = inbox[id];
+      const a = ANSWERS[q.answered.code] || ANSWERS.c;
+      const row = el("button", "arow arow--mine");
+      row.type = "button";
+      row.title = `You answered ${q.name} "${said(q.answered)}" to: ${q.text}. Click to clear.`;
+      const icon = el("span", `arow__icon answer--${q.answered.code}`);
+      icon.innerHTML = svg(a.icon, 15);
+      const text = el("span", "arow__text");
+      const who = el("b", "arow__who", `You → ${q.name}`);
+      text.append(who, el("span", "arow__said", said(q.answered)), el("span", "arow__q", q.text));
+      row.append(icon, text, el("span", "arow__ago", q.seenAt ? "✓ Seen" : "Sent"), el("span", "arow__act", "Clear"));
+      row.addEventListener("click", () => setUi(id, { cleared: true }));
+      list.append(row);
+    }
+    return list;
+  }
+
+  // The phone deck's big card for a question to you.
   function questionCard(id) {
     const q = inbox[id];
     const card = el("div", "qcard");
@@ -1600,22 +1726,35 @@
     return card;
   }
 
-  // Their answer to a question you asked.
-  function answerCard(id) {
+  // Answers to questions you asked: a slim list, one line each (who, their answer, your
+  // question, how long ago), as wide as there's room for. Hovering a line turns it into a
+  // glowing pill button; clicking it marks the answer seen (they hear) and clears it.
+  function answerList(ids) {
+    const list = el("div", "alist");
+    list.setAttribute("role", "list");
+    for (const id of ids) list.append(answerRow(id));
+    return list;
+  }
+  function answerRow(id) {
     const q = sent[id];
-    const a = ANSWERS[q.answer.code];
-    const card = el("div", "acard");
-    const icon = el("div", `acard__icon answer--${q.answer.code}`);
-    icon.innerHTML = svg(a.icon, 20);
-    const body = el("div", "acard__body");
-    body.append(
-      el("div", "acard__who", `${q.to} answered`),
-      el("div", "acard__head", said(q.answer)),
-      el("div", "acard__question", q.group ? `${q.text} (asked ${askedWho(q)})` : q.text),
-    );
-    body.append(seenControl(id, q.answer, "receipt receipt--btn"));
-    card.append(icon, body, closeButton(() => setUi(id, { closed: true })));
-    return card;
+    const a = ANSWERS[q.answer.code] || ANSWERS.c;
+    const row = el("button", "arow");
+    row.type = "button";
+    row.setAttribute("role", "listitem");
+    row.title = `${q.to} answered "${said(q.answer)}" to: ${q.text}. Click to mark it seen.`;
+    const icon = el("span", `arow__icon answer--${q.answer.code}`);
+    icon.innerHTML = svg(a.icon, 15);
+    const who = el("b", "arow__who", q.to);
+    if (colorOf(q.to)) who.style.color = colorOf(q.to);
+    const text = el("span", "arow__text");
+    text.append(who, el("span", "arow__said", said(q.answer)), el("span", "arow__q", q.group ? `${q.text} (asked ${askedWho(q)})` : q.text));
+    row.append(icon, text, el("span", "arow__ago", ago(q.answer.at)), el("span", "arow__act", q.answer.acked === "sending" ? "Sending…" : "Got it"));
+    row.disabled = q.answer.acked === "sending";
+    row.addEventListener("click", () => {
+      if (q.answer.acked !== true) ack(id);
+      setUi(id, { closed: true });
+    });
+    return row;
   }
 
   // "Mark as seen" (tells them), "Sending…", or "✓ Seen".
@@ -1629,22 +1768,6 @@
     return seen;
   }
 
-  // Your answer to their question, until you close it: "✓ Seen" once they've
-  // tapped Mark as seen.
-  function repliedCard(id) {
-    const q = inbox[id];
-    const a = ANSWERS[q.answered.code];
-    const card = el("div", "rcard");
-    const icon = el("div", `rcard__icon answer--${q.answered.code}`);
-    icon.innerHTML = svg(a.icon, 16);
-    const body = el("div", "rcard__body");
-    const head = el("div", "rcard__head");
-    head.append(el("span", null, `You answered ${q.name}: `), el("b", null, said(q.answered)));
-    body.append(head, el("div", "rcard__question", q.text));
-    body.append(q.seenAt ? el("span", "receipt receipt--seen", "✓ Seen") : el("span", "receipt", "Sent"));
-    card.append(icon, body, closeButton(() => setUi(id, { cleared: true })));
-    return card;
-  }
 
   // The bar's message area: what's waiting for you (questions and messages to you, and
   // answers to your questions you haven't marked seen), one at a time, with its answers;
@@ -2080,7 +2203,8 @@
       panel.append(talk);
     }
 
-    for (const id of Object.keys(inbox).filter((id) => inbox[id].from === login && !inbox[id].done)) panel.append(questionCard(id));
+    const fromThem = Object.keys(inbox).filter((id) => inbox[id].from === login && !inbox[id].done);
+    if (fromThem.length) panel.append(inboxList(fromThem));
 
     // Everything finished or waiting on them, newest first.
     const rows = [
@@ -2450,7 +2574,7 @@
     const answers = Object.keys(sent).filter((id) => sent[id].answer && !sent[id].answer.seen);
     const open = Object.keys(inbox).filter((id) => !inbox[id].done);
     for (const id of open) panel.append(questionCard(id));
-    for (const id of answers) panel.append(answerCard(id));
+    if (answers.length) panel.append(answerList(answers));
     for (const login of requests) panel.append(requestRow(login));
 
     // The tiles.
