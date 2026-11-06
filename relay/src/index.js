@@ -69,7 +69,7 @@
 //   statsShare { on }       share your stream stats with your connections
 //   sample { s }            your panel's latest numbers; see Stats below
 //   statEvent { kind, n, who, viewers }  a sub, gift, cheer, follow or raid
-//   view { v }              what your OBS dock shows now; see Streamer View below
+//   view { v }              what your OBS dock shows now (null: stop sharing); see Streamer View below
 //   seen { id }
 // Messages to a page:
 //   state { me, status, connections, requests, tags, questions, rooms, chat, statsOn, stats }   (on sign-in, and whenever
@@ -358,6 +358,14 @@ export class Hub {
   }
 
   async setView(ws, who, raw) {
+    // null: the streamer switched sharing off in Settings.
+    if (raw === null) {
+      if (!who.viewer) return;
+      ws.serializeAttachment({ ...who, viewer: false });
+      if (this.viewing(who.login)) return; // another of their docks still shares
+      await this.ctx.storage.delete(`v:${who.login}`);
+      return this.tellView(who.login, null);
+    }
     const v = cleanView(raw);
     if (!v) return;
     if (!who.viewer) ws.serializeAttachment({ ...who, viewer: true });

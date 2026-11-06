@@ -234,17 +234,21 @@
     if (t.startsWith("#")) return `${t.slice(1)} (${tags[t.slice(1)].filter((l) => able.includes(l)).length})`;
     return t;
   }
-  // In OBS, sending starts from whoever you last sent to, or else one person,
-  // so a message doesn't go to everyone by accident.
+  // Who sending starts with. In OBS: the last person you talked to (sent to or
+  // answered), never a group, so a message doesn't go to everyone by accident; else
+  // the first person. In the side panel: the streamer whose channel you're watching
+  // (the extension says which), else the first choice.
   const KEEP_LAST_TO = !EMBED && !DECK;
+  const isPerson = (t) => t && t !== "*" && !t.startsWith("#");
   function defaultTo() {
     const choices = targets();
+    if (EMBED && choices.includes(watching)) return watching;
     if (!KEEP_LAST_TO) return choices[0];
     const last = get("lastTo", "");
-    return choices.includes(last) ? last : choices.find((t) => t !== "*" && !t.startsWith("#")) || choices[0];
+    return choices.includes(last) && isPerson(last) ? last : choices.find(isPerson) || choices[0];
   }
   function rememberTo(to) {
-    if (!KEEP_LAST_TO || !to) return;
+    if (!KEEP_LAST_TO || !isPerson(to)) return;
     put("lastTo", to);
     if ([...quickTo.options].some((o) => o.value === to)) quickTo.value = to;
   }
@@ -395,7 +399,9 @@
     // The Twitch channel open in the tab beside the panel, for Streamer View.
     if (e.data?.t === "hub-channel") {
       watching = typeof e.data.channel === "string" ? e.data.channel.toLowerCase() : "";
-      drawStreamerView();
+      // The Ask box follows the stream you're in (until you pick someone else).
+      if (me && targets().includes(watching)) askDraft.to = watching;
+      render();
     }
   });
 
@@ -816,19 +822,25 @@
       });
     } catch {}
   }
+  // Volume, from Settings: quiet, normal or loud.
+  const VOLUME = { quiet: 0.5, normal: 1, loud: 1.6 };
+  const vol = () => VOLUME[get("volume", "normal")] || 1;
   // Two soft notes.
   function chime() {
-    if (!POPOUT && soundOn()) tones([659, 880], 0.14, 0.18, 0.35);
+    if (!POPOUT && soundOn()) tones([659, 880], 0.14, 0.18 * vol(), 0.35);
   }
-  // One clear note per ping.
-  function ping(count) {
-    if (soundOn()) tones(Array(count).fill(988), 0.28, 0.22, 0.22);
+  // Something new: one clear note. A reminder (it moved up a colour): one softer note,
+  // unless reminders are switched off in Settings.
+  function ping(stage) {
+    if (!soundOn() || (stage > 1 && !get("reminderBeeps", true))) return;
+    tones([988], 0, (stage > 1 ? 0.13 : 0.22) * vol(), 0.22);
   }
 
   // ===== Pings =============================================================================
-  // Someone needs the streamer. The whole edge of the panel glows, over whichever chat is
-  // showing, and it pings. Each step up the ladder pings once more than the last: green
-  // one ping, orange two, yellow three, white four. Green glows; the rest flash.
+  // Someone needs the streamer. The edge of the panel glows (a thin, faint line), over
+  // whichever chat is showing, and it pings: one clear note when it arrives, then one
+  // softer note each time it moves up the ladder (green, orange, yellow, white), with a
+  // brief flash of the edge.
   //
   // The sender picks how far up it can go (q.level). "Green" is one ping and stays green;
   // "white" keeps climbing until it's dealt with. Answering, dismissing or marking it seen
@@ -856,6 +868,7 @@
     const now = Date.now();
     let glow = 0;
     let loudest = 0;
+    let fresh = false; // something just arrived (gets the clear note, not the reminder)
     let saveLog = false;
     for (const id of Object.keys(pingLog)) {
       if (inbox[id] && !inbox[id].done) continue;
@@ -873,6 +886,7 @@
       let stage = 1;
       while (stage < pingTopOf(q) && now - log.start >= PING_AFTER[stage]) stage++;
       if (stage > log.stage) {
+        if (!log.stage) fresh = true;
         log.stage = stage;
         loudest = Math.max(loudest, stage);
         saveLog = true;
@@ -885,9 +899,16 @@
       pingGlow.setAttribute("aria-hidden", "true");
       document.body.append(pingGlow);
     }
-    pingGlow.className = glow ? `glow glow--${glow}` : "glow";
+    if (glow !== glowNow) pingGlow.className = glow ? `glow glow--${glow}` : "glow";
     glowNow = glow;
-    if (loudest) ping(loudest);
+    // One brief flash when something moves up a colour, then it sits still.
+    if (loudest && glow) {
+      pingGlow.classList.remove("glow--pulse");
+      void pingGlow.offsetWidth;
+      pingGlow.classList.add("glow--pulse");
+      setTimeout(() => pingGlow.classList.remove("glow--pulse"), 900);
+    }
+    if (loudest) ping(fresh ? 1 : loudest);
     return !!loudest;
   }
 
@@ -906,7 +927,9 @@
   const onScreen = new Map(); // flash id -> the note or flagged line in this dock's bar
   let lastView = "";
   let viewTimer = 0;
-  let watching = ""; // the channel in the Twitch tab beside the side panel
+  // The channel in the Twitch tab beside the side panel. On this Mac, ?watch=<channel>
+  // stands in for the extension saying so (testing without Chrome).
+  let watching = (location.hostname === "localhost" && params.get("watch")?.toLowerCase()) || "";
   let svPicked = "";
 
   function viewNow() {
@@ -934,7 +957,7 @@
     if (!PINGS_HERE || DEMO || !ready || !me) return;
     clearTimeout(viewTimer);
     viewTimer = setTimeout(() => {
-      const v = viewNow();
+      const v = get("shareView", true) ? viewNow() : null; // switched off in Settings: the relay drops it
       const json = JSON.stringify(v);
       if (json === lastView || socket?.readyState !== 1) return;
       lastView = json;
@@ -1049,6 +1072,117 @@
   // Ages ("2 min ago") move on even when nothing new arrives.
   if (EMBED) setInterval(() => !svEl?.hidden && drawStreamerView(), 30000);
 
+  // ===== Settings ==========================================================================
+  // The gear at the top right of the streamer's OBS docks. Each is kept in this page's
+  // localStorage, so OBS keeps it between restarts:
+  //   "sound"          sound when something arrives (also under Connections)
+  //   "volume"         "quiet" | "normal" | "loud"
+  //   "reminderBeeps"  the softer note each time something waiting moves up a colour
+  //   "edgeGlow"       the thin line round the edge
+  //   "showQuick"      the quick-questions row (chat dock)
+  //   "chatSize"       "small" | "normal" | "large": custom chat's text (chat dock)
+  //   "shareView"      send Streamer View to your connections
+  const settingsBtn = document.getElementById("settingsBtn");
+  const settingsEl = document.getElementById("settings");
+
+  // What the switches change on screen, applied on load and on every change.
+  function applySettings() {
+    document.body.classList.toggle("no-edge", !get("edgeGlow", true));
+    document.body.classList.toggle("hide-quick", !get("showQuick", true));
+    document.body.classList.remove("chat-small", "chat-large");
+    const size = get("chatSize", "normal");
+    if (size !== "normal") document.body.classList.add(`chat-${size}`);
+  }
+
+  function drawSettings() {
+    const sw = (key, label, fallback, after) => {
+      const row = el("label", "set__row");
+      const box = el("input", "set__switch");
+      box.type = "checkbox";
+      box.checked = get(key, fallback);
+      box.addEventListener("change", () => {
+        put(key, box.checked);
+        applySettings();
+        after?.(box.checked);
+        drawSettings();
+      });
+      row.append(el("span", "set__label", label), box);
+      return row;
+    };
+    const choice = (label, options, now, pick) => {
+      const row = el("div", "set__row");
+      const group = el("div", "set__seg");
+      group.setAttribute("role", "group");
+      group.setAttribute("aria-label", label);
+      for (const [value, text] of options) {
+        const b = el("button", `set__opt${value === now ? " set__opt--on" : ""}`, text);
+        b.type = "button";
+        b.setAttribute("aria-pressed", String(value === now));
+        b.addEventListener("click", () => {
+          pick(value);
+          applySettings();
+          drawSettings();
+        });
+        group.append(b);
+      }
+      row.append(el("span", "set__label", label), group);
+      return row;
+    };
+    const head = (text) => el("div", "set__head", text);
+
+    const parts = [head("Sound")];
+    parts.push(sw("sound", "Sound when something arrives", PINGS_HERE, (on) => on && ping(1)));
+    if (soundOn()) {
+      parts.push(choice("Volume", [["quiet", "Quiet"], ["normal", "Normal"], ["loud", "Loud"]], get("volume", "normal"), (v) => {
+        put("volume", v);
+        ping(1); // hear what it sounds like
+      }));
+      parts.push(sw("reminderBeeps", "Softer reminder while it waits", true, (on) => on && ping(2)));
+    }
+    parts.push(el("p", "set__note", "If OBS captures your desktop audio, viewers may hear it too."));
+
+    parts.push(head("Screen"));
+    parts.push(sw("edgeGlow", "Glow round the edge", true));
+    if (LIVECHAT) {
+      parts.push(sw("showQuick", "Quick questions row", true, () => render()));
+      if (get("ownChat", false) && window.OwnChat) {
+        const twitch = get("ownChatPicked", "") === "twitch";
+        parts.push(choice("Chat", [["own", "Custom"], ["twitch", "Twitch's"]], twitch ? "twitch" : "own", (v) => {
+          if (v === "twitch" && !twitch) chooseTwitchChat();
+          else if (v === "own" && twitch) tryOwnChatAgain();
+        }));
+        parts.push(choice("Chat text", [["small", "Small"], ["normal", "Normal"], ["large", "Large"]], get("chatSize", "normal"), (v) => put("chatSize", v)));
+      }
+    }
+
+    parts.push(head("Mods"));
+    parts.push(sw("shareView", "Share what this dock shows (Streamer View)", true, () => {
+      lastView = ""; // send the change straight away
+      shareView();
+    }));
+    parts.push(el("p", "set__note", "Your connections see it at the top of their Chrome side panel."));
+    settingsEl.replaceChildren(...parts);
+  }
+
+  function openSettings(open) {
+    settingsEl.hidden = !open;
+    settingsBtn.classList.toggle("pill--on", open);
+    settingsBtn.setAttribute("aria-expanded", String(open));
+    if (open) drawSettings();
+  }
+  settingsBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openSettings(settingsEl.hidden);
+  });
+  // Clicking elsewhere, or Escape, closes it. (Clicks inside stop here: a switch redraws
+  // the menu, so by the time the click reaches the page its target is gone.)
+  settingsEl.addEventListener("click", (e) => e.stopPropagation());
+  document.addEventListener("click", () => !settingsEl.hidden && openSettings(false));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !settingsEl.hidden) openSettings(false);
+  });
+  applySettings();
+
   // ===== Doing things ======================================================================
 
   const clean = (s) => s.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, MAX_LEN);
@@ -1057,6 +1191,7 @@
     if (pending[id]) return;
     if (relay({ t: "answer", id, code, text: reply || "" })) {
       pending[id] = true;
+      rememberTo(questions[id]?.from); // answering someone counts as talking to them
       delete drafts[id];
       render();
     }
@@ -1132,6 +1267,7 @@
     drawPeek();
     drawStreamerView();
     shareView();
+    settingsBtn.hidden = !PINGS_HERE || !me;
     if (typingIn) {
       const again = document.querySelector(`[data-key="${typingIn}"]`);
       again?.focus();

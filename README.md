@@ -43,15 +43,16 @@ minutes; the streamer or a mod can clear it for everyone with its X.
 
 ### Pings
 
-When someone needs the streamer, the whole edge of the panel glows and it pings. This
-works over either chat. If it isn't dealt with, it climbs:
+When someone needs the streamer, a thin, faint line glows round the edge of the panel and
+it pings. This works over either chat. If it isn't dealt with, it climbs, and each step
+flashes the edge once, briefly:
 
-| Time | Glow | Pings |
+| Time | Glow | Ping |
 | --- | --- | --- |
-| Right away | Green | 1 |
-| 2 minutes | Orange, flashing | 2 |
-| 4 minutes | Yellow, flashing | 3 |
-| 5 minutes | White, flashing | 4 |
+| Right away | Green | one clear note |
+| 2 minutes | Orange | one softer reminder |
+| 4 minutes | Yellow | one softer reminder |
+| 5 minutes | White | one softer reminder |
 
 The sender picks how far it can go under **How far it goes** in the Ask box: **Green** is
 one ping and stays green, **White** goes all the way. Anything sent without a choice goes
@@ -61,7 +62,12 @@ dismissing or marking it seen stops it. The bar shows the most urgent message fi
 The clock starts when the panel first shows the message, so something sent while OBS was
 closed starts at green, and anything over an hour old by then doesn't ping at all. The
 sound is on by default in OBS panels. **If OBS captures your desktop audio, viewers may
-hear it**; the switch is under Connections.
+hear it**; the switch is under Connections and in Settings.
+
+**Settings** (the gear at the top right of the OBS docks): sound on or off, volume (quiet,
+normal, loud), the softer reminder beeps, the edge glow, the quick-questions row, custom
+chat or Twitch's, custom chat's text size, and whether to share Streamer View with your
+connections. They're kept in OBS between restarts.
 
 ### Streamer View (for mods, in the Chrome side panel)
 

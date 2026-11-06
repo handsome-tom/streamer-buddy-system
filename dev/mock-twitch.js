@@ -8,7 +8,8 @@
 //
 // Then make things happen: curl "http://localhost:8789/mock/control?do=<what>"
 //   line        a chat message (also: emote, reply, sub, hold, delete, clearuser, clear)
-//   feed        a message every second (feedoff stops it)
+//   feed        a busy pretend chat: made-up chatters, each with their own colour, saying
+//               short, medium and long things at uneven times (feedoff stops it)
 //   quiet       the connection stays open but stops pinging (it should fail over)
 //   drop        closes the connection, and allows reconnecting (it should recover)
 //   dropdead    closes the connection and refuses new ones (it should fail over)
@@ -65,6 +66,45 @@ function chat(text, opts = {}) {
   return id;
 }
 
+// The feed's pretend chatters. Each gets a random colour once, and keeps it.
+const CHATTERS = ["pixelpanda", "NightOwl_88", "crumbsnacker", "LuckyLlama", "vortexvic", "mossy_rocks", "TheRealDanny", "sleepycat42",
+  "Glitchwave", "maplesyrup_eh", "BigTimeTurtle", "quietlurker", "zoomzoom_k", "ferntastic", "captain_crunchy", "OliveBranch"];
+const chatterColor = {};
+const randomColor = () => `hsl(${Math.floor(Math.random() * 360)}, ${65 + Math.floor(Math.random() * 30)}%, ${55 + Math.floor(Math.random() * 15)}%)`;
+const hex = (hsl) => {
+  const [h, sat, l] = hsl.match(/\d+/g).map(Number);
+  const a = (sat / 100) * Math.min(l / 100, 1 - l / 100);
+  const f = (k) => {
+    const x = (k + h / 30) % 12;
+    return Math.round(255 * (l / 100 - a * Math.max(-1, Math.min(x - 3, 9 - x, 1)))).toString(16).padStart(2, "0");
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+};
+const SHORT = ["lol", "W", "nice", "LETS GO", "oof", "gg", "true", "hi chat", "no way", "clean", "rip", "o7", "yo", "hahaha", "first try?"];
+const MEDIUM = [
+  "that was actually so clean", "how is the mic so good today", "wait what just happened", "chat is moving fast tonight",
+  "did anyone else hear that", "I joined right on time", "this map is my favourite", "ok that jump was insane",
+  "can we get a replay of that", "hydrate check everyone", "who's here from the raid", "back from making food, what did I miss",
+];
+const LONG = [
+  "honestly the way you handled that last fight was so much better than yesterday, the patience is paying off",
+  "quick question for later if you have time, what settings are you using for the stream, it looks really smooth tonight",
+  "I've been watching for like two years now and this is easily one of the best streams, thanks for always being so chill",
+  "not to be a backseat gamer but I think there's a chest behind the waterfall you skipped earlier, no pressure though",
+  "my cat just walked across my keyboard and sent half a message in another chat so if you see weird stuff that was her",
+];
+function fillerLine() {
+  const r = Math.random();
+  const pool = r < 0.45 ? SHORT : r < 0.85 ? MEDIUM : LONG;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+function feedOnce() {
+  const who = CHATTERS[Math.floor(Math.random() * CHATTERS.length)];
+  chatterColor[who] ||= hex(randomColor());
+  chat(fillerLine(), { who, color: chatterColor[who] });
+  feedTimer = setTimeout(feedOnce, 400 + Math.random() * 2600); // uneven, like a real chat
+}
+
 const controls = {
   line: () => chat(`hello from the pretend chat, line ${n + 1}`),
   html: () => chat(`<img src=x onerror="document.title='HACKED'"><b>not bold</b>`),
@@ -76,10 +116,10 @@ const controls = {
   clearuser: (q) => event("channel.chat.clear_user_messages", { target_user_id: `u-${q.get("who") || "viewer1"}` }),
   clear: () => event("channel.chat.clear", {}),
   feed: () => {
-    clearInterval(feedTimer);
-    feedTimer = setInterval(() => chat(`busy chat line ${n + 1}`), Number(1000));
+    clearTimeout(feedTimer);
+    feedOnce();
   },
-  feedoff: () => clearInterval(feedTimer),
+  feedoff: () => clearTimeout(feedTimer),
   quiet: () => (flags.quiet = true),
   drop: () => {
     sockets.forEach((s) => s.end(CLOSE));
@@ -102,7 +142,7 @@ const controls = {
   throwing: () => (flags.throwing = true), // ownchat.js throws as soon as it starts
   reset: () => {
     flags = {};
-    clearInterval(feedTimer);
+    clearTimeout(feedTimer);
   },
 };
 
