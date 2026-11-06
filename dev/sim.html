@@ -46,6 +46,7 @@
     <button id="modSay" type="button">mod1 messages</button>
     <button id="modNote" type="button">mod1 quick note</button>
     <button id="modNudge" type="button">mod1 nudges</button>
+    <button id="modWarn" type="button">mod1 warns</button>
     <button id="streamerAsk" type="button">Streamer asks mod1</button>
     <span class="group">In chat:
       <select id="chatter" title="Who"><option>mod1</option><option>mod2</option></select>
@@ -175,6 +176,13 @@
     said(`mod1 nudged: ${q.text}`);
   };
   document.getElementById("modNudge").addEventListener("click", modNudge);
+  // A warning: what tapping Nudge six times quickly sends (red on the streamer's screen).
+  document.getElementById("modWarn").addEventListener("click", () => {
+    const q = Object.values(open).filter((q) => q.from === "mod1" && q.to === "streamer" && !q.note && !q.answer && !q.dismissed).sort((a, b) => a.at - b.at)[0];
+    if (!q) return said("mod1 has nothing unanswered to warn about");
+    send("mod1", { t: "nudge", id: q.id, warn: true });
+    said(`mod1 sent a warning: ${q.text}`);
+  });
   const streamerAsk = () => send("streamer", { t: "ask", to: "mod1", text: pick(STREAMER_ASKS), options: ["y", "n", "s", "o", "m", "t"] });
   for (const [id, go, what] of [["modAsk", modAsk, "mod1 asked the streamer"], ["modSay", modSay, "mod1 messaged the streamer"], ["modNote", modNote, "mod1 sent a quick note"], ["streamerAsk", streamerAsk, "the streamer asked mod1"]]) {
     document.getElementById(id).addEventListener("click", () => {

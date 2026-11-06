@@ -13,7 +13,7 @@
 // between mutual connections.
 //
 // Questions: { id, from, to, text, at, options, answer: { code, text, at } | null,
-// dismissed, seenAt, group, nudges, nudgedAt }. Asking everyone ("to": "*") makes one copy per
+// dismissed, seenAt, group, nudges, nudgedAt, warns, warnedAt }. Asking everyone ("to": "*") makes one copy per
 // mutual connection, sharing a group id; asking a tag ("#Mods") does the same
 // for the people in it. toTag says who it went to ("everyone", or the tag).
 //
@@ -59,7 +59,8 @@
 // Messages from a page:
 //   auth { token }          connect { login }        disconnect { login }
 //   ask { to, text, options, note }  answer { id, code, text }  dismiss { id }
-//   nudge { id }            remind them of your unanswered question (up to 3; see nudge())
+//   nudge { id, warn }      remind them of your unanswered question (up to 3; warn: past the
+//                           limits, as a warning; see nudge())
 //   status { status }       "online", "idle" or "offline"
 //   tag { login, tag, on }  put a connection in (or out of) one of your tags
 //   room { tag }            open your chat room to one of your tags (null closes it)
@@ -115,6 +116,7 @@ const STAT_DAYS_KEPT = 40;
 const MAX_VIEW_ITEMS = 12;
 const MAX_NUDGES = 3;
 const NUDGE_GAP_MS = 15 * 1000;
+const WARN_GAP_MS = 30 * 1000;
 
 export default {
   async fetch(req, env) {
@@ -168,7 +170,7 @@ export class Hub {
       else if (m.t === "answer") await this.answer(ws, who, m);
       else if (m.t === "dismiss") await this.update(ws, who, m.id, (q) => q.to === who.login && !q.answer && !q.dismissed, (q) => (q.dismissed = Date.now()));
       // Seen: the asker, of an answer; or the person a plain message went to.
-      else if (m.t === "nudge") await this.nudge(ws, who, m.id);
+      else if (m.t === "nudge") await this.nudge(ws, who, m.id, !!m.warn);
       else if (m.t === "seen") await this.update(ws, who, m.id, (q) => !q.seenAt && ((q.from === who.login && q.answer) || (q.to === who.login && q.note && !q.answer && !q.dismissed)), (q) => (q.seenAt = Date.now()));
     } catch (e) {
       this.send(ws, { t: "error", why: "Something went wrong on the relay" });
@@ -639,9 +641,18 @@ export class Hub {
   // Nudge: the asker reminds them of a question that's still unanswered. Each nudge moves it
   // up a colour on their screen (orange, yellow, white), up to three, at most one every
   // NUDGE_GAP_MS.
-  async nudge(ws, who, id) {
+  // warn: the asker tapped Nudge over and over (dock.js): it goes red on their screen with
+  // a louder beep, past the wait and the three-nudge limit, at most once every WARN_GAP_MS.
+  async nudge(ws, who, id, warn = false) {
     const q = await this.ctx.storage.get(`q:${String(id || "")}`);
     if (!q || q.from !== who.login || q.note || q.answer || q.dismissed) return this.send(ws, { t: "error", why: "That question can't be nudged now" });
+    if (warn) {
+      if (Date.now() - (q.warnedAt || 0) < WARN_GAP_MS) return this.send(ws, { t: "error", why: "A warning was just sent; give them a moment" });
+      q.warnedAt = q.nudgedAt = Date.now();
+      q.warns = (q.warns || 0) + 1;
+      await this.ctx.storage.put(`q:${q.id}`, q);
+      return this.share(q);
+    }
     if ((q.nudges || 0) >= MAX_NUDGES) return this.send(ws, { t: "error", why: "Already nudged as far as it goes" });
     if (Date.now() - (q.nudgedAt || 0) < NUDGE_GAP_MS) return this.send(ws, { t: "error", why: "Give them a moment before nudging again" });
     q.nudges = (q.nudges || 0) + 1;
@@ -738,7 +749,7 @@ function cleanView(raw) {
   const str = (x, n = MAX_LEN) => String(x ?? "").slice(0, n);
   const login = (x) => str(x, 25).toLowerCase().replace(/[^a-z0-9_]/g, "");
   const num = (x) => (Number.isFinite(x) ? x : 0);
-  const stage = (x) => (Number.isInteger(x) && x >= 0 && x <= 4 ? x : 0);
+  const stage = (x) => (Number.isInteger(x) && x >= 0 && x <= 5 ? x : 0); // 5: a warning
   const color = (x) => (/^#[0-9a-f]{6}$/i.test(x || "") ? x : "");
   const list = (x) => (Array.isArray(x) ? x.slice(0, MAX_VIEW_ITEMS) : []);
   return {

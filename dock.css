@@ -1950,16 +1950,37 @@ body.livechat main:has(> .cards:empty) {
 /* Pings: the whole edge of the panel, over whichever chat is showing. It's only ever
    a picture on top, so clicks go straight through. */
 .glow { display: none; position: fixed; inset: 0; z-index: 1000; pointer-events: none; }
-/* A thin, faint line that stays still; it flashes once, briefly, when it moves up a colour. */
+/* A thin, faint line. It glows for a couple of seconds when something arrives or moves
+   up a colour, then fades down to almost nothing (2%). If it's still unanswered it comes
+   back up after 15 seconds, then every 10 seconds, resting a touch brighter (5%) in
+   between. dock.js restarts the cycle on anything new. */
 .glow--1, .glow--2, .glow--3, .glow--4 { display: block; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ping) 60%, transparent), inset 0 0 8px color-mix(in srgb, var(--ping) 25%, transparent); }
+.glow--1, .glow--2, .glow--3, .glow--4, .glow--5 { animation: glowFirst 15s ease-in-out, glowAgain 10s ease-in-out 15s infinite; }
+@keyframes glowFirst {
+  0%, 13% { opacity: 1; }
+  25%, 94% { opacity: 0.02; }
+  100% { opacity: 1; }
+}
+@keyframes glowAgain {
+  0%, 20% { opacity: 1; }
+  35%, 92% { opacity: 0.05; }
+  100% { opacity: 1; }
+}
+/* Twins: switching to these restarts the cycle (the message area's glow, in dock.js). */
+@keyframes glowFirst2 {
+  0%, 13% { opacity: 1; }
+  25%, 94% { opacity: 0.02; }
+  100% { opacity: 1; }
+}
+@keyframes glowAgain2 {
+  0%, 20% { opacity: 1; }
+  35%, 92% { opacity: 0.05; }
+  100% { opacity: 1; }
+}
 .glow--1 { --ping: var(--good); }
 .glow--2 { --ping: var(--orange); }
 .glow--3 { --ping: var(--yellow); }
 .glow--4 { --ping: #fff; }
-.glow--pulse { animation: pingPulse 0.8s ease-out; }
-@keyframes pingPulse {
-  25% { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ping) 85%, transparent), inset 0 0 14px color-mix(in srgb, var(--ping) 45%, transparent); }
-}
 .peek__ping { flex: none; width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; background: var(--ping); }
 .peek__ping--1 { --ping: var(--good); }
 .peek__ping--2 { --ping: var(--orange); }
@@ -2372,18 +2393,33 @@ body.livechat main { max-height: 55vh; }
    it. No edges: a soft glow in the colour of what it shows, fading out at the sides. */
 body.livechat .peek--on {
   --ping: var(--good);
+  position: relative;
+  isolation: isolate;
   gap: 8px;
   margin: 4px 0 2px;
   padding: 10px 12px;
   border-radius: 16px;
+  animation: peekIn 0.35s ease-out;
+}
+/* The glow behind the words breathes like the edge: up when something's new, down to
+   almost nothing, back up every 15 seconds while it waits. The words stay as they are. */
+body.livechat .peek--on::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
   background:
     radial-gradient(ellipse 85% 120% at 30% 50%, color-mix(in srgb, var(--ping) 16%, transparent), transparent 75%),
     color-mix(in srgb, var(--ping) 4%, transparent);
   box-shadow:
     0 0 22px 2px color-mix(in srgb, var(--ping) 16%, transparent),
     inset 0 0 18px color-mix(in srgb, var(--ping) 10%, transparent);
-  animation: peekIn 0.35s ease-out;
+  pointer-events: none;
+  animation: glowFirst 15s ease-in-out, glowAgain 10s ease-in-out 15s infinite;
 }
+/* Switching to the twin keyframes restarts the cycle (dock.js, on anything new). */
+body.livechat .peek--on[data-breath="1"]::before { animation-name: glowFirst2, glowAgain2; }
 body.livechat .peek--2 { --ping: var(--orange); }
 body.livechat .peek--3 { --ping: var(--yellow); }
 body.livechat .peek--4 { --ping: #fff; }
@@ -2464,3 +2500,13 @@ body.livechat .peek__pager { margin-left: auto; }
 .presence__item--on { background: rgba(145, 71, 255, 0.18); }
 .presence__item .presence { font-weight: 600; }
 .presence__says { padding-left: 14px; font-size: 11px; color: var(--muted); }
+
+/* ===== Warnings (Nudge tapped over and over): red, past white ============================ */
+.glow--5 { display: block; --ping: var(--red); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--red) 75%, transparent), inset 0 0 12px color-mix(in srgb, var(--red) 35%, transparent); }
+.peek__ping--5, .peek__dot--5 { --ping: var(--red); }
+body.livechat .peek--5 { --ping: var(--red); }
+.sv--5 { --ping: var(--red); }
+.sv__row--5 { --ping: var(--red); }
+.nudge--warned { border-color: color-mix(in srgb, var(--red) 60%, var(--line)); }
+/* Counting taps towards a warning. */
+.nudge--arming { color: #fff; border-color: var(--red); background: color-mix(in srgb, var(--red) 22%, var(--panel)); }

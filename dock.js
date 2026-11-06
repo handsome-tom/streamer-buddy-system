@@ -210,13 +210,13 @@
       const u = ui[q.id] || {};
       if (q.to === me?.login) {
         inbox[q.id] = {
-          from: q.from, name: q.from, text: q.text, at: q.at, options: q.options, note: q.note, group: q.group, toTag: q.toTag, nudges: q.nudges || 0,
+          from: q.from, name: q.from, text: q.text, at: q.at, options: q.options, note: q.note, group: q.group, toTag: q.toTag, nudges: q.nudges || 0, warns: q.warns || 0,
           done: !!(q.answer || q.dismissed || (q.note && q.seenAt)), answered: q.answer, seenAt: q.seenAt,
           sending: !!pending[q.id], cleared: !!u.cleared, gone: !!u.gone,
         };
       } else if (q.from === me?.login) {
         sent[q.id] = {
-          to: q.to, text: q.text, at: q.at, note: q.note, seenAt: q.seenAt, group: q.group, toTag: q.toTag, nudges: q.nudges || 0, nudgedAt: q.nudgedAt || 0, seen: !!u.waitClosed || !!q.dismissed, gone: !!u.gone,
+          to: q.to, text: q.text, at: q.at, note: q.note, seenAt: q.seenAt, group: q.group, toTag: q.toTag, nudges: q.nudges || 0, nudgedAt: q.nudgedAt || 0, warns: q.warns || 0, warnedAt: q.warnedAt || 0, seen: !!u.waitClosed || !!q.dismissed, gone: !!u.gone,
           answer: q.answer && { ...q.answer, acked: q.seenAt ? true : pending[q.id] ? "sending" : false, seen: !!u.closed },
         };
       }
@@ -833,8 +833,11 @@
   }
   // Something new: one clear note. A reminder (it moved up a colour): one softer note,
   // unless reminders are switched off in Settings.
+  // A warning: two quick, higher notes, a little louder (even with reminders off).
   function ping(stage) {
-    if (!soundOn() || (stage > 1 && !get("reminderBeeps", true))) return;
+    if (!soundOn()) return;
+    if (stage === PING_WARN) return tones([1319, 1319], 0.16, 0.26 * vol(), 0.14);
+    if (stage > 1 && !get("reminderBeeps", true)) return;
     tones([988], 0, (stage > 1 ? 0.13 : 0.22) * vol(), 0.22);
   }
 
@@ -846,10 +849,14 @@
   // edge. Nothing climbs by itself. Answering, dismissing or marking it seen stops it.
   // Anything over an hour old when this panel first shows it doesn't ping or glow, unless
   // it's nudged after that.
-  const PING_NAMES = ["", "Green", "Orange", "Yellow", "White"];
+  //
+  // A warning (q.warns: the asker tapped Nudge over and over) is red, past white, with a
+  // double beep each time one comes.
+  const PING_NAMES = ["", "Green", "Orange", "Yellow", "White", "Red"];
   const PING_TOP = 4;
+  const PING_WARN = 5;
   const PING_STALE_MS = 60 * 60 * 1000;
-  const stageFor = (q) => Math.min(PING_TOP, 1 + (q.nudges || 0));
+  const stageFor = (q) => (q.warns ? PING_WARN : Math.min(PING_TOP, 1 + (q.nudges || 0)));
   const pingLog = get("pings", {}); // question id -> { stage, stale }, kept so a reload doesn't ping again
   let pingGlow = null;
   let glowNow = 0; // the edge's colour right now (0 = no glow), for Streamer View
@@ -862,6 +869,7 @@
     let glow = 0;
     let loudest = 0;
     let fresh = false; // something just arrived (gets the clear note, not the reminder)
+    let warned = false; // a new warning (gets the double beep)
     let saveLog = false;
     for (const id of Object.keys(pingLog)) {
       if (inbox[id] && !inbox[id].done) continue;
@@ -879,6 +887,12 @@
       const log = pingLog[id];
       if (log.stale && stage <= log.stage) continue;
       log.stale = false; // nudged since: it's live again
+      if ((q.warns || 0) > (log.warns || 0)) {
+        log.warns = q.warns;
+        warned = true;
+        loudest = Math.max(loudest, PING_WARN);
+        saveLog = true;
+      }
       if (stage > log.stage) {
         if (!log.stage) fresh = true;
         log.stage = stage;
@@ -895,14 +909,15 @@
     }
     if (glow !== glowNow) pingGlow.className = glow ? `glow glow--${glow}` : "glow";
     glowNow = glow;
-    // One brief flash when something moves up a colour, then it sits still.
+    // Something new (or up a colour): glow up now and start the 15-second cycle again,
+    // on the edge and behind the message area. See .glow in dock.css.
     if (loudest && glow) {
-      pingGlow.classList.remove("glow--pulse");
+      pingGlow.style.animation = "none";
       void pingGlow.offsetWidth;
-      pingGlow.classList.add("glow--pulse");
-      setTimeout(() => pingGlow.classList.remove("glow--pulse"), 900);
+      pingGlow.style.animation = "";
+      peekEl.dataset.breath = peekEl.dataset.breath === "1" ? "0" : "1";
     }
-    if (loudest) ping(fresh ? 1 : loudest);
+    if (loudest) ping(warned ? PING_WARN : fresh ? 1 : loudest);
     return !!loudest;
   }
 
@@ -1817,25 +1832,59 @@
   // Nudge: remind them of a question you asked that's still unanswered. On their screen
   // it moves up a colour each time: orange, yellow, then white (see "Pings"). For a
   // question to several people, it nudges everyone who hasn't answered.
-  const NUDGE_GAP_MS = 15 * 1000; // the relay's limit too
+  //
+  // While it can't be nudged (just nudged, or already white), the button still takes
+  // taps: WARN_TAPS of them in quick succession sends a warning, red on their screen with a
+  // louder beep. At most one every WARN_GAP_MS (the relay's limits too).
+  const NUDGE_GAP_MS = 15 * 1000;
+  const WARN_GAP_MS = 30 * 1000;
+  const WARN_TAPS = 6;
+  const WARN_WINDOW_MS = 4000;
+  const warnTaps = new Map(); // ids key -> [tap times]
   function nudgeButton(ids) {
     const qs = ids.map((id) => sent[id]).filter(Boolean);
+    const key = ids.join();
     const nudges = Math.max(0, ...qs.map((q) => q.nudges));
-    const next = Math.min(PING_TOP, nudges + 2); // the colour it turns
+    const warns = Math.max(0, ...qs.map((q) => q.warns));
+    const next = Math.min(PING_TOP, nudges + 2); // the colour a nudge turns it
     const done = nudges >= PING_TOP - 1;
     const wait = Math.max(0, ...qs.map((q) => q.nudgedAt + NUDGE_GAP_MS - Date.now()));
-    const b = el("button", `nudge nudge--${done ? nudges + 1 : next}`);
+    const warnWait = Math.max(0, ...qs.map((q) => q.warnedAt + WARN_GAP_MS - Date.now()));
+    const canNudge = !done && wait <= 0;
+    const taps = (warnTaps.get(key) || []).filter((t) => Date.now() - t < WARN_WINDOW_MS);
+    const busy = ids.some((id) => nudging.has(id));
+    const colour = warns ? PING_WARN : canNudge ? next : done ? PING_TOP : nudges + 1;
+    const b = el("button", `nudge nudge--${colour}${warns ? " nudge--warned" : ""}${taps.length ? " nudge--arming" : ""}`);
     b.type = "button";
-    b.append(el("span", `peek__ping peek__ping--${done ? PING_TOP : next}`), el("span", null, done ? "Nudged 3×" : nudges ? `Nudge again` : "Nudge"));
-    b.disabled = done || wait > 0 || ids.some((id) => nudging.has(id));
-    b.title = done ? "It's as far up as it goes" : wait > 0 ? "Give them a moment before nudging again" : `Remind them: it turns ${PING_NAMES[next].toLowerCase()} on their screen, with a soft beep`;
+    const label = taps.length ? `Warn: ${WARN_TAPS - taps.length} more` : warns ? "Warned" : canNudge ? (nudges ? "Nudge again" : "Nudge") : done ? "Nudged 3×" : "Nudged";
+    b.append(el("span", `peek__ping peek__ping--${colour}`), el("span", null, label));
+    b.disabled = busy || (!canNudge && warnWait > 0);
+    b.title = canNudge
+      ? `Remind them: it turns ${PING_NAMES[next].toLowerCase()} on their screen, with a soft beep`
+      : warnWait > 0 ? "A warning was just sent; give them a moment"
+      : `Tap ${WARN_TAPS} times quickly to send a warning (red on their screen, louder beep)`;
     b.addEventListener("click", (e) => {
       e.stopPropagation();
-      for (const id of ids) relay({ t: "nudge", id });
-      ids.forEach((id) => nudging.add(id));
+      if (canNudge) {
+        for (const id of ids) relay({ t: "nudge", id });
+        ids.forEach((id) => nudging.add(id));
+        warnTaps.delete(key);
+        return render();
+      }
+      // Tapping while it can't be nudged: count towards a warning.
+      const now = [...(warnTaps.get(key) || []).filter((t) => Date.now() - t < WARN_WINDOW_MS), Date.now()];
+      if (now.length >= WARN_TAPS) {
+        warnTaps.delete(key);
+        for (const id of ids) relay({ t: "nudge", id, warn: true });
+        ids.forEach((id) => nudging.add(id));
+      } else {
+        warnTaps.set(key, now);
+        setTimeout(() => render(), WARN_WINDOW_MS + 50); // the count runs out if they stop
+      }
       render();
     });
-    if (wait > 0 && !done) setTimeout(() => render(), wait + 50);
+    const soonest = [wait, warnWait].filter((ms) => ms > 0);
+    if (soonest.length) setTimeout(() => render(), Math.min(...soonest) + 50);
     return b;
   }
   const nudging = new Set(); // question ids: sent, waiting for the relay to say so
@@ -3096,6 +3145,7 @@
     else if (m.t === "answer" && q) gotQuestion({ ...q, answer: { code: m.code, text: m.text, at: now } });
     else if (m.t === "dismiss" && q) gotQuestion({ ...q, dismissed: now });
     else if (m.t === "seen" && q) gotQuestion({ ...q, seenAt: now });
+    else if (m.t === "nudge" && q && m.warn) gotQuestion({ ...q, warns: (q.warns || 0) + 1, warnedAt: now, nudgedAt: now });
     else if (m.t === "nudge" && q) gotQuestion({ ...q, nudges: Math.min(3, (q.nudges || 0) + 1), nudgedAt: now });
     else if (m.t === "connect") gotState({ connections: [...connections, { login: m.login, mutual: requests.includes(m.login), online: false }], requests: requests.filter((l) => l !== m.login), tags, questions: Object.values(questions) });
     else if (m.t === "disconnect") gotState({ connections: connections.filter((c) => c.login !== m.login), requests, tags, questions: Object.values(questions) });

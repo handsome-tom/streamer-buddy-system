@@ -45,7 +45,10 @@ minutes; the streamer or a mod can clear it for everyone with its X.
 ### Pings
 
 When someone needs the streamer, a thin, faint line glows green round the edge of the
-panel and it pings once. This works over either chat. Nothing climbs by itself: if a
+panel and it pings once. The glow (and the one behind the bar's message) lasts a couple
+of seconds and fades down to almost nothing. If it's still unanswered it comes back up
+after 15 seconds, then every 10, resting a touch brighter in between, so it reminds
+without badgering. This works over either chat. Nothing climbs by itself: if a
 question isn't answered, the person who asked can **Nudge** it (on their waiting
 question, or in Streamer View). Each nudge moves it up a colour on the streamer's screen
 with one softer reminder beep and a brief flash of the edge:
@@ -56,8 +59,12 @@ with one softer reminder beep and a brief flash of the edge:
 | 1st nudge | Orange | one softer reminder |
 | 2nd nudge | Yellow | one softer reminder |
 | 3rd nudge | White | one softer reminder |
+| Warning | Red | two quick, louder notes |
 
-Three nudges at most, and at most one every 15 seconds. Answering, dismissing or marking
+Three nudges at most, and at most one every 15 seconds. While it can't be nudged (just
+nudged, or already white), tapping **Nudge** six times quickly sends a **warning**
+instead: red on the streamer's screen with a louder double beep (even with reminders
+off), at most one every 30 seconds. Answering, dismissing or marking
 it seen stops it. The bar shows the most urgent message first.
 
 Anything over an hour old when the panel first shows it doesn't ping or glow, unless
