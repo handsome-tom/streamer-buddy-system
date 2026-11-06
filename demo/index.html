@@ -29,6 +29,9 @@
   .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 16px 10px; border-bottom: 1px solid var(--line); }
   .tools button, .tools select { padding: 5px 10px; font: inherit; color: #efeff1; background: #2f2f35; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
   .tools button:hover { background: #3a3a40; }
+  .tools button.sim { font-weight: 700; color: #fff; background: #ff6a00; border-color: #ff8a33; }
+  .tools button.sim + button.sim { background: #00a86b; border-color: #00db84; }
+  .tools button.sim:hover { filter: brightness(1.12); }
   .tools .on { background: #772ce8; border-color: var(--purple); }
   .tools .group { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 2px 6px; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; }
   .tools .said { flex: 1 1 200px; text-align: right; color: var(--muted); font-size: 12px; }
@@ -62,9 +65,9 @@
       <button id="cSay" type="button">says something</button>
       <button id="cPart" type="button">leaves</button>
     </span>
-    <span class="group">On Twitch:
-      <button id="tRaid" type="button">a raid</button>
-      <button id="tFirst" type="button">first-time chatter</button>
+    <span class="group">Simulate on Twitch:
+      <button id="tRaid" type="button" class="sim">🚀 Raid</button>
+      <button id="tFirst" type="button" class="sim">👋 First-time chatter</button>
       <button id="tSub" type="button">a sub</button>
       <button id="tGift" type="button">gifted subs</button>
       <button id="tCheer" type="button">a cheer</button>
@@ -223,7 +226,7 @@
   const on = (id, run) => document.getElementById(id).addEventListener("click", run);
   on("tRaid", () => {
     const { from, count } = pretendTwitch.raid();
-    said(`${from} raided with ${count} viewers: see the streamer's chat`);
+    said(`${from} raided with ${count} viewers: watch the streamer's chat on the right`);
   });
   on("tFirst", () => said(`${pretendTwitch.first()} chatted for the first time`));
   on("tSub", () => said(`${pretendTwitch.sub()} subscribed`));

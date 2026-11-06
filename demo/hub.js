@@ -211,7 +211,9 @@ const twitch = (() => {
   }
   const NEWBIES = ["fresh_fern", "NewHereHi", "pebble_pusher", "WanderingWes", "kettlecorn99", "SoftServeSam", "dewdrop_dev", "MarbleMoth"];
   const RAIDERS = ["CozyCastleTV", "MidnightMango", "TurboTortoise", "PaperCraneLive"];
-  const RAID_LINES = ["RAID HYPE", "hi from the raid!", "we're here!!", "raid raid raid", "hello new streamer o7", "the raid has arrived"];
+  const RAIDER_NAMES = ["bean_counter", "StarlitSoda", "gravelgrump", "Mx_Marigold", "tinyhatbandit", "OrbitOtter", "lemonade_larry", "ChunkyMonkeyTV",
+    "pocketfox", "WaffleWizard", "dustbunny_dee", "SirLurksALot", "neon_nana", "PlumPudding7", "brick_by_brick", "HoneyBadgerHal"];
+  const RAID_LINES = ["RAID HYPE", "hi from the raid!", "we're here!!", "raid raid raid", "hello new streamer o7", "the raid has arrived", "hi chat, we come in peace", "what did we walk into lol", "raid gang o7", "hello from the other stream!"];
   const firstOne = () => {
     const who = pick(NEWBIES);
     chat(pick(["hi everyone, first time here!", "hello! just found this stream", "hey, been lurking, first message", "this is my first time chatting, hi"]), who, { first: true });
@@ -253,8 +255,10 @@ const twitch = (() => {
         system: `${count} raiders from ${from} have joined!`,
         fields: { raid: { user_id: `u-${from}`, user_name: from, user_login: from.toLowerCase(), viewer_count: count, profile_image_url: new URL("pics/raider.svg", import.meta.url).href } },
       });
-      const raiders = CHATTERS.slice().sort(() => Math.random() - 0.5).slice(0, 6);
-      raiders.forEach((who, i) => setTimeout(() => chat(pick(RAID_LINES), who), 900 + i * 450));
+      // The raiders pour in over a few seconds: people from the other channel, about half
+      // of them chatting here for the first time.
+      const raiders = RAIDER_NAMES.slice().sort(() => Math.random() - 0.5).slice(0, 8 + Math.floor(Math.random() * 5));
+      raiders.forEach((who, i) => setTimeout(() => chat(pick(RAID_LINES), who, { first: i % 2 === 0 }), 900 + i * 500 + Math.random() * 300));
       return { from, count };
     },
     first: () => firstOne(),
