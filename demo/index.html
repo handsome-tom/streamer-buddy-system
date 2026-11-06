@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Try Streamer Buddy System</title>
+<title>Twitch Space · Streamer Buddy System demo</title>
 <meta name="description" content="Click around Streamer Buddy System: a mod's side panel and the streamer's OBS dock, side by side, with pretend people. Nothing here is real.">
 <!--
   The public demo: both sides of Streamer Buddy System on one screen, the mod's Chrome
@@ -21,7 +21,9 @@
   html, body { margin: 0; min-height: 100%; background: #070708; color: #efeff1; font: 13px/1.45 Inter, "Helvetica Neue", Arial, sans-serif; }
   body { display: flex; flex-direction: column; min-height: 100vh; }
   .intro { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding: 14px 16px 6px; }
-  .intro h1 { margin: 0; font-size: 18px; }
+  .intro { align-items: center; }
+  .intro h1 { margin: 0; font-size: 18px; line-height: 0; }
+  .brand img { display: block; height: 34px; width: auto; }
   .intro p { margin: 0; color: var(--muted); max-width: 820px; }
   .intro b { color: #efeff1; }
   .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 16px 10px; border-bottom: 1px solid var(--line); }
@@ -43,7 +45,7 @@
 </head>
 <body>
   <div class="intro">
-    <h1>Try Streamer Buddy System</h1>
+    <h1 class="brand"><img src="brand/twitch-space.svg" alt="Twitch Space" width="200" height="40"></h1>
     <p>Mods quietly ask the streamer things and look out for them, without cluttering the stream. On the left, a <b>mod's side panel</b> in Chrome; on the right, the <b>streamer's OBS dock</b> with chat. Click around both. Everyone here is pretend, nothing is sent anywhere, and reloading starts over.</p>
   </div>
   <div class="tools">

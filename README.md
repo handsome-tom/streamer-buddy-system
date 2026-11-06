@@ -120,6 +120,9 @@ itself instead of embedding Twitch's. It's what lets the chat do things of its o
 asks for one extra Twitch sign-in, kept separate from the ordinary one and never sent to
 the relay. `&ownchat=off` switches it off again.
 
+Before each viewer's name, Twitch-style mod icons: ban (a second click within 3 seconds),
+time out for 10 minutes, and delete, while you're a mod there (Settings can hide them).
+
 Switching between custom chat and Twitch's (Settings, or the link above the chat) never
 loses messages: both stay running, and switching only changes which one shows. Custom
 chat keeps collecting while Twitch's is on screen, and Twitch's chat is loaded in the

@@ -51,6 +51,8 @@
     bookmark: '<path d="M6 3.5h8a1 1 0 0 1 1 1v12l-5-3.2-5 3.2v-12a1 1 0 0 1 1-1z"/>',
     reply: '<path d="M8.5 5 4 9.5 8.5 14M4.5 9.5H12a4 4 0 0 1 4 4V15"/>',
     trash: '<path d="M4 6h12M8 6V4.5h4V6M6 6l.7 10h6.6L14 6M8.5 9v4.5M11.5 9v4.5"/>',
+    ban: '<circle cx="10" cy="10" r="6.5"/><path d="M5.4 14.6l9.2-9.2"/>',
+    clock: '<circle cx="10" cy="10" r="6.5"/><path d="M10 6.2V10l2.6 1.6"/>',
   };
   const icon = (name, size = 15) =>
     `<svg viewBox="0 0 20 20" width="${size}" height="${size}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICON[name]}</svg>`;
@@ -81,7 +83,7 @@
     const timers = [];
 
     // ----- What's on screen ------------------------------------------------------------
-    const root = el("div", "oc");
+    const root = el("div", `oc${isMod ? " oc--mod" : ""}`);
     const bar = el("div", "oc-bar");
     const statusEl = el("span", "oc-status oc-status--wait", "Connecting…");
     const twitchBtn = button("oc-link", "Use Twitch chat", () => host.onChoose?.(), "Switch to Twitch's own chat");
@@ -263,6 +265,7 @@
       lostAt = 0;
       everConnected = true;
       ready = true;
+      root.classList.toggle("oc--mod", isMod); // the mod icons before names
       setStatus(isMod ? "Custom chat" : "Custom chat (not a mod here)", "ok");
     }
 
@@ -539,6 +542,10 @@
         img.title = badge.title;
         line.append(img);
       }
+      // Mod icons, like Twitch's, before the name: ban, time out (10 minutes) and delete.
+      // Only where you can use them (shown while you're a mod here; see .oc--mod), and not
+      // on your own lines or other mods'. Settings can hide them ("modIcons").
+      if (m.login !== me.login && !line.dataset.staff) line.append(modIcons(line));
       const who = button("oc-name", m.name, () => openCard(line));
       const color = safeColor(m.color);
       if (color) who.style.color = color;
@@ -680,6 +687,35 @@
         note("Couldn't reach Twitch. Try again.");
         return false;
       }
+    }
+
+    function modIcons(line) {
+      const box = el("span", "oc-modicons");
+      const { uid, name } = line.dataset;
+      // A ban takes a second click within 3 seconds (the chat moves under the mouse);
+      // a timeout and a delete are one click, and a ban or timeout can be undone.
+      const banBtn = iconButton("oc-modicon oc-modicon--ban", "ban", async () => {
+        if (!banBtn.dataset.sure) {
+          banBtn.dataset.sure = "1";
+          banBtn.classList.add("oc-modicon--sure");
+          banBtn.title = `Click again to ban ${name}`;
+          setTimeout(() => {
+            delete banBtn.dataset.sure;
+            banBtn.classList.remove("oc-modicon--sure");
+            banBtn.title = `Ban ${name}`;
+          }, 3000);
+          return;
+        }
+        delete banBtn.dataset.sure;
+        banBtn.classList.remove("oc-modicon--sure");
+        await ban(uid, name);
+      }, `Ban ${name}`);
+      box.append(
+        banBtn,
+        iconButton("oc-modicon", "clock", () => ban(uid, name, 600), `Time out ${name} for 10 minutes`),
+        iconButton("oc-modicon", "trash", () => deleteMessage(line), "Delete this message"),
+      );
+      return box;
     }
 
     function openCard(line) {

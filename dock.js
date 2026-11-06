@@ -1254,6 +1254,7 @@
   //   "showQuick"      the quick-questions row (chat dock)
   //   "chatSize"       "small" | "normal" | "large": custom chat's text (chat dock)
   //   "shareView"      send Streamer View to your connections
+  //   "modIcons"       ban / time out / delete icons before names in custom chat
   const settingsBtn = document.getElementById("settingsBtn");
   const settingsEl = document.getElementById("settings");
 
@@ -1261,6 +1262,7 @@
   function applySettings() {
     document.body.classList.toggle("no-edge", !get("edgeGlow", true));
     document.body.classList.toggle("hide-quick", !get("showQuick", true));
+    document.body.classList.toggle("no-modicons", !get("modIcons", true));
     document.body.classList.remove("chat-small", "chat-large");
     const size = get("chatSize", "normal");
     if (size !== "normal") document.body.classList.add(`chat-${size}`);
@@ -1324,6 +1326,7 @@
           else if (v === "own" && twitch) backToOwnChat();
         }));
         parts.push(choice("Chat text", [["small", "Small"], ["normal", "Normal"], ["large", "Large"]], get("chatSize", "normal"), (v) => put("chatSize", v)));
+        parts.push(sw("modIcons", "Mod icons next to names (ban, time out, delete)", true));
       }
     }
 
