@@ -80,7 +80,11 @@
   const HELIX = "https://api.twitch.tv/helix";
   const MAX_LEN = 200;
   const UPDATE_CHECK_MS = 60 * 1000;
-  const params = new URLSearchParams(location.search);
+  // Twitch's sign-in sends the page back without its address options (?livechat, &ownchat,
+  // &channel=...), so they're kept just before leaving and put back on the way in.
+  const RETURN_KEY = "signinReturn";
+  const backFromSignin = location.hash.includes("access_token") || /[?&]error=/.test(location.search);
+  const params = new URLSearchParams((backFromSignin && localStorage.getItem(RETURN_KEY)) || location.search);
   const DEMO = params.has("demo");
   // The public demo (demo/index.html): the page is inside it, with a pretend relay and a
   // pretend Twitch running in the demo page and storage of its own (demo/sandbox.js), so it
@@ -327,6 +331,7 @@
       scope: get("statsWanted", false) ? STATS_SCOPES.join(" ") : SCOPES,
       state,
     });
+    localStorage.setItem(RETURN_KEY, location.search);
     location.href = `https://id.twitch.tv/oauth2/authorize?${q}`;
   }
 
@@ -341,6 +346,7 @@
       scope: [...window.OwnChat.SCOPES, ...(window.OwnChat.EXTRA_SCOPES || [])].join(" "), // extras: nice to have, not needed
       state,
     });
+    localStorage.setItem(RETURN_KEY, location.search);
     location.href = `https://id.twitch.tv/oauth2/authorize?${q}`;
   }
 
@@ -401,13 +407,22 @@
   function takeTokenFromAddress() {
     if (!location.hash.includes("access_token") && !location.search.includes("error")) return;
     const h = new URLSearchParams(location.hash.slice(1));
-    const state = h.get("state") || params.get("state");
+    const said = new URLSearchParams(location.search); // what Twitch put in the address (params is the kept one)
+    const state = h.get("state") || said.get("state");
     // Custom chat's sign-in can ban and delete, so it's kept apart from the ordinary one,
     // which is the one that goes to the relay.
     if (state && state === get("signinState") && h.get("access_token")) put(state.endsWith("-ownchat-livechat") ? "chatToken" : "token", h.get("access_token"));
     localStorage.removeItem("signinState");
-    history.replaceState(null, "", location.pathname + (EMBED ? "?embed=ext" : LIVECHAT ? "?livechat" : ""));
-    if (params.get("error")) return params.get("error_description") || params.get("error");
+    // Back to the address it had before signing in (or a plain one if that's gone).
+    const back = localStorage.getItem(RETURN_KEY);
+    localStorage.removeItem(RETURN_KEY);
+    const kept = new URLSearchParams(back || "");
+    kept.delete("state");
+    kept.delete("error");
+    kept.delete("error_description");
+    const query = back ? kept.toString().replace(/=(?=&|$)/g, "") : EMBED ? "embed=ext" : LIVECHAT ? "livechat" : "";
+    history.replaceState(null, "", location.pathname + (query ? `?${query}` : ""));
+    if (said.get("error")) return said.get("error_description") || said.get("error");
   }
 
   // The extension (our parent page) handing over a sign-in.
