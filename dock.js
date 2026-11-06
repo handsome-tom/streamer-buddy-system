@@ -10,9 +10,10 @@
 //     home-screen apps can't always come back from a sign-in page
 //   - a chat dock (?livechat, to use in place of OBS's Twitch chat dock): for a
 //     streamer who's live, so just the one-row bar on top of Twitch's own embedded
-//     chat. It receives everything but only sends questions, and a connection's
-//     picture is lit by how recently they chatted, or gray if they aren't in the
-//     chat. ?channel=<name> shows another channel's chat
+//     chat. It receives everything but only sends messages and questions. A
+//     connection's picture shows once they've been in the chat this stream: bright
+//     while they're there, faded after they leave, ringed by how recently they
+//     chatted. ?channel=<name> shows another channel's chat
 // Everyone talks through the relay (relay/ in this repo, on Cloudflare): a
 // WebSocket that signs in with your Twitch sign-in, keeps connections and the
 // week's questions, and says who's online. Questions wait there for anyone
@@ -40,7 +41,12 @@
 //     hype trains and viewer averages and highs (from the day it's switched on)
 //   - cards below the bar when there's room: questions to you with six
 //     one-tap answers or your own reply; answers to yours with "Mark as seen"
-//     (the person who answered sees "✓ Seen"); nothing clears by itself
+//     (the person who answered sees "✓ Seen", and a notice in the bar); nothing
+//     clears by itself
+//   - a streamer's one-row bar sends what isn't a question as a plain message: no
+//     answer buttons, just "Mark as seen" (the streamer gets the notice) or a reply
+//   - in the side panel, a button for how connections see you: online, idle or
+//     offline
 //
 // Connections: two people can ask each other once both have added each other;
 // someone who added you shows as a request you can add back.
@@ -52,10 +58,16 @@
 // Saved in this page's localStorage (OBS keeps it between restarts; inside the
 // side panel's iframe it's the iframe's own):
 //   "token"    the Twitch sign-in
+//   "chatToken"  custom chat's own sign-in (ownchat.js), never sent to the relay
+//   "ownChat", "ownChatPicked", "ownChatFailed"  custom chat: on or off, picked Twitch's
+//              chat by hand, and when and why it last fell back
 //   "ui"       { question id: { closed, waitClosed, cleared, gone } }  what you've
 //              closed or cleared here (per device; the relay keeps the rest)
 //   "ids", "pics", "colors"  Twitch user ids, profile pictures, chat colours
-//   "sound"    true to chime when something arrives
+//   "sound"    whether to make a sound when something arrives (on by default in OBS)
+//   "pings"    what's been pinged, so a reload doesn't ping again
+//   "lastTo"   who you last sent to, where sending starts from next time (OBS)
+//   "chatBeen-<channel>"  { stream, logins } who's been in the chat this stream
 //
 // Open with ?demo to try it without signing in. On this Mac, ?dev=<name> signs
 // in as anyone against the local test relay.
@@ -80,6 +92,8 @@
   // state remembers this was the chat dock.
   const LIVECHAT = !POPOUT && !EMBED && !DECK && (params.has("livechat") || (new URLSearchParams(location.hash.slice(1)).get("state") || params.get("state") || "").endsWith("-livechat"));
   const STREAMER = LIVECHAT || params.has("streamer"); // and the windows it pops out
+  // The streamer's OBS panels get the glowing edge and pings (see "Pings" below).
+  const PINGS_HERE = !POPOUT && !EMBED && !DECK;
 
   const svg =(paths, size = 18) => `<svg viewBox="0 0 20 20" width="${size}" height="${size}" aria-hidden="true">${paths}</svg>`;
   const LINE = 'fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"';
@@ -113,6 +127,7 @@
   const peekEl = document.getElementById("peek");
   const askBtn = document.getElementById("askBtn");
   const peopleBtn = document.getElementById("peopleBtn");
+  const presenceBtn = document.getElementById("presenceBtn");
   const quickAsk = document.getElementById("quickAsk");
   const quickEl = document.getElementById("quick");
   const flashesEl = document.getElementById("flashes");
@@ -130,7 +145,7 @@
   const drafts = {}; // question id -> reply being typed (kept if things redraw)
   // The Ask box: who to, the question, and its answer buttons (the six
   // standard ones until some are taken off; "+label" for your own).
-  const askDraft = { to: (POPOUT && params.get("to")) || "", text: "", note: "", options: [...STANDARD], adding: "", mode: "ask" }; // mode: "ask" | "info" | "love"
+  const askDraft = { to: (POPOUT && params.get("to")) || "", text: "", note: "", options: [...STANDARD], adding: "", mode: "ask", level: 4 }; // mode: "ask" | "info" | "love"; level: how far it goes, see "Pings"
 
   // ===== Saved data ========================================================================
 
@@ -151,6 +166,7 @@
   let connections = []; // [{ login, mutual, online }]
   let requests = []; // [login] who added you
   let tags = {}; // { tag: [logins] } your own groups of connections (Mods, Lead mods, Tech…)
+  let myStatus = "online"; // how connections see you: "online" | "idle" | "offline"
   // Chat: the rooms you're in ({ owner, tag, members: [{ login, online }] }), and a
   // private chat with each mutual connection ({ owner, direct: true, with, members }),
   // and each one's recent messages ({ owner: [{ id, from, text, at }] }).
@@ -159,6 +175,7 @@
   // Stats: what the relay has ({ login: worked-out stats }), whether you share
   // yours, and what Twitch says publicly ({ login: { ..., at } }).
   let stats = {};
+  let views = {}; // Streamer View: streamer's login -> what their OBS dock shows (see "Streamer View")
   let statsOn = false;
   const publicStats = {};
   const statsDraft = { who: (POPOUT && params.get("view") === "stats" && params.get("to")) || "" };
@@ -190,13 +207,13 @@
       const u = ui[q.id] || {};
       if (q.to === me?.login) {
         inbox[q.id] = {
-          from: q.from, name: q.from, text: q.text, at: q.at, options: q.options, group: q.group, toTag: q.toTag,
-          done: !!(q.answer || q.dismissed), answered: q.answer, seenAt: q.seenAt,
+          from: q.from, name: q.from, text: q.text, at: q.at, options: q.options, note: q.note, group: q.group, toTag: q.toTag, level: q.level,
+          done: !!(q.answer || q.dismissed || (q.note && q.seenAt)), answered: q.answer, seenAt: q.seenAt,
           sending: !!pending[q.id], cleared: !!u.cleared, gone: !!u.gone,
         };
       } else if (q.from === me?.login) {
         sent[q.id] = {
-          to: q.to, text: q.text, at: q.at, group: q.group, toTag: q.toTag, seen: !!u.waitClosed || !!q.dismissed, gone: !!u.gone,
+          to: q.to, text: q.text, at: q.at, note: q.note, seenAt: q.seenAt, group: q.group, toTag: q.toTag, seen: !!u.waitClosed || !!q.dismissed, gone: !!u.gone,
           answer: q.answer && { ...q.answer, acked: q.seenAt ? true : pending[q.id] ? "sending" : false, seen: !!u.closed },
         };
       }
@@ -217,6 +234,25 @@
     if (t.startsWith("#")) return `${t.slice(1)} (${tags[t.slice(1)].filter((l) => able.includes(l)).length})`;
     return t;
   }
+  // In OBS, sending starts from whoever you last sent to, or else one person,
+  // so a message doesn't go to everyone by accident.
+  const KEEP_LAST_TO = !EMBED && !DECK;
+  function defaultTo() {
+    const choices = targets();
+    if (!KEEP_LAST_TO) return choices[0];
+    const last = get("lastTo", "");
+    return choices.includes(last) ? last : choices.find((t) => t !== "*" && !t.startsWith("#")) || choices[0];
+  }
+  function rememberTo(to) {
+    if (!KEEP_LAST_TO || !to) return;
+    put("lastTo", to);
+    if ([...quickTo.options].some((o) => o.value === to)) quickTo.value = to;
+  }
+  // What the bar sends: something that reads as a question gets the answer
+  // buttons; anything else is a plain message.
+  const QUESTION_START = /^(who|what|when|where|why|how|which|can|could|would|should|will|do|does|did|is|are|am|was|were|has|have|had|any|anyone|anybody)\b/i;
+  const isQuestion = (text) => text.includes("?") || QUESTION_START.test(text);
+  const askOrSay = (text) => (isQuestion(text) ? { options: STANDARD } : { note: true });
   const askedWho = (q) => (q.toTag === "everyone" || !q.toTag ? "everyone" : q.toTag);
   const conn = (login) => connections.find((c) => c.login === login);
 
@@ -264,6 +300,20 @@
       client_id: TWITCH_CLIENT_ID,
       redirect_uri: location.origin + location.pathname,
       scope: get("statsWanted", false) ? STATS_SCOPES.join(" ") : SCOPES,
+      state,
+    });
+    location.href = `https://id.twitch.tv/oauth2/authorize?${q}`;
+  }
+
+  // Custom chat's own sign-in, in the chat dock only (see ownchat.js).
+  function ownChatSignIn() {
+    const state = `${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}-ownchat-livechat`;
+    put("signinState", state);
+    const q = new URLSearchParams({
+      response_type: "token",
+      client_id: TWITCH_CLIENT_ID,
+      redirect_uri: location.origin + location.pathname,
+      scope: window.OwnChat.SCOPES.join(" "),
       state,
     });
     location.href = `https://id.twitch.tv/oauth2/authorize?${q}`;
@@ -327,7 +377,9 @@
     if (!location.hash.includes("access_token") && !location.search.includes("error")) return;
     const h = new URLSearchParams(location.hash.slice(1));
     const state = h.get("state") || params.get("state");
-    if (state && state === get("signinState") && h.get("access_token")) put("token", h.get("access_token"));
+    // Custom chat's sign-in can ban and delete, so it's kept apart from the ordinary one,
+    // which is the one that goes to the relay.
+    if (state && state === get("signinState") && h.get("access_token")) put(state.endsWith("-ownchat-livechat") ? "chatToken" : "token", h.get("access_token"));
     localStorage.removeItem("signinState");
     history.replaceState(null, "", location.pathname + (EMBED ? "?embed=ext" : LIVECHAT ? "?livechat" : ""));
     if (params.get("error")) return params.get("error_description") || params.get("error");
@@ -339,6 +391,11 @@
     if (e.data?.t === "hub-token" && typeof e.data.token === "string") {
       put("token", e.data.token);
       start();
+    }
+    // The Twitch channel open in the tab beside the panel, for Streamer View.
+    if (e.data?.t === "hub-channel") {
+      watching = typeof e.data.channel === "string" ? e.data.channel.toLowerCase() : "";
+      drawStreamerView();
     }
   });
 
@@ -382,16 +439,19 @@
   }
 
   function signOut() {
-    const token = get("token");
+    const tokens = [get("token"), get("chatToken")].filter(Boolean);
     shareSignin(null);
     localStorage.removeItem("token");
     localStorage.removeItem("refresh");
-    if (token && !DEV) {
-      fetch("https://id.twitch.tv/oauth2/revoke", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ client_id: TWITCH_CLIENT_ID, token }),
-      }).catch(() => {});
+    localStorage.removeItem("chatToken");
+    if (!DEV) {
+      for (const token of tokens) {
+        fetch("https://id.twitch.tv/oauth2/revoke", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ client_id: TWITCH_CLIENT_ID, token }),
+        }).catch(() => {});
+      }
     }
     location.reload();
   }
@@ -473,6 +533,7 @@
       else if (m.t === "flash") gotFlash(m.f);
       else if (m.t === "unflash") pinLeaving.get(m.id)?.();
       else if (m.t === "flashed") gotFlashed(m);
+      else if (m.t === "view") gotView(m.owner, m.v);
       else if (m.t === "stats") {
         stats[m.owner] = m.s;
         if (view === "stats") render();
@@ -512,12 +573,19 @@
     rooms = m.rooms || [];
     chat = m.chat || {};
     stats = m.stats || {};
+    views = m.views || (DEMO ? views : {});
+    lastView = ""; // a fresh connection: the relay hears this dock's view again
     statsOn = !!m.statsOn;
+    myStatus = m.status || myStatus;
     collect();
     gotPins(m.pins || []);
     const had = new Set(Object.keys(questions));
+    const before = { ...questions };
     for (const k of Object.keys(questions)) delete questions[k];
-    for (const q of m.questions || []) questions[q.id] = q;
+    for (const q of m.questions || []) {
+      questions[q.id] = q;
+      noticeSeen(before[q.id], q); // while we were reconnecting
+    }
     ready = true;
     setStatus("Online", "ok");
     if (first) moveOldList();
@@ -526,7 +594,7 @@
       localStorage.removeItem("statsAfterSignin");
       relay({ t: "statsShare", on: true });
     }
-    else if ((m.questions || []).some((q) => !had.has(q.id) && q.to === me.login)) arrived();
+    else if (!PINGS_HERE && (m.questions || []).some((q) => !had.has(q.id) && q.to === me.login)) arrived();
     loadPics();
     render();
   }
@@ -535,16 +603,26 @@
     const old = questions[q.id];
     questions[q.id] = q;
     delete pending[q.id];
+    noticeSeen(old, q);
     // Something new for you: a question to you, or an answer to yours.
-    if ((!old && q.to === me.login) || (q.from === me.login && q.answer && !old?.answer)) arrived();
+    if ((!old && q.to === me.login && !PINGS_HERE) || (q.from === me.login && q.answer && !old?.answer)) arrived();
     if (!old && q.from === me.login) {
       askDraft.text = "";
       askDraft.note = "";
+      askDraft.level = PING_TOP;
       askDraft.options = [...STANDARD]; // options are per question
       askDraft.adding = "";
       if (view === "ask") view = "cards"; // their page shows it in the log
     }
     render();
+  }
+
+  // Someone marked your answer or message seen: say so in the bar for a minute,
+  // since a one-row dock has no cards to show it on. Their page's history keeps it.
+  function noticeSeen(old, q) {
+    if (POPOUT || !old || old.seenAt || !q.seenAt) return;
+    const what = q.to === me.login && q.answer ? said(q.answer) : q.from === me.login && q.note ? q.text : "";
+    if (what) gotFlash({ id: `seen-${q.id}`, kind: "seen", from: q.to === me.login ? q.from : q.to, to: me.login, text: what, at: Date.now() });
   }
 
   // ===== The quick strip ===================================================================
@@ -556,12 +634,13 @@
   // is just the bar): a copy of the line with its emotes, for 5 minutes. The
   // relay keeps it that long, and its X clears it for everyone who has it: the
   // streamer, their connections, and whoever flagged it.
-  const FLASH_MS = { info: 120000, chat: 300000, love: 30000 };
+  const FLASH_MS = { info: 120000, chat: 300000, love: 30000, seen: 60000 };
   const FUZZ_MS = 1400;
   const FLASH_ICONS = {
     info: `<path d="M11 2 4 11.5h5L8 18l7-9.5h-5z" ${LINE} stroke-width="1.7"/>`,
     love: '<path d="M10 17s-6.5-4-6.5-8.6A3.6 3.6 0 0 1 10 6.2a3.6 3.6 0 0 1 6.5 2.2C16.5 13 10 17 10 17z" fill="currentColor"/>',
     chat: `<path d="M3 4h14v9H8l-4 3v-3H3z" ${LINE} stroke-width="1.8"/>`,
+    seen: `<path d="M4 10.5l4 4 8-9" ${LINE} stroke-width="2.4"/>`,
   };
   const seenFlashes = new Set();
   const pinLeaving = new Map(); // pinned line's id -> takes it away
@@ -591,7 +670,7 @@
     if (f.kind !== "love" && mine && late < 5000) arrived(); // not when a reload brings back an old pin
     const chip = el("div", `qflash qflash--${f.kind}`);
     const color = f.color || colorOf(f.from);
-    if (color && f.kind !== "love") chip.style.setProperty("--c", color);
+    if (color && f.kind !== "love" && f.kind !== "seen") chip.style.setProperty("--c", color);
     const icon = el("span", "qflash__icon");
     icon.innerHTML = svg(FLASH_ICONS[f.kind], 15);
     if (f.kind === "chat") flaggerPicture(icon, f.from);
@@ -601,13 +680,21 @@
       const name = el("b", null, f.chatterName || f.chatter);
       if (f.chatterColor) name.style.color = f.chatterColor;
       body.append(name, ": ", ...withEmotes(f.text, f.emotes), el("span", "qflash__who", ` flagged by ${f.from}${mine ? "" : ` in ${f.channel}`}`));
+    } else if (f.kind === "seen") {
+      body.title = `Seen by ${f.from}: ${f.text}`;
+      body.append(el("b", null, `Seen by ${f.from}`), el("span", "qflash__who", ` ${f.text}`));
     } else {
       body.append(document.createTextNode(f.text), el("span", "qflash__who", ` ${f.from}`));
+    }
+    if (mine) {
+      onScreen.set(f.id, { id: f.id, kind: f.kind, from: f.from, text: f.text, chatter: f.chatterName || f.chatter, chatterColor: f.chatterColor, color, at: f.at || Date.now() });
+      shareView();
     }
     const leave = () => {
       if (chip.classList.contains("qflash--leaving")) return;
       chip.classList.add("qflash--leaving");
       pinLeaving.delete(f.id);
+      if (onScreen.delete(f.id)) shareView();
       setTimeout(() => chip.remove(), FUZZ_MS);
     };
     const pinned = f.kind === "chat";
@@ -644,7 +731,10 @@
   }
 
   function sendFlash(kind, to, text) {
-    if (relay({ t: "flash", kind, to, text })) askDraft.text = "";
+    if (relay({ t: "flash", kind, to, text })) {
+      askDraft.text = "";
+      rememberTo(to);
+    }
     render();
   }
 
@@ -703,27 +793,261 @@
     chime();
   }
 
-  // Two soft notes, only if switched on (OBS may pick the dock's sound up on stream).
+  // Sound: on by default in the streamer's OBS panels, which is the point of a ping, and
+  // off unless wanted elsewhere. OBS may pick the dock's sound up on stream if it captures
+  // desktop audio; the switch is under Connections.
+  const soundOn = () => get("sound", PINGS_HERE);
   let audio = null;
-  function chime() {
-    if (POPOUT || !get("sound", false)) return;
+  function tones(freqs, gap, peak, length) {
     try {
       audio ||= new AudioContext();
       audio.resume();
-      [659, 880].forEach((freq, i) => {
+      freqs.forEach((freq, i) => {
         const o = audio.createOscillator();
         const g = audio.createGain();
-        const t = audio.currentTime + i * 0.14;
+        const t = audio.currentTime + i * gap;
         o.frequency.value = freq;
         g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+        g.gain.exponentialRampToValueAtTime(peak, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + length);
         o.connect(g).connect(audio.destination);
         o.start(t);
-        o.stop(t + 0.4);
+        o.stop(t + length + 0.05);
       });
     } catch {}
   }
+  // Two soft notes.
+  function chime() {
+    if (!POPOUT && soundOn()) tones([659, 880], 0.14, 0.18, 0.35);
+  }
+  // One clear note per ping.
+  function ping(count) {
+    if (soundOn()) tones(Array(count).fill(988), 0.28, 0.22, 0.22);
+  }
+
+  // ===== Pings =============================================================================
+  // Someone needs the streamer. The whole edge of the panel glows, over whichever chat is
+  // showing, and it pings. Each step up the ladder pings once more than the last: green
+  // one ping, orange two, yellow three, white four. Green glows; the rest flash.
+  //
+  // The sender picks how far up it can go (q.level). "Green" is one ping and stays green;
+  // "white" keeps climbing until it's dealt with. Answering, dismissing or marking it seen
+  // stops it. A question without a level goes all the way; a plain message stays green.
+  // The clock starts when this panel first shows it, so something sent while OBS was
+  // closed starts at green. Anything over an hour old by then doesn't ping at all.
+  const PING_NAMES = ["", "Green", "Orange", "Yellow", "White"];
+  const PING_TOP = 4;
+  // ?pingms=<ms> counts a "minute" as that long, on this Mac, for testing.
+  const PING_MINUTE = location.hostname === "localhost" && Number(params.get("pingms")) || 60 * 1000;
+  const PING_AFTER = [0, 2, 4, 5].map((minutes) => minutes * PING_MINUTE);
+  const PING_STALE_MS = 60 * 60 * 1000;
+  const pingLog = get("pings", {}); // question id -> { start, stage, stale }, kept so a reload doesn't ping again
+  let pingGlow = null;
+  let glowNow = 0; // the edge's colour right now (0 = no glow), for Streamer View
+
+  function pingTopOf(q) {
+    return q.level >= 1 && q.level <= PING_TOP ? q.level : q.note ? 1 : PING_TOP;
+  }
+
+  // Looks at everything waiting; says whether anything moved up.
+  function pingCheck() {
+    // Not before the relay has said what's waiting, or a reload would look like nothing is.
+    if (!PINGS_HERE || !me || !ready) return false;
+    const now = Date.now();
+    let glow = 0;
+    let loudest = 0;
+    let saveLog = false;
+    for (const id of Object.keys(pingLog)) {
+      if (inbox[id] && !inbox[id].done) continue;
+      delete pingLog[id];
+      saveLog = true;
+    }
+    for (const [id, q] of Object.entries(inbox)) {
+      if (q.done || q.sending) continue;
+      if (!pingLog[id]) {
+        pingLog[id] = { start: now, stage: 0, stale: now - q.at > PING_STALE_MS };
+        saveLog = true;
+      }
+      const log = pingLog[id];
+      if (log.stale) continue;
+      let stage = 1;
+      while (stage < pingTopOf(q) && now - log.start >= PING_AFTER[stage]) stage++;
+      if (stage > log.stage) {
+        log.stage = stage;
+        loudest = Math.max(loudest, stage);
+        saveLog = true;
+      }
+      glow = Math.max(glow, log.stage);
+    }
+    if (saveLog) put("pings", pingLog);
+    if (!pingGlow) {
+      pingGlow = el("div", "glow");
+      pingGlow.setAttribute("aria-hidden", "true");
+      document.body.append(pingGlow);
+    }
+    pingGlow.className = glow ? `glow glow--${glow}` : "glow";
+    glowNow = glow;
+    if (loudest) ping(loudest);
+    return !!loudest;
+  }
+
+  // ===== Streamer View =====================================================================
+  // At the top of the side panel: what the streamer's OBS dock is showing right now, so a
+  // mod knows what's already in front of them before asking more. The streamer's dock (the
+  // full dock or the chat dock, not pop-outs) sends the relay a summary whenever it
+  // changes: the edge's glow, everything waiting for them (from anyone, with how far each
+  // has glowed), answers to their own questions they haven't marked seen, and the notes and
+  // flagged lines in their bar. The relay passes it to their mutual connections and drops
+  // it when that dock closes. The side panel shows the streamer whose channel is open in
+  // the Twitch tab beside it (the extension says which: "hub-channel"), else the first one
+  // sharing, with a picker when there's more than one. It only shows; nothing's answered
+  // from here.
+  const MAX_VIEW_ITEMS = 12;
+  const onScreen = new Map(); // flash id -> the note or flagged line in this dock's bar
+  let lastView = "";
+  let viewTimer = 0;
+  let watching = ""; // the channel in the Twitch tab beside the side panel
+  let svPicked = "";
+
+  function viewNow() {
+    const stageOf = (id) => (!pingLog[id]?.stale && pingLog[id]?.stage) || 0;
+    const waiting = Object.keys(inbox)
+      .filter((id) => !inbox[id].done)
+      .sort((a, b) => stageOf(b) - stageOf(a) || inbox[b].at - inbox[a].at)
+      .slice(0, MAX_VIEW_ITEMS)
+      .map((id) => {
+        const q = inbox[id];
+        return { id, from: q.from, text: q.text, at: q.at, note: !!q.note, stage: stageOf(id), top: pingTopOf(q), options: q.note ? [] : optionsOf(q).map((o) => o.label) };
+      });
+    const answers = Object.keys(sent)
+      .filter((id) => sent[id].answer && !sent[id].answer.seen)
+      .sort((a, b) => sent[b].answer.at - sent[a].answer.at)
+      .slice(0, MAX_VIEW_ITEMS)
+      .map((id) => ({ id, to: sent[id].to, text: sent[id].text, said: said(sent[id].answer), code: sent[id].answer.code, at: sent[id].answer.at }));
+    const notes = [...onScreen.values()].slice(-MAX_VIEW_ITEMS);
+    return { glow: glowNow, waiting, answers, notes, chat: LIVECHAT ? "livechat" : "dock" };
+  }
+
+  // The streamer's side: send it when it changes (gathered for a moment, as a burst of
+  // things often arrives together).
+  function shareView() {
+    if (!PINGS_HERE || DEMO || !ready || !me) return;
+    clearTimeout(viewTimer);
+    viewTimer = setTimeout(() => {
+      const v = viewNow();
+      const json = JSON.stringify(v);
+      if (json === lastView || socket?.readyState !== 1) return;
+      lastView = json;
+      socket.send(JSON.stringify({ t: "view", v }));
+    }, 400);
+  }
+
+  function gotView(owner, v) {
+    if (v) views[owner] = v;
+    else delete views[owner];
+    drawStreamerView();
+  }
+
+  // Whose view the panel shows.
+  function svOwner() {
+    const sharing = Object.keys(views).filter((l) => l !== me?.login);
+    if (watching && sharing.includes(watching)) return watching;
+    if (sharing.includes(svPicked)) return svPicked;
+    return sharing[0] || "";
+  }
+
+  const svEl = document.getElementById("streamerView");
+  function drawStreamerView() {
+    if (!svEl) return;
+    const owner = EMBED && me ? svOwner() : "";
+    svEl.hidden = !owner;
+    if (!owner) return svEl.replaceChildren();
+    const v = views[owner];
+    const open = get("svOpen", true);
+    const sharing = Object.keys(views).filter((l) => l !== me.login);
+    svEl.className = `sv${v.glow ? ` sv--glow sv--${v.glow}` : ""}${open ? "" : " sv--closed"}`;
+
+    const head = el("div", "sv__head");
+    const toggle = el("button", "sv__toggle");
+    toggle.type = "button";
+    toggle.title = open ? "Fold Streamer View away" : "Show Streamer View";
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.append(el("span", "sv__title", "Streamer View"));
+    const count = v.waiting.length;
+    const says = v.glow ? `Glowing ${PING_NAMES[v.glow].toLowerCase()}` : count ? `${count} waiting` : "Nothing waiting";
+    if (v.glow) toggle.append(el("span", `peek__ping peek__ping--${v.glow}`));
+    toggle.append(el("span", "sv__says", says));
+    toggle.addEventListener("click", () => {
+      put("svOpen", !open);
+      drawStreamerView();
+    });
+    head.append(toggle);
+    if (sharing.length > 1) {
+      const pick = el("select", "sv__pick");
+      pick.title = watching === owner ? "Following the channel you're watching" : "Whose view";
+      pick.replaceChildren(...sharing.map((l) => new Option(l, l)));
+      pick.value = owner;
+      pick.addEventListener("change", () => {
+        svPicked = pick.value;
+        watching = ""; // picked by hand: stop following the tab until it changes channel
+        drawStreamerView();
+      });
+      head.append(pick);
+    } else {
+      const name = el("span", "sv__owner", owner);
+      if (colorOf(owner)) name.style.color = colorOf(owner);
+      head.append(name);
+    }
+    if (!open) return svEl.replaceChildren(head);
+
+    const body = el("div", "sv__body");
+    const who = (login) => {
+      const b = el("b", "sv__who", login);
+      if (colorOf(login)) b.style.color = colorOf(login);
+      return b;
+    };
+    for (const q of v.waiting) {
+      const row = el("div", `sv__row${q.stage ? ` sv__row--${q.stage}` : ""}`);
+      row.title = q.stage ? `${PING_NAMES[q.stage]} now; goes up to ${PING_NAMES[q.top].toLowerCase()}` : q.text;
+      row.append(el("span", `peek__ping peek__ping--${q.stage || 0}${q.stage ? "" : " sv__dot--quiet"}`));
+      const text = el("div", "sv__text");
+      text.append(who(q.from), document.createTextNode(` ${q.note ? "says" : "asks"}: `), el("span", null, q.text));
+      if (q.from === me.login) text.append(el("span", "sv__tag", "yours"));
+      row.append(text, el("span", "sv__ago", ago(q.at)));
+      body.append(row);
+    }
+    for (const a of v.answers) {
+      const row = el("div", "sv__row sv__row--answer");
+      const icon = el("span", `peek__icon answer--${a.code}`);
+      icon.innerHTML = svg((ANSWERS[a.code] || ANSWERS.c).icon, 13);
+      const text = el("div", "sv__text");
+      text.append(who(a.to), document.createTextNode(" answered "), el("b", null, a.said), el("span", "sv__muted", ` · ${a.text}`));
+      row.append(icon, text, el("span", "sv__ago", ago(a.at)));
+      body.append(row);
+    }
+    for (const f of v.notes) {
+      const row = el("div", `sv__row sv__note sv__note--${f.kind}`);
+      if (f.color && f.kind !== "love" && f.kind !== "seen") row.style.setProperty("--c", f.color);
+      const icon = el("span", "sv__icon");
+      icon.innerHTML = svg(FLASH_ICONS[f.kind] || FLASH_ICONS.info, 13);
+      const text = el("div", "sv__text");
+      if (f.kind === "chat") {
+        const name = el("b", null, f.chatter || "");
+        if (f.chatterColor) name.style.color = f.chatterColor;
+        text.append(name, `: ${f.text}`, el("span", "sv__muted", ` · flagged by ${f.from}`));
+      } else if (f.kind === "seen") {
+        text.append(el("b", null, `Seen by ${f.from}`), el("span", "sv__muted", ` · ${f.text}`));
+      } else {
+        text.append(document.createTextNode(f.text), el("span", "sv__muted", ` · ${f.from}${f.kind === "love" ? " (!vanish)" : ""}`));
+      }
+      row.append(icon, text);
+      body.append(row);
+    }
+    if (!body.childElementCount) body.append(el("p", "sv__empty", "Their dock is clear: nothing waiting."));
+    svEl.replaceChildren(head, body);
+  }
+  // Ages ("2 min ago") move on even when nothing new arrives.
+  if (EMBED) setInterval(() => !svEl?.hidden && drawStreamerView(), 30000);
 
   // ===== Doing things ======================================================================
 
@@ -756,7 +1080,9 @@
 
   function ask(to, question) {
     askDraft.note = "";
-    relay({ t: "ask", to, text: question, options: askDraft.options });
+    // A streamer's window sends statements plainly too, unless they picked buttons.
+    const plain = STREAMER && askDraft.options.join() === STANDARD.join() && !isQuestion(question);
+    if (relay({ t: "ask", to, text: question, ...(plain ? { note: true } : { options: askDraft.options }), ...(STREAMER ? {} : { level: askDraft.level }) })) rememberTo(to);
   }
 
   // ===== Pop-outs (OBS) ====================================================================
@@ -797,12 +1123,15 @@
   function render() {
     if (!me) return;
     derive();
+    pingCheck();
     // Keep typing where it was if things are redrawn under you.
     const typingIn = document.activeElement?.dataset?.key;
     main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : view === "deck" ? deckPanel() : cardList());
     if (view === "chat") main.querySelector(".chat__log")?.scrollTo(0, 1e9);
     drawDots();
     drawPeek();
+    drawStreamerView();
+    shareView();
     if (typingIn) {
       const again = document.querySelector(`[data-key="${typingIn}"]`);
       again?.focus();
@@ -814,6 +1143,7 @@
     peopleBtn.title = requests.length ? `Connections (${requests.length} waiting for you to add them back)` : "Connections";
     askBtn.textContent = DECK ? "Deck" : view === "ask" ? "Cancel" : "Ask";
     drawQuickAsk();
+    drawPresence();
     statsBtn.hidden = STREAMER || (!connections.length && !statsOn);
     statsBtn.classList.toggle("pill--on", view === "stats");
     // The chat button: shown once you're in a room or have tags to open one with.
@@ -843,7 +1173,7 @@
     askBtn.hidden = inBar || !me;
     if (!inBar) return;
     const choices = targets();
-    const want = choices.includes(quickTo.value) ? quickTo.value : choices[0];
+    const want = choices.includes(quickTo.value) ? quickTo.value : defaultTo();
     const labels = choices.map(targetLabel);
     if ([...quickTo.options].map((o) => o.text).join() !== labels.join()) {
       quickTo.replaceChildren(...choices.map((l, k) => new Option(labels[k], l)));
@@ -860,7 +1190,7 @@
       const sentNow = quickSent === text;
       const b = el("button", `pill pill--quick${sentNow ? " pill--sent" : ""}`);
       b.type = "button";
-      b.title = `Ask ${targetLabel(quickTo.value || "*")}: ${text}`;
+      b.title = `Send to ${targetLabel(quickTo.value || defaultTo())}: ${text}`;
       b.append(el("span", null, sentNow ? "Sent ✓" : text));
       const x = el("span", "pill__x", "×");
       x.title = "Forget this quick question";
@@ -913,19 +1243,36 @@
     quickEl.replaceChildren(...parts);
   }
 
+  // Side panel only: how your connections see you. Each click moves it on.
+  const STATUS = {
+    online: { label: "Online", next: "idle", says: "Your connections see you as online." },
+    idle: { label: "Idle", next: "offline", says: "Your connections see you as idle." },
+    offline: { label: "Offline", next: "online", says: "Your connections see you as offline. Things still reach you here." },
+  };
+  function drawPresence() {
+    presenceBtn.hidden = !EMBED;
+    if (!EMBED) return;
+    const now = STATUS[myStatus] || STATUS.online;
+    presenceBtn.className = `pill presence presence--${myStatus}`;
+    presenceBtn.textContent = now.label;
+    presenceBtn.title = `${now.says} Click to switch to ${STATUS[now.next].label.toLowerCase()}.`;
+  }
+
   // The dots: one per connection; glowing green ring while online, faded until they've
   // added you back; pulsing in their chat colour for a question from them,
   // ringed for their answer to yours, with how many.
   function drawDots() {
-    const dots = connections.map(({ login, mutual, online }) => {
-      const asks = Object.values(inbox).filter((q) => q.from === login && !q.done).length;
+    const dots = connections.map(({ login, mutual, online, idle }) => {
+      const fromThem = Object.values(inbox).filter((q) => q.from === login && !q.done);
+      const asks = fromThem.length;
       const answers = Object.values(sent).filter((q) => q.to === login && q.answer && !q.answer.seen).length;
       const direct = directWith(login);
       const said = direct ? unread(direct.owner) : 0; // private messages only count; they don't pulse
-      // The chat dock: everyone you're connected with, lit by whether they're in the chat.
+      // The chat dock: only people who are or have been in the chat this stream (or
+      // have something waiting). Bright while they're there, faded once they leave.
       const light = LIVECHAT && mutual ? liveLight(login) : null;
-      if (LIVECHAT && !light && !(asks + answers + said)) return null; // hasn't added you back
-      const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}${online && !LIVECHAT ? " dot--online" : ""}${light ? ` dot--${light.ring}` : ""}`);
+      if (LIVECHAT && !(asks + answers + said) && !(light && liveWasHere(login))) return null;
+      const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}${online && !LIVECHAT ? " dot--online" : ""}${idle ? " dot--idle" : ""}${light?.ring ? ` dot--${light.ring}` : ""}${light?.away ? " dot--away" : ""}`);
       dot.type = "button";
       if (colorOf(login)) {
         dot.style.setProperty("--c", colorOf(login));
@@ -936,11 +1283,11 @@
         dot.classList.add("dot--highlight");
       }
       dot.title = !mutual ? `Waiting for ${login} to add you back`
-        : asks ? `${login} asked you something`
+        : asks ? `${login} ${fromThem.every((q) => q.note) ? "sent you a message" : "asked you something"}`
         : answers ? `${login} answered you`
         : said ? `${login} sent you a message`
-        : light ? `${login}: ${light.says}`
-        : `${login}${online ? " (online)" : ""}`;
+        : light ? `${login}: ${light.says}${idle ? ", set to idle" : ""}`
+        : `${login}${idle ? " (idle)" : online ? " (online)" : ""}`;
       if (pics[login]) {
         const img = el("img");
         img.src = pics[login];
@@ -1006,7 +1353,7 @@
     const q = inbox[id];
     const card = el("div", "qcard");
     card.setAttribute("role", "alertdialog");
-    card.append(el("div", "qcard__head", `${q.name} asks${q.group ? ` ${askedWho(q)}` : ""}`), el("div", "qcard__text", q.text));
+    card.append(el("div", "qcard__head", `${q.name} ${q.note ? "says" : "asks"}${q.group ? ` ${q.note ? "to " : ""}${askedWho(q)}` : ""}`), el("div", "qcard__text", q.text));
     const buttons = el("div", "qcard__answers");
     for (const { code, label } of optionsOf(q)) {
       const b = el("button", `qcard__answer answer--${code}${code === "x" ? " qcard__answer--own" : ""}`);
@@ -1031,7 +1378,16 @@
       const reply = clean(input.value);
       if (reply) answer(id, "c", reply);
     });
-    const x = el("button", "qcard__dismiss", "Dismiss without answering");
+    // A plain message: no answer buttons, just say you've seen it (or reply).
+    if (q.note) {
+      const seen = el("button", "qcard__answer qcard__seen", q.sending ? "Sending…" : "Mark as seen");
+      seen.type = "button";
+      seen.title = `Let ${q.name} know you've seen this`;
+      seen.disabled = q.sending;
+      seen.addEventListener("click", () => ack(id));
+      buttons.append(seen);
+    }
+    const x = el("button", "qcard__dismiss", q.note ? "Dismiss" : "Dismiss without answering");
     x.type = "button";
     x.addEventListener("click", () => dismiss(id));
     card.append(buttons, own, x);
@@ -1088,7 +1444,9 @@
   // the newest answer to a question of yours, or else a connection request.
   // "+N" for the rest.
   function drawPeek() {
-    const open = Object.keys(inbox).filter((id) => !inbox[id].done).sort((a, b) => inbox[b].at - inbox[a].at);
+    // The most urgent shows first, so the message in the bar is the one causing the glow.
+    const stageOf = (id) => (PINGS_HERE && !pingLog[id]?.stale && pingLog[id]?.stage) || 0;
+    const open = Object.keys(inbox).filter((id) => !inbox[id].done).sort((a, b) => stageOf(b) - stageOf(a) || inbox[b].at - inbox[a].at);
     const answers = Object.keys(sent).filter((id) => sent[id].answer && !sent[id].answer.seen).sort((a, b) => sent[b].answer.at - sent[a].answer.at);
     const parts = [];
     const who = (login, text) => {
@@ -1101,6 +1459,7 @@
       const q = inbox[id];
       const line = el("div", "peek__line");
       line.title = q.text;
+      if (stageOf(id)) line.append(el("span", `peek__ping peek__ping--${stageOf(id)}`));
       line.append(who(q.from, q.name), el("span", "peek__text", q.text));
       const buttons = el("div", "peek__answers");
       for (const { code, label } of optionsOf(q)) {
@@ -1124,7 +1483,16 @@
         const reply = clean(input.value);
         if (reply) answer(id, "c", reply);
       });
-      parts.push(line, buttons, own, closeButton(() => dismiss(id), "Dismiss without answering"));
+      if (q.note) {
+        const seen = el("button", "pill pill--on", q.sending ? "Sending…" : "Mark as seen");
+        seen.type = "button";
+        seen.title = `Let ${q.name} know you've seen this`;
+        seen.disabled = q.sending;
+        seen.addEventListener("click", () => ack(id));
+        parts.push(line, seen, own, closeButton(() => dismiss(id), "Dismiss"));
+      } else {
+        parts.push(line, buttons, own, closeButton(() => dismiss(id), "Dismiss without answering"));
+      }
     } else if (answers.length) {
       const id = answers[0];
       const q = sent[id];
@@ -1166,9 +1534,12 @@
     const q = sent[id];
     const copies = q.group ? Object.entries(sent).filter(([, c]) => c.group === q.group) : [[id, q]];
     const answered = copies.filter(([, c]) => c.answer).length;
+    const seenBy = copies.filter(([, c]) => c.seenAt).length;
     const row = el("div", "waiting");
     const text = el("div", "waiting__text");
-    const who = q.group ? `Waiting on ${askedWho(q)} (${answered} of ${copies.length} answered): ` : `Waiting on ${q.to}: `;
+    const who = q.note
+      ? (q.group ? `Sent to ${askedWho(q)} (${seenBy} of ${copies.length} seen): ` : `Sent to ${q.to}${q.seenAt ? " · ✓ Seen" : ""}: `)
+      : q.group ? `Waiting on ${askedWho(q)} (${answered} of ${copies.length} answered): ` : `Waiting on ${q.to}: `;
     text.append(el("span", "waiting__who", who), document.createTextNode(q.text));
     row.append(text, closeButton(() => {
       for (const [cid] of copies) ui[cid] = { ...ui[cid], waitClosed: true };
@@ -1195,7 +1566,9 @@
   let quickSent = ""; // the quick question just sent, shown as "Sent" for a moment
 
   function sendQuick(text) {
-    if (relay({ t: "ask", to: quickTo.value || "*", text, options: STANDARD })) {
+    const to = quickTo.value || defaultTo();
+    if (relay({ t: "ask", to, text, ...askOrSay(text) })) {
+      rememberTo(to);
       quickSent = text;
       render();
       setTimeout(() => {
@@ -1223,7 +1596,7 @@
       chip.append(img);
     }
     chip.append(el("span", "ask__name", login));
-    if (conn(login)?.online) chip.append(el("span", "ask__online"));
+    if (conn(login)?.online) chip.append(el("span", `ask__online${conn(login).idle ? " ask__online--idle" : ""}`));
     return chip;
   }
 
@@ -1274,7 +1647,7 @@
 
     // Who to ask: the chosen person, with a caret that drops down the rest.
     if (!fixedTo) {
-      if (!targets().includes(askDraft.to)) askDraft.to = targets()[0];
+      if (!targets().includes(askDraft.to)) askDraft.to = defaultTo();
       const who = el("div", "ask__who");
       const pick = personChip(askDraft.to, "ask__person ask__person--on");
       pick.append(el("span", `ask__caret${pickerOpen ? " ask__caret--open" : ""}`));
@@ -1343,6 +1716,28 @@
         : "For things like incoming raids or minor technical difficulties. Shows on their bar with your name for 2 minutes. Only reaches people who are online."));
       if (askDraft.note) box.append(el("p", "ask__note", askDraft.note));
       return box;
+    }
+
+    // How far it can go if they don't answer: see "Pings".
+    if (!STREAMER) {
+      box.append(el("div", "ask__label", "How far it goes"));
+      const levels = el("div", "ask__levels");
+      for (let level = 1; level <= PING_TOP; level++) {
+        const b = el("button", `ask__level ask__level--${level}${askDraft.level === level ? " ask__level--on" : ""}`, PING_NAMES[level]);
+        b.type = "button";
+        b.title = `${level} ping${level > 1 ? "s" : ""}`;
+        b.addEventListener("click", () => {
+          askDraft.level = level;
+          render();
+        });
+        levels.append(b);
+      }
+      box.append(levels, el("p", "ask__hint", [
+        "One ping, and it stays green.",
+        "Green, then orange after 2 minutes if there's no answer.",
+        "Green, orange after 2 minutes, then yellow after 4.",
+        "Green, orange after 2 minutes, yellow after 4, then white after 5.",
+      ][askDraft.level - 1]));
     }
 
     // Quick questions: tap one to put it in the box; × forgets it.
@@ -1442,7 +1837,7 @@
     }
     const name = el("span", "person__name", login);
     if (colorOf(login)) name.style.color = colorOf(login);
-    head.append(name, el("span", `person__state${c.online ? " person__state--on" : ""}`, !c.mutual ? "hasn't added you yet" : c.online ? "online" : "offline"));
+    head.append(name, el("span", `person__state${c.idle ? " person__state--idle" : c.online ? " person__state--on" : ""}`, !c.mutual ? "hasn't added you yet" : c.idle ? "idle" : c.online ? "online" : "offline"));
     panel.append(head);
     if (c.mutual) panel.append(composer(login));
     const direct = directWith(login);
@@ -1484,7 +1879,8 @@
   function logRow(id, q, mine, login) {
     const row = el("div", "log__row");
     const body = el("div", "log__body");
-    body.append(el("div", "log__who", `${mine ? "You asked" : `${login} asked`} · ${ago(q.at)}`), el("div", "log__q", q.text));
+    const verb = q.note ? "said" : "asked";
+    body.append(el("div", "log__who", `${mine ? `You ${verb}` : `${login} ${verb}`} · ${ago(q.at)}`), el("div", "log__q", q.text));
     const out = el("div", "log__a");
     const reply = mine ? q.answer : q.answered;
     if (reply) {
@@ -1495,6 +1891,8 @@
       // Seen: on their answer, that you marked it; on yours, that they did.
       if (mine) out.append(seenControl(id, reply, "pill"));
       else out.append(el("span", `receipt${q.seenAt ? " receipt--seen" : ""}`, q.seenAt ? "✓ Seen" : "Not seen yet"));
+    } else if (q.note) {
+      out.append(el("span", `receipt${q.seenAt ? " receipt--seen" : ""}`, q.seenAt ? "✓ Seen" : q.dismissed ? "Dismissed" : "Not seen yet"));
     } else {
       out.append(el("span", "receipt", mine ? (q.seen ? "Dismissed" : "Waiting for their answer") : "Dismissed"));
     }
@@ -1720,12 +2118,12 @@
     const sound = el("label", "panel__check");
     const box = el("input");
     box.type = "checkbox";
-    box.checked = get("sound", false);
+    box.checked = soundOn();
     box.addEventListener("change", () => {
       put("sound", box.checked);
       if (box.checked) chime();
     });
-    sound.append(box, document.createTextNode(" Chime when something arrives"));
+    sound.append(box, document.createTextNode(" Sound when something arrives"));
     panel.append(sound, el("p", "panel__sub", "In OBS: if it captures your desktop audio, viewers may hear it too."));
 
     const out = el("button", "panel__signout", `Sign out of ${me.login}`);
@@ -2199,16 +2597,49 @@
   const liveChatters = new Set(); // logins Twitch says are in the chat
   let liveSaid = {}; // connection's login -> when they last chatted here (saved, for restarts)
   let liveListed = false; // attendance named people here, so it can be trusted over who chatted
+  const liveLeft = new Set(); // Twitch said they left, and they haven't been back
+  let liveBeen = { stream: "", logins: [] }; // who's been in the chat this stream (saved, for restarts)
 
-  // Their light: green within 5 minutes, orange 10, yellow 20, white after that
-  // or if they haven't chatted; gray if they aren't in the chat. Until attendance
-  // has named people (it never does in very big chats), chatting in the last 30
-  // minutes counts as being there.
+  // Their light: the ring is how recently they chatted, green within 5 minutes,
+  // orange 10, yellow 20, and it stays that colour if they leave; white if they're
+  // there but haven't chatted lately. The picture is bright while they're in the
+  // chat and faded once they aren't. Until attendance has named people (it never
+  // does in very big chats), chatting in the last 30 minutes counts as being there.
   function liveLight(login) {
     const min = liveSaid[login] ? (Date.now() - liveSaid[login]) / 60000 : Infinity;
-    if (!liveChatters.has(login) && (liveListed || min > 30)) return { ring: "away", says: "not in chat" };
-    const says = min === Infinity ? "in chat, lurking" : `chatted ${Math.max(1, Math.round(min))} min ago`;
-    return { ring: min <= 5 ? "light5" : min <= 10 ? "light10" : min <= 20 ? "light20" : "lightold", says };
+    const away = !liveChatters.has(login) && (liveListed || min > 30 || liveLeft.has(login));
+    const chatted = min === Infinity ? "" : `chatted ${Math.max(1, Math.round(min))} min ago`;
+    const ring = min <= 5 ? "light5" : min <= 10 ? "light10" : min <= 20 ? "light20" : away ? "" : "lightold";
+    return { ring, away, says: away ? `not in chat${chatted && `, ${chatted}`}` : chatted || "in chat, lurking" };
+  }
+
+  // Are they, or have they been, in the chat this stream? Once seen, they stay.
+  function liveWasHere(login) {
+    if (liveChatters.has(login) && !liveBeen.logins.includes(login)) {
+      liveBeen.logins.push(login);
+      put(`chatBeen-${liveChannel}`, liveBeen);
+    }
+    return liveBeen.logins.includes(login);
+  }
+
+  // A new stream starts the list again, with whoever's in the chat right now.
+  // Between streams it's left alone. (?stream=<anything> pretends, on this Mac.)
+  async function liveCheckStream() {
+    let started = DEV ? params.get("stream") : "";
+    if (!DEV && !DEMO) {
+      try {
+        started = (await (await helix(`/streams?user_login=${liveChannel}`)).json()).data?.[0]?.started_at;
+      } catch {
+        return;
+      }
+    }
+    if (!started || started === liveBeen.stream) return;
+    liveBeen = { stream: started, logins: [] };
+    put(`chatBeen-${liveChannel}`, liveBeen);
+    liveSaid = {};
+    put(`chatSaid-${liveChannel}`, liveSaid);
+    liveLeft.clear();
+    drawDots();
   }
 
   function liveJoin(ws) {
@@ -2261,15 +2692,22 @@
           changed = true;
         }
         const [, login, what] = line.match(/^:(\w+)!\S+ (JOIN|PART|PRIVMSG) /) || [];
+        if (what === "PRIVMSG") {
+          try {
+            ownChat?.ircSaw(login); // lets custom chat check it isn't missing messages
+          } catch {}
+        }
         if (!login || !trusted().includes(login)) continue;
         changed = true;
-        if (what === "JOIN") liveChatters.add(login);
-        else if (what === "PART") {
+        if (what === "JOIN") {
+          liveChatters.add(login);
+          liveLeft.delete(login);
+        } else if (what === "PART") {
           liveChatters.delete(login);
-          delete liveSaid[login];
-          put(`chatSaid-${liveChannel}`, liveSaid);
+          liveLeft.add(login);
         } else {
           liveChatters.add(login);
+          liveLeft.delete(login);
           liveSaid[login] = Date.now();
           put(`chatSaid-${liveChannel}`, liveSaid);
         }
@@ -2279,24 +2717,169 @@
     ws.onclose = () => setTimeout(liveListen, 5000);
   }
 
+  // ----- Which chat shows -----------------------------------------------------------------
+  // Twitch's own chat unless custom chat (ownchat.js) is switched on and working. Add
+  // &ownchat to the address to switch it on, &ownchat=off to switch it off. Whatever goes
+  // wrong with custom chat ends in chatFallback, which needs nothing but this page: it
+  // shuts custom chat down and puts Twitch's chat in its place. This file also watches
+  // custom chat from outside, in case its own checks are what's broken.
+  const OWNCHAT_START_MS = 15 * 1000; // must be connected by then
+  const OWNCHAT_SILENCE_MS = 30 * 1000; // ownchat.js gives up at 20, so this is the backstop
+  const OWNCHAT_RETRY_AFTER_MS = 30 * 60 * 1000; // if it failed this recently, don't start on it
+  const MOCK = location.hostname === "localhost" && params.has("mock"); // dev/mock-twitch.js
+  let ownChat = null;
+  let ownChatWatch = 0;
+  let ownChatStartTimer = 0;
+  let chatTurn = 0; // anything still waiting from an earlier attempt is ignored
+
+  const chatToken = () => get("chatToken", "");
+  const chatUrls = () => (MOCK
+    ? { helix: `${location.origin}/mock/helix`, eventsub: `ws://${location.host}/mock/ws`, validate: `${location.origin}/mock/validate`, history: `${location.origin}/mock/history`, otherEmotes: false }
+    : { helix: HELIX, eventsub: "wss://eventsub.wss.twitch.tv/ws", validate: "https://id.twitch.tv/oauth2/validate", history: "https://recent-messages.robotty.de/api/v2/recent-messages", otherEmotes: true });
+
+  function showTwitchChat(strip) {
+    const box = document.getElementById("live");
+    const frame = el("iframe", "live__frame");
+    frame.title = `${liveChannel}'s Twitch chat`;
+    frame.src = `https://www.twitch.tv/embed/${liveChannel}/chat?parent=${encodeURIComponent(location.hostname)}&darkpopout`;
+    box.replaceChildren(...(strip ? [chatStrip(strip)] : []), frame);
+  }
+
+  // The slim line above Twitch's chat, when there's something to say about custom chat.
+  function chatStrip({ text, unsent, label, run }) {
+    const strip = el("div", "live__strip");
+    strip.append(el("span", "live__stripText", text));
+    if (unsent) strip.append(el("span", "live__stripUnsent", `Not sent: ${unsent}`));
+    const go = el("button", "live__stripBtn", label);
+    go.type = "button";
+    go.addEventListener("click", run);
+    strip.append(go);
+    return strip;
+  }
+
+  function stopOwnChat() {
+    chatTurn++;
+    clearInterval(ownChatWatch);
+    clearTimeout(ownChatStartTimer);
+    let draft = "";
+    try {
+      draft = ownChat?.stop() || "";
+    } catch {}
+    ownChat = null;
+    return draft;
+  }
+
+  const tryOwnChatAgain = () => {
+    localStorage.removeItem("ownChatFailed");
+    put("ownChatPicked", "");
+    chatBegin();
+  };
+
+  function chatFallback(reason) {
+    const unsent = stopOwnChat();
+    put("ownChatFailed", { at: Date.now(), reason });
+    showTwitchChat({ text: `Switched to Twitch's chat because ${reason}.`, unsent, label: "Try custom chat again", run: tryOwnChatAgain });
+  }
+
+  // The streamer picked Twitch's chat, and that's remembered until they pick otherwise.
+  function chooseTwitchChat() {
+    const unsent = stopOwnChat();
+    put("ownChatPicked", "twitch");
+    showTwitchChat({ text: "Using Twitch's chat.", unsent, label: "Use custom chat", run: tryOwnChatAgain });
+  }
+
+  // Custom chat's sign-in, checked before anything depends on it.
+  async function chatSigninProblem() {
+    const token = chatToken();
+    if (!token) return "needs";
+    const r = await fetch(chatUrls().validate, { headers: { Authorization: `OAuth ${token}` } });
+    if (r.status === 401) {
+      localStorage.removeItem("chatToken");
+      return "needs";
+    }
+    if (!r.ok) throw new Error(`Twitch said ${r.status}`);
+    const j = await r.json();
+    const mine = MOCK || j.user_id === me.id;
+    return mine && window.OwnChat.SCOPES.every((s) => (j.scopes || []).includes(s)) ? "" : "needs";
+  }
+
+  async function chatBegin() {
+    stopOwnChat();
+    const turn = chatTurn;
+    try {
+      if (params.get("ownchat") === "off") put("ownChat", false);
+      else if (params.has("ownchat")) put("ownChat", true);
+      if (!get("ownChat", false)) return showTwitchChat();
+      if (!window.OwnChat) return showTwitchChat({ text: "Custom chat didn't load, so this is Twitch's chat.", label: "Reload", run: () => location.reload() });
+      if (get("ownChatPicked", "") === "twitch") return showTwitchChat({ text: "Using Twitch's chat.", label: "Use custom chat", run: tryOwnChatAgain });
+      const failed = get("ownChatFailed", null);
+      if (failed && Date.now() - failed.at < OWNCHAT_RETRY_AFTER_MS) {
+        return showTwitchChat({ text: `Using Twitch's chat because ${failed.reason} earlier.`, label: "Try custom chat again", run: tryOwnChatAgain });
+      }
+      ownChatStartTimer = setTimeout(() => turn === chatTurn && !ownChat?.ready && chatFallback("custom chat took too long to connect"), OWNCHAT_START_MS);
+      const problem = await chatSigninProblem();
+      if (turn !== chatTurn) return;
+      if (problem) {
+        clearTimeout(ownChatStartTimer);
+        return showTwitchChat({ text: "Custom chat needs your OK on Twitch first.", label: "Sign in", run: ownChatSignIn });
+      }
+      const box = document.getElementById("live");
+      box.replaceChildren();
+      ownChat = window.OwnChat.start({
+        box,
+        me: MOCK ? { ...me, id: me.id || "1" } : me,
+        channel: liveChannel,
+        channelId: liveChannel === me.login ? (me.id || (MOCK ? "1" : "")) : "",
+        token: chatToken,
+        clientId: TWITCH_CLIENT_ID,
+        urls: chatUrls(),
+        isConnection: (login) => trusted().includes(login),
+        onFail: (reason) => turn === chatTurn && chatFallback(reason),
+        onChoose: chooseTwitchChat,
+      });
+      if (location.hostname === "localhost") window.__ownChat = ownChat;
+      let lastTick = Date.now();
+      ownChatWatch = setInterval(() => {
+        try {
+          const now = Date.now();
+          const slept = now - lastTick > 20000;
+          lastTick = now;
+          if (slept) return;
+          if (ownChat?.ready) clearTimeout(ownChatStartTimer);
+          if (ownChat?.ready && now - ownChat.lastOk > OWNCHAT_SILENCE_MS) chatFallback("the connection to Twitch stopped");
+        } catch {
+          chatFallback("custom chat stopped responding");
+        }
+      }, 5000);
+    } catch (err) {
+      console.warn("Custom chat:", err);
+      if (turn === chatTurn) chatFallback("custom chat couldn't start");
+    }
+  }
+
   function liveStart() {
     if (liveChannel) return;
     const wanted = (params.get("channel") || me.login).toLowerCase();
     if (!/^[a-z0-9_]+$/.test(wanted)) return;
     liveChannel = wanted;
-    const frame = el("iframe", "live__frame");
-    frame.title = `${wanted}'s Twitch chat`;
-    frame.src = `https://www.twitch.tv/embed/${wanted}/chat?parent=${encodeURIComponent(location.hostname)}&darkpopout`;
-    document.getElementById("live").append(frame);
     document.getElementById("live").hidden = false;
+    chatBegin();
     liveSaid = get(`chatSaid-${wanted}`, {});
+    liveBeen = get(`chatBeen-${wanted}`, liveBeen);
     setInterval(drawDots, 30 * 1000); // lights change with time
     if (DEMO) {
+      // Here and chatting; here and lurking; came and left; never came (not shown).
+      connections.push({ login: "leftearly", mutual: true, online: false }, { login: "nevercame", mutual: true, online: false });
       liveChatters.add("tallglassofwasps").add("techbuddy");
       liveSaid.tallglassofwasps = Date.now() - 2 * 60000;
+      liveSaid.leftearly = Date.now() - 7 * 60000;
+      liveBeen.logins = ["leftearly"];
+      liveListed = true;
     } else {
       liveListen();
       setTimeout(liveRecheck, LIVE_RECHECK_MS);
+      liveCheckStream();
+      setInterval(liveCheckStream, 5 * 60 * 1000);
     }
     render();
   }
@@ -2320,7 +2903,10 @@
   function demoRelay(m) {
     const now = Date.now();
     const q = questions[m.id];
-    if (m.t === "ask") gotQuestion({ id: `d${now}`, from: me.login, to: m.to, text: m.text, at: now, answer: null, dismissed: 0, seenAt: 0 });
+    if (m.t === "status") {
+      myStatus = m.status;
+      render();
+    } else if (m.t === "ask") gotQuestion({ id: `d${now}`, from: me.login, to: m.to, text: m.text, at: now, options: m.options, note: m.note, answer: null, dismissed: 0, seenAt: 0 });
     else if (m.t === "answer" && q) gotQuestion({ ...q, answer: { code: m.code, text: m.text, at: now } });
     else if (m.t === "dismiss" && q) gotQuestion({ ...q, dismissed: now });
     else if (m.t === "seen" && q) gotQuestion({ ...q, seenAt: now });
@@ -2360,6 +2946,22 @@
           hype: { level: 2, progress: 640, goal: 1200, ends: "" },
         },
       },
+      // Streamer View (side panel): what tallglassofwasps's OBS dock is showing.
+      views: {
+        tallglassofwasps: {
+          glow: 3,
+          chat: "livechat",
+          waiting: [
+            { id: "v1", from: "techbuddy", text: "Mic is peaking, can you turn it down?", at: now - 250000, note: false, stage: 3, top: 4, options: ["Yes", "No", "Soon"] },
+            { id: "v2", from: "you", text: "Poll is ready when you are", at: now - 70000, note: true, stage: 1, top: 1, options: [] },
+          ],
+          answers: [{ id: "v3", to: "techbuddy", text: "Can you fix the overlay?", said: "Soon", code: "s", at: now - 40000 }],
+          notes: [
+            { id: "v4", kind: "chat", from: "you", text: "is this the speedrun category?", chatter: "NewViewer42", chatterColor: "#1e90ff", at: now - 30000 },
+            { id: "v5", kind: "info", from: "techbuddy", text: "Raid incoming from dampeyes", at: now - 20000 },
+          ],
+        },
+      },
       chat: { you: [{ id: "c1", owner: "you", from: "tallglassofwasps", text: "Raid target after this game?", at: now - 300000 }, { id: "c2", owner: "you", from: "tallglassofwasps", text: "@you also the poll is ready", at: now - 60000 }] },
       questions: [
         { id: "demo01", from: "tallglassofwasps", to: "you", text: "Can I clip that last play for TikTok?", at: now, answer: null, dismissed: 0, seenAt: 0 },
@@ -2378,10 +2980,21 @@
   quickAsk.addEventListener("submit", (e) => {
     e.preventDefault();
     const question = clean(quickText.value);
-    if (!question || !relay({ t: "ask", to: quickTo.value, text: question, options: STANDARD })) return;
+    if (!question || !relay({ t: "ask", to: quickTo.value, text: question, ...askOrSay(question) })) return;
+    rememberTo(quickTo.value);
     quickText.value = "";
     quickText.placeholder = "Sent ✓";
-    setTimeout(() => (quickText.placeholder = "Ask…"), 2500);
+    setTimeout(() => (quickText.placeholder = "Message…"), 2500);
+  });
+  presenceBtn.addEventListener("click", () => {
+    const next = STATUS[myStatus]?.next || "idle";
+    if (!relay({ t: "status", status: next })) return;
+    myStatus = next;
+    drawPresence();
+  });
+  // Sent from a popped-out window: the bar's picker follows.
+  addEventListener("storage", (e) => {
+    if (e.key === "lastTo" && me) rememberTo(get("lastTo", ""));
   });
   askFull.addEventListener("click", () => show("ask", quickTo.value));
   quickTo.addEventListener("change", drawQuick);
@@ -2414,6 +3027,7 @@
       askBtn.hidden = peopleBtn.hidden = false;
       startDemo();
       if (LIVECHAT) liveStart();
+      if (PINGS_HERE) setInterval(() => pingCheck() && render(), 1000);
       return;
     }
     if (!TWITCH_CLIENT_ID) return showMessage("Not set up yet", "Put the Twitch app's Client ID in config.js.");
@@ -2448,6 +3062,7 @@
       render();
     }, 60 * 60 * 1000);
     setInterval(checkForUpdate, UPDATE_CHECK_MS);
+    if (PINGS_HERE) setInterval(() => pingCheck() && render(), 1000);
   }
 
   start();

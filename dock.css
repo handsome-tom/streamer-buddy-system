@@ -1908,10 +1908,10 @@ body.livechat .peek__own input {
 .dot--light10:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px #ff8a00; }
 .dot--light20:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px #ffd400; }
 .dot--lightold:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px #fff; }
+/* Bright while they're in the chat, faded once they aren't; the ring keeps its colour. */
 .dot--away img,
 .dot--away .dot__letter {
-  filter: grayscale(1);
-  opacity: 0.45;
+  opacity: 0.32;
 }
 body.livechat .pins {
   flex: none;
@@ -1931,12 +1931,124 @@ body.livechat main:has(> .cards:empty) {
   flex: 1;
   min-height: 0;
 }
+.live:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+}
 .live__frame {
   display: block;
+  flex: 1;
   width: 100%;
-  height: 100%;
+  min-height: 0;
   border: 0;
 }
+/* Pings: the whole edge of the panel, over whichever chat is showing. It's only ever
+   a picture on top, so clicks go straight through. */
+.glow { display: none; position: fixed; inset: 0; z-index: 1000; pointer-events: none; }
+.glow--1, .glow--2, .glow--3, .glow--4 { display: block; box-shadow: inset 0 0 0 4px var(--ping), inset 0 0 28px 6px var(--ping); }
+.glow--1 { --ping: var(--good); }
+.glow--2 { --ping: var(--orange); animation: pingFlash 1.4s ease-in-out infinite; }
+.glow--3 { --ping: var(--yellow); animation: pingFlash 1s ease-in-out infinite; }
+.glow--4 { --ping: #fff; animation: pingFlash 0.7s ease-in-out infinite; }
+@keyframes pingFlash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+.peek__ping { flex: none; width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; background: var(--ping); }
+.peek__ping--1 { --ping: var(--good); }
+.peek__ping--2 { --ping: var(--orange); }
+.peek__ping--3 { --ping: var(--yellow); }
+.peek__ping--4 { --ping: #fff; }
+.ask__levels { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+.ask__level { padding: 3px 10px; font: inherit; font-size: 12px; color: var(--muted); background: none; border: 1px solid var(--ping); border-radius: 12px; cursor: pointer; }
+.ask__level--1 { --ping: var(--good); }
+.ask__level--2 { --ping: var(--orange); }
+.ask__level--3 { --ping: var(--yellow); }
+.ask__level--4 { --ping: #fff; }
+.ask__level--on { color: #000; font-weight: 700; background: var(--ping); }
+
+/* The slim line above Twitch's chat when custom chat has something to say. */
+.live__strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.live__stripText { flex: 1; min-width: 120px; }
+.live__stripUnsent { flex-basis: 100%; order: 3; color: var(--amber); overflow-wrap: anywhere; }
+.live__stripBtn, .oc-link {
+  padding: 0;
+  font: inherit;
+  color: #bf94ff;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ===== Custom chat (ownchat.js) ===== */
+.oc { flex: 1; min-height: 0; display: flex; flex-direction: column; font-size: 13px; line-height: 1.45; color: var(--text); background: var(--bg); }
+.oc-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 8px; font-size: 11px; color: var(--muted); border-bottom: 1px solid var(--line); }
+.oc-status::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: var(--yellow); }
+.oc-status--ok::before { background: var(--good); }
+.oc-status--retry::before { background: var(--orange); }
+.oc-listwrap { position: relative; flex: 1; min-height: 0; }
+.oc-list { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; padding: 4px 0; }
+.oc-line { position: relative; padding: 2px 8px; overflow-wrap: anywhere; }
+.oc-line:hover { background: rgba(255, 255, 255, 0.06); }
+.oc-line--old { opacity: 0.65; }
+.oc-line--connection { box-shadow: inset 3px 0 0 var(--purple); }
+.oc-line--gone { color: var(--muted); }
+.oc-system { font-size: 12px; color: var(--muted); font-style: italic; }
+.oc-notice { margin: 3px 0; padding: 4px 8px; background: rgba(145, 71, 255, 0.14); box-shadow: inset 3px 0 0 var(--purple); }
+.oc-notice__head { font-weight: 600; }
+.oc-notice--announce { background: rgba(255, 179, 26, 0.13); box-shadow: inset 3px 0 0 var(--amber); }
+.oc-replied { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.oc-shared { margin-right: 4px; padding: 0 4px; font-size: 10px; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; }
+.oc-badge { width: 18px; height: 18px; margin-right: 3px; vertical-align: -4px; }
+.oc-name { padding: 0; font: inherit; font-weight: 700; color: #bf94ff; background: none; border: 0; cursor: pointer; }
+.oc-emote { height: 28px; margin: -5px 1px; vertical-align: middle; }
+.oc-mention { font-weight: 600; }
+.oc-mention--me { padding: 0 3px; color: #fff; background: var(--red); border-radius: 3px; }
+.oc-cheer { font-weight: 700; color: var(--amber); }
+.oc-url { color: #bf94ff; }
+.oc-gone { padding: 0; font: inherit; font-style: italic; color: var(--muted); background: none; border: 0; cursor: pointer; }
+.oc-tools { position: absolute; top: 0; right: 4px; display: flex; gap: 2px; visibility: hidden; }
+.oc-line:hover > .oc-tools { visibility: visible; }
+.oc-tool { padding: 1px 6px; font-size: 11px; color: var(--text); background: #2f2f35; border: 1px solid var(--line); border-radius: 3px; cursor: pointer; }
+.oc-tool:hover { background: #3f3f46; }
+.oc-more { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); padding: 3px 10px; font-size: 12px; color: #fff; background: var(--purple); border: 0; border-radius: 12px; cursor: pointer; white-space: nowrap; }
+.oc-card { position: absolute; left: 6px; right: 6px; top: 6px; padding: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5); }
+.oc-card__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.oc-card__name { font-weight: 700; color: var(--text); }
+.oc-card__row { display: flex; flex-wrap: wrap; gap: 4px; }
+.oc-act { padding: 3px 9px; font-size: 12px; color: var(--text); background: #2f2f35; border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
+.oc-act:hover { background: #3f3f46; }
+.oc-act--good { border-color: var(--good); }
+.oc-act--bad { color: var(--bad); border-color: var(--bad); }
+.oc-held { max-height: 35%; overflow-y: auto; background: rgba(255, 179, 26, 0.1); border-bottom: 1px solid var(--amber); }
+.oc-hold { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; padding: 4px 8px; }
+.oc-hold + .oc-hold { border-top: 1px solid var(--line); }
+.oc-hold__text { flex: 1; min-width: 140px; overflow-wrap: anywhere; }
+.oc-hold__why { font-size: 11px; color: var(--amber); }
+.oc-note { padding: 4px 8px; font-size: 12px; color: var(--amber); background: var(--panel); border-top: 1px solid var(--line); }
+.oc-replying { padding: 3px 8px; font-size: 12px; color: var(--muted); background: var(--panel); border-top: 1px solid var(--line); }
+.oc-picker { padding: 6px; background: var(--panel); border-top: 1px solid var(--line); }
+.oc-picker__search { box-sizing: border-box; width: 100%; margin-bottom: 4px; padding: 3px 6px; color: var(--text); background: var(--bg); border: 1px solid var(--field); border-radius: 4px; }
+.oc-picker__grid { display: flex; flex-wrap: wrap; gap: 2px; max-height: 130px; overflow-y: auto; }
+.oc-picker__emote { padding: 2px; background: none; border: 0; border-radius: 3px; cursor: pointer; }
+.oc-picker__emote:hover { background: #3f3f46; }
+.oc-picker__emote .oc-emote { margin: 0; }
+.oc-picker__none { padding: 4px; font-size: 12px; color: var(--muted); }
+.oc-send { display: flex; gap: 4px; padding: 6px; border-top: 1px solid var(--line); }
+.oc-input { flex: 1; min-width: 0; padding: 5px 8px; font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--field); border-radius: 4px; }
+.oc-input:focus { outline: 2px solid var(--purple); outline-offset: -1px; }
+.oc-emotebtn { padding: 0 8px; font-size: 16px; color: var(--muted); background: none; border: 0; cursor: pointer; }
 /* Flagged chat lines, pinned below the bar: the whole message, wrapped. */
 .pins {
   display: flex;
@@ -1971,3 +2083,178 @@ body.livechat main:has(> .cards:empty) {
   height: 18px;
   border-radius: 50%;
 }
+
+/* Set to idle: an amber corner on the picture, and an amber ring where the ring means online. */
+.dot--idle::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  right: -2px;
+  bottom: -2px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--panel);
+  border-radius: 50%;
+  background: var(--amber);
+}
+.dot--online.dot--idle:not(:hover):not(.dot--answer) {
+  box-shadow: 0 0 0 2px var(--amber);
+}
+.dot--online.dot--idle::after {
+  box-shadow: 0 0 9px 2px color-mix(in srgb, var(--amber) 75%, transparent);
+}
+.ask__online--idle {
+  background: var(--amber);
+}
+.person__state--idle {
+  color: var(--amber);
+}
+
+/* The side panel's online / idle / offline button. */
+.presence {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.presence::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--good);
+}
+.presence--idle::before {
+  background: var(--amber);
+}
+.presence--offline::before {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--muted);
+}
+.presence--offline {
+  color: var(--muted);
+}
+
+/* Someone marked your answer or message seen. */
+.qflash--seen {
+  --c: var(--good);
+}
+
+/* A plain message's one button. */
+.qcard__seen {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  justify-content: center;
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ===== Streamer View (side panel) ======================================================= */
+/* What the streamer's OBS dock shows now. The box's edge takes the dock's glow colour,
+   and flashes like it does from orange up. */
+.sv {
+  --ping: var(--line);
+  margin: 8px 8px 0;
+  border: 1px solid var(--ping);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.sv[hidden] { display: none; }
+.sv--1 { --ping: var(--good); }
+.sv--2 { --ping: var(--orange); }
+.sv--3 { --ping: var(--yellow); }
+.sv--4 { --ping: #fff; }
+.sv--glow { box-shadow: 0 0 12px color-mix(in srgb, var(--ping) 45%, transparent); }
+.sv--2 .sv__head .peek__ping { animation: pingFlash 1.4s ease-in-out infinite; }
+.sv--3 .sv__head .peek__ping { animation: pingFlash 1s ease-in-out infinite; }
+.sv--4 .sv__head .peek__ping { animation: pingFlash 0.7s ease-in-out infinite; }
+.sv__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 10px;
+}
+.sv__toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.sv__toggle::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-right: -2px;
+  border: solid var(--muted);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 0.15s;
+}
+.sv--closed .sv__toggle::before { transform: rotate(-45deg); }
+.sv__title { font-weight: 700; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+.sv__toggle .peek__ping { margin-right: -4px; }
+.sv__says { overflow: hidden; color: var(--muted); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.sv__owner { flex: none; font-weight: 600; font-size: 12px; }
+.sv__pick {
+  flex: none;
+  max-width: 45%;
+  padding: 2px 6px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.sv__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 34vh;
+  padding: 0 8px 8px;
+  overflow-y: auto;
+}
+.sv__row {
+  --ping: var(--line);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--ping);
+  border-radius: 6px;
+  background: var(--bg);
+}
+.sv__row--1 { --ping: var(--good); }
+.sv__row--2 { --ping: var(--orange); }
+.sv__row--3 { --ping: var(--yellow); }
+.sv__row--4 { --ping: #fff; }
+.sv__row--answer { --ping: var(--purple); }
+.sv__row .peek__ping, .sv__row .peek__icon, .sv__icon { margin: 4px 0 0; }
+.sv__dot--quiet { background: var(--field); }
+.sv__note { --c: #3fb2ff; --ping: var(--c); }
+.sv__note--love { --c: #ff7ab8; }
+.sv__note--seen { --c: var(--good); }
+.sv__icon { flex: none; display: flex; color: var(--c); }
+.sv__text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.sv__who { font-weight: 700; }
+.sv__muted { color: var(--muted); }
+.sv__tag {
+  margin-left: 6px;
+  padding: 0 6px;
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.sv__ago { flex: none; margin-top: 1px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.sv__empty { margin: 0; padding: 4px 2px; color: var(--muted); font-size: 12px; }

@@ -48,9 +48,18 @@
 // asker can mark the answer seen. Kept a week, and waiting here for anyone
 // who's offline, so nothing's lost while OBS is closed.
 //
+// Plain messages: a question with note: true is something said, not asked. It
+// has no answer buttons; the person it went to can mark it seen (the sender hears)
+// or type a reply. It doesn't count towards the unanswered-questions limit.
+//
+// Status: what your connections see you as: "online" (the default), "idle", or
+// "offline" (shown as offline even while connected; things still reach you). Kept
+// on your account, so it stays until you change it.
+//
 // Messages from a page:
 //   auth { token }          connect { login }        disconnect { login }
-//   ask { to, text, options }  answer { id, code, text }  dismiss { id }
+//   ask { to, text, options, note, level }  answer { id, code, text }  dismiss { id }
+//   status { status }       "online", "idle" or "offline"
 //   tag { login, tag, on }  put a connection in (or out of) one of your tags
 //   room { tag }            open your chat room to one of your tags (null closes it)
 //   say { owner, text }     post in someone's room (yours: owner is you)
@@ -60,9 +69,10 @@
 //   statsShare { on }       share your stream stats with your connections
 //   sample { s }            your panel's latest numbers; see Stats below
 //   statEvent { kind, n, who, viewers }  a sub, gift, cheer, follow or raid
+//   view { v }              what your OBS dock shows now; see Streamer View below
 //   seen { id }
 // Messages to a page:
-//   state { me, connections, requests, tags, questions, rooms, chat, statsOn, stats }   (on sign-in, and whenever
+//   state { me, status, connections, requests, tags, questions, rooms, chat, statsOn, stats }   (on sign-in, and whenever
 //                                                       connections or who's online change)
 //   q { q }                 a question that's new or changed
 //   msg { m }               a new chat message { id, owner, from, text, at }
@@ -71,8 +81,15 @@
 //   unflash { id }          a pinned flagged line was cleared
 //   flashed { kind, reached }  how many people yours reached
 //   stats { owner, s }      someone's worked-out stats changed
+//   view { owner, v }       what a connection's OBS dock shows now (v null: it closed)
 //   error { why }
 // A plain "ping" gets "pong" without waking the hub (keeps idle pages cheap).
+//
+// Streamer View: a streamer's OBS dock sends a summary of what it shows whenever that
+// changes: { glow, waiting, answers, notes, chat }. It's kept as "v:<login>" while that
+// dock is connected and goes to their mutual connections (state's "views", and "view"
+// as it changes), unless they've set themselves to Offline. When the last dock that sent
+// one closes, it's dropped and connections get v: null.
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_LEN = 200;
@@ -93,6 +110,7 @@ const CHAT_BACKLOG = 50;
 const MAX_LOVE_LEN = 80;
 const MAX_FLASHES_PER_MINUTE = 20;
 const STAT_DAYS_KEPT = 40;
+const MAX_VIEW_ITEMS = 12;
 
 export default {
   async fetch(req, env) {
@@ -133,6 +151,7 @@ export class Hub {
       if (m.t === "connect") await this.setConnection(who.login, m.login, true);
       else if (m.t === "disconnect") await this.setConnection(who.login, m.login, false);
       else if (m.t === "ask") await this.ask(ws, who, m);
+      else if (m.t === "status") await this.setStatus(who.login, m);
       else if (m.t === "tag") await this.setTag(who.login, m);
       else if (m.t === "room") await this.setRoom(who.login, m);
       else if (m.t === "say") await this.say(ws, who, m);
@@ -141,9 +160,11 @@ export class Hub {
       else if (m.t === "statsShare") await this.statsShare(who.login, m);
       else if (m.t === "sample") await this.sample(who.login, m.s);
       else if (m.t === "statEvent") await this.statEvent(who.login, m);
+      else if (m.t === "view") await this.setView(ws, who, m.v);
       else if (m.t === "answer") await this.answer(ws, who, m);
       else if (m.t === "dismiss") await this.update(ws, who, m.id, (q) => q.to === who.login && !q.answer && !q.dismissed, (q) => (q.dismissed = Date.now()));
-      else if (m.t === "seen") await this.update(ws, who, m.id, (q) => q.from === who.login && q.answer && !q.seenAt, (q) => (q.seenAt = Date.now()));
+      // Seen: the asker, of an answer; or the person a plain message went to.
+      else if (m.t === "seen") await this.update(ws, who, m.id, (q) => !q.seenAt && ((q.from === who.login && q.answer) || (q.to === who.login && q.note && !q.answer && !q.dismissed)), (q) => (q.seenAt = Date.now()));
     } catch (e) {
       this.send(ws, { t: "error", why: "Something went wrong on the relay" });
     }
@@ -185,6 +206,10 @@ export class Hub {
 
   async left(ws) {
     const who = ws.deserializeAttachment() || {};
+    if (who.login && who.viewer && !this.sockets(who.login, ws).some((w) => w.deserializeAttachment()?.viewer)) {
+      await this.ctx.storage.delete(`v:${who.login}`);
+      if (this.isOnline(who.login, ws)) await this.tellView(who.login, null);
+    }
     if (who.login && !this.isOnline(who.login, ws)) await this.tellConnections(who.login);
   }
 
@@ -194,6 +219,21 @@ export class Hub {
 
   isOnline(login, except) {
     return this.sockets(login, except).length > 0;
+  }
+
+  // What connections see: connected, and not set to Offline.
+  shownOnline(login, users) {
+    return this.isOnline(login) && users[login]?.status !== "offline";
+  }
+
+  async setStatus(login, m) {
+    if (!["online", "idle", "offline"].includes(m.status)) return;
+    const user = (await this.ctx.storage.get(`u:${login}`)) || { list: [] };
+    if (m.status === "online") delete user.status;
+    else user.status = m.status;
+    await this.ctx.storage.put(`u:${login}`, user);
+    await this.sendState(login);
+    await this.tellConnections(login);
   }
 
   send(ws, msg) {
@@ -224,7 +264,8 @@ export class Hub {
     const mine = users[login]?.list || [];
     const connections = mine.map((l) => {
       const mutual = !!users[l]?.list.includes(login);
-      return { login: l, mutual, online: mutual && this.isOnline(l) };
+      const online = mutual && this.shownOnline(l, users);
+      return { login: l, mutual, online, idle: online && users[l]?.status === "idle" };
     });
     const requests = Object.entries(users).filter(([l, u]) => l !== login && u.list.includes(login) && !mine.includes(l)).map(([l]) => l);
     const questions = [];
@@ -245,7 +286,13 @@ export class Hub {
       const rec = await this.ctx.storage.get(`s:${l}`);
       if (rec) stats[l] = workOut(rec);
     }
-    this.sendTo(login, { t: "state", me: login, connections, requests, tags: users[login]?.tags || {}, questions, pins, rooms, chat, statsOn: !!users[login]?.statsOn, stats });
+    const views = {};
+    for (const c of connections) {
+      if (!c.online || users[c.login]?.status === "offline" || !this.viewing(c.login)) continue;
+      const v = await this.ctx.storage.get(`v:${c.login}`);
+      if (v) views[c.login] = v;
+    }
+    this.sendTo(login, { t: "state", me: login, status: users[login]?.status || "online", connections, requests, tags: users[login]?.tags || {}, questions, pins, rooms, chat, statsOn: !!users[login]?.statsOn, stats, views });
   }
 
   // A room's latest messages. Anything over a week old is deleted, even if nobody
@@ -271,7 +318,7 @@ export class Hub {
   }
 
   roomsFor(login, users) {
-    const online = (members) => members.map((l) => ({ login: l, online: this.isOnline(l) }));
+    const online = (members) => members.map((l) => ({ login: l, online: this.shownOnline(l, users) }));
     const groups = Object.keys(users)
       .map((owner) => ({ owner, tag: users[owner].room?.tag, members: this.members(owner, users) }))
       .filter((r) => r.members.includes(login))
@@ -301,6 +348,30 @@ export class Hub {
     }
     for (const r of this.roomsFor(login, users)) for (const m of r.members) if (m.login !== login) told.add(m.login);
     for (const l of told) await this.sendState(l);
+  }
+
+  // ===== Streamer View =======================================================================
+
+  // Is one of their OBS docks connected and sharing what it shows?
+  viewing(login) {
+    return this.sockets(login).some((w) => w.deserializeAttachment()?.viewer);
+  }
+
+  async setView(ws, who, raw) {
+    const v = cleanView(raw);
+    if (!v) return;
+    if (!who.viewer) ws.serializeAttachment({ ...who, viewer: true });
+    await this.ctx.storage.put(`v:${who.login}`, v);
+    await this.tellView(who.login, v);
+  }
+
+  // Their mutual connections who are online hear (nothing while they're set to Offline).
+  async tellView(login, v) {
+    const users = await this.users();
+    if (users[login]?.status === "offline") v = null;
+    for (const l of users[login]?.list || []) {
+      if (users[l]?.list.includes(login)) this.sendTo(l, { t: "view", owner: login, v });
+    }
   }
 
   async setConnection(login, other, on) {
@@ -517,18 +588,21 @@ export class Hub {
     if (recent.size >= MAX_ASKS_PER_MINUTE) {
       return this.send(ws, { t: "error", why: "That's a lot of questions at once; try again in a minute" });
     }
-    const open = (to) => all.filter((q) => q.from === who.login && q.to === to && !q.answer && !q.dismissed).length;
-    const full = targets.filter((to) => open(to) >= MAX_OPEN_PER_PAIR);
+    const open = (to) => all.filter((q) => q.from === who.login && q.to === to && !q.note && !q.answer && !q.dismissed).length;
+    const note = !!m.note;
+    const full = note ? [] : targets.filter((to) => open(to) >= MAX_OPEN_PER_PAIR);
     if (!everyone && full.length) {
       return this.send(ws, { t: "error", why: `${full[0]} already has ${MAX_OPEN_PER_PAIR} unanswered questions from you` });
     }
     const group = everyone ? crypto.randomUUID().slice(0, 8) : null;
-    const options = cleanOptions(m.options);
+    const options = note ? [] : cleanOptions(m.options);
     let sent = 0;
     for (const to of targets) {
       if (full.includes(to)) continue; // asking everyone skips anyone already full up
       const q = { id: crypto.randomUUID().slice(0, 8), from: who.login, to, text, at: Date.now(), options, answer: null, dismissed: 0, seenAt: 0 };
       if (group) Object.assign(q, { group, toTag: tagName ?? "everyone" });
+      if (note) q.note = true;
+      if ([1, 2, 3, 4].includes(m.level)) q.level = m.level; // how far its pings can go (see dock.js)
       await this.ctx.storage.put(`q:${q.id}`, q);
       this.share(q);
       sent++;
@@ -629,4 +703,30 @@ function cleanEmotes(emotes) {
     } catch {}
   }
   return out;
+}
+
+// A Streamer View summary, kept to what the side panel draws.
+function cleanView(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const str = (x, n = MAX_LEN) => String(x ?? "").slice(0, n);
+  const login = (x) => str(x, 25).toLowerCase().replace(/[^a-z0-9_]/g, "");
+  const num = (x) => (Number.isFinite(x) ? x : 0);
+  const stage = (x) => (Number.isInteger(x) && x >= 0 && x <= 4 ? x : 0);
+  const color = (x) => (/^#[0-9a-f]{6}$/i.test(x || "") ? x : "");
+  const list = (x) => (Array.isArray(x) ? x.slice(0, MAX_VIEW_ITEMS) : []);
+  return {
+    glow: stage(raw.glow),
+    chat: raw.chat === "livechat" ? "livechat" : "dock",
+    waiting: list(raw.waiting).map((q) => ({
+      id: str(q.id, 60), from: login(q.from), text: str(q.text), at: num(q.at), note: !!q.note, stage: stage(q.stage), top: stage(q.top),
+      options: list(q.options).map((o) => str(o, MAX_OPTION_LEN)),
+    })),
+    answers: list(raw.answers).map((a) => ({
+      id: str(a.id, 60), to: login(a.to), text: str(a.text), said: str(a.said), code: /^[ynmsotcx]$/.test(a.code) ? a.code : "c", at: num(a.at),
+    })),
+    notes: list(raw.notes).map((f) => ({
+      id: str(f.id, 60), kind: ["info", "love", "chat", "seen"].includes(f.kind) ? f.kind : "info", from: login(f.from), text: str(f.text, MAX_FLAGGED_LEN),
+      chatter: str(f.chatter, 25), chatterColor: color(f.chatterColor), color: color(f.color), at: num(f.at),
+    })),
+  };
 }
