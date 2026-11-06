@@ -1834,8 +1834,9 @@
   // question to several people, it nudges everyone who hasn't answered.
   //
   // While it can't be nudged (just nudged, or already white), the button still takes
-  // taps: WARN_TAPS of them in quick succession sends a warning, red on their screen with a
-  // louder beep. At most one every WARN_GAP_MS (the relay's limits too).
+  // taps: WARN_TAPS of them in quick succession sends them a warning, a heads-up that
+  // something needs them right now (a mod looking out for the streamer), red on their
+  // screen with a louder beep. At most one every WARN_GAP_MS (the relay's limits too).
   const NUDGE_GAP_MS = 15 * 1000;
   const WARN_GAP_MS = 30 * 1000;
   const WARN_TAPS = 6;
@@ -1856,13 +1857,13 @@
     const colour = warns ? PING_WARN : canNudge ? next : done ? PING_TOP : nudges + 1;
     const b = el("button", `nudge nudge--${colour}${warns ? " nudge--warned" : ""}${taps.length ? " nudge--arming" : ""}`);
     b.type = "button";
-    const label = taps.length ? `Warn: ${WARN_TAPS - taps.length} more` : warns ? "Warned" : canNudge ? (nudges ? "Nudge again" : "Nudge") : done ? "Nudged 3×" : "Nudged";
+    const label = taps.length ? `Send warning: ${WARN_TAPS - taps.length} more` : warns ? "Warning sent" : canNudge ? (nudges ? "Nudge again" : "Nudge") : done ? "Nudged 3×" : "Nudged";
     b.append(el("span", `peek__ping peek__ping--${colour}`), el("span", null, label));
     b.disabled = busy || (!canNudge && warnWait > 0);
     b.title = canNudge
       ? `Remind them: it turns ${PING_NAMES[next].toLowerCase()} on their screen, with a soft beep`
-      : warnWait > 0 ? "A warning was just sent; give them a moment"
-      : `Tap ${WARN_TAPS} times quickly to send a warning (red on their screen, louder beep)`;
+      : warnWait > 0 ? "Your warning just went to them; give them a moment"
+      : `Something needs them right now? Tap ${WARN_TAPS} times quickly to send them a warning (red on their screen, louder beep)`;
     b.addEventListener("click", (e) => {
       e.stopPropagation();
       if (canNudge) {

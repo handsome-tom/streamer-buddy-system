@@ -181,7 +181,7 @@
     const q = Object.values(open).filter((q) => q.from === "mod1" && q.to === "streamer" && !q.note && !q.answer && !q.dismissed).sort((a, b) => a.at - b.at)[0];
     if (!q) return said("mod1 has nothing unanswered to warn about");
     send("mod1", { t: "nudge", id: q.id, warn: true });
-    said(`mod1 sent a warning: ${q.text}`);
+    said(`mod1 sent the streamer a warning: ${q.text}`);
   });
   const streamerAsk = () => send("streamer", { t: "ask", to: "mod1", text: pick(STREAMER_ASKS), options: ["y", "n", "s", "o", "m", "t"] });
   for (const [id, go, what] of [["modAsk", modAsk, "mod1 asked the streamer"], ["modSay", modSay, "mod1 messaged the streamer"], ["modNote", modNote, "mod1 sent a quick note"], ["streamerAsk", streamerAsk, "the streamer asked mod1"]]) {

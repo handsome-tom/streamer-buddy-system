@@ -62,8 +62,9 @@ with one softer reminder beep and a brief flash of the edge:
 | Warning | Red | two quick, louder notes |
 
 Three nudges at most, and at most one every 15 seconds. While it can't be nudged (just
-nudged, or already white), tapping **Nudge** six times quickly sends a **warning**
-instead: red on the streamer's screen with a louder double beep (even with reminders
+nudged, or already white), tapping **Nudge** six times quickly sends the streamer a
+**warning**: a heads-up that something needs her right now (a mod looking out for her,
+not a mark against her). It shows red on the streamer's screen with a louder double beep (even with reminders
 off), at most one every 30 seconds. Answering, dismissing or marking
 it seen stops it. The bar shows the most urgent message first.
 
