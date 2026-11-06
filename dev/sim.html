@@ -25,6 +25,7 @@
   .tools button, .tools select { padding: 4px 10px; font: inherit; color: #efeff1; background: #2f2f35; border: 1px solid #3a3a3d; border-radius: 6px; cursor: pointer; }
   .tools button:hover { background: #3a3a40; }
   .tools .on { background: #772ce8; border-color: #9147ff; }
+  .tools .group { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; color: #adadb8; border: 1px dashed #3a3a3d; border-radius: 8px; }
   .tools .said { margin-left: auto; color: #adadb8; font-size: 12px; }
   .stage { flex: 1; display: flex; justify-content: center; gap: 24px; min-height: 0; padding: 14px; overflow: auto; }
   .side { display: flex; flex-direction: column; gap: 6px; height: 100%; }
@@ -46,6 +47,12 @@
     <button id="modNote" type="button">mod1 quick note</button>
     <button id="modNudge" type="button">mod1 nudges</button>
     <button id="streamerAsk" type="button">Streamer asks mod1</button>
+    <span class="group">In chat:
+      <select id="chatter" title="Who"><option>mod1</option><option>mod2</option></select>
+      <button id="cJoin" type="button">joins</button>
+      <button id="cSay" type="button">says something</button>
+      <button id="cPart" type="button">leaves</button>
+    </span>
     <button id="reload" type="button">Reload both</button>
     <span class="said" id="said"></span>
   </div>
@@ -55,7 +62,7 @@
       <iframe id="mod" title="Mod side panel"></iframe>
     </div>
     <div class="side">
-      <h2>Streamer · OBS chat dock <span>(signed in as streamer)</span></h2>
+      <h2>Streamer · OBS chat dock <span>(signed in as streamer; a "minute" is 6 s for the pictures' rings)</span></h2>
       <iframe id="obs" title="Streamer OBS dock"></iframe>
     </div>
   </div>
@@ -79,7 +86,7 @@
 
   function load() {
     document.getElementById("mod").src = "http://localhost:8787/?dev=mod1&embed=ext&watch=streamer";
-    document.getElementById("obs").src = `/?dev=streamer&livechat&ownchat&mock`;
+    document.getElementById("obs").src = `/?dev=streamer&livechat&ownchat&mock&lightms=6000`;
   }
 
   async function setUp() {
@@ -222,6 +229,12 @@
   });
 
   document.getElementById("reload").addEventListener("click", load);
+  // Who's in the chat: the pictures in the streamer's bar light up, ring and go gray.
+  const LINES = ["hey chat", "that was clean", "lol", "o7", "nice one", "W"];
+  const chatter = () => document.getElementById("chatter").value;
+  document.getElementById("cJoin").addEventListener("click", () => (control(`join&who=${chatter()}`), said(`${chatter()} joined the chat`)));
+  document.getElementById("cSay").addEventListener("click", () => (control(`say&who=${chatter()}&text=${encodeURIComponent(pick(LINES))}`), said(`${chatter()} chatted`)));
+  document.getElementById("cPart").addEventListener("click", () => (control(`part&who=${chatter()}`), said(`${chatter()} left the chat`)));
   setUp();
 </script>
 </body>

@@ -11,9 +11,9 @@
 //   - a chat dock (?livechat, to use in place of OBS's Twitch chat dock): for a
 //     streamer who's live, so just the one-row bar on top of Twitch's own embedded
 //     chat. It receives everything but only sends messages and questions. A
-//     connection's picture shows once they've been in the chat this stream: bright
-//     while they're there, faded after they leave, ringed by how recently they
-//     chatted. ?channel=<name> shows another channel's chat
+//     connection's picture shows once they've been in the chat this stream: ringed
+//     green, orange, yellow, then white by how recently they chatted, lit with no ring
+//     when they're quiet, gray once they've left. ?channel=<name> shows another channel's chat
 // Everyone talks through the relay (relay/ in this repo, on Cloudflare): a
 // WebSocket that signs in with your Twitch sign-in, keeps connections and the
 // week's questions, and says who's online. Questions wait there for anyone
@@ -113,11 +113,14 @@
   // Accounts whose picture gets a bright ring everywhere, so they stand out
   // (Alex's own channel).
   const HIGHLIGHT = { myspacetomofficial: "#3fb2ff" };
-  const MAX_OPTIONS = 8;
 
   // A question's answer buttons, in the asker's order: { code, label }. The
   // asker's own options are code "x" with their label.
   const optionsOf = (q) => (q.options || STANDARD).map((o) => (o.startsWith("+") ? { code: "x", label: o.slice(1) } : { code: o, label: ANSWERS[o].label }));
+  // The streamer's answers, whatever the asker offered: heart, check and X, heart on the
+  // left. Anything else is a typed reply. The relay always accepts these three.
+  const STREAMER_ANSWERS = ["t", "y", "n"];
+  const answerChoices = (q) => (STREAMER ? STREAMER_ANSWERS.map((code) => ({ code, label: ANSWERS[code].label })) : optionsOf(q));
   // What an answer says: a typed reply or own option's words, else its label.
   const said = (a) => (a.code === "c" || a.code === "x" ? a.text : ANSWERS[a.code].label);
 
@@ -143,9 +146,9 @@
   const HOME_VIEW = DECK ? "deck" : "cards";
   let view = POPOUT && /^(ask|people|person|chat|stats)$/.test(params.get("view")) ? params.get("view") : HOME_VIEW; // "cards" | "deck" | "ask" | "people" | "person" | "chat" | "stats"
   const drafts = {}; // question id -> reply being typed (kept if things redraw)
-  // The Ask box: who to, the question, and its answer buttons (the six
-  // standard ones until some are taken off; "+label" for your own).
-  const askDraft = { to: (POPOUT && params.get("to")) || "", text: "", note: "", options: [...STANDARD], adding: "", mode: "ask" }; // mode: "ask" | "info" | "love"
+  // The Ask box: who to, what's being typed, and what kind ("ask" | "info" | "love").
+  // Every question offers the streamer's three answers: heart, check and X.
+  const askDraft = { to: (POPOUT && params.get("to")) || "", text: "", note: "", options: ["t", "y", "n"], mode: "ask" };
 
   // ===== Saved data ========================================================================
 
@@ -616,8 +619,6 @@
     if (!old && q.from === me.login) {
       askDraft.text = "";
       askDraft.note = "";
-      askDraft.options = [...STANDARD]; // options are per question
-      askDraft.adding = "";
       if (view === "ask") view = "cards"; // their page shows it in the log
     }
     render();
@@ -1211,7 +1212,7 @@
   function ask(to, question) {
     askDraft.note = "";
     // A streamer's window sends statements plainly too, unless they picked buttons.
-    const plain = STREAMER && askDraft.options.join() === STANDARD.join() && !isQuestion(question);
+    const plain = STREAMER && !isQuestion(question);
     if (relay({ t: "ask", to, text: question, ...(plain ? { note: true } : { options: askDraft.options }) })) rememberTo(to);
   }
 
@@ -1220,9 +1221,10 @@
   // The cards in a window of their own, in front, sized to fit. Null if OBS
   // (or the browser) won't open one. Not from the side panel, which has room.
   let popWin = null;
+  // Never for the streamer: everything opens just under the bar instead (see "Inline").
   function popOut(show = "cards", to = "") {
     if (POPOUT) return window;
-    if (EMBED || DECK) return null;
+    if (EMBED || DECK || STREAMER) return null;
     const q = new URLSearchParams({ popout: "", view: show, to });
     if (STREAMER) q.set("streamer", "");
     if (DEMO) q.set("demo", "");
@@ -1235,6 +1237,25 @@
   // Kept to one row: no room below the bar, so Ask and Connections pop out.
   const short = () => !POPOUT && !EMBED && !DECK && (LIVECHAT || innerHeight < 120);
 
+  // Inline (the streamer's chat dock): what would have been a pop-out opens just under the
+  // bar, over the top of the chat, with a Close at the top. The bar's own buttons close it
+  // too, by pressing them again.
+  let showAll = false; // the chat dock's full list of what's waiting, opened from "+2" or a picture
+  const INLINE_TITLES = { cards: "Waiting for you", ask: "Ask", people: "Connections", chat: "Chat", stats: "Stats" };
+  function inlineHead() {
+    const head = el("div", "inline__head");
+    head.append(el("span", "inline__title", view === "person" ? askDraft.to : INLINE_TITLES[view] || ""));
+    const close = el("button", "inline__close", "Close");
+    close.type = "button";
+    close.addEventListener("click", () => {
+      showAll = false;
+      view = HOME_VIEW;
+      render();
+    });
+    head.append(close);
+    return head;
+  }
+
   // Ask / Connections / someone's page: here, or popped out if the dock is just the bar.
   function show(next, to = "") {
     if (next === "chat" && to) chatDraft.owner = to;
@@ -1244,6 +1265,7 @@
       askDraft.note = "";
     }
     if (next !== "cards" && short() && popOut(next, to)) return;
+    showAll = false;
     view = view === next && next !== "person" ? HOME_VIEW : next;
     render();
   }
@@ -1257,6 +1279,7 @@
     // Keep typing where it was if things are redrawn under you.
     const typingIn = document.activeElement?.dataset?.key;
     main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : view === "deck" ? deckPanel() : cardList());
+    if (LIVECHAT && (view !== "cards" || showAll) && main.firstElementChild?.childElementCount !== 0) main.prepend(inlineHead());
     if (view === "chat") main.querySelector(".chat__log")?.scrollTo(0, 1e9);
     drawDots();
     drawPeek();
@@ -1374,20 +1397,50 @@
     quickEl.replaceChildren(...parts);
   }
 
-  // Side panel only: how your connections see you. Each click moves it on.
+  // Side panel only: how your connections see you. The button opens a little menu of the
+  // three to pick from.
   const STATUS = {
-    online: { label: "Online", next: "idle", says: "Your connections see you as online." },
-    idle: { label: "Idle", next: "offline", says: "Your connections see you as idle." },
-    offline: { label: "Offline", next: "online", says: "Your connections see you as offline. Things still reach you here." },
+    online: { label: "Online", says: "Your connections see you as online." },
+    idle: { label: "Idle", says: "Shown as away for a bit." },
+    offline: { label: "Offline", says: "Shown as offline. Things still reach you here." },
   };
+  const presenceMenu = el("div", "presence__menu");
+  presenceMenu.setAttribute("role", "menu");
+  presenceMenu.hidden = true;
+  presenceBtn.after(presenceMenu);
   function drawPresence() {
     presenceBtn.hidden = !EMBED;
     if (!EMBED) return;
     const now = STATUS[myStatus] || STATUS.online;
-    presenceBtn.className = `pill presence presence--${myStatus}`;
+    presenceBtn.className = `pill presence presence--${myStatus}${presenceMenu.hidden ? "" : " pill--on"}`;
     presenceBtn.textContent = now.label;
-    presenceBtn.title = `${now.says} Click to switch to ${STATUS[now.next].label.toLowerCase()}.`;
+    presenceBtn.title = `${now.says} Click to change.`;
+    presenceBtn.setAttribute("aria-haspopup", "menu");
+    presenceBtn.setAttribute("aria-expanded", String(!presenceMenu.hidden));
   }
+  function openPresence(open) {
+    presenceMenu.hidden = !open;
+    if (open) {
+      presenceMenu.style.left = `${Math.max(4, Math.min(presenceBtn.offsetLeft, innerWidth - 228))}px`; // under the button
+      presenceMenu.replaceChildren(...Object.entries(STATUS).map(([status, { label, says }]) => {
+        const item = el("button", `presence__item${status === myStatus ? " presence__item--on" : ""}`);
+        item.type = "button";
+        item.setAttribute("role", "menuitemradio");
+        item.setAttribute("aria-checked", String(status === myStatus));
+        item.append(el("span", `presence presence--${status}`, label), el("span", "presence__says", says));
+        item.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (status !== myStatus && relay({ t: "status", status })) myStatus = status;
+          openPresence(false);
+        });
+        return item;
+      }));
+    }
+    drawPresence();
+  }
+  // Clicking elsewhere, or Escape, closes it.
+  document.addEventListener("click", (e) => !presenceMenu.hidden && !presenceMenu.contains(e.target) && e.target !== presenceBtn && openPresence(false));
+  document.addEventListener("keydown", (e) => e.key === "Escape" && !presenceMenu.hidden && openPresence(false));
 
   // The dots: one per connection; glowing green ring while online, faded until they've
   // added you back; pulsing in their chat colour for a question from them,
@@ -1403,7 +1456,7 @@
       // have something waiting). Bright while they're there, faded once they leave.
       const light = LIVECHAT && mutual ? liveLight(login) : null;
       if (LIVECHAT && !(asks + answers + said) && !(light && liveWasHere(login))) return null;
-      const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}${online && !LIVECHAT ? " dot--online" : ""}${idle ? " dot--idle" : ""}${light?.ring ? ` dot--${light.ring}` : ""}${light?.away ? " dot--away" : ""}`);
+      const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}${online && !LIVECHAT ? " dot--online" : ""}${idle ? " dot--idle" : ""}${light?.ring ? ` dot--${light.ring}` : ""}${light?.away ? " dot--away" : light && !light.ring ? " dot--here" : ""}`);
       dot.type = "button";
       if (colorOf(login)) {
         dot.style.setProperty("--c", colorOf(login));
@@ -1431,6 +1484,7 @@
       dot.addEventListener("click", () => {
         if (asks + answers) {
           view = "cards";
+          showAll = true;
           popOut();
           render();
         } else if (said) {
@@ -1447,8 +1501,10 @@
   function cardList() {
     const wrap = el("div", "cards");
     if (signinNote()) wrap.append(signinPill());
-    if (LIVECHAT) return wrap; // everything else is in the bar, or pops out from a picture
-    if (!POPOUT && !DECK) wrap.append(composer(null));
+    // The chat dock: the newest is in the bar; all of them only when asked for ("+2" or a
+    // picture), just under the bar.
+    if (LIVECHAT && !showAll) return wrap;
+    if (!POPOUT && !DECK && !LIVECHAT) wrap.append(composer(null)); // the chat dock sends from its bar
     const answers = Object.keys(sent).filter((id) => sent[id].answer && !sent[id].answer.seen).sort((a, b) => sent[a].answer.at - sent[b].answer.at);
     const waiting = Object.keys(sent).filter((id) => !sent[id].answer && !sent[id].seen).sort((a, b) => sent[a].at - sent[b].at);
     const open = Object.keys(inbox).filter((id) => !inbox[id].done).sort((a, b) => inbox[a].at - inbox[b].at);
@@ -1466,6 +1522,10 @@
     }
     // With connections, the dots say it all: nothing here, so the dock can be one row.
 
+    if (LIVECHAT && wrap.childElementCount === (signinNote() ? 1 : 0)) {
+      showAll = false; // all dealt with: fold away
+      return el("div", "cards");
+    }
     return wrap;
   }
 
@@ -1486,7 +1546,7 @@
     card.setAttribute("role", "alertdialog");
     card.append(el("div", "qcard__head", `${q.name} ${q.note ? "says" : "asks"}${q.group ? ` ${q.note ? "to " : ""}${askedWho(q)}` : ""}`), el("div", "qcard__text", q.text));
     const buttons = el("div", "qcard__answers");
-    for (const { code, label } of optionsOf(q)) {
+    for (const { code, label } of answerChoices(q)) {
       const b = el("button", `qcard__answer answer--${code}${code === "x" ? " qcard__answer--own" : ""}`);
       b.type = "button";
       b.disabled = q.sending;
@@ -1571,29 +1631,84 @@
     return card;
   }
 
-  // The bar's preview: the newest question to you, with its answers, or else
-  // the newest answer to a question of yours, or else a connection request.
-  // "+N" for the rest.
-  function drawPeek() {
-    // The most urgent shows first, so the message in the bar is the one causing the glow.
+  // The bar's message area: what's waiting for you (questions and messages to you, and
+  // answers to your questions you haven't marked seen), one at a time, with its answers;
+  // or else a connection request. In the streamer's chat dock it's the place to look:
+  // boxed, a little larger, in the colour of what it shows.
+  //
+  // More than one: they take turns, a new one every PEEK_TURN_MS, with dots for how many
+  // and which (click one to show it). Something new jumps straight in. It holds still
+  // while the pointer is over it or you're typing a reply. "See all" opens the full list.
+  const PEEK_TURN_MS = 6000;
+  let peekId = "";
+  let peekSince = 0;
+  const peekKnown = new Set();
+  // Pointer over it (tracked, as OBS's docks don't always report :hover), or typing a reply.
+  let peekHover = false;
+  peekEl.addEventListener("pointerenter", () => (peekHover = true));
+  peekEl.addEventListener("pointerleave", () => {
+    peekHover = false;
+    peekSince = Math.max(peekSince, Date.now() - PEEK_TURN_MS + 2000); // a moment before it moves on
+  });
+  const peekHeld = () => peekHover || peekEl.matches(":hover") || peekEl.contains(document.activeElement) || !!drafts[peekId];
+
+  function peekItems() {
+    // The most urgent first, so the first one shown is the one causing the glow.
     const stageOf = (id) => (PINGS_HERE && !pingLog[id]?.stale && pingLog[id]?.stage) || 0;
     const open = Object.keys(inbox).filter((id) => !inbox[id].done).sort((a, b) => stageOf(b) - stageOf(a) || inbox[b].at - inbox[a].at);
     const answers = Object.keys(sent).filter((id) => sent[id].answer && !sent[id].answer.seen).sort((a, b) => sent[b].answer.at - sent[a].answer.at);
+    return { stageOf, items: [...open.map((id) => ({ id, kind: "q" })), ...answers.map((id) => ({ id, kind: "a" }))] };
+  }
+
+  // Every second: time for the next one?
+  setInterval(() => {
+    if (!me || !peekId) return;
+    const { items } = peekItems();
+    if (items.length < 2 || Date.now() - peekSince < PEEK_TURN_MS || peekHeld()) return;
+    const at = items.findIndex((it) => it.id === peekId);
+    peekId = items[(at + 1) % items.length].id;
+    peekSince = Date.now();
+    drawPeek();
+    // A soft slide-in, so the change is noticed.
+    peekEl.style.animation = "none";
+    void peekEl.offsetWidth;
+    peekEl.style.animation = "";
+  }, 1000);
+
+  function drawPeek() {
+    const { stageOf, items } = peekItems();
+    // Something new jumps in (not the ones already there when the page opened).
+    const fresh = items.find((it) => !peekKnown.has(it.id));
+    const firstLook = !peekKnown.size;
+    items.forEach((it) => peekKnown.add(it.id));
+    if (fresh && !firstLook && !peekHeld()) {
+      peekId = fresh.id;
+      peekSince = Date.now();
+    }
+    if (!items.some((it) => it.id === peekId)) {
+      peekId = items[0]?.id || "";
+      peekSince = Date.now();
+    }
+    const current = items.find((it) => it.id === peekId);
+
     const parts = [];
     const who = (login, text) => {
       const name = el("span", "peek__who", text);
       if (colorOf(login)) name.style.color = colorOf(login);
       return name;
     };
-    if (open.length) {
-      const id = open[0];
+    peekEl.className = "peek";
+    if (current?.kind === "q") {
+      const id = current.id;
       const q = inbox[id];
+      const stage = stageOf(id);
+      peekEl.classList.add("peek--on", `peek--${stage || 1}`);
       const line = el("div", "peek__line");
       line.title = q.text;
-      if (stageOf(id)) line.append(el("span", `peek__ping peek__ping--${stageOf(id)}`));
+      if (stage) line.append(el("span", `peek__ping peek__ping--${stage}`));
       line.append(who(q.from, q.name), el("span", "peek__text", q.text));
       const buttons = el("div", "peek__answers");
-      for (const { code, label } of optionsOf(q)) {
+      for (const { code, label } of answerChoices(q)) {
         const b = el("button", `pill pill--answer answer--${code}${code === "x" ? " pill--own" : ""}`);
         b.type = "button";
         b.title = label;
@@ -1624,10 +1739,11 @@
       } else {
         parts.push(line, buttons, own, closeButton(() => dismiss(id), "Dismiss without answering"));
       }
-    } else if (answers.length) {
-      const id = answers[0];
+    } else if (current?.kind === "a") {
+      const id = current.id;
       const q = sent[id];
       const a = ANSWERS[q.answer.code];
+      peekEl.classList.add("peek--on", "peek--answer");
       const line = el("div", "peek__line");
       line.title = q.text;
       const icon = el("span", `peek__icon answer--${q.answer.code}`);
@@ -1644,17 +1760,33 @@
       parts.push(line, add);
     }
     if (signinNote()) parts.unshift(signinPill());
-    const more = open.length + answers.length - (open.length || answers.length ? 1 : 0);
-    if (more > 0) {
-      const b = el("button", "pill pill--more", `+${more}`);
-      b.type = "button";
-      b.title = "See them all";
-      b.addEventListener("click", () => {
+    if (items.length > 1) {
+      // Which one this is, of how many: a dot each (click to show it), then See all.
+      const pager = el("div", "peek__pager");
+      items.forEach((it, k) => {
+        const dot = el("button", `peek__dot${it.id === peekId ? " peek__dot--on" : ""}`);
+        dot.type = "button";
+        dot.title = `${k + 1} of ${items.length}`;
+        dot.setAttribute("aria-label", dot.title);
+        if (it.kind === "q" && stageOf(it.id)) dot.classList.add(`peek__dot--${stageOf(it.id)}`);
+        dot.addEventListener("click", () => {
+          peekId = it.id;
+          peekSince = Date.now();
+          drawPeek();
+        });
+        pager.append(dot);
+      });
+      const all = el("button", "pill pill--more", "See all");
+      all.type = "button";
+      all.title = `See all ${items.length}`;
+      all.addEventListener("click", () => {
         view = "cards";
+        showAll = true;
         if (short()) popOut();
         render();
       });
-      parts.push(b);
+      pager.append(all);
+      parts.push(pager);
     }
     peekEl.replaceChildren(...parts);
   }
@@ -1767,11 +1899,10 @@
     return panel;
   }
 
-  // The Ask box, open at the top unless you fold it away (remembered). Pick
-  // who (a row of their pictures; fixed on someone's page), write the
-  // question, and choose its answer buttons: × takes a standard one off for
-  // this question, "Add option" puts your own on. Typing a reply is always
-  // open to them.
+  // The Ask box, open at the top unless you fold it away (remembered). Pick who (fixed on
+  // someone's page), then type: the switch at the left of the typing bar says whether
+  // it's a question (answered with heart, check or X, or a typed reply), a quick note, or
+  // a !vanish note.
   function composer(fixedTo, alwaysOpen = false) {
     const box = el("section", "ask");
     const able = connections.filter((c) => c.mutual).map((c) => c.login);
@@ -1787,19 +1918,6 @@
     });
     box.append(head);
     if (!open) return box;
-    // What you're sending: a question, a fast note, or a !vanish note.
-    const modes = el("div", "ask__modes");
-    for (const [mode, label] of [["ask", "Ask"], ["info", "Quick info"], ["love", "!vanish note"]]) {
-      const b = el("button", `ask__mode${askDraft.mode === mode ? " ask__mode--on" : ""}`, label);
-      b.type = "button";
-      b.addEventListener("click", () => {
-        askDraft.mode = mode;
-        askDraft.note = "";
-        render();
-      });
-      modes.append(b);
-    }
-    if (!STREAMER) box.append(modes); // a streamer only asks
     if (!fixedTo && !able.length) {
       box.append(el("p", "ask__hint", "Add someone under Connections first. You can ask each other once you've both added each other."));
       return box;
@@ -1847,19 +1965,25 @@
     send.title = "Send";
     send.setAttribute("aria-label", "Send");
     send.innerHTML = `<svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 16V4M5 9l5-5 5 5"/></svg>`;
-    const save = el("button", "ask__save", "☆");
-    save.setAttribute("aria-label", "Save as a quick question");
-    save.type = "button";
-    save.title = "Save as a quick question";
-    save.addEventListener("click", () => {
-      const question = clean(input.value);
-      if (!question || presets().includes(question)) return;
-      put("presets", [...presets(), question].slice(-MAX_PRESETS));
-      render();
-    });
-    form.append(input);
-    if (mode === "ask") form.append(save);
-    form.append(send);
+    // What you're sending, picked right in the typing bar: a question, a quick note, or
+    // a !vanish note. A streamer only asks.
+    const field = el("div", `ask__field ask__field--${mode}`);
+    if (!STREAMER) {
+      const pickMode = el("select", "ask__modepick");
+      pickMode.title = "What you're sending";
+      pickMode.setAttribute("aria-label", "What you're sending");
+      for (const [value, label] of [["ask", "Ask"], ["info", "Quick info"], ["love", "!vanish"]]) pickMode.append(new Option(label, value));
+      pickMode.value = mode;
+      pickMode.addEventListener("change", () => {
+        askDraft.mode = pickMode.value;
+        askDraft.note = "";
+        render();
+        document.querySelector(`[data-key="${input.dataset.key}"]`)?.focus();
+      });
+      field.append(pickMode);
+    }
+    field.append(input);
+    form.append(field, send);
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const question = clean(input.value);
@@ -1869,94 +1993,11 @@
     });
     box.append(form);
 
-    // Quick info and !vanish notes are just the text; say how long they show.
-    if (mode !== "ask") {
-      box.append(el("p", "ask__hint", askDraft.sent === mode ? "Sent ✓"
-        : mode === "love" ? "Shows on their bar with your name, then disappears after 30 seconds."
-        : "For things like incoming raids or minor technical difficulties. Shows on their bar with your name for 2 minutes. Only reaches people who are online."));
-      if (askDraft.note) box.append(el("p", "ask__note", askDraft.note));
-      return box;
-    }
-
-    // Quick questions: tap one to put it in the box; × forgets it.
-    if (presets().length) {
-      box.append(el("div", "ask__label", "Quick questions"));
-      const quick = el("div", "ask__options");
-      for (const text of presets()) {
-        const chip = el("span", "ask__option ask__quick");
-        const use = el("button", "ask__quickuse", text);
-        use.type = "button";
-        use.title = "Put this in the box";
-        use.addEventListener("click", () => {
-          askDraft.text = text;
-          render();
-          document.querySelector(`[data-key="${input.dataset.key}"]`)?.focus();
-        });
-        const x = el("button", "ask__optx", "×");
-        x.type = "button";
-        x.title = "Forget this quick question";
-        x.addEventListener("click", () => {
-          put("presets", presets().filter((p) => p !== text));
-          render();
-        });
-        chip.append(use, x);
-        quick.append(chip);
-      }
-      box.append(quick);
-    }
-
-    // Their answer buttons for this question.
-    box.append(el("div", "ask__label", "Answer buttons"));
-    const chips = el("div", "ask__options");
-    for (const o of askDraft.options) {
-      const own = o.startsWith("+");
-      const chip = el("span", `ask__option${own ? " ask__option--own" : ""}`);
-      if (!own) {
-        const icon = el("span", `answer--${o}`);
-        icon.innerHTML = svg(ANSWERS[o].icon, 13);
-        chip.append(icon);
-      }
-      chip.append(el("span", null, own ? o.slice(1) : ANSWERS[o].label));
-      const x = el("button", "ask__optx", "×");
-      x.type = "button";
-      x.title = "Take this off for this question";
-      x.addEventListener("click", () => {
-        askDraft.options = askDraft.options.filter((v) => v !== o);
-        render();
-      });
-      chip.append(x);
-      chips.append(chip);
-    }
-    if (askDraft.options.length < MAX_OPTIONS) {
-      const addForm = el("form", "ask__add");
-      const add = textBox("+ Add option", askDraft.adding);
-      add.dataset.key = "ask-add";
-      add.maxLength = 30;
-      add.addEventListener("input", () => (askDraft.adding = add.value));
-      addForm.append(add);
-      addForm.addEventListener("submit", (e) => {
-        e.preventDefault();
-        const label = clean(add.value).slice(0, 30);
-        if (label && !askDraft.options.includes(`+${label}`)) askDraft.options = [...askDraft.options, `+${label}`];
-        askDraft.adding = "";
-        render();
-      });
-      chips.append(addForm);
-    }
-    box.append(chips);
-    const changed = askDraft.options.join() !== STANDARD.join();
-    const foot = el("div", "ask__foot");
-    foot.append(el("span", "ask__hint", askDraft.options.length ? "They can also type their own reply." : "They'll type their reply."));
-    if (changed) {
-      const reset = el("button", "ask__reset", "Back to the standard six");
-      reset.type = "button";
-      reset.addEventListener("click", () => {
-        askDraft.options = [...STANDARD];
-        render();
-      });
-      foot.append(reset);
-    }
-    box.append(foot);
+    // Say what happens to it.
+    box.append(el("p", "ask__hint", askDraft.sent === mode ? "Sent ✓"
+      : mode === "love" ? "Shows on their bar with your name, then disappears after 30 seconds."
+      : mode === "info" ? "For things like incoming raids or minor technical difficulties. Shows on their bar with your name for 2 minutes. Only reaches people who are online."
+      : "They answer with ♥, ✓ or ✗, or type a reply."));
     if (askDraft.note) box.append(el("p", "ask__note", askDraft.note));
     return box;
   }
@@ -2730,7 +2771,9 @@
   // always say when someone leaves, so a fresh connection takes attendance every few
   // minutes: Twitch reports everyone there to a newcomer.
   const LIVE_RECHECK_MS = DEV && params.has("recheck") ? Number(params.get("recheck")) : 3 * 60 * 1000; // ?recheck=<ms> for testing
-  const LIVE_ATTENDANCE_MS = 90 * 1000;
+  const LIVE_ATTENDANCE_MS = (DEV && params.has("mock") ? 3 : 90) * 1000; // the pretend Twitch answers at once
+  // Twitch's public chat, or the pretend one (dev/mock-twitch.js) on this Mac.
+  const IRC_URL = () => (location.hostname === "localhost" && params.has("mock") ? `ws://${location.host}/mock/irc` : "wss://irc-ws.chat.twitch.tv:443");
   let liveChannel = "";
   const liveChatters = new Set(); // logins Twitch says are in the chat
   let liveSaid = {}; // connection's login -> when they last chatted here (saved, for restarts)
@@ -2738,17 +2781,20 @@
   const liveLeft = new Set(); // Twitch said they left, and they haven't been back
   let liveBeen = { stream: "", logins: [] }; // who's been in the chat this stream (saved, for restarts)
 
-  // Their light: the ring is how recently they chatted, green within 5 minutes,
-  // orange 10, yellow 20, and it stays that colour if they leave; white if they're
-  // there but haven't chatted lately. The picture is bright while they're in the
-  // chat and faded once they aren't. Until attendance has named people (it never
-  // does in very big chats), chatting in the last 30 minutes counts as being there.
+  // Their light, while they're in the chat: a ring for how recently they chatted, green
+  // within 5 minutes, then orange (10), yellow (20) and white (30); after that, or if they
+  // haven't chatted, no ring, just their picture lit up. Not in the chat: gray, no ring.
+  // Until attendance has named people (it never does in very big chats), chatting in
+  // the last 30 minutes counts as being there. ?lightms=<ms> on this Mac counts a
+  // "minute" as that long, for testing.
+  const LIGHT_MINUTE = (location.hostname === "localhost" && Number(params.get("lightms"))) || 60 * 1000;
   function liveLight(login) {
-    const min = liveSaid[login] ? (Date.now() - liveSaid[login]) / 60000 : Infinity;
-    const away = !liveChatters.has(login) && (liveListed || min > 30 || liveLeft.has(login));
+    const min = liveSaid[login] ? (Date.now() - liveSaid[login]) / LIGHT_MINUTE : Infinity;
+    const here = liveChatters.has(login) || (!liveListed && !liveLeft.has(login) && min <= 30);
     const chatted = min === Infinity ? "" : `chatted ${Math.max(1, Math.round(min))} min ago`;
-    const ring = min <= 5 ? "light5" : min <= 10 ? "light10" : min <= 20 ? "light20" : away ? "" : "lightold";
-    return { ring, away, says: away ? `not in chat${chatted && `, ${chatted}`}` : chatted || "in chat, lurking" };
+    if (!here) return { ring: "", away: true, says: `not in chat${chatted && `, ${chatted}`}` };
+    const ring = min <= 5 ? "light5" : min <= 10 ? "light10" : min <= 20 ? "light20" : min <= 30 ? "light30" : "";
+    return { ring, away: false, says: chatted ? `in chat, ${chatted}` : "in chat, lurking" };
   }
 
   // Are they, or have they been, in the chat this stream? Once seen, they stay.
@@ -2788,7 +2834,7 @@
   }
 
   function liveRecheck() {
-    const ws = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
+    const ws = new WebSocket(IRC_URL());
     const there = new Set();
     ws.onopen = () => liveJoin(ws);
     ws.onmessage = (e) => {
@@ -2814,7 +2860,7 @@
   }
 
   function liveListen() {
-    const ws = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
+    const ws = new WebSocket(IRC_URL());
     ws.onopen = () => {
       liveChatters.clear();
       liveJoin(ws);
@@ -3006,7 +3052,7 @@
     chatBegin();
     liveSaid = get(`chatSaid-${wanted}`, {});
     liveBeen = get(`chatBeen-${wanted}`, liveBeen);
-    setInterval(drawDots, 30 * 1000); // lights change with time
+    setInterval(drawDots, Math.min(30 * 1000, LIGHT_MINUTE / 2)); // lights change with time
     if (DEMO) {
       // Here and chatting; here and lurking; came and left; never came (not shown).
       connections.push({ login: "leftearly", mutual: true, online: false }, { login: "nevercame", mutual: true, online: false });
@@ -3127,12 +3173,7 @@
     quickText.placeholder = "Sent ✓";
     setTimeout(() => (quickText.placeholder = "Message…"), 2500);
   });
-  presenceBtn.addEventListener("click", () => {
-    const next = STATUS[myStatus]?.next || "idle";
-    if (!relay({ t: "status", status: next })) return;
-    myStatus = next;
-    drawPresence();
-  });
+  presenceBtn.addEventListener("click", () => openPresence(presenceMenu.hidden));
   // Sent from a popped-out window: the bar's picker follows.
   addEventListener("storage", (e) => {
     if (e.key === "lastTo" && me) rememberTo(get("lastTo", ""));

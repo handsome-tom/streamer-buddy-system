@@ -101,6 +101,7 @@ const EMOTE_HOSTS = ["static-cdn.jtvnw.net", "cdn.betterttv.net", "cdn.frankerfa
 const MAX_OPEN_PER_PAIR = 3;
 const MAX_ASKS_PER_MINUTE = 10;
 const STANDARD = ["y", "n", "m", "s", "o", "t"];
+const ALWAYS_ANSWERS = ["t", "y", "n"]; // answerable on any question (dock.js STREAMER_ANSWERS)
 const MAX_OPTIONS = 8;
 const MAX_OPTION_LEN = 30;
 const MAX_TAGS = 12;
@@ -628,6 +629,7 @@ export class Hub {
     const offered = (q) => {
       const options = q.options || STANDARD;
       if (code === "c") return !!text;
+      if (ALWAYS_ANSWERS.includes(code)) return true; // heart, yes, no: the streamer's three
       if (code === "x") return options.includes(`+${text}`);
       return STANDARD.includes(code) && options.includes(code);
     };

@@ -36,9 +36,10 @@ info and !vanish notes as they come in. Sending starts from whoever you last sen
 to. What reads as a question goes with the answer buttons; anything else goes as a
 plain message they can mark seen, and you get a notice in the bar when someone marks
 your message or answer seen. A connection's picture shows once they've been in the
-chat this stream: bright while they're there, faded after they leave. Its ring is how
-recently they chatted: green within 5 minutes, then orange (10), yellow (20), and
-white if they're just lurking. Below it is Twitch's own embedded chat, unchanged. A line a mod flags in Chrome is pinned at the top, emotes included, for 5
+chat this stream. While they're in the chat, its ring is how recently they chatted:
+green within 5 minutes, then orange (10), yellow (20) and white (30); after that, or if
+they're just lurking, no ring, just their picture lit up. Once they leave the chat the
+picture goes gray. Below it is Twitch's own embedded chat, unchanged. A line a mod flags in Chrome is pinned at the top, emotes included, for 5
 minutes; the streamer or a mod can clear it for everyone with its X.
 
 ### Pings

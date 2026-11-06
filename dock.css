@@ -1904,14 +1904,19 @@ body.livechat .peek__own input {
   width: 100%;
 }
 /* Who's in chat, by how recently they chatted. */
-.dot--light5:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px #00c27a; }
-.dot--light10:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px #ff8a00; }
-.dot--light20:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px #ffd400; }
-.dot--lightold:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px #fff; }
-/* Bright while they're in the chat, faded once they aren't; the ring keeps its colour. */
+/* In the chat dock: a ring for how recently they chatted (green, orange, yellow, white),
+   no ring once that's a while ago (just the picture, lit), and gray with no ring when
+   they're not in the chat. Something waiting from them (pulsing) wins over all of it. */
+body.livechat .dot--here:not(:hover):not(.dot--answer):not(.dot--ask),
+body.livechat .dot--away:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: none; }
+.dot--light5:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px var(--good), 0 0 8px color-mix(in srgb, var(--good) 50%, transparent); }
+.dot--light10:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px var(--orange); }
+.dot--light20:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px var(--yellow); }
+.dot--light30:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px #fff; }
 .dot--away img,
 .dot--away .dot__letter {
-  opacity: 0.32;
+  filter: grayscale(1);
+  opacity: 0.45;
 }
 body.livechat .pins {
   flex: none;
@@ -2315,3 +2320,147 @@ body.no-edge .glow { display: none !important; }
 body.hide-quick #quick { display: none !important; }
 body.chat-small .oc-line { font-size: 12px; }
 body.chat-large .oc-line { font-size: 16px; line-height: 1.45; }
+
+/* ===== Inline (the streamer's chat dock) ================================================ */
+/* What would have popped out opens just under the bar, over the top of the chat. */
+body.livechat main { max-height: 55vh; }
+.inline__head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.inline__title { font-weight: 700; }
+.inline__close {
+  padding: 2px 10px;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.inline__close:hover { border-color: var(--muted); }
+
+/* ===== The message area (the bar's peek) ================================================ */
+/* Which one of several is showing: a dot each, then See all. They take turns every 6 s. */
+.peek__pager { display: flex; flex: none; align-items: center; gap: 5px; }
+.peek__dot {
+  --ping: var(--muted);
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 1.5px solid var(--ping);
+  border-radius: 50%;
+  background: none;
+  opacity: 0.7;
+}
+.peek__dot--1 { --ping: var(--good); }
+.peek__dot--2 { --ping: var(--orange); }
+.peek__dot--3 { --ping: var(--yellow); }
+.peek__dot--4 { --ping: #fff; }
+.peek__dot--on { background: var(--ping); opacity: 1; }
+.peek__dot:hover { opacity: 1; }
+
+/* In the streamer's chat dock: the place to look, a little larger than everything round
+   it. No edges: a soft glow in the colour of what it shows, fading out at the sides. */
+body.livechat .peek--on {
+  --ping: var(--good);
+  gap: 8px;
+  margin: 4px 0 2px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background:
+    radial-gradient(ellipse 85% 120% at 30% 50%, color-mix(in srgb, var(--ping) 16%, transparent), transparent 75%),
+    color-mix(in srgb, var(--ping) 4%, transparent);
+  box-shadow:
+    0 0 22px 2px color-mix(in srgb, var(--ping) 16%, transparent),
+    inset 0 0 18px color-mix(in srgb, var(--ping) 10%, transparent);
+  animation: peekIn 0.35s ease-out;
+}
+body.livechat .peek--2 { --ping: var(--orange); }
+body.livechat .peek--3 { --ping: var(--yellow); }
+body.livechat .peek--4 { --ping: #fff; }
+body.livechat .peek--answer { --ping: var(--purple); }
+body.livechat .peek--on .peek__line { font-size: 15px; line-height: 1.35; }
+body.livechat .peek--on .peek__who { font-size: 14px; }
+body.livechat .peek--on .peek__text { font-size: 16px; }
+body.livechat .peek--on .pill--answer { padding: 5px 10px; }
+body.livechat .peek__pager { margin-left: auto; }
+@keyframes peekIn {
+  from { opacity: 0.3; filter: blur(3px); }
+  to { opacity: 1; filter: none; }
+}
+
+/* ===== The Ask box's typing bar ======================================================= */
+/* Ask, Quick info or !vanish, picked at the left of the bar you type in. */
+.ask__field {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  height: 38px;
+  padding: 0 4px;
+  border: 1px solid var(--field);
+  border-radius: 19px;
+  background: var(--bg);
+}
+.ask__field:focus-within { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(145, 71, 255, 0.25); }
+.ask__field .ask__input { height: 36px; padding: 0 10px; border: 0; border-radius: 0; background: none; }
+.ask__field .ask__input:focus { box-shadow: none; }
+.ask__modepick {
+  flex: none;
+  height: 28px;
+  padding: 0 22px 0 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  border: 0;
+  border-radius: 14px;
+  background: var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23adadb8' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 8px center;
+  appearance: none;
+  cursor: pointer;
+}
+.ask__field--ask .ask__modepick { background-color: color-mix(in srgb, var(--purple) 35%, var(--panel)); }
+.ask__field--info .ask__modepick { background-color: color-mix(in srgb, #3fb2ff 30%, var(--panel)); }
+.ask__field--love .ask__modepick { background-color: color-mix(in srgb, #ff7ab8 30%, var(--panel)); }
+
+/* The status menu (side panel): Online, Idle or Offline, opened from the status button. */
+.presence__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 220px;
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+}
+.presence__menu[hidden] { display: none; }
+.presence__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 6px 8px;
+  color: var(--text);
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 7px;
+}
+.presence__item:hover { background: rgba(83, 83, 95, 0.35); }
+.presence__item--on { background: rgba(145, 71, 255, 0.18); }
+.presence__item .presence { font-weight: 600; }
+.presence__says { padding-left: 14px; font-size: 11px; color: var(--muted); }

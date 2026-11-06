@@ -19,6 +19,11 @@
 //   nosubs      subscribing is refused, for the next connection (it should fail over)
 //   sendbroken  sending answers 500 (it should fail over after the second try)
 //   reset       everything back to normal
+//
+// Who's in the chat (the pictures' lights in the chat dock), through a pretend Twitch public
+// chat at /mock/irc (the dock uses it with &mock):
+//   join&who=mod1     they arrive          part&who=mod1     they leave
+//   say&who=mod1&text=hello   they chat (arriving if they weren't there; shows in custom chat too)
 
 const http = require("http");
 const fs = require("fs");
@@ -31,6 +36,8 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/cs
 const SCOPES = ["user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod"];
 
 let sockets = [];
+let ircSockets = [];
+const ircHere = new Set(); // who the pretend public chat says is in the chat
 let flags = {};
 let feedTimer = 0;
 let n = 0;
@@ -105,7 +112,29 @@ function feedOnce() {
   feedTimer = setTimeout(feedOnce, 400 + Math.random() * 2600); // uneven, like a real chat
 }
 
+// The pretend public chat (what the dock reads to see who's in the chat).
+const ircLine = (line) => ircSockets.forEach((s) => s.write(frame(line)));
+const ircUser = (who) => `:${who}!${who}@${who}.tmi.twitch.tv`;
+
 const controls = {
+  join: (q) => {
+    const who = (q.get("who") || "mod1").toLowerCase();
+    ircHere.add(who);
+    ircLine(`${ircUser(who)} JOIN #streamer`);
+  },
+  part: (q) => {
+    const who = (q.get("who") || "mod1").toLowerCase();
+    ircHere.delete(who);
+    ircLine(`${ircUser(who)} PART #streamer`);
+  },
+  say: (q) => {
+    const who = (q.get("who") || "mod1").toLowerCase();
+    const text = q.get("text") || "hey chat";
+    if (!ircHere.has(who)) controls.join(q);
+    ircLine(`${ircUser(who)} PRIVMSG #streamer :${text}`);
+    chatterColor[who] ||= hex(randomColor());
+    chat(text, { who, color: chatterColor[who] });
+  },
   line: () => chat(`hello from the pretend chat, line ${n + 1}`),
   html: () => chat(`<img src=x onerror="document.title='HACKED'"><b>not bold</b>`),
   emote: () => chat("Kappa nice", { fragments: [{ type: "emote", text: "Kappa", emote: { id: "25", format: ["static"] } }, { type: "text", text: " nice " }, { type: "mention", text: "@you", mention: { user_login: "you" } }] }),
@@ -218,6 +247,19 @@ server.on("upgrade", (req, socket) => {
   const accept = crypto.createHash("sha1").update(`${req.headers["sec-websocket-key"]}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`).digest("base64");
   socket.write(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`);
   socket.on("error", () => {});
+  // The pretend public chat: like Twitch, a newcomer is told everyone who's there (a JOIN
+  // each, and the names list), then hears arrivals, departures and messages. What the page
+  // sends (its sign-in and JOIN) is ignored.
+  if (req.url.startsWith("/mock/irc")) {
+    ircSockets.push(socket);
+    setTimeout(() => {
+      const me = `justinfan${Math.floor(Math.random() * 90000)}`;
+      for (const who of [me, ...ircHere]) socket.write(frame(`${ircUser(who)} JOIN #streamer`));
+      socket.write(frame(`:${me}.tmi.twitch.tv 353 ${me} = #streamer :${[me, ...ircHere].join(" ")}`));
+    }, 300);
+    socket.on("close", () => (ircSockets = ircSockets.filter((s) => s !== socket)));
+    return;
+  }
   const moved = req.url.includes("moved=1");
   say(socket, "session_welcome", { session: { id: `s${Date.now()}`, keepalive_timeout_seconds: 10 } });
   if (moved) sockets.forEach((s) => s.end(CLOSE)), (sockets = []);
