@@ -3341,10 +3341,20 @@
         else if (line.includes(" RECONNECT")) ws.close();
         const names = line.match(/ 353 \S+ = #\S+ :(.*)$/)?.[1];
         if (names) {
-          for (const login of names.split(" ")) liveChatters.add(login);
+          for (const login of names.split(" ")) {
+            liveChatters.add(login);
+            try {
+              ownChat?.here(login); // custom chat tells raiders from people already here
+            } catch {}
+          }
           changed = true;
         }
         const [, tags, login, what] = line.match(/^(?:@(\S+) )?:(\w+)!\S+ (JOIN|PART|PRIVMSG) /) || [];
+        if (what === "JOIN") {
+          try {
+            ownChat?.here(login);
+          } catch {}
+        }
         if (what === "PRIVMSG") {
           try {
             ownChat?.ircSaw(login); // lets custom chat check it isn't missing messages
@@ -3533,6 +3543,7 @@
         onChoose: chooseTwitchChat,
       });
       if (location.hostname === "localhost") window.__ownChat = ownChat;
+      for (const login of liveChatters) ownChat.here?.(login); // who was already here
       let lastTick = Date.now();
       ownChatWatch = setInterval(() => {
         try {

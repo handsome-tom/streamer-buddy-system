@@ -68,6 +68,7 @@
     <span class="group">Simulate on Twitch:
       <button id="tRaid" type="button" class="sim">🚀 Raid</button>
       <button id="tFirst" type="button" class="sim">👋 First-time chatter</button>
+      <button id="tCmd" type="button">!command</button>
       <button id="tSub" type="button">a sub</button>
       <button id="tGift" type="button">gifted subs</button>
       <button id="tCheer" type="button">a cheer</button>
@@ -229,6 +230,10 @@
     said(`${from} raided with ${count} viewers: watch the streamer's chat on the right`);
   });
   on("tFirst", () => said(`${pretendTwitch.first()} chatted for the first time`));
+  on("tCmd", () => {
+    const { who, cmd } = pretendTwitch.command();
+    said(`${who} typed ${cmd}: StreamElements answers (you can type one in the streamer's chat too)`);
+  });
   on("tSub", () => said(`${pretendTwitch.sub()} subscribed`));
   on("tGift", () => {
     const { who, total } = pretendTwitch.gift();

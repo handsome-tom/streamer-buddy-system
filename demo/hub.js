@@ -184,7 +184,7 @@ const twitch = (() => {
 
   // A chat message, as Twitch sends it to custom chat. A first message in the channel is
   // also marked on Twitch's public chat, the way Twitch really says so (first-msg=1).
-  function chat(text, who = pick(CHATTERS), { kind = "text", bits = 0, first = false } = {}) {
+  function chat(text, who = pick(CHATTERS), { kind = "text", bits = 0, first = false, badges = [] } = {}) {
     const id = `m${++n}`;
     lastIds.push(id);
     if (lastIds.length > 50) lastIds.shift();
@@ -193,10 +193,30 @@ const twitch = (() => {
     const fragments = bits ? [{ type: "cheermote", text: `Cheer${bits}` }, { type: "text", text: ` ${text}` }] : [{ type: "text", text }];
     event("channel.chat.message", {
       broadcaster_user_id: "1", chatter_user_id: `u-${who}`, chatter_user_login: who.toLowerCase(), chatter_user_name: who,
-      message_id: id, message: { text: bits ? `Cheer${bits} ${text}` : text, fragments }, message_type: kind, badges: [], color: colorOf[who], reply: null,
+      message_id: id, message: { text: bits ? `Cheer${bits} ${text}` : text, fragments }, message_type: kind, badges, color: colorOf[who], reply: null,
       cheer: bits ? { bits } : null,
     });
+    if (text.startsWith("!") && who !== BOT) botReply(text, who);
     return id;
+  }
+
+  // StreamElements, the chat bot: it answers !commands a moment later, as its own account
+  // (a mod, so no mod icons on its lines), the way it does on Twitch.
+  const BOT = "StreamElements";
+  const BOT_COMMANDS = {
+    "!commands": () => "Commands: !discord !socials !schedule !uptime !lurk !hug",
+    "!discord": () => "Join the community Discord: discord.gg/your-server",
+    "!socials": () => "Follow along: twitter.com/yourname · instagram.com/yourname · tiktok.com/@yourname",
+    "!schedule": () => "Live Monday, Wednesday and Friday at 7pm Central",
+    "!uptime": () => `The stream has been live for 2 hours ${10 + Math.floor(Math.random() * 49)} minutes`,
+    "!lurk": (who) => `${who} is now lurking. Enjoy the stream!`,
+    "!hug": (who) => `${who} gives the whole chat a big hug <3`,
+  };
+  function botReply(text, who) {
+    const answer = BOT_COMMANDS[text.split(/\s/)[0].toLowerCase()];
+    if (!answer) return;
+    colorOf[BOT] = "#5ac8fa";
+    setTimeout(() => chat(answer(who), BOT, { badges: [{ set_id: "moderator", id: "1" }] }), 700 + Math.random() * 600);
   }
 
   // Twitch's notices: raids, subs, gifts, announcements.
@@ -224,6 +244,7 @@ const twitch = (() => {
   function feedOnce() {
     const r = Math.random();
     if (Math.random() < 0.03) firstOne(); // now and then someone new says hello
+    else if (Math.random() < 0.04) chat(pick(Object.keys(BOT_COMMANDS))); // or asks the bot something
     else chat(pick(r < 0.45 ? SHORT : r < 0.88 ? MEDIUM : LONG));
     feedTimer = setTimeout(feedOnce, 600 + Math.random() * 3000);
   }
@@ -258,10 +279,17 @@ const twitch = (() => {
       // The raiders pour in over a few seconds: people from the other channel, about half
       // of them chatting here for the first time.
       const raiders = RAIDER_NAMES.slice().sort(() => Math.random() - 0.5).slice(0, 8 + Math.floor(Math.random() * 5));
+      setTimeout(() => raiders.forEach((who) => ircLine(`${ircUser(who.toLowerCase())} JOIN #streamer`)), 400);
       raiders.forEach((who, i) => setTimeout(() => chat(pick(RAID_LINES), who, { first: i % 2 === 0 }), 900 + i * 500 + Math.random() * 300));
       return { from, count };
     },
     first: () => firstOne(),
+    command() {
+      const who = pick(CHATTERS);
+      const cmd = pick(Object.keys(BOT_COMMANDS));
+      chat(cmd, who);
+      return { who, cmd };
+    },
     sub() {
       const who = pick(CHATTERS);
       if (Math.random() < 0.5) notice("sub", { who, system: `${who} subscribed at Tier 1.`, fields: { sub: { sub_tier: "1000", is_prime: false, duration_months: 1 } } });
@@ -309,7 +337,9 @@ const twitch = (() => {
     setTimeout(() => {
       const me = `justinfan${Math.floor(Math.random() * 90000)}`;
       for (const who of [me, ...here]) socket._receive(`${ircUser(who)} JOIN #streamer`);
-      socket._receive(`:${me}.tmi.twitch.tv 353 ${me} = #streamer :${[me, ...here].join(" ")}`);
+      // The regulars are in the chat too, like Twitch's list of who's here says.
+      const regulars = CHATTERS.map((c) => c.toLowerCase());
+      socket._receive(`:${me}.tmi.twitch.tv 353 ${me} = #streamer :${[me, ...here, ...regulars, ...NEWBIES.map((c) => c.toLowerCase())].join(" ")}`);
     }, 300);
     socket._peer = { got() {}, gone: () => chatSockets.delete(socket) };
   }

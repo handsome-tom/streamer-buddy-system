@@ -26,6 +26,7 @@
   const FLUSH_MS = 100; // busy chats draw in small batches
   const HOVER_HOLD_MS = 3000; // the chat holds still while the mouse is moving over it
   const ERRORS_ALLOWED = 3; // in a minute
+  const RAIDER_MS = 15 * 60 * 1000; // how long raiders' lines are marked after a raid
   const TIMEOUTS = [["1m", 60], ["10m", 600], ["1h", 3600], ["24h", 86400]];
   // Twitch's chat commands don't run through the API, and could post as plain text, so
   // anything that looks like one is stopped here. Dots are how some people type them.
@@ -560,6 +561,13 @@
         codeError(err);
       }
       if (m.bits) line.append(el("span", "oc-bits", `${m.bits} bits`), " ");
+      const raid = !line.dataset.staff && m.login !== me.login && raidOf(m.login, m.history);
+      if (raid) {
+        line.classList.add("oc-line--raider");
+        const tag = el("span", "oc-raidtag", "raid");
+        tag.title = `Probably came in with ${raid.from}'s raid (they hadn't been in the chat before it)`;
+        line.append(tag, " ");
+      }
       line.append(who, ": ", body);
       byId.set(m.id, line);
       // Someone's first message in this channel, as Twitch marks it for mods. Twitch's
@@ -590,6 +598,33 @@
       line.append(shown);
     }
 
+    // ----- Who came with a raid ---------------------------------------------------------
+    // Twitch's own chat highlights raiders, but doesn't tell apps who they are: a raid
+    // notice only says which channel and how many. So this is a good guess: someone whose
+    // first line since this page opened comes after a raid, and who wasn't in the chat
+    // before it (dock.js passes on who's here from Twitch's public chat, see here()), is
+    // marked as a raider for RAIDER_MS. Someone who happens to arrive at the same moment
+    // gets marked too; in chats too big for Twitch to list who's here, only the first
+    // half of that check applies.
+    const raids = []; // { at, from, present: who was here then }
+    const firstSpoke = new Map(); // login -> when this page first saw them chat
+    const presentNow = new Set(); // who Twitch's public chat says is here
+    function raidOf(login, old) {
+      if (!firstSpoke.has(login)) firstSpoke.set(login, old ? 0 : Date.now());
+      const first = firstSpoke.get(login);
+      const now = Date.now();
+      for (let i = raids.length - 1; i >= 0; i--) {
+        const r = raids[i];
+        if (now - r.at > RAIDER_MS) break;
+        if (first >= r.at) return r.present.has(login) ? null : r;
+      }
+      return null;
+    }
+    function gotRaid(from) {
+      raids.push({ at: Date.now(), from, present: new Set(presentNow) });
+      if (raids.length > 20) raids.shift();
+    }
+
     // Twitch's chat notices: raids, subs and gifts, cheers' badges, announcements, and the
     // same from the other channels in a shared chat ("shared_chat_" in front).
     const SUB_NOTICES = ["sub", "resub", "sub_gift", "community_sub_gift", "gift_paid_upgrade", "prime_paid_upgrade", "pay_it_forward"];
@@ -602,6 +637,7 @@
       if (kind === "raid" && e.raid) {
         // Who's raiding, with how many, their picture, and a quick welcome.
         const r = e.raid;
+        if (!fromChannel) gotRaid(r.user_name || r.user_login);
         const head = el("div", "oc-raid");
         if (r.profile_image_url) {
           const pic = el("img", "oc-raid__pic");
@@ -1093,6 +1129,10 @@
         return lastOk;
       },
       ircSaw,
+      // Who Twitch's public chat says is in the chat (dock.js): for telling raiders apart.
+      here(login) {
+        if (login) presentNow.add(String(login).toLowerCase());
+      },
       // Twitch's public chat marked this message as someone's first here (dock.js).
       firstChat(id) {
         if (!id) return;
