@@ -14,6 +14,7 @@
   h2 .pill.next { background: #e07a00; }
   h2 .pill.later { background: #6b6b76; }
   h3 { margin: 14px 0 3px; font-size: 11.5pt; }
+  h2, h3 { break-after: avoid; page-break-after: avoid; }
   p { margin: 0 0 6px; }
   ul { margin: 2px 0 8px; padding-left: 18px; }
   li { margin: 2px 0; }
@@ -31,13 +32,13 @@
 </head>
 <body>
   <h1>Streamer Buddy System</h1>
-  <p class="sub">Update and upcoming features · 6 November 2026</p>
+  <p class="sub">What's new and what's next · 6 November 2026</p>
 
   <div class="summary">
     <ul>
       <li><b>The streamer's OBS dock got calmer and quicker to use:</b> no pop-out windows, one message area that takes turns, and one-tap answers (♥ ✓ ✗).</li>
       <li><b>Mods can see what the streamer sees</b> (Streamer View) and <b>nudge</b> a question instead of it escalating by itself.</li>
-      <li><b>Coming next:</b> a warning for when it really matters, and a glow that rests instead of staying on.</li>
+      <li><b>A warning for when it really matters</b>, and <b>a glow that rests</b> instead of staying on.</li>
     </ul>
   </div>
 
@@ -62,16 +63,10 @@
     <li><b>Status menu.</b> Online, Idle or Offline, picked from a small menu.</li>
   </ul>
 
-  <h3>Behind the scenes</h3>
-  <ul>
-    <li><b>Two-machine simulator</b> for testing on one computer: a mod's panel and the streamer's dock side by side as pretend users, a fake chat with made-up chatters in their own colours, and buttons for asking, nudging, warning, and mods joining, chatting and leaving.</li>
-    <li>Updates reach an open OBS dock by themselves within about a minute.</li>
-  </ul>
-
-  <h2>Coming next <span class="pill next">built and tested, not live yet</span></h2>
-  <h3>Warning mode</h3>
+  <h3>Nudges, warnings and the glow</h3>
+  <h3 style="font-size:10.5pt;margin-top:8px">Warning mode</h3>
   <p>When it really can't wait: while Nudge is waiting (or after the third nudge), tapping it six times quickly sends a <b>warning</b>. It turns <b>red</b> on the streamer's screen with a louder double beep, even if she's turned reminder beeps off. At most one every 30 seconds per question, so it can't be spammed.</p>
-  <h3>A glow that rests</h3>
+  <h3 style="font-size:10.5pt;margin-top:8px">A glow that rests</h3>
   <p>The glow no longer stays on. It shows for about 2 seconds, fades down to 2%, and only comes back if the question is still unanswered: after 15 seconds, then every 10 seconds, resting at 5% in between. The words stay fully readable the whole time.</p>
   <table>
     <tr><th>Moment</th><th>Colour</th><th>Sound</th></tr>
@@ -82,7 +77,13 @@
     <tr><td>Warning (six quick taps)</td><td><span class="sw" style="background:#ff3b30"></span>Red</td><td>Louder double beep</td></tr>
   </table>
 
-  <h2>After that <span class="pill later">ideas to decide on</span></h2>
+  <h3>Behind the scenes</h3>
+  <ul>
+    <li><b>Two-machine simulator</b> for testing on one computer: a mod's panel and the streamer's dock side by side as pretend users, a fake chat with made-up chatters in their own colours, and buttons for asking, nudging, warning, and mods joining, chatting and leaving.</li>
+    <li>Updates reach an open OBS dock by themselves within about a minute.</li>
+  </ul>
+
+  <h2>Coming next <span class="pill next">ideas to decide on</span></h2>
   <ul>
     <li><b>Live test with a real streamer</b>, she in OBS and a mod in Chrome, to check the timing and sounds on a real stream.</li>
     <li><b>Who sees Streamer View.</b> Today every mutual connection sees everything waiting for her, including other people's questions. It could be limited to her Mods tag.</li>
