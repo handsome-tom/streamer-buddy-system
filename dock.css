@@ -2959,3 +2959,11 @@ body.livechat .settings-btn { order: 2; margin-left: 0; }
 /* The chat dock's back-to-chat bubble: a slight green, so it reads as "chat". */
 #homeChatBtn { color: var(--good); background: color-mix(in srgb, var(--good) 16%, var(--panel, #18181b)); }
 #homeChatBtn:hover, #homeChatBtn:focus-visible { color: #fff; background: color-mix(in srgb, var(--good) 34%, var(--panel, #18181b)); }
+
+/* The chat area's two layers, custom chat and Twitch's own, on top of each other. The one
+   not showing stays laid out and running, just out of sight, so switching back finds it
+   exactly as it was (scrolled to the bottom, everything in it). */
+.live { position: relative; }
+.live__layer { position: absolute; inset: 0; display: flex; flex-direction: column; min-height: 0; }
+.live__layer--off { visibility: hidden; pointer-events: none; }
+.live__stripSlot:empty { display: none; }

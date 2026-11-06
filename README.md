@@ -120,6 +120,11 @@ itself instead of embedding Twitch's. It's what lets the chat do things of its o
 asks for one extra Twitch sign-in, kept separate from the ordinary one and never sent to
 the relay. `&ownchat=off` switches it off again.
 
+Switching between custom chat and Twitch's (Settings, or the link above the chat) never
+loses messages: both stay running, and switching only changes which one shows. Custom
+chat keeps collecting while Twitch's is on screen, and Twitch's chat is loaded in the
+background as soon as the dock opens, so it already has everything since then.
+
 It does: messages, Twitch, 7TV, BTTV and FFZ emotes, an emote picker, Tab to finish a
 name or emote, badges, replies, subs and other notices, delete, timeout, ban and undo,
 AutoMod holds, and the last 50 messages when it opens. A purple edge marks your

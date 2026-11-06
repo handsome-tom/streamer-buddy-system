@@ -1321,7 +1321,7 @@
         const twitch = get("ownChatPicked", "") === "twitch";
         parts.push(choice("Chat", [["own", "Custom"], ["twitch", "Twitch's"]], twitch ? "twitch" : "own", (v) => {
           if (v === "twitch" && !twitch) chooseTwitchChat();
-          else if (v === "own" && twitch) tryOwnChatAgain();
+          else if (v === "own" && twitch) backToOwnChat();
         }));
         parts.push(choice("Chat text", [["small", "Small"], ["normal", "Normal"], ["large", "Large"]], get("chatSize", "normal"), (v) => put("chatSize", v)));
       }
@@ -3384,12 +3384,40 @@
     ? { helix: `${location.origin}/mock/helix`, eventsub: `ws://${location.host}/mock/ws`, validate: `${location.origin}/mock/validate`, history: `${location.origin}/mock/history`, otherEmotes: false }
     : { helix: HELIX, eventsub: "wss://eventsub.wss.twitch.tv/ws", validate: "https://id.twitch.tv/oauth2/validate", history: "https://recent-messages.robotty.de/api/v2/recent-messages", otherEmotes: true });
 
-  function showTwitchChat(strip) {
+  // The two chats are two layers in the chat area, each made once and then kept: custom
+  // chat, and Twitch's own (its embedded chat). Switching between them only changes which
+  // one shows, so neither loses what it had. Twitch's is loaded in the background as soon
+  // as the dock opens (unless it's the pretend Twitch), so it already has everything since
+  // then the first time it's needed, even if custom chat fails.
+  let ownLayer = null;
+  let twitchLayer = null;
+  let twitchStrip = null;
+  function chatLayers() {
+    if (ownLayer) return;
     const box = document.getElementById("live");
+    ownLayer = el("div", "live__layer live__layer--own");
+    twitchLayer = el("div", "live__layer live__layer--twitch live__layer--off");
+    twitchStrip = el("div", "live__stripSlot");
+    twitchLayer.append(twitchStrip);
+    box.replaceChildren(ownLayer, twitchLayer);
+  }
+  function twitchFrame() {
+    chatLayers();
+    if (twitchLayer.querySelector(".live__frame")) return;
     const frame = el("iframe", "live__frame");
     frame.title = `${liveChannel}'s Twitch chat`;
     frame.src = `https://www.twitch.tv/embed/${liveChannel}/chat?parent=${encodeURIComponent(location.hostname)}&darkpopout`;
-    box.replaceChildren(...(strip ? [chatStrip(strip)] : []), frame);
+    twitchLayer.append(frame);
+  }
+  function showLayer(which) {
+    chatLayers();
+    ownLayer.classList.toggle("live__layer--off", which !== "own");
+    twitchLayer.classList.toggle("live__layer--off", which !== "twitch");
+  }
+  function showTwitchChat(strip) {
+    twitchFrame();
+    twitchStrip.replaceChildren(...(strip ? [chatStrip(strip)] : []));
+    showLayer("twitch");
   }
 
   // The slim line above Twitch's chat, when there's something to say about custom chat.
@@ -3431,10 +3459,20 @@
   }
 
   // The streamer picked Twitch's chat, and that's remembered until they pick otherwise.
+  // Custom chat carries on underneath (out of sight), so going back to it loses nothing.
   function chooseTwitchChat() {
-    const unsent = stopOwnChat();
     put("ownChatPicked", "twitch");
-    showTwitchChat({ text: "Using Twitch's chat.", unsent, label: "Use custom chat", run: tryOwnChatAgain });
+    showTwitchChat({ text: "Using Twitch's chat.", label: "Use custom chat", run: backToOwnChat });
+    if (settingsEl && !settingsEl.hidden) drawSettings();
+  }
+  // Back to custom chat: straight back to it, as it was, if it's still running; otherwise
+  // it starts again (with the last 50 messages).
+  function backToOwnChat() {
+    put("ownChatPicked", "");
+    if (ownChat) {
+      showLayer("own");
+      if (settingsEl && !settingsEl.hidden) drawSettings();
+    } else tryOwnChatAgain();
   }
 
   // Custom chat's sign-in, checked before anything depends on it.
@@ -3460,7 +3498,7 @@
       else if (params.has("ownchat")) put("ownChat", true);
       if (!get("ownChat", false)) return showTwitchChat();
       if (!window.OwnChat) return showTwitchChat({ text: "Custom chat didn't load, so this is Twitch's chat.", label: "Reload", run: () => location.reload() });
-      if (get("ownChatPicked", "") === "twitch") return showTwitchChat({ text: "Using Twitch's chat.", label: "Use custom chat", run: tryOwnChatAgain });
+      if (get("ownChatPicked", "") === "twitch") return showTwitchChat({ text: "Using Twitch's chat.", label: "Use custom chat", run: backToOwnChat });
       const failed = get("ownChatFailed", null);
       if (failed && Date.now() - failed.at < OWNCHAT_RETRY_AFTER_MS) {
         return showTwitchChat({ text: `Using Twitch's chat because ${failed.reason} earlier.`, label: "Try custom chat again", run: tryOwnChatAgain });
@@ -3472,10 +3510,11 @@
         clearTimeout(ownChatStartTimer);
         return showTwitchChat({ text: "Custom chat needs your OK on Twitch first.", label: "Sign in", run: ownChatSignIn });
       }
-      const box = document.getElementById("live");
-      box.replaceChildren();
+      chatLayers();
+      ownLayer.replaceChildren();
+      showLayer("own");
       ownChat = window.OwnChat.start({
-        box,
+        box: ownLayer,
         me: MOCK ? { ...me, id: me.id || "1" } : me,
         channel: liveChannel,
         channelId: liveChannel === me.login ? (me.id || (MOCK ? "1" : "")) : "",
@@ -3512,6 +3551,8 @@
     if (!/^[a-z0-9_]+$/.test(wanted)) return;
     liveChannel = wanted;
     document.getElementById("live").hidden = false;
+    chatLayers();
+    if (!MOCK && get("ownChat", false)) twitchFrame(); // ready in the background, with history
     chatBegin();
     liveSaid = get(`chatSaid-${wanted}`, {});
     liveBeen = get(`chatBeen-${wanted}`, liveBeen);
