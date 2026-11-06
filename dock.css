@@ -1960,27 +1960,27 @@ body.livechat main:has(> .cards:empty) {
 .peek__ping--2 { --ping: var(--orange); }
 .peek__ping--3 { --ping: var(--yellow); }
 .peek__ping--4 { --ping: #fff; }
-.ask__levels { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
-.ask__level { padding: 3px 10px; font: inherit; font-size: 12px; color: var(--muted); background: none; border: 1px solid var(--ping); border-radius: 12px; cursor: pointer; }
-.ask__level--1 { --ping: var(--good); }
-.ask__level--2 { --ping: var(--orange); }
-.ask__level--3 { --ping: var(--yellow); }
-.ask__level--4 { --ping: #fff; }
-.ask__level--on { color: #000; font-weight: 700; background: var(--ping); }
+.nudge { flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; font-size: 12px; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 11px; }
+.nudge:hover:not(:disabled) { border-color: var(--muted); }
+.nudge .peek__ping { width: 7px; height: 7px; margin: 0; }
+.sv__row .nudge { align-self: center; }
 
-/* The slim line above Twitch's chat when custom chat has something to say. */
+/* The slim line above Twitch's chat when custom chat has something to say. It matches
+   custom chat's own bar (.oc-bar) exactly, so the switch between the two chats stays in
+   the same place, top right, whichever is showing: the words are cut to one line (all of
+   them on hover) rather than pushing the switch onto a line of its own. */
 .live__strip {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 8px;
-  padding: 4px 8px;
-  font-size: 12px;
+  gap: 2px 8px;
+  padding: 3px 8px;
+  font-size: 11px;
   color: var(--muted);
-  background: var(--panel);
   border-bottom: 1px solid var(--line);
 }
-.live__stripText { flex: 1; min-width: 120px; }
+.live__stripText { flex: 1 1 0; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.live__stripBtn, .oc-link { flex: none; margin-left: auto; }
 .live__stripUnsent { flex-basis: 100%; order: 3; color: var(--amber); overflow-wrap: anywhere; }
 .live__stripBtn, .oc-link {
   padding: 0;

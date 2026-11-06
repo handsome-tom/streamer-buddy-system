@@ -43,29 +43,28 @@ minutes; the streamer or a mod can clear it for everyone with its X.
 
 ### Pings
 
-When someone needs the streamer, a thin, faint line glows round the edge of the panel and
-it pings. This works over either chat. If it isn't dealt with, it climbs, and each step
-flashes the edge once, briefly:
+When someone needs the streamer, a thin, faint line glows green round the edge of the
+panel and it pings once. This works over either chat. Nothing climbs by itself: if a
+question isn't answered, the person who asked can **Nudge** it (on their waiting
+question, or in Streamer View). Each nudge moves it up a colour on the streamer's screen
+with one softer reminder beep and a brief flash of the edge:
 
-| Time | Glow | Ping |
+| | Glow | Ping |
 | --- | --- | --- |
-| Right away | Green | one clear note |
-| 2 minutes | Orange | one softer reminder |
-| 4 minutes | Yellow | one softer reminder |
-| 5 minutes | White | one softer reminder |
+| Asked | Green | one clear note |
+| 1st nudge | Orange | one softer reminder |
+| 2nd nudge | Yellow | one softer reminder |
+| 3rd nudge | White | one softer reminder |
 
-The sender picks how far it can go under **How far it goes** in the Ask box: **Green** is
-one ping and stays green, **White** goes all the way. Anything sent without a choice goes
-all the way if it's a question, and stays green if it's a plain message. Answering,
-dismissing or marking it seen stops it. The bar shows the most urgent message first.
+Three nudges at most, and at most one every 15 seconds. Answering, dismissing or marking
+it seen stops it. The bar shows the most urgent message first.
 
-The clock starts when the panel first shows the message, so something sent while OBS was
-closed starts at green, and anything over an hour old by then doesn't ping at all. The
-sound is on by default in OBS panels. **If OBS captures your desktop audio, viewers may
-hear it**; the switch is under Connections and in Settings.
+Anything over an hour old when the panel first shows it doesn't ping or glow, unless
+it's nudged after that. The sound is on by default in OBS panels. **If OBS captures your
+desktop audio, viewers may hear it**; the switch is under Connections and in Settings.
 
 **Settings** (the gear at the top right of the OBS docks): sound on or off, volume (quiet,
-normal, loud), the softer reminder beeps, the edge glow, the quick-questions row, custom
+normal, loud), the softer nudge beeps, the edge glow, the quick-questions row, custom
 chat or Twitch's, custom chat's text size, and whether to share Streamer View with your
 connections. They're kept in OBS between restarts.
 
@@ -123,5 +122,9 @@ Things to know:
 - Open the page with `?demo` to try the cards without signing in.
 - `dev/mock-twitch.js` is a pretend Twitch for testing custom chat, including making it
   fail on purpose. How to use it is at the top of that file.
+- `dev/sim.html` puts a mod's side panel and the streamer's OBS chat dock side by side,
+  talking through the local relay as pretend users, with buttons to send chat lines and
+  questions. Start relay-local, streamer-buddy-local and mock-twitch, then open
+  `http://localhost:8789/dev/sim.html`.
 - Receiving uses an EventSub WebSocket (`user.whisper.message`); sending uses
   `POST /helix/whispers`. Scopes: `user:read:whispers user:manage:whispers`.

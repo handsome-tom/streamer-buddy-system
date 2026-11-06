@@ -13,7 +13,7 @@
 // between mutual connections.
 //
 // Questions: { id, from, to, text, at, options, answer: { code, text, at } | null,
-// dismissed, seenAt, group }. Asking everyone ("to": "*") makes one copy per
+// dismissed, seenAt, group, nudges, nudgedAt }. Asking everyone ("to": "*") makes one copy per
 // mutual connection, sharing a group id; asking a tag ("#Mods") does the same
 // for the people in it. toTag says who it went to ("everyone", or the tag).
 //
@@ -58,7 +58,8 @@
 //
 // Messages from a page:
 //   auth { token }          connect { login }        disconnect { login }
-//   ask { to, text, options, note, level }  answer { id, code, text }  dismiss { id }
+//   ask { to, text, options, note }  answer { id, code, text }  dismiss { id }
+//   nudge { id }            remind them of your unanswered question (up to 3; see nudge())
 //   status { status }       "online", "idle" or "offline"
 //   tag { login, tag, on }  put a connection in (or out of) one of your tags
 //   room { tag }            open your chat room to one of your tags (null closes it)
@@ -111,6 +112,8 @@ const MAX_LOVE_LEN = 80;
 const MAX_FLASHES_PER_MINUTE = 20;
 const STAT_DAYS_KEPT = 40;
 const MAX_VIEW_ITEMS = 12;
+const MAX_NUDGES = 3;
+const NUDGE_GAP_MS = 15 * 1000;
 
 export default {
   async fetch(req, env) {
@@ -164,6 +167,7 @@ export class Hub {
       else if (m.t === "answer") await this.answer(ws, who, m);
       else if (m.t === "dismiss") await this.update(ws, who, m.id, (q) => q.to === who.login && !q.answer && !q.dismissed, (q) => (q.dismissed = Date.now()));
       // Seen: the asker, of an answer; or the person a plain message went to.
+      else if (m.t === "nudge") await this.nudge(ws, who, m.id);
       else if (m.t === "seen") await this.update(ws, who, m.id, (q) => !q.seenAt && ((q.from === who.login && q.answer) || (q.to === who.login && q.note && !q.answer && !q.dismissed)), (q) => (q.seenAt = Date.now()));
     } catch (e) {
       this.send(ws, { t: "error", why: "Something went wrong on the relay" });
@@ -610,7 +614,6 @@ export class Hub {
       const q = { id: crypto.randomUUID().slice(0, 8), from: who.login, to, text, at: Date.now(), options, answer: null, dismissed: 0, seenAt: 0 };
       if (group) Object.assign(q, { group, toTag: tagName ?? "everyone" });
       if (note) q.note = true;
-      if ([1, 2, 3, 4].includes(m.level)) q.level = m.level; // how far its pings can go (see dock.js)
       await this.ctx.storage.put(`q:${q.id}`, q);
       this.share(q);
       sent++;
@@ -629,6 +632,20 @@ export class Hub {
       return STANDARD.includes(code) && options.includes(code);
     };
     await this.update(ws, who, m.id, (q) => q.to === who.login && !q.answer && !q.dismissed && offered(q), (q) => (q.answer = { code, text, at: Date.now() }));
+  }
+
+  // Nudge: the asker reminds them of a question that's still unanswered. Each nudge moves it
+  // up a colour on their screen (orange, yellow, white), up to three, at most one every
+  // NUDGE_GAP_MS.
+  async nudge(ws, who, id) {
+    const q = await this.ctx.storage.get(`q:${String(id || "")}`);
+    if (!q || q.from !== who.login || q.note || q.answer || q.dismissed) return this.send(ws, { t: "error", why: "That question can't be nudged now" });
+    if ((q.nudges || 0) >= MAX_NUDGES) return this.send(ws, { t: "error", why: "Already nudged as far as it goes" });
+    if (Date.now() - (q.nudgedAt || 0) < NUDGE_GAP_MS) return this.send(ws, { t: "error", why: "Give them a moment before nudging again" });
+    q.nudges = (q.nudges || 0) + 1;
+    q.nudgedAt = Date.now();
+    await this.ctx.storage.put(`q:${q.id}`, q);
+    this.share(q);
   }
 
   // Change a question if this person's allowed to; both sides hear.
@@ -726,7 +743,7 @@ function cleanView(raw) {
     glow: stage(raw.glow),
     chat: raw.chat === "livechat" ? "livechat" : "dock",
     waiting: list(raw.waiting).map((q) => ({
-      id: str(q.id, 60), from: login(q.from), text: str(q.text), at: num(q.at), note: !!q.note, stage: stage(q.stage), top: stage(q.top),
+      id: str(q.id, 60), from: login(q.from), text: str(q.text), at: num(q.at), note: !!q.note, stage: stage(q.stage), nudges: stage(q.nudges),
       options: list(q.options).map((o) => str(o, MAX_OPTION_LEN)),
     })),
     answers: list(raw.answers).map((a) => ({

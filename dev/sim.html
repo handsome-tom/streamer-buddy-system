@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Two-machine simulator · Streamer Buddy System</title>
+<!--
+  Both sides on one screen, talking through the local test relay with pretend users
+  (no Twitch accounts): a mod's Chrome side panel ("mod1") and the streamer's OBS chat
+  dock ("streamer"), with a pretend Twitch chat under it. The buttons speak as mod1 or
+  the streamer, and Auto-play has the two of them talk on their own. "mod2" is someone
+  else you're connected to: they never start anything, but answer whatever you ask or
+  message them a few seconds later.
+
+  Needs the three local servers (.claude/launch.json): relay-local (8788),
+  streamer-buddy-local (8787) and mock-twitch (8789). Open:
+    http://localhost:8789/dev/sim.html
+  It's served by mock-twitch so its buttons can drive the pretend chat.
+-->
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #070708; color: #efeff1; font: 13px/1.4 Inter, "Helvetica Neue", Arial, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 12px; background: #18181b; border-bottom: 1px solid #3a3a3d; }
+  .tools h1 { margin: 0 10px 0 0; font-size: 14px; }
+  .tools button, .tools select { padding: 4px 10px; font: inherit; color: #efeff1; background: #2f2f35; border: 1px solid #3a3a3d; border-radius: 6px; cursor: pointer; }
+  .tools button:hover { background: #3a3a40; }
+  .tools .on { background: #772ce8; border-color: #9147ff; }
+  .tools .said { margin-left: auto; color: #adadb8; font-size: 12px; }
+  .stage { flex: 1; display: flex; justify-content: center; gap: 24px; min-height: 0; padding: 14px; overflow: auto; }
+  .side { display: flex; flex-direction: column; gap: 6px; height: 100%; }
+  .side h2 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #adadb8; }
+  .side h2 span { font-weight: 400; text-transform: none; letter-spacing: 0; }
+  iframe { flex: 1; border: 1px solid #3a3a3d; border-radius: 8px; background: #0e0e10; }
+  #mod { width: 400px; }
+  #obs { width: 420px; }
+</style>
+</head>
+<body>
+  <div class="tools">
+    <h1>Two-machine simulator</h1>
+    <button id="feed" type="button" class="on">Chat feed: on</button>
+    <button id="line" type="button">One chat line</button>
+    <button id="auto" type="button">Auto-play: off</button>
+    <button id="modAsk" type="button">mod1 asks</button>
+    <button id="modSay" type="button">mod1 messages</button>
+    <button id="modNote" type="button">mod1 quick note</button>
+    <button id="modNudge" type="button">mod1 nudges</button>
+    <button id="streamerAsk" type="button">Streamer asks mod1</button>
+    <button id="reload" type="button">Reload both</button>
+    <span class="said" id="said"></span>
+  </div>
+  <div class="stage">
+    <div class="side">
+      <h2>Mod · Chrome side panel <span>(signed in as mod1, watching streamer)</span></h2>
+      <iframe id="mod" title="Mod side panel"></iframe>
+    </div>
+    <div class="side">
+      <h2>Streamer · OBS chat dock <span>(signed in as streamer)</span></h2>
+      <iframe id="obs" title="Streamer OBS dock"></iframe>
+    </div>
+  </div>
+<script>
+  const RELAY = "ws://localhost:8788/ws";
+  const said = (text) => (document.getElementById("said").textContent = text);
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // Speak to the relay as a pretend user (the local relay accepts "dev:<login>").
+  async function as(login, msgs) {
+    const ws = new WebSocket(RELAY);
+    await new Promise((ok, fail) => { ws.onopen = ok; ws.onerror = () => fail(new Error("relay-local isn't running")); });
+    ws.send(JSON.stringify({ t: "auth", token: `dev:${login}` }));
+    await wait(500);
+    for (const m of msgs) ws.send(JSON.stringify(m));
+    await wait(500);
+    ws.close();
+  }
+
+  const control = (what) => fetch(`/mock/control?do=${what}`).catch(() => said("mock-twitch isn't running"));
+
+  function load() {
+    document.getElementById("mod").src = "http://localhost:8787/?dev=mod1&embed=ext&watch=streamer";
+    document.getElementById("obs").src = `/?dev=streamer&livechat&ownchat&mock`;
+  }
+
+  async function setUp() {
+    // Custom chat's pretend sign-in, for the OBS side (same address as this page).
+    localStorage.setItem("chatToken", JSON.stringify("mock"));
+    localStorage.setItem("ownChat", "true");
+    localStorage.removeItem("ownChatPicked");
+    localStorage.removeItem("ownChatFailed");
+    try {
+      // Everyone added back, so they can talk (does nothing if they already are).
+      await as("streamer", [{ t: "connect", login: "mod1" }, { t: "connect", login: "mod2" }]);
+      await as("mod1", [{ t: "connect", login: "streamer" }, { t: "connect", login: "mod2" }]);
+      await as("mod2", [{ t: "connect", login: "streamer" }, { t: "connect", login: "mod1" }]);
+    } catch (e) {
+      said(`${e.message}: start it from the launch list.`);
+    }
+    load();
+    puppets.mod1 = puppet("mod1", onAutoQuestion);
+    puppets.streamer = puppet("streamer", onAutoQuestion);
+    puppets.mod2 = puppet("mod2", mod2);
+    await wait(2500);
+    control("feed");
+  }
+
+  let feeding = true;
+  document.getElementById("feed").addEventListener("click", (e) => {
+    feeding = !feeding;
+    control(feeding ? "feed" : "feedoff");
+    e.target.textContent = `Chat feed: ${feeding ? "on" : "off"}`;
+    e.target.classList.toggle("on", feeding);
+  });
+  document.getElementById("line").addEventListener("click", () => control("line"));
+  // ===== Puppets: mod1, the streamer and mod2, each on a connection of its own =========
+  // They share the logins of the two screens, so whatever a puppet does shows there as
+  // if it was done on that screen.
+  const puppets = {};
+  function puppet(login, onMessage) {
+    const ws = new WebSocket(RELAY);
+    ws.onopen = () => ws.send(JSON.stringify({ t: "auth", token: `dev:${login}` }));
+    ws.onmessage = (e) => {
+      if (e.data === "pong") return;
+      try { onMessage?.(JSON.parse(e.data)); } catch {}
+    };
+    ws.onclose = () => setTimeout(() => (puppets[login] = puppet(login, onMessage)), 2000);
+    return { send: (m) => ws.readyState === 1 && ws.send(JSON.stringify(m)), ws };
+  }
+  const send = (login, m) => puppets[login]?.send(m);
+  const pick = (list) => list[Math.floor(Math.random() * list.length)];
+
+  // Questions waiting, so auto-play can answer them: id -> question.
+  const open = {};
+  function track(m) {
+    if (m.t === "state") for (const q of m.questions || []) open[q.id] = q;
+    if (m.t === "q") open[m.q.id] = m.q;
+  }
+
+  // mod2: answers anything sent to them, a few seconds later.
+  const MOD2_REPLIES = ["Sure, on it", "Give me a sec", "Yep, done", "Not right now, sorry", "I'll check"];
+  function mod2(m) {
+    track(m);
+    if (m.t === "q" && m.q.to === "mod2" && !m.q.answer && !m.q.dismissed) {
+      const q = m.q;
+      setTimeout(() => {
+        if (q.note) send("mod2", { t: "answer", id: q.id, code: "c", text: pick(MOD2_REPLIES) });
+        else send("mod2", { t: "answer", id: q.id, code: (q.options || ["y"]).find((o) => !o.startsWith("+")) || "y" });
+      }, 3000 + Math.random() * 3000);
+    }
+    // A private chat message to mod2: a reply in the same chat.
+    if (m.t === "msg" && m.m.from !== "mod2" && m.m.owner.startsWith("@") && m.m.owner.includes("mod2")) {
+      setTimeout(() => send("mod2", { t: "say", owner: m.m.owner, text: pick(MOD2_REPLIES) }), 2500 + Math.random() * 2500);
+    }
+  }
+
+  const MOD_ASKS = ["Can I run the poll now?", "Should I start the giveaway?", "Timeout the spammer?", "Raid them after this game?", "Want me to clip that?"];
+  const MOD_SAYS = ["Mic is a little quiet", "Chat's asking about your settings", "Poll is ready when you are", "Someone new followed, say hi"];
+  const MOD_NOTES = ["Raid incoming in 1 min", "Ad break in 2 min", "Big donation just came in"];
+  const STREAMER_ASKS = ["Can you clip that?", "Can you pin the schedule?", "Who just raided?", "Can you start the poll?"];
+  const modAsk = () => send("mod1", { t: "ask", to: "streamer", text: pick(MOD_ASKS), options: ["y", "n", "s"] });
+  const modSay = () => send("mod1", { t: "ask", to: "streamer", text: pick(MOD_SAYS), note: true });
+  const modNote = () => send("mod1", { t: "flash", kind: "info", to: "streamer", text: pick(MOD_NOTES) });
+  // Nudge mod1's oldest unanswered question to the streamer (it moves up a colour there).
+  const modNudge = () => {
+    const q = Object.values(open).filter((q) => q.from === "mod1" && q.to === "streamer" && !q.note && !q.answer && !q.dismissed && (q.nudges || 0) < 3).sort((a, b) => a.at - b.at)[0];
+    if (!q) return said("mod1 has nothing unanswered to nudge");
+    send("mod1", { t: "nudge", id: q.id });
+    said(`mod1 nudged: ${q.text}`);
+  };
+  document.getElementById("modNudge").addEventListener("click", modNudge);
+  const streamerAsk = () => send("streamer", { t: "ask", to: "mod1", text: pick(STREAMER_ASKS), options: ["y", "n", "s", "o", "m", "t"] });
+  for (const [id, go, what] of [["modAsk", modAsk, "mod1 asked the streamer"], ["modSay", modSay, "mod1 messaged the streamer"], ["modNote", modNote, "mod1 sent a quick note"], ["streamerAsk", streamerAsk, "the streamer asked mod1"]]) {
+    document.getElementById(id).addEventListener("click", () => {
+      go();
+      said(what);
+    });
+  }
+
+  // ===== Auto-play: mod1 and the streamer talk on their own ===========================
+  // Every so often one of them starts something; the other answers a little later (the
+  // streamer takes longer, so you see the glow climb first). Anything you answer by hand
+  // first is left alone.
+  let auto = 0;
+  function answerLater(login, q, ms) {
+    setTimeout(() => {
+      const now = open[q.id];
+      if (!now || now.answer || now.dismissed || (now.note && now.seenAt)) return; // done by hand
+      if (now.note) send(login, { t: "seen", id: q.id });
+      else send(login, { t: "answer", id: q.id, code: pick((now.options || ["y"]).filter((o) => !o.startsWith("+"))) });
+    }, ms);
+  }
+  function autoTurn() {
+    const turn = pick(["modAsk", "modAsk", "modNudge", "modNudge", "modSay", "modNote", "streamerAsk"]);
+    if (turn === "modNudge") return modNudge(), (auto = setTimeout(autoTurn, 15000 + Math.random() * 15000));
+    ({ modAsk, modSay, modNote, streamerAsk })[turn]();
+    said(`Auto-play: ${{ modAsk: "mod1 asked", modSay: "mod1 messaged", modNote: "mod1 sent a note", streamerAsk: "the streamer asked mod1" }[turn]}`);
+    auto = setTimeout(autoTurn, 15000 + Math.random() * 15000);
+  }
+  // New questions between the two get answered by the other side, while auto-play's on.
+  function onAutoQuestion(m) {
+    track(m);
+    if (!auto || m.t !== "q" || m.q.answer || m.q.dismissed || m.q.seenAt) return;
+    const q = m.q;
+    if (q.from === "mod1" && q.to === "streamer" && !answered.has(q.id)) {
+      answered.add(q.id);
+      answerLater("streamer", q, 25000 + Math.random() * 35000); // slow, so there's time to nudge
+    } else if (q.from === "streamer" && q.to === "mod1" && !answered.has(q.id)) {
+      answered.add(q.id);
+      answerLater("mod1", q, 3000 + Math.random() * 4000);
+    }
+  }
+  const answered = new Set();
+  document.getElementById("auto").addEventListener("click", (e) => {
+    if (auto) {
+      clearTimeout(auto);
+      auto = 0;
+    } else {
+      auto = setTimeout(autoTurn, 500);
+    }
+    e.target.textContent = `Auto-play: ${auto ? "on" : "off"}`;
+    e.target.classList.toggle("on", !!auto);
+  });
+
+  document.getElementById("reload").addEventListener("click", load);
+  setUp();
+</script>
+</body>
+</html>

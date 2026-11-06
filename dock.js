@@ -145,7 +145,7 @@
   const drafts = {}; // question id -> reply being typed (kept if things redraw)
   // The Ask box: who to, the question, and its answer buttons (the six
   // standard ones until some are taken off; "+label" for your own).
-  const askDraft = { to: (POPOUT && params.get("to")) || "", text: "", note: "", options: [...STANDARD], adding: "", mode: "ask", level: 4 }; // mode: "ask" | "info" | "love"; level: how far it goes, see "Pings"
+  const askDraft = { to: (POPOUT && params.get("to")) || "", text: "", note: "", options: [...STANDARD], adding: "", mode: "ask" }; // mode: "ask" | "info" | "love"
 
   // ===== Saved data ========================================================================
 
@@ -207,13 +207,13 @@
       const u = ui[q.id] || {};
       if (q.to === me?.login) {
         inbox[q.id] = {
-          from: q.from, name: q.from, text: q.text, at: q.at, options: q.options, note: q.note, group: q.group, toTag: q.toTag, level: q.level,
+          from: q.from, name: q.from, text: q.text, at: q.at, options: q.options, note: q.note, group: q.group, toTag: q.toTag, nudges: q.nudges || 0,
           done: !!(q.answer || q.dismissed || (q.note && q.seenAt)), answered: q.answer, seenAt: q.seenAt,
           sending: !!pending[q.id], cleared: !!u.cleared, gone: !!u.gone,
         };
       } else if (q.from === me?.login) {
         sent[q.id] = {
-          to: q.to, text: q.text, at: q.at, note: q.note, seenAt: q.seenAt, group: q.group, toTag: q.toTag, seen: !!u.waitClosed || !!q.dismissed, gone: !!u.gone,
+          to: q.to, text: q.text, at: q.at, note: q.note, seenAt: q.seenAt, group: q.group, toTag: q.toTag, nudges: q.nudges || 0, nudgedAt: q.nudgedAt || 0, seen: !!u.waitClosed || !!q.dismissed, gone: !!u.gone,
           answer: q.answer && { ...q.answer, acked: q.seenAt ? true : pending[q.id] ? "sending" : false, seen: !!u.closed },
         };
       }
@@ -609,13 +609,13 @@
     const old = questions[q.id];
     questions[q.id] = q;
     delete pending[q.id];
+    nudging.delete(q.id);
     noticeSeen(old, q);
     // Something new for you: a question to you, or an answer to yours.
     if ((!old && q.to === me.login && !PINGS_HERE) || (q.from === me.login && q.answer && !old?.answer)) arrived();
     if (!old && q.from === me.login) {
       askDraft.text = "";
       askDraft.note = "";
-      askDraft.level = PING_TOP;
       askDraft.options = [...STANDARD]; // options are per question
       askDraft.adding = "";
       if (view === "ask") view = "cards"; // their page shows it in the log
@@ -774,6 +774,7 @@
 
   function gotError(m) {
     for (const k of Object.keys(pending)) delete pending[k];
+    nudging.clear();
     if (m.why === "signin") return; // the socket closing next deals with it
     askDraft.note = `${m.why}.`;
     setStatus(m.why, "bad");
@@ -838,28 +839,19 @@
 
   // ===== Pings =============================================================================
   // Someone needs the streamer. The edge of the panel glows (a thin, faint line), over
-  // whichever chat is showing, and it pings: one clear note when it arrives, then one
-  // softer note each time it moves up the ladder (green, orange, yellow, white), with a
-  // brief flash of the edge.
-  //
-  // The sender picks how far up it can go (q.level). "Green" is one ping and stays green;
-  // "white" keeps climbing until it's dealt with. Answering, dismissing or marking it seen
-  // stops it. A question without a level goes all the way; a plain message stays green.
-  // The clock starts when this panel first shows it, so something sent while OBS was
-  // closed starts at green. Anything over an hour old by then doesn't ping at all.
+  // whichever chat is showing. Everything arrives green, with one clear note. If it isn't
+  // answered, the person who asked can nudge it (q.nudges): each nudge moves it up a
+  // colour (orange, yellow, then white) with one softer note and a brief flash of the
+  // edge. Nothing climbs by itself. Answering, dismissing or marking it seen stops it.
+  // Anything over an hour old when this panel first shows it doesn't ping or glow, unless
+  // it's nudged after that.
   const PING_NAMES = ["", "Green", "Orange", "Yellow", "White"];
   const PING_TOP = 4;
-  // ?pingms=<ms> counts a "minute" as that long, on this Mac, for testing.
-  const PING_MINUTE = location.hostname === "localhost" && Number(params.get("pingms")) || 60 * 1000;
-  const PING_AFTER = [0, 2, 4, 5].map((minutes) => minutes * PING_MINUTE);
   const PING_STALE_MS = 60 * 60 * 1000;
-  const pingLog = get("pings", {}); // question id -> { start, stage, stale }, kept so a reload doesn't ping again
+  const stageFor = (q) => Math.min(PING_TOP, 1 + (q.nudges || 0));
+  const pingLog = get("pings", {}); // question id -> { stage, stale }, kept so a reload doesn't ping again
   let pingGlow = null;
   let glowNow = 0; // the edge's colour right now (0 = no glow), for Streamer View
-
-  function pingTopOf(q) {
-    return q.level >= 1 && q.level <= PING_TOP ? q.level : q.note ? 1 : PING_TOP;
-  }
 
   // Looks at everything waiting; says whether anything moved up.
   function pingCheck() {
@@ -877,14 +869,15 @@
     }
     for (const [id, q] of Object.entries(inbox)) {
       if (q.done || q.sending) continue;
+      const stage = stageFor(q);
       if (!pingLog[id]) {
-        pingLog[id] = { start: now, stage: 0, stale: now - q.at > PING_STALE_MS };
+        const stale = now - q.at > PING_STALE_MS;
+        pingLog[id] = { stage: stale ? stage : 0, stale }; // an old one counts as already pinged
         saveLog = true;
       }
       const log = pingLog[id];
-      if (log.stale) continue;
-      let stage = 1;
-      while (stage < pingTopOf(q) && now - log.start >= PING_AFTER[stage]) stage++;
+      if (log.stale && stage <= log.stage) continue;
+      log.stale = false; // nudged since: it's live again
       if (stage > log.stage) {
         if (!log.stage) fresh = true;
         log.stage = stage;
@@ -940,7 +933,7 @@
       .slice(0, MAX_VIEW_ITEMS)
       .map((id) => {
         const q = inbox[id];
-        return { id, from: q.from, text: q.text, at: q.at, note: !!q.note, stage: stageOf(id), top: pingTopOf(q), options: q.note ? [] : optionsOf(q).map((o) => o.label) };
+        return { id, from: q.from, text: q.text, at: q.at, note: !!q.note, stage: stageOf(id), nudges: q.nudges, options: q.note ? [] : optionsOf(q).map((o) => o.label) };
       });
     const answers = Object.keys(sent)
       .filter((id) => sent[id].answer && !sent[id].answer.seen)
@@ -1031,12 +1024,14 @@
     };
     for (const q of v.waiting) {
       const row = el("div", `sv__row${q.stage ? ` sv__row--${q.stage}` : ""}`);
-      row.title = q.stage ? `${PING_NAMES[q.stage]} now; goes up to ${PING_NAMES[q.top].toLowerCase()}` : q.text;
+      row.title = q.nudges ? `Nudged ${q.nudges} time${q.nudges === 1 ? "" : "s"}` : q.text;
       row.append(el("span", `peek__ping peek__ping--${q.stage || 0}${q.stage ? "" : " sv__dot--quiet"}`));
       const text = el("div", "sv__text");
       text.append(who(q.from), document.createTextNode(` ${q.note ? "says" : "asks"}: `), el("span", null, q.text));
       if (q.from === me.login) text.append(el("span", "sv__tag", "yours"));
       row.append(text, el("span", "sv__ago", ago(q.at)));
+      // Your own unanswered question: nudge it from here too.
+      if (q.from === me.login && sent[q.id] && !q.note) row.append(nudgeButton([q.id]));
       body.append(row);
     }
     for (const a of v.answers) {
@@ -1217,7 +1212,7 @@
     askDraft.note = "";
     // A streamer's window sends statements plainly too, unless they picked buttons.
     const plain = STREAMER && askDraft.options.join() === STANDARD.join() && !isQuestion(question);
-    if (relay({ t: "ask", to, text: question, ...(plain ? { note: true } : { options: askDraft.options }), ...(STREAMER ? {} : { level: askDraft.level }) })) rememberTo(to);
+    if (relay({ t: "ask", to, text: question, ...(plain ? { note: true } : { options: askDraft.options }) })) rememberTo(to);
   }
 
   // ===== Pop-outs (OBS) ====================================================================
@@ -1677,12 +1672,41 @@
       ? (q.group ? `Sent to ${askedWho(q)} (${seenBy} of ${copies.length} seen): ` : `Sent to ${q.to}${q.seenAt ? " · ✓ Seen" : ""}: `)
       : q.group ? `Waiting on ${askedWho(q)} (${answered} of ${copies.length} answered): ` : `Waiting on ${q.to}: `;
     text.append(el("span", "waiting__who", who), document.createTextNode(q.text));
-    row.append(text, closeButton(() => {
+    row.append(text);
+    const unanswered = copies.filter(([, c]) => !c.answer && !c.seen).map(([cid]) => cid);
+    if (!q.note && unanswered.length) row.append(nudgeButton(unanswered));
+    row.append(closeButton(() => {
       for (const [cid] of copies) ui[cid] = { ...ui[cid], waitClosed: true };
       setUi(id, {});
     }, "Stop showing this"));
     return row;
   }
+
+  // Nudge: remind them of a question you asked that's still unanswered. On their screen
+  // it moves up a colour each time: orange, yellow, then white (see "Pings"). For a
+  // question to several people, it nudges everyone who hasn't answered.
+  const NUDGE_GAP_MS = 15 * 1000; // the relay's limit too
+  function nudgeButton(ids) {
+    const qs = ids.map((id) => sent[id]).filter(Boolean);
+    const nudges = Math.max(0, ...qs.map((q) => q.nudges));
+    const next = Math.min(PING_TOP, nudges + 2); // the colour it turns
+    const done = nudges >= PING_TOP - 1;
+    const wait = Math.max(0, ...qs.map((q) => q.nudgedAt + NUDGE_GAP_MS - Date.now()));
+    const b = el("button", `nudge nudge--${done ? nudges + 1 : next}`);
+    b.type = "button";
+    b.append(el("span", `peek__ping peek__ping--${done ? PING_TOP : next}`), el("span", null, done ? "Nudged 3×" : nudges ? `Nudge again` : "Nudge"));
+    b.disabled = done || wait > 0 || ids.some((id) => nudging.has(id));
+    b.title = done ? "It's as far up as it goes" : wait > 0 ? "Give them a moment before nudging again" : `Remind them: it turns ${PING_NAMES[next].toLowerCase()} on their screen, with a soft beep`;
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      for (const id of ids) relay({ t: "nudge", id });
+      ids.forEach((id) => nudging.add(id));
+      render();
+    });
+    if (wait > 0 && !done) setTimeout(() => render(), wait + 50);
+    return b;
+  }
+  const nudging = new Set(); // question ids: sent, waiting for the relay to say so
 
   function closeButton(onClick, title = "Close") {
     const x = el("button", "x", "×");
@@ -1852,28 +1876,6 @@
         : "For things like incoming raids or minor technical difficulties. Shows on their bar with your name for 2 minutes. Only reaches people who are online."));
       if (askDraft.note) box.append(el("p", "ask__note", askDraft.note));
       return box;
-    }
-
-    // How far it can go if they don't answer: see "Pings".
-    if (!STREAMER) {
-      box.append(el("div", "ask__label", "How far it goes"));
-      const levels = el("div", "ask__levels");
-      for (let level = 1; level <= PING_TOP; level++) {
-        const b = el("button", `ask__level ask__level--${level}${askDraft.level === level ? " ask__level--on" : ""}`, PING_NAMES[level]);
-        b.type = "button";
-        b.title = `${level} ping${level > 1 ? "s" : ""}`;
-        b.addEventListener("click", () => {
-          askDraft.level = level;
-          render();
-        });
-        levels.append(b);
-      }
-      box.append(levels, el("p", "ask__hint", [
-        "One ping, and it stays green.",
-        "Green, then orange after 2 minutes if there's no answer.",
-        "Green, orange after 2 minutes, then yellow after 4.",
-        "Green, orange after 2 minutes, yellow after 4, then white after 5.",
-      ][askDraft.level - 1]));
     }
 
     // Quick questions: tap one to put it in the box; × forgets it.
@@ -2884,7 +2886,9 @@
   // The slim line above Twitch's chat, when there's something to say about custom chat.
   function chatStrip({ text, unsent, label, run }) {
     const strip = el("div", "live__strip");
-    strip.append(el("span", "live__stripText", text));
+    const words = el("span", "live__stripText", text);
+    words.title = text;
+    strip.append(words);
     if (unsent) strip.append(el("span", "live__stripUnsent", `Not sent: ${unsent}`));
     const go = el("button", "live__stripBtn", label);
     go.type = "button";
@@ -3046,6 +3050,7 @@
     else if (m.t === "answer" && q) gotQuestion({ ...q, answer: { code: m.code, text: m.text, at: now } });
     else if (m.t === "dismiss" && q) gotQuestion({ ...q, dismissed: now });
     else if (m.t === "seen" && q) gotQuestion({ ...q, seenAt: now });
+    else if (m.t === "nudge" && q) gotQuestion({ ...q, nudges: Math.min(3, (q.nudges || 0) + 1), nudgedAt: now });
     else if (m.t === "connect") gotState({ connections: [...connections, { login: m.login, mutual: requests.includes(m.login), online: false }], requests: requests.filter((l) => l !== m.login), tags, questions: Object.values(questions) });
     else if (m.t === "disconnect") gotState({ connections: connections.filter((c) => c.login !== m.login), requests, tags, questions: Object.values(questions) });
     else if (m.t === "flash") {
