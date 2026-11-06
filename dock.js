@@ -338,7 +338,7 @@
       response_type: "token",
       client_id: TWITCH_CLIENT_ID,
       redirect_uri: location.origin + location.pathname,
-      scope: window.OwnChat.SCOPES.join(" "),
+      scope: [...window.OwnChat.SCOPES, ...(window.OwnChat.EXTRA_SCOPES || [])].join(" "), // extras: nice to have, not needed
       state,
     });
     location.href = `https://id.twitch.tv/oauth2/authorize?${q}`;
@@ -3541,6 +3541,7 @@
         isConnection: (login) => trusted().includes(login),
         onFail: (reason) => turn === chatTurn && chatFallback(reason),
         onChoose: chooseTwitchChat,
+        onSignIn: ownChatSignIn, // to add a permission it would like (EXTRA_SCOPES)
       });
       if (location.hostname === "localhost") window.__ownChat = ownChat;
       for (const login of liveChatters) ownChat.here?.(login); // who was already here

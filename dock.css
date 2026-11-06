@@ -2999,3 +2999,8 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-line--raider { background: rgba(255, 106, 0, 0.1); box-shadow: inset 3px 0 0 #ff6a00; }
 .oc-line--raider.oc-line--first { background: linear-gradient(90deg, rgba(255, 106, 0, 0.14), rgba(0, 219, 132, 0.1)); }
 .oc-raidtag { margin-right: 4px; padding: 0 5px; font-size: 10px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #fff; background: #ff6a00; border-radius: 3px; cursor: help; }
+/* The raiding streamer's picture: large on the raid card, small on each raider's tag */
+.oc-raid__pic { width: 56px; height: 56px; border-width: 3px; object-fit: cover; }
+.oc-raid__hi { margin-left: 64px; }
+.oc-raidtag { display: inline-flex; align-items: center; gap: 3px; vertical-align: 1px; }
+.oc-raidtag__pic { width: 14px; height: 14px; margin-left: -3px; border-radius: 50%; border: 1px solid #fff; object-fit: cover; }

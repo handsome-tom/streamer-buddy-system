@@ -35,7 +35,7 @@ const crypto = require("crypto");
 const PORT = 8789;
 const ROOT = path.join(__dirname, "..");
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".txt": "text/plain", ".png": "image/png", ".svg": "image/svg+xml", ".webmanifest": "application/json" };
-const SCOPES = ["user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod"];
+const SCOPES = ["user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod", "moderator:read:chatters"];
 
 let sockets = [];
 let ircSockets = [];
@@ -223,6 +223,7 @@ function api(req, res, url, body) {
     }
     return json(res, 200, { data: [{}] });
   }
+  if (route === "/chat/chatters") return json(res, 200, { data: ["viewer0", "viewer1", "viewer2", "viewer3", "mod1", "mod2"].map((c) => ({ user_login: c, user_name: c })), pagination: {} });
   if (route === "/moderation/automod/message") {
     event("automod.message.update", { message_id: JSON.parse(body).msg_id, status: "approved" });
     return json(res, 204, {});

@@ -27,6 +27,10 @@
   const HOVER_HOLD_MS = 3000; // the chat holds still while the mouse is moving over it
   const ERRORS_ALLOWED = 3; // in a minute
   const RAIDER_MS = 15 * 60 * 1000; // how long raiders' lines are marked after a raid
+  // Asked for at sign-in but not needed: Twitch's full list of who's in the chat, which
+  // makes telling raiders from people already here exact even in big chats.
+  const EXTRA_SCOPES = ["moderator:read:chatters"];
+  const CHATTERS_EVERY_MS = 2 * 60 * 1000;
   const TIMEOUTS = [["1m", 60], ["10m", 600], ["1h", 3600], ["24h", 86400]];
   // Twitch's chat commands don't run through the API, and could post as plain text, so
   // anything that looks like one is stopped here. Dots are how some people type them.
@@ -566,6 +570,13 @@
         line.classList.add("oc-line--raider");
         const tag = el("span", "oc-raidtag", "raid");
         tag.title = `Probably came in with ${raid.from}'s raid (they hadn't been in the chat before it)`;
+        if (raid.pic) {
+          // The raiding streamer's picture, small, so it's clear whose raid they came with.
+          const pic = el("img", "oc-raidtag__pic");
+          pic.src = raid.pic;
+          pic.alt = "";
+          tag.prepend(pic);
+        }
         line.append(tag, " ");
       }
       line.append(who, ": ", body);
@@ -620,8 +631,43 @@
       }
       return null;
     }
-    function gotRaid(from) {
-      raids.push({ at: Date.now(), from, present: new Set(presentNow) });
+    // Twitch's full list, when this sign-in allows it (a mod's list of everyone here). Kept
+    // fresh in the background, so at a raid the list from just before it is ready.
+    let canListChatters = false;
+    async function listChatters() {
+      if (!canListChatters || !isMod || stopped) return;
+      try {
+        let cursor = "";
+        for (let page = 0; page < 20; page++) {
+          // Not api(): a refusal here mustn't count as the sign-in ending.
+          const r = await fetch(`${urls.helix}/chat/chatters?${modQuery()}&first=1000${cursor ? `&after=${encodeURIComponent(cursor)}` : ""}`, {
+            headers: { Authorization: `Bearer ${host.token()}`, "Client-Id": host.clientId },
+          });
+          if (!r.ok) return;
+          const j = await r.json();
+          for (const c of j.data || []) presentNow.add(String(c.user_login).toLowerCase());
+          cursor = j.pagination?.cursor || "";
+          if (!cursor) return;
+        }
+      } catch {}
+    }
+    (async () => {
+      try {
+        const r = await fetch(urls.validate, { headers: { Authorization: `OAuth ${host.token()}` } });
+        if (!r.ok) return;
+        const scopes = (await r.json()).scopes || [];
+        canListChatters = EXTRA_SCOPES.every((sc) => scopes.includes(sc));
+        if (canListChatters) {
+          listChatters();
+          timers.push(setInterval(listChatters, CHATTERS_EVERY_MS));
+        } else if (host.onSignIn) {
+          addSystem("Sign in once more to let custom chat use Twitch's list of who's here, so it marks raiders more accurately.", { label: "Sign in", run: () => host.onSignIn() });
+        }
+      } catch {}
+    })();
+
+    function gotRaid(from, pic) {
+      raids.push({ at: Date.now(), from, pic, present: new Set(presentNow) });
       if (raids.length > 20) raids.shift();
     }
 
@@ -637,11 +683,12 @@
       if (kind === "raid" && e.raid) {
         // Who's raiding, with how many, their picture, and a quick welcome.
         const r = e.raid;
-        if (!fromChannel) gotRaid(r.user_name || r.user_login);
+        const raidPic = r.profile_image_url ? r.profile_image_url.replace("%{width}", "70").replace("%{height}", "70") : "";
+        if (!fromChannel) gotRaid(r.user_name || r.user_login, raidPic);
         const head = el("div", "oc-raid");
         if (r.profile_image_url) {
           const pic = el("img", "oc-raid__pic");
-          pic.src = r.profile_image_url.replace("%{width}", "70").replace("%{height}", "70");
+          pic.src = raidPic;
           pic.alt = "";
           head.append(pic);
         }
@@ -1173,5 +1220,5 @@
     };
   }
 
-  window.OwnChat = { SCOPES, start };
+  window.OwnChat = { SCOPES, EXTRA_SCOPES, start };
 })();

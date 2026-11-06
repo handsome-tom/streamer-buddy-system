@@ -231,7 +231,6 @@ const twitch = (() => {
     });
   }
   const NEWBIES = ["fresh_fern", "NewHereHi", "pebble_pusher", "WanderingWes", "kettlecorn99", "SoftServeSam", "dewdrop_dev", "MarbleMoth"];
-  const RAIDERS = ["CozyCastleTV", "MidnightMango", "TurboTortoise", "PaperCraneLive"];
   const RAIDER_NAMES = ["bean_counter", "StarlitSoda", "gravelgrump", "Mx_Marigold", "tinyhatbandit", "OrbitOtter", "lemonade_larry", "ChunkyMonkeyTV",
     "pocketfox", "WaffleWizard", "dustbunny_dee", "SirLurksALot", "neon_nana", "PlumPudding7", "brick_by_brick", "HoneyBadgerHal"];
   const RAID_LINES = ["RAID HYPE", "hi from the raid!", "we're here!!", "raid raid raid", "hello new streamer o7", "the raid has arrived", "hi chat, we come in peace", "what did we walk into lol", "raid gang o7", "hello from the other stream!"];
@@ -270,12 +269,12 @@ const twitch = (() => {
     },
     // A raid: the notice, then the raiders saying hello.
     raid() {
-      const from = pick(RAIDERS);
+      const from = "Lump"; // the raiding streamer (demo/pics/raider.png)
       const count = 8 + Math.floor(Math.random() * 140);
       notice("raid", {
         who: from,
         system: `${count} raiders from ${from} have joined!`,
-        fields: { raid: { user_id: `u-${from}`, user_name: from, user_login: from.toLowerCase(), viewer_count: count, profile_image_url: new URL("pics/raider.svg", import.meta.url).href } },
+        fields: { raid: { user_id: `u-${from}`, user_name: from, user_login: from.toLowerCase(), viewer_count: count, profile_image_url: new URL("pics/raider.png", import.meta.url).href } },
       });
       // The raiders pour in over a few seconds: people from the other channel, about half
       // of them chatting here for the first time.
@@ -345,7 +344,7 @@ const twitch = (() => {
     socket._peer = { got() {}, gone: () => chatSockets.delete(socket) };
   }
 
-  const SCOPES = ["user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod"];
+  const SCOPES = ["user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod", "moderator:read:chatters"];
   const json = (status, body) => new Response(status === 204 ? null : JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
   async function api(url, init = {}) {
     const u = new URL(url);
@@ -375,6 +374,8 @@ const twitch = (() => {
       return json(200, { data: [{}] });
     }
     if (route === "/moderation/automod/message") return json(204, {});
+    // Twitch's list of who's in the chat: the regulars and the lurkers (not raiders yet).
+    if (route === "/chat/chatters") return json(200, { data: [...CHATTERS, ...NEWBIES, "mod1", "mod2"].map((c) => ({ user_login: c.toLowerCase(), user_name: c })), pagination: {} });
     return json(404, { message: `the demo doesn't do ${route}` });
   }
 
