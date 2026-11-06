@@ -2715,3 +2715,136 @@ body.livechat .peek__line .peek__answer { margin-right: 8px; }
 .oc-line--here { border-bottom: 2px solid var(--orange); }
 .oc-line[data-id] { cursor: default; }
 .irow { cursor: pointer; }
+
+/* ===== The message area's "2 of 5 ▾" and its short list ================================== */
+.peek__count {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.07);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.peek__count:hover, .peek__count--open { background: color-mix(in srgb, var(--purple) 40%, transparent); }
+.peek__caret { font-size: 10px; transition: transform 0.15s; }
+.peek__count--open .peek__caret { transform: rotate(180deg); }
+.peek__menu {
+  display: flex;
+  flex: 1 1 100%;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 150px;
+  margin-top: 2px;
+  padding: 4px;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+}
+.peek__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--text);
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.peek__item:hover { background: color-mix(in srgb, var(--purple) 28%, transparent); }
+.peek__item--on { background: rgba(255, 255, 255, 0.07); }
+.peek__item .peek__ping { margin: 0; }
+.peek__ping--answer { background: var(--purple); }
+.peek__itemtext { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+/* ===== !vanish notes: a pink glow that spills out into the background ==================== */
+/* As it arrives the glow blooms wide and bright past the edges of the note, then settles
+   into a softer pink haze that breathes gently until the note fuzzes away with it. */
+.qflash--love {
+  position: relative;
+  isolation: isolate;
+  box-shadow: 0 0 20px 4px color-mix(in srgb, var(--c) 65%, transparent), 0 0 60px 16px color-mix(in srgb, var(--c) 30%, transparent);
+}
+.qflash--love::before {
+  content: "";
+  position: absolute;
+  inset: -34px -70px;
+  z-index: -1;
+  border-radius: 999px;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--c) 80%, transparent), color-mix(in srgb, var(--c) 35%, transparent) 50%, transparent);
+  filter: blur(16px);
+  pointer-events: none;
+  animation: loveBloom 2.2s ease-out, loveHaze 4s ease-in-out 2.2s infinite;
+}
+.qflash--love.qflash--leaving::before { animation: loveFade 1.4s ease-in forwards; }
+@keyframes loveBloom {
+  0% { opacity: 0; transform: scale(0.6); }
+  30% { opacity: 1; transform: scale(1.3); }
+  100% { opacity: 0.75; transform: scale(1); }
+}
+@keyframes loveHaze {
+  0%, 100% { opacity: 0.75; transform: scale(1); }
+  50% { opacity: 0.95; transform: scale(1.1); }
+}
+@keyframes loveFade {
+  to { opacity: 0; transform: scale(1.3); }
+}
+
+/* ===== Quick info and !vanish notes in the streamer's chat dock ========================== */
+/* Not little pills: they take the same room as a question in the message area, just
+   above it, full width, the same larger text, and a soft glow in their colour (blue for
+   quick info, pink for !vanish) with no hard edge. "Seen by" notices stay small. */
+body.livechat .flashes {
+  order: 5;
+  flex: 1 1 100%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+body.livechat .qflash--info,
+body.livechat .qflash--love {
+  position: relative;
+  isolation: isolate;
+  max-width: none;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  gap: 10px;
+  margin: 4px 0 2px;
+  padding: 10px 8px 10px 14px;
+  border: 0;
+  border-radius: 16px;
+  background:
+    radial-gradient(ellipse 85% 120% at 30% 50%, color-mix(in srgb, var(--c) 18%, transparent), transparent 75%),
+    color-mix(in srgb, var(--c) 6%, transparent);
+  box-shadow: 0 0 22px 2px color-mix(in srgb, var(--c) 22%, transparent), inset 0 0 18px color-mix(in srgb, var(--c) 12%, transparent);
+}
+body.livechat .qflash--info .qflash__icon svg,
+body.livechat .qflash--love .qflash__icon svg { width: 20px; height: 20px; }
+body.livechat .qflash--info .qflash__body,
+body.livechat .qflash--love .qflash__body {
+  flex: 1;
+  font-size: 16px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+body.livechat .qflash--info .qflash__who,
+body.livechat .qflash--love .qflash__who { font-size: 13px; }
+/* The !vanish haze spreads a little wider to match the bigger note. */
+body.livechat .qflash--love { box-shadow: 0 0 26px 4px color-mix(in srgb, var(--c) 45%, transparent), 0 0 64px 16px color-mix(in srgb, var(--c) 24%, transparent); }
+body.livechat .qflash--love::before { inset: -30px -40px; }
+body.livechat .qflash__from { margin-right: 6px; font-size: 14px; color: var(--amber); }
+body.livechat .qflash--info .qflash__who, body.livechat .qflash--love .qflash__who { margin-left: 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: color-mix(in srgb, var(--c) 70%, var(--muted)); white-space: nowrap; }

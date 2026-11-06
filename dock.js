@@ -702,6 +702,11 @@
     } else if (f.kind === "seen") {
       body.title = `Seen by ${f.from}: ${f.text}`;
       body.append(el("b", null, `Seen by ${f.from}`), el("span", "qflash__who", ` ${f.text}`));
+    } else if (LIVECHAT) {
+      // The chat dock shows these as big as a question: who first, in their colour.
+      const who = el("b", "qflash__from", f.from);
+      if (colorOf(f.from)) who.style.color = colorOf(f.from);
+      body.append(who, " ", document.createTextNode(f.text), el("span", "qflash__who", f.kind === "love" ? "  !vanish" : "  quick info"));
     } else {
       body.append(document.createTextNode(f.text), el("span", "qflash__who", ` ${f.from}`));
     }
@@ -1790,6 +1795,9 @@
   // and which (click one to show it). Something new jumps straight in. It holds still
   // while the pointer is over it or you're typing a reply. "See all" opens the full list.
   const PEEK_TURN_MS = 6000;
+  let peekMenu = false; // the short list of everything waiting, dropped down from "2 of 5 ▾"
+  let peekMenuAt = 0;
+  const PEEK_MENU_IDLE_MS = 8000; // left open and not pointed at: it closes, the turns carry on
   let peekId = "";
   let peekSince = 0;
   const peekKnown = new Set();
@@ -1800,7 +1808,14 @@
     peekHover = false;
     peekSince = Math.max(peekSince, Date.now() - PEEK_TURN_MS + 2000); // a moment before it moves on
   });
-  const peekHeld = () => peekHover || peekEl.matches(":hover") || peekEl.contains(document.activeElement) || !!drafts[peekId];
+  const peekHeld = () => peekMenu || peekHover || peekEl.matches(":hover") || peekEl.contains(document.activeElement) || !!drafts[peekId];
+  // Clicking anywhere else closes the short list (and the turns carry on).
+  document.addEventListener("click", (e) => {
+    if (peekMenu && !peekEl.contains(e.target)) {
+      peekMenu = false;
+      drawPeek();
+    }
+  });
 
   function peekItems() {
     // The most urgent first, so the first one shown is the one causing the glow.
@@ -1813,6 +1828,12 @@
   // Every second: time for the next one?
   setInterval(() => {
     if (!me || !peekId) return;
+    if (peekMenu && !peekHover && Date.now() - peekMenuAt > PEEK_MENU_IDLE_MS) {
+      peekMenu = false;
+      peekSince = Date.now();
+      drawPeek();
+    }
+    if (peekMenu && peekHover) peekMenuAt = Date.now();
     const { items } = peekItems();
     if (items.length < 2 || Date.now() - peekSince < PEEK_TURN_MS || peekHeld()) return;
     const at = items.findIndex((it) => it.id === peekId);
@@ -1911,32 +1932,53 @@
     }
     if (signinNote()) parts.unshift(signinPill());
     if (items.length > 1) {
-      // Which one this is, of how many: a dot each (click to show it), then See all.
+      // Which one this is, of how many: one small chip ("2 of 5 ▾") that drops down a
+      // short list, a line each (who and what, in its colour); picking one shows it. The
+      // turns carry on whenever the list isn't open.
+      const at = items.findIndex((it) => it.id === peekId);
       const pager = el("div", "peek__pager");
-      items.forEach((it, k) => {
-        const dot = el("button", `peek__dot${it.id === peekId ? " peek__dot--on" : ""}`);
-        dot.type = "button";
-        dot.title = `${k + 1} of ${items.length}`;
-        dot.setAttribute("aria-label", dot.title);
-        if (it.kind === "q" && stageOf(it.id)) dot.classList.add(`peek__dot--${stageOf(it.id)}`);
-        dot.addEventListener("click", () => {
-          peekId = it.id;
-          peekSince = Date.now();
-          drawPeek();
-        });
-        pager.append(dot);
+      const chip = el("button", `peek__count${peekMenu ? " peek__count--open" : ""}`);
+      chip.type = "button";
+      chip.title = peekMenu ? "Close the list" : `${items.length} waiting: see them all`;
+      chip.setAttribute("aria-expanded", String(peekMenu));
+      chip.append(el("span", null, `${at + 1} of ${items.length}`), el("span", "peek__caret", "▾"));
+      chip.addEventListener("click", (e) => {
+        e.stopPropagation();
+        peekMenu = !peekMenu;
+        peekMenuAt = Date.now();
+        drawPeek();
       });
-      const all = el("button", "pill pill--more", "See all");
-      all.type = "button";
-      all.title = `See all ${items.length}`;
-      all.addEventListener("click", () => {
-        view = "cards";
-        showAll = true;
-        if (short()) popOut();
-        render();
-      });
-      pager.append(all);
+      pager.append(chip);
       parts.push(pager);
+      if (peekMenu) {
+        const menu = el("div", "peek__menu");
+        menu.setAttribute("role", "menu");
+        for (const it of items) {
+          const row = el("button", `peek__item${it.id === peekId ? " peek__item--on" : ""}`);
+          row.type = "button";
+          row.setAttribute("role", "menuitem");
+          const stage = it.kind === "q" ? stageOf(it.id) || 1 : 0;
+          const q = it.kind === "q" ? inbox[it.id] : sent[it.id];
+          row.append(el("span", `peek__ping ${it.kind === "q" ? `peek__ping--${stage}` : "peek__ping--answer"}`));
+          const who = el("b", null, it.kind === "q" ? q.name : `${q.to} answered`);
+          if (colorOf(it.kind === "q" ? q.from : q.to)) who.style.color = colorOf(it.kind === "q" ? q.from : q.to);
+          const what = el("span", "peek__itemtext");
+          what.append(who, " ", it.kind === "q" ? q.text : `${said(q.answer)} · ${q.text}`);
+          row.append(what);
+          row.title = it.kind === "q" ? q.text : `${said(q.answer)}: ${q.text}`;
+          row.addEventListener("click", (e) => {
+            e.stopPropagation();
+            peekId = it.id;
+            peekSince = Date.now();
+            peekMenu = false;
+            drawPeek();
+          });
+          menu.append(row);
+        }
+        parts.push(menu);
+      }
+    } else {
+      peekMenu = false;
     }
     peekEl.replaceChildren(...parts);
   }
