@@ -3012,3 +3012,8 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-notice--raid { --raid: #ff6a00; background: linear-gradient(90deg, color-mix(in srgb, var(--raid) 26%, transparent), color-mix(in srgb, var(--raid) 8%, transparent)); box-shadow: inset 3px 0 0 var(--raid); }
 .oc-notice--raid .oc-raid__pic { border-color: var(--raid); }
 .oc-notice--raid .oc-raid__title { color: color-mix(in srgb, var(--raid) 70%, #fff); }
+/* Raiders in the raiding streamer's name colour (orange if they have none) */
+.oc-line--raider { --raid: #ff6a00; --raid-ink: #fff; background: color-mix(in srgb, var(--raid) 5%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--raid) 60%, transparent); }
+.oc-line--raider.oc-line--first { background: linear-gradient(90deg, color-mix(in srgb, var(--raid) 7%, transparent), rgba(0, 219, 132, 0.04)); }
+.oc-line--raider .oc-raidtag { color: var(--raid-ink); background: var(--raid); }
+.oc-line--raider .oc-raidtag__pic { border-color: var(--raid-ink); }

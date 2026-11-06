@@ -568,6 +568,12 @@
       const raid = !line.dataset.staff && m.login !== me.login && raidOf(m.login, m.history);
       if (raid) {
         line.classList.add("oc-line--raider");
+        if (raid.color) {
+          // In the raiding streamer's name colour, with words that stay readable on it.
+          line.style.setProperty("--raid", raid.color);
+          const [r, g, b] = [1, 3, 5].map((i) => parseInt(raid.color.slice(i, i + 2), 16));
+          line.style.setProperty("--raid-ink", 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#18181b" : "#fff");
+        }
         const tag = el("span", "oc-raidtag", "raid");
         tag.title = `Probably came in with ${raid.from}'s raid (they hadn't been in the chat before it)`;
         if (raid.pic) {
@@ -666,8 +672,8 @@
       } catch {}
     })();
 
-    function gotRaid(from, pic) {
-      raids.push({ at: Date.now(), from, pic, present: new Set(presentNow) });
+    function gotRaid(from, pic, color) {
+      raids.push({ at: Date.now(), from, pic, color, present: new Set(presentNow) });
       if (raids.length > 20) raids.shift();
     }
 
@@ -686,7 +692,7 @@
         const raidColor = safeColor(e.color);
         if (raidColor) line.style.setProperty("--raid", raidColor);
         const raidPic = r.profile_image_url ? r.profile_image_url.replace("%{width}", "70").replace("%{height}", "70") : "";
-        if (!fromChannel) gotRaid(r.user_name || r.user_login, raidPic);
+        if (!fromChannel) gotRaid(r.user_name || r.user_login, raidPic, raidColor);
         const head = el("div", "oc-raid");
         if (r.profile_image_url) {
           const pic = el("img", "oc-raid__pic");
