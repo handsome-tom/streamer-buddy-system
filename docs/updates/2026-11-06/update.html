@@ -28,6 +28,10 @@
   .board { page-break-before: always; }
   .board img { display: block; width: 100%; margin-top: 8px; border-radius: 6px; }
   .note { color: #5b5b66; font-size: 9.5pt; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  .pair figure { margin: 0; }
+  .pair img { margin-top: 0; }
+  .pair figcaption { margin-top: 5px; color: #5b5b66; font-size: 9pt; }
 </style>
 </head>
 <body>
@@ -36,9 +40,9 @@
 
   <div class="summary">
     <ul>
-      <li><b>The streamer's OBS dock got calmer and quicker to use:</b> no pop-out windows, one message area that takes turns, and one-tap answers (♥ ✓ ✗).</li>
-      <li><b>Mods can see what the streamer sees</b> (Streamer View) and <b>nudge</b> a question instead of it escalating by itself.</li>
-      <li><b>Mods can send the streamer a warning</b> when something needs her right now, and <b>the glow rests</b> instead of staying on.</li>
+      <li><b>Get it:</b> mods install <b>Twitch Space 2.5.0</b> (the handshake side panel is back in it): <a href="https://github.com/handsome-tom/MytwitchTom-Tester/releases/latest">github.com/handsome-tom/MytwitchTom-Tester/releases/latest</a>. The streamer only needs the OBS dock; no extension.</li>
+      <li><b>The streamer's OBS dock got calmer and quicker to use:</b> no pop-out windows, one message area that takes turns, one-tap answers (♥ ✓ ✗), a glow that rests, and notes as big as questions.</li>
+      <li><b>Mods can see what the streamer sees</b> (Streamer View), <b>nudge</b> a question instead of it escalating by itself, and <b>send her a warning</b> when something needs her right now.</li>
     </ul>
   </div>
 
@@ -46,26 +50,37 @@
 
   <h3>For the streamer (OBS chat dock)</h3>
   <ul>
-    <li><b>Message area.</b> The place to look, just under the bar, a little larger than everything else and glowing softly in the colour of what it shows. With more than one message it takes turns every 6 seconds; it holds still while her mouse is over it or she's typing a reply. Something new jumps straight in. "See all" opens the full list.</li>
+    <li><b>Message area.</b> The place to look, just under the bar, a little larger than everything else, in a soft glow coloured by what it shows. With more than one message they take turns every 6 seconds, holding still while her mouse is over it or she's typing a reply; something new jumps straight in. A small <b>"2 of 5 ▾"</b> chip drops down a short one-line list of everything waiting; picking one shows it, and the list closes itself after 8 idle seconds so the turns carry on.</li>
     <li><b>One-tap answers: ♥ ✓ ✗</b>, heart on the left, on any question, or a typed reply.</li>
     <li><b>No pop-out windows.</b> The full list, Connections, chat and stats open just under the bar with a Close button.</li>
+    <li><b>Quick info and !vanish notes as big as questions:</b> full width, sender first, larger text, a soft blue glow for quick info (2 minutes) and pink for !vanish (30 seconds). A !vanish note blooms into a pink haze that spills into the background, then breathes gently until it fades.</li>
     <li><b>Pictures show who's in chat.</b> A ring for how recently each mod chatted (green within 5 minutes, then orange, yellow and white), just the picture lit up when they're quiet, and gray once they've left.</li>
     <li><b>Settings gear:</b> sound on or off, volume, reminder beeps, edge glow, the quick-questions row, custom or Twitch chat, chat text size, and whether to share Streamer View.</li>
-    <li><b>Calmer sound and glow.</b> One clear beep when something arrives; one softer beep per nudge. A thin, faint edge instead of a thick flashing one.</li>
     <li><b>Starts with the right person.</b> Sending starts with the last person she talked to, never a group.</li>
   </ul>
 
-  <h3>For mods (Chrome side panel)</h3>
+  <h3>For the streamer: custom chat (optional)</h3>
+  <ul>
+    <li><b>Message tools as icons.</b> Hovering a message shows a small floating pill: <b>bookmark</b>, <b>reply</b>, and <b>delete</b> (only where she's allowed; it's a real delete on Twitch, for everyone).</li>
+    <li><b>Bookmarks for later.</b> A bookmarked message gets a soft amber outline and icon; the bookmark counter in the chat bar jumps back to them, newest first.</li>
+    <li><b>"Where I was" line.</b> One click on a message draws an orange line under it across the whole chat; clicking another moves it, clicking the same one removes it.</li>
+    <li><b>Flagged lines glow.</b> A line a mod flags glows in her chat in the flagger's colour, and its pinned copy sits at the top of her chat for 10 seconds instead of 5 minutes.</li>
+  </ul>
+
+  <h3>For mods (Twitch Space side panel)</h3>
   <ul>
     <li><b>Streamer View.</b> The top of the panel shows what the streamer's dock shows right now: its glow colour, everything waiting for her, unseen answers, and notes in her bar. It follows the channel you're watching.</li>
-    <li><b>Nudge instead of a timer.</b> Every question arrives green. If it isn't answered, the person who asked taps Nudge: orange, then yellow, then white (up to three, 15 seconds apart).</li>
-    <li><b>Simpler Ask box.</b> One typing bar, with Ask, Quick info or !vanish picked at its left. It starts with the streamer you're watching.</li>
+    <li><b>Simple Ask box.</b> One typing bar, with Ask, Quick info or !vanish picked at its left. It starts with the streamer you're watching. No answer-button editor or quick questions: every question offers her ♥ ✓ ✗.</li>
+    <li><b>Slim lists, newest first.</b> Messages and questions to you come first, one line each, with small ♥ ✓ ✗ or Seen buttons, a reply box only when you open it, and × to dismiss; clicking a message line marks it seen. Answers to your questions are one line each; hovering turns a line into a glowing pill, and clicking marks it seen.</li>
     <li><b>Status menu.</b> Online, Idle or Offline, picked from a small menu.</li>
+    <li><b>Flag a chat line</b> from Twitch's chat for the streamer to see.</li>
   </ul>
 
   <h3>Nudges, warnings and the glow</h3>
+  <h3 style="font-size:10.5pt;margin-top:8px">Nudge instead of a timer</h3>
+  <p>Every question arrives green. Nothing climbs by itself: if it isn't answered, the person who asked taps <b>Nudge</b> (on their question or in Streamer View) and it moves up a colour on her screen, up to three times, 15 seconds apart.</p>
   <h3 style="font-size:10.5pt;margin-top:8px">Sending the streamer a warning</h3>
-  <p>For when something needs her attention right now: trouble in chat, a safety issue, anything that can't wait. A mod taps Nudge six times quickly (while it's waiting, or after the third nudge) and the question turns <b>red</b> on her screen with a louder double beep, even if she's turned reminder beeps off. It's a mod looking out for the streamer, not a mark against her. At most one every 30 seconds per question, so it can't be spammed.</p>
+  <p>For when something needs her attention right now: trouble in chat, a safety issue, anything that can't wait. A mod taps Nudge six times quickly (while it's waiting, or after the third nudge); the button counts down ("Send warning: 3 more") and then says "Warning sent". The question turns <b>red</b> on her screen with a louder double beep, even if she's turned reminder beeps off. It's a mod looking out for the streamer, not a mark against her. At most one every 30 seconds per question, so it can't be spammed.</p>
   <h3 style="font-size:10.5pt;margin-top:8px">A glow that rests</h3>
   <p>The glow no longer stays on. It shows for about 2 seconds, fades down to 2%, and only comes back if the question is still unanswered: after 15 seconds, then every 10 seconds, resting at 5% in between. The words stay fully readable the whole time.</p>
   <table>
@@ -77,10 +92,16 @@
     <tr><td>Warning to her (six quick taps)</td><td><span class="sw" style="background:#ff3b30"></span>Red</td><td>Louder double beep</td></tr>
   </table>
 
+  <h3>Twitch Space 2.5.0</h3>
+  <ul>
+    <li>The handshake button and side panel are back in the public Twitch Space download, so any mod can use everything above. Update by replacing the files in your existing Twitch Space folder and clicking reload on its card; Chrome may ask to allow the side panel.</li>
+    <li>Release and download: <a href="https://github.com/handsome-tom/MytwitchTom-Tester/releases/latest">github.com/handsome-tom/MytwitchTom-Tester/releases/latest</a> (TwitchSpace-2.5.0.zip, with the feature guide as a PDF).</li>
+  </ul>
+
   <h3>Behind the scenes</h3>
   <ul>
-    <li><b>Two-machine simulator</b> for testing on one computer: a mod's panel and the streamer's dock side by side as pretend users, a fake chat with made-up chatters in their own colours, and buttons for asking, nudging, warning, and mods joining, chatting and leaving.</li>
-    <li>Updates reach an open OBS dock by themselves within about a minute.</li>
+    <li><b>Two-machine simulator</b> for testing on one computer: a mod's panel and the streamer's dock side by side as pretend users, a fake chat with made-up chatters in their own colours, and buttons for asking, nudging, warning, auto-play, and mods joining, chatting and leaving.</li>
+    <li>Updates reach an open OBS dock and side panel by themselves within about a minute.</li>
   </ul>
 
   <h2>Coming next <span class="pill next">ideas to decide on</span></h2>
@@ -88,13 +109,17 @@
     <li><b>Live test with a real streamer</b>, she in OBS and a mod in Chrome, to check the timing and sounds on a real stream.</li>
     <li><b>Who sees Streamer View.</b> Today every mutual connection sees everything waiting for her, including other people's questions. It could be limited to her Mods tag.</li>
     <li><b>The streamer's quick-questions row</b> ("Clip that!"). It can be hidden in Settings; it could be removed like the mod's.</li>
-    <li><b>Twitch Space extension update</b> so the side panel follows the channel you're watching for everyone (it's ready; it needs publishing).</li>
+    <li><b>Keeping bookmarks</b> in custom chat after the dock reloads (today they last until a reload).</li>
   </ul>
 
   <div class="board">
     <h2>What it looks like</h2>
     <p class="note">From the test simulator. The first six are the streamer's OBS dock; the seventh is the mod's side panel at the same moment, after sending the warning.</p>
     <img src="glow-states.png" alt="Screenshots of each glow state">
+    <div class="pair">
+      <figure><img src="shots/8-mod-panel-lists.jpg" alt="The mod's side panel with the slim lists"><figcaption>The mod's side panel now: Streamer View with Nudge, the Ask bar, and slim newest-first lines with small buttons.</figcaption></figure>
+      <figure><img src="shots/9-streamer-notes.jpg" alt="Quick info and !vanish notes on the streamer's dock"><figcaption>Quick info (blue) and a !vanish note (pink haze), as big as a question on the streamer's dock.</figcaption></figure>
+    </div>
   </div>
 </body>
 </html>
