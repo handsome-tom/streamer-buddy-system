@@ -117,9 +117,9 @@
   // A question's answer buttons, in the asker's order: { code, label }. The
   // asker's own options are code "x" with their label.
   const optionsOf = (q) => (q.options || STANDARD).map((o) => (o.startsWith("+") ? { code: "x", label: o.slice(1) } : { code: o, label: ANSWERS[o].label }));
-  // The streamer's answers, whatever the asker offered: heart, check and X, heart on the
-  // left. Anything else is a typed reply. The relay always accepts these three.
-  const STREAMER_ANSWERS = ["t", "y", "n"];
+  // The streamer's answers, whatever the asker offered: heart, check, X and ? (maybe),
+  // heart on the left. Anything else is a typed reply. The relay always accepts these.
+  const STREAMER_ANSWERS = ["t", "y", "n", "m"];
   const answerChoices = (q) => (STREAMER ? STREAMER_ANSWERS.map((code) => ({ code, label: ANSWERS[code].label })) : optionsOf(q));
   // What an answer says: a typed reply or own option's words, else its label.
   const said = (a) => (a.code === "c" || a.code === "x" ? a.text : ANSWERS[a.code].label);
@@ -140,6 +140,9 @@
   const askFull = document.getElementById("askFull");
   const statsBtn = document.getElementById("statsBtn");
   const chatBtn = document.getElementById("chatBtn");
+  const homeChatBtn = document.getElementById("homeChatBtn");
+  const dndBtn = document.getElementById("dndBtn");
+  const dndLabel = document.getElementById("dndLabel");
   const chatCount = document.getElementById("chatCount");
 
   let me = null; // { login, id }
@@ -190,6 +193,16 @@
   const ui = get("ui", {});
   const ids = get("ids", {});
   const pics = get("pics", {});
+  // Testing on localhost: the pretend users get pictures from dev/memes (kept out of git,
+  // so only where someone's put them), so a ring glowing round a picture is easy to tell
+  // from one that isn't. Never saved.
+  if (DEV) {
+    for (const who of ["streamer", "streamer2", "mod1", "mod2"]) {
+      if (pics[who]) continue;
+      const url = `/dev/memes/${who}.png`;
+      fetch(url, { method: "HEAD" }).then((r) => r.ok && ((pics[who] = url), me && render())).catch(() => {});
+    }
+  }
   const colors = get("colors", {});
 
   function setUi(id, change) {
@@ -211,12 +224,12 @@
       if (q.to === me?.login) {
         inbox[q.id] = {
           from: q.from, name: q.from, text: q.text, at: q.at, options: q.options, note: q.note, group: q.group, toTag: q.toTag, nudges: q.nudges || 0, warns: q.warns || 0,
-          done: !!(q.answer || q.dismissed || (q.note && q.seenAt)), answered: q.answer, seenAt: q.seenAt,
+          done: !!(q.answer || q.dismissed || q.withdrawn || (q.note && q.seenAt)), answered: q.answer, seenAt: q.seenAt, withdrawn: q.withdrawn,
           sending: !!pending[q.id], cleared: !!u.cleared, gone: !!u.gone,
         };
       } else if (q.from === me?.login) {
         sent[q.id] = {
-          to: q.to, text: q.text, at: q.at, note: q.note, seenAt: q.seenAt, group: q.group, toTag: q.toTag, nudges: q.nudges || 0, nudgedAt: q.nudgedAt || 0, warns: q.warns || 0, warnedAt: q.warnedAt || 0, seen: !!u.waitClosed || !!q.dismissed, gone: !!u.gone,
+          to: q.to, text: q.text, at: q.at, note: q.note, seenAt: q.seenAt, group: q.group, toTag: q.toTag, nudges: q.nudges || 0, nudgedAt: q.nudgedAt || 0, warns: q.warns || 0, warnedAt: q.warnedAt || 0, seen: !!u.waitClosed || !!q.dismissed || !!q.withdrawn, withdrawn: q.withdrawn, gone: !!u.gone,
           answer: q.answer && { ...q.answer, acked: q.seenAt ? true : pending[q.id] ? "sending" : false, seen: !!u.closed },
         };
       }
@@ -540,7 +553,7 @@
       else if (m.t === "q") gotQuestion(m.q);
       else if (m.t === "msg") gotMessage(m.m);
       else if (m.t === "flash") gotFlash(m.f);
-      else if (m.t === "unflash") pinLeaving.get(m.id)?.();
+      else if (m.t === "unflash") (pinLeaving.get(m.id) || flashLeaving.get(m.id))?.();
       else if (m.t === "flashed") gotFlashed(m);
       else if (m.t === "view") gotView(m.owner, m.v);
       else if (m.t === "stats") {
@@ -657,6 +670,7 @@
   };
   const seenFlashes = new Set();
   const pinLeaving = new Map(); // pinned line's id -> takes it away
+  const flashLeaving = new Map(); // a quick note's or !vanish's id -> takes it away (its sender took it back)
 
   function gotPins(pins) {
     const still = new Set(pins.map((f) => f.id));
@@ -718,6 +732,7 @@
       if (chip.classList.contains("qflash--leaving")) return;
       chip.classList.add("qflash--leaving");
       pinLeaving.delete(f.id);
+      flashLeaving.delete(f.id);
       if (onScreen.delete(f.id)) shareView();
       setTimeout(() => chip.remove(), FUZZ_MS);
     };
@@ -728,6 +743,7 @@
     };
     chip.append(icon, body, closeButton(clear, pinned ? "Clear this for everyone" : "Clear this"));
     if (pinned) pinLeaving.set(f.id, leave);
+    else flashLeaving.set(f.id, leave);
     (pinned && (LIVECHAT || !short()) ? pinsEl : flashesEl).append(chip);
     setTimeout(leave, Math.max(0, flashMs(f.kind) - FUZZ_MS - Math.max(0, late)));
   }
@@ -811,6 +827,7 @@
 
   // Something arrived: the edge glows, and the chime plays if it's on.
   function arrived() {
+    if (dndOn()) return; // Do Not Disturb: it waits, quietly
     document.body.classList.remove("flash");
     void document.body.offsetWidth;
     document.body.classList.add("flash");
@@ -846,13 +863,13 @@
   const vol = () => VOLUME[get("volume", "normal")] || 1;
   // Two soft notes.
   function chime() {
-    if (!POPOUT && soundOn()) tones([659, 880], 0.14, 0.18 * vol(), 0.35);
+    if (!POPOUT && soundOn() && !dndOn()) tones([659, 880], 0.14, 0.18 * vol(), 0.35);
   }
   // Something new: one clear note. A reminder (it moved up a colour): one softer note,
   // unless reminders are switched off in Settings.
   // A warning: two quick, higher notes, a little louder (even with reminders off).
   function ping(stage) {
-    if (!soundOn()) return;
+    if (!soundOn() || dndOn()) return;
     if (stage === PING_WARN) return tones([1319, 1319], 0.16, 0.26 * vol(), 0.14);
     if (stage > 1 && !get("reminderBeeps", true)) return;
     tones([988], 0, (stage > 1 ? 0.13 : 0.22) * vol(), 0.22);
@@ -974,7 +991,7 @@
       .slice(0, MAX_VIEW_ITEMS)
       .map((id) => ({ id, to: sent[id].to, text: sent[id].text, said: said(sent[id].answer), code: sent[id].answer.code, at: sent[id].answer.at }));
     const notes = [...onScreen.values()].slice(-MAX_VIEW_ITEMS);
-    return { glow: glowNow, waiting, answers, notes, chat: LIVECHAT ? "livechat" : "dock" };
+    return { glow: dndOn() ? 0 : glowNow, waiting, answers, notes, chat: LIVECHAT ? "livechat" : "dock", dnd: dndOn() ? get("dndUntil", 0) : 0 };
   }
 
   // The streamer's side: send it when it changes (gathered for a moment, as a burst of
@@ -1005,6 +1022,119 @@
     return sharing[0] || "";
   }
 
+  // The X on your own things in Streamer View: takes it off their dock. It's gone from the
+  // list as soon as their dock says so (a moment later).
+  function takeBack(send, what) {
+    const x = closeButton((e) => {
+      e.stopPropagation();
+      x.disabled = true;
+      x.closest(".sv__row")?.classList.add("sv__row--going");
+      send();
+    }, `Take back your ${what} (removes it from their dock)`);
+    x.classList.add("sv__x");
+    return x;
+  }
+
+  // The chat page fills exactly the room left below whatever's above it (the bar, Streamer
+  // View, the chat dock's own top), so its box to type in always sits at the bottom with
+  // no scrolling; the history above takes what's left, newest at the bottom.
+  function fitChat() {
+    const panel = view === "chat" && main.querySelector(".panel.chat");
+    if (!panel) return;
+    const log = panel.querySelector(".chat__log");
+    const atEnd = !log || log.scrollHeight - log.scrollTop - log.clientHeight < 40 || !log.dataset.fitted;
+    let bottom = window.innerHeight; // the side panel: the page is the screen
+    let top = panel.getBoundingClientRect().top + window.scrollY;
+    if (LIVECHAT) {
+      // The chat dock: what opens under the bar is capped (max-height), over Twitch chat.
+      const box = main.getBoundingClientRect();
+      bottom = box.top + (parseFloat(getComputedStyle(main).maxHeight) || window.innerHeight);
+      top = panel.getBoundingClientRect().top + main.scrollTop;
+    }
+    const pad = parseFloat(getComputedStyle(main).paddingBottom) || 0;
+    panel.style.height = `${Math.max(180, Math.floor(bottom - top - pad - 2))}px`;
+    if (log) {
+      log.dataset.fitted = "1";
+      if (atEnd) log.scrollTo(0, 1e9);
+    }
+  }
+  window.addEventListener("resize", fitChat);
+
+  // ===== Do Not Disturb (the streamer's OBS docks) =========================================
+  // Clicking the hand offers a choice: for 15 minutes, or until it's clicked off. Meanwhile
+  // no sounds, no glowing edge and no message card; things still arrive and wait, and show
+  // once it's over. Clicking it while it's on ends it. Connections see it in Streamer View.
+  // Kept on this device ("dndUntil": a time, or -1 for until turned off), so every dock on
+  // it agrees.
+  const DND_MS = 15 * 60 * 1000;
+  const DND_FOREVER = -1;
+  const dndOn = () => {
+    const until = get("dndUntil", 0);
+    return until === DND_FOREVER || until > Date.now();
+  };
+  const dndMenu = document.getElementById("dndMenu");
+  function setDnd(until) {
+    put("dndUntil", until);
+    openDndMenu(false);
+    drawDnd();
+    pingCheck();
+    render();
+  }
+  function openDndMenu(open) {
+    dndMenu.hidden = !open;
+    dndBtn.setAttribute("aria-expanded", String(open));
+    if (!open) return;
+    const pick = (label, sub, until) => {
+      const b = el("button", "dnd-menu__item");
+      b.type = "button";
+      b.setAttribute("role", "menuitem");
+      b.append(el("b", null, label), el("span", null, sub));
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setDnd(until());
+      });
+      return b;
+    };
+    dndMenu.replaceChildren(
+      el("div", "dnd-menu__head", "Do Not Disturb"),
+      pick("For 15 minutes", "Then everything comes back by itself", () => Date.now() + DND_MS),
+      pick("Until I turn it off", "Click the hand again to end it", () => DND_FOREVER),
+    );
+    // Right under the hand (over the message box below it if need be), its right edge
+    // lined up with the hand's, kept on screen.
+    const bar = dndMenu.offsetParent || document.body;
+    const at = dndBtn.getBoundingClientRect();
+    const box = bar.getBoundingClientRect();
+    const width = dndMenu.offsetWidth;
+    dndMenu.style.top = `${at.bottom - box.top + 4}px`;
+    dndMenu.style.right = "auto";
+    dndMenu.style.left = `${Math.max(4, Math.min(at.right - box.left - width, box.width - width - 4))}px`;
+  }
+  document.addEventListener("click", (e) => !dndMenu.hidden && !dndMenu.contains(e.target) && openDndMenu(false));
+  document.addEventListener("keydown", (e) => e.key === "Escape" && !dndMenu.hidden && openDndMenu(false));
+  function drawDnd() {
+    const on = dndOn();
+    const until = get("dndUntil", 0);
+    dndBtn.hidden = !PINGS_HERE || !me;
+    document.body.classList.toggle("dnd", on);
+    dndBtn.classList.toggle("pill--on", on);
+    dndBtn.classList.toggle("dnd-btn--on", on);
+    dndBtn.setAttribute("aria-pressed", String(on));
+    const left = on && until !== DND_FOREVER ? Math.ceil((until - Date.now()) / 60000) : 0;
+    dndLabel.textContent = !on ? "" : left ? `${left}m` : "On";
+    dndBtn.title = !on ? "Do Not Disturb" : left ? `Do Not Disturb: ${left} min left. Click to turn it off now` : "Do Not Disturb until you turn it off. Click to turn it off now";
+  }
+  let dndWas = false;
+  setInterval(() => {
+    if (!me) return;
+    const on = dndOn();
+    if (on !== dndWas) {
+      dndWas = on;
+      render(); // it ended by itself (or another dock changed it): show what waited
+    } else drawDnd();
+  }, 1000);
+  window.addEventListener("storage", (e) => e.key?.endsWith("dndUntil") && render());
+
   const svEl = document.getElementById("streamerView");
   function drawStreamerView() {
     if (!svEl) return;
@@ -1023,7 +1153,9 @@
     toggle.setAttribute("aria-expanded", String(open));
     toggle.append(el("span", "sv__title", "Streamer View"));
     const count = v.waiting.length;
-    const says = v.glow ? `Glowing ${PING_NAMES[v.glow].toLowerCase()}` : count ? `${count} waiting` : "Nothing waiting";
+    const dndLeft = v.dnd > Date.now() ? Math.ceil((v.dnd - Date.now()) / 60000) : 0;
+    const dnd = v.dnd === -1 ? "Do Not Disturb" : dndLeft ? `Do Not Disturb · ${dndLeft} min` : "";
+    const says = dnd ? `${dnd}${count ? ` · ${count} waiting` : ""}` : v.glow ? `Glowing ${PING_NAMES[v.glow].toLowerCase()}` : count ? `${count} waiting` : "Nothing waiting";
     if (v.glow) toggle.append(el("span", `peek__ping peek__ping--${v.glow}`));
     toggle.append(el("span", "sv__says", says));
     toggle.addEventListener("click", () => {
@@ -1047,7 +1179,10 @@
       if (colorOf(owner)) name.style.color = colorOf(owner);
       head.append(name);
     }
-    if (!open) return svEl.replaceChildren(head);
+    if (!open) {
+      svEl.replaceChildren(head);
+      return fitChat();
+    }
 
     const body = el("div", "sv__body");
     const who = (login) => {
@@ -1063,8 +1198,9 @@
       text.append(who(q.from), document.createTextNode(` ${q.note ? "says" : "asks"}: `), el("span", null, q.text));
       if (q.from === me.login) text.append(el("span", "sv__tag", "yours"));
       row.append(text, el("span", "sv__ago", ago(q.at)));
-      // Your own unanswered question: nudge it from here too.
+      // Your own unanswered question: nudge it from here too, or take it back.
       if (q.from === me.login && sent[q.id] && !q.note) row.append(nudgeButton([q.id]));
+      if (q.from === me.login && sent[q.id]) row.append(takeBack(() => relay({ t: "withdraw", id: q.id }), q.note ? "message" : "question"));
       body.append(row);
     }
     for (const a of v.answers) {
@@ -1092,10 +1228,13 @@
         text.append(document.createTextNode(f.text), el("span", "sv__muted", ` · ${f.from}${f.kind === "love" ? " (!vanish)" : ""}`));
       }
       row.append(icon, text);
+      // Yours: take it off their bar (a flagged line comes off for everyone who has it).
+      if (f.from === me.login && f.kind !== "seen") row.append(takeBack(() => relay({ t: "unflash", id: f.id }), f.kind === "chat" ? "flagged line" : f.kind === "love" ? "!vanish" : "note"));
       body.append(row);
     }
     if (!body.childElementCount) body.append(el("p", "sv__empty", "Their dock is clear: nothing waiting."));
     svEl.replaceChildren(head, body);
+    fitChat(); // it's above the chat page, so the chat's room changes with it
   }
   // Ages ("2 min ago") move on even when nothing new arrives.
   if (EMBED) setInterval(() => !svEl?.hidden && drawStreamerView(), 30000);
@@ -1298,8 +1437,10 @@
     }
     if (next !== "cards" && short() && popOut(next, to)) return;
     showAll = false;
+    const was = view;
     view = view === next && next !== "person" ? HOME_VIEW : next;
     render();
+    if (view !== was || next === "chat") main.scrollTop = 0; // a new page starts at its top
   }
 
   // ===== Drawing ===========================================================================
@@ -1312,31 +1453,34 @@
     const typingIn = document.activeElement?.dataset?.key;
     main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : view === "deck" ? deckPanel() : cardList());
     if (LIVECHAT && (view !== "cards" || showAll) && main.firstElementChild?.childElementCount !== 0) main.prepend(inlineHead());
-    if (view === "chat") main.querySelector(".chat__log")?.scrollTo(0, 1e9);
     drawDots();
     drawPeek();
     drawStreamerView();
+    fitChat();
     shareView();
     settingsBtn.hidden = !PINGS_HERE || !me;
+    homeChatBtn.hidden = !LIVECHAT || !me;
+    drawDnd();
     if (typingIn) {
       const again = document.querySelector(`[data-key="${typingIn}"]`);
       again?.focus();
       again?.setSelectionRange?.(again.value.length, again.value.length);
     }
     askBtn.classList.toggle("pill--on", DECK ? view === "deck" : view === "ask" || (view === "cards" && !short() && get("askOpen", true)));
-    peopleBtn.classList.toggle("pill--on", view === "people");
     peopleBtn.classList.toggle("pill--badge", requests.length > 0);
-    peopleBtn.title = requests.length ? `Connections (${requests.length} waiting for you to add them back)` : "Connections";
+    const unreadChat = rooms.reduce((sum, r) => sum + unread(r.owner), 0);
+    peopleBtn.title = [requests.length ? `${requests.length} waiting for you to add them back` : "", unreadChat ? `${unreadChat} unread in chat` : ""].filter(Boolean).join(", ");
+    peopleBtn.title = peopleBtn.title ? `Connections and chat (${peopleBtn.title})` : "Connections and chat";
+    peopleBtn.classList.toggle("pill--on", view === "people" || view === "chat");
     askBtn.textContent = DECK ? "Deck" : view === "ask" ? "Cancel" : "Ask";
     drawQuickAsk();
     drawPresence();
     statsBtn.hidden = STREAMER || (!connections.length && !statsOn);
     statsBtn.classList.toggle("pill--on", view === "stats");
-    // The chat button: shown once you're in a room or have tags to open one with.
-    chatBtn.hidden = !(rooms.length || Object.keys(tags).length);
-    chatBtn.classList.toggle("pill--on", view === "chat");
-    const n = rooms.reduce((sum, r) => sum + unread(r.owner), 0);
-    chatCount.textContent = n ? String(n) : "";
+    // Chat lives in Connections now (a Chat button by each person, rooms at the top), so
+    // its own button stays hidden; what's unread shows as a count on Connections.
+    chatBtn.hidden = true;
+    chatCount.textContent = unreadChat ? String(unreadChat) : "";
     if (POPOUT) closeWhenDone();
   }
 
@@ -1543,6 +1687,15 @@
     const waiting = Object.keys(sent).filter((id) => !sent[id].answer && !sent[id].seen).sort((a, b) => sent[b].at - sent[a].at);
     const open = Object.keys(inbox).filter((id) => !inbox[id].done).sort((a, b) => stageFor(inbox[b]) - stageFor(inbox[a]) || inbox[b].at - inbox[a].at);
     const replied = Object.keys(inbox).filter((id) => inbox[id].answered && !inbox[id].cleared).sort((a, b) => inbox[b].answered.at - inbox[a].answered.at);
+    // "Clear all", as plain text between the Ask box and the lists (the side panel): puts
+    // away everything below in one go. Connection requests stay.
+    if (EMBED && open.length + answers.length + replied.length + waiting.length) {
+      const all = el("button", "cards__clearall", "Clear all");
+      all.type = "button";
+      all.title = "Clear everything below: questions to you dismissed, messages marked seen, answers put away, and your waiting questions hidden here";
+      all.addEventListener("click", () => clearAll({ open, answers, replied, waiting }));
+      wrap.append(all);
+    }
     for (const login of requests) wrap.append(requestRow(login));
     if (open.length) wrap.append(inboxList(open)); // waiting on you: first
     if (answers.length) wrap.append(answerList(answers));
@@ -1561,6 +1714,28 @@
       return el("div", "cards");
     }
     return wrap;
+  }
+
+  // Clear all: what each line's own X does, for every line at once.
+  function clearAll({ open, answers, replied, waiting }) {
+    for (const id of open) {
+      if (inbox[id].note) relay({ t: "seen", id }); // a message: they see you've seen it
+      else relay({ t: "dismiss", id }); // a question: dismissed without answering
+      pending[id] = true;
+      delete drafts[id];
+    }
+    for (const id of answers) {
+      if (sent[id].answer.acked !== true && !pending[id]) relay({ t: "seen", id });
+      ui[id] = { ...ui[id], closed: true };
+    }
+    for (const id of replied) ui[id] = { ...ui[id], cleared: true };
+    for (const id of waiting) {
+      const group = sent[id].group;
+      for (const [cid, c] of Object.entries(sent)) if (cid === id || (group && c.group === group)) ui[cid] = { ...ui[cid], waitClosed: true };
+    }
+    replyOpen.clear();
+    put("ui", ui);
+    render();
   }
 
   // Someone added you: add them back to connect.
@@ -1931,54 +2106,38 @@
       parts.push(line, add);
     }
     if (signinNote()) parts.unshift(signinPill());
+    // Which one this is, of how many ("2 of 5"): just a label. The arrows either side step
+    // through them, and the turns carry on by themselves.
+    peekMenu = false;
     if (items.length > 1) {
-      // Which one this is, of how many: one small chip ("2 of 5 ▾") that drops down a
-      // short list, a line each (who and what, in its colour); picking one shows it. The
-      // turns carry on whenever the list isn't open.
       const at = items.findIndex((it) => it.id === peekId);
       const pager = el("div", "peek__pager");
-      const chip = el("button", `peek__count${peekMenu ? " peek__count--open" : ""}`);
-      chip.type = "button";
-      chip.title = peekMenu ? "Close the list" : `${items.length} waiting: see them all`;
-      chip.setAttribute("aria-expanded", String(peekMenu));
-      chip.append(el("span", null, `${at + 1} of ${items.length}`), el("span", "peek__caret", "▾"));
-      chip.addEventListener("click", (e) => {
-        e.stopPropagation();
-        peekMenu = !peekMenu;
-        peekMenuAt = Date.now();
-        drawPeek();
-      });
-      pager.append(chip);
+      pager.append(el("span", "peek__count", `${at + 1} of ${items.length}`));
       parts.push(pager);
-      if (peekMenu) {
-        const menu = el("div", "peek__menu");
-        menu.setAttribute("role", "menu");
-        for (const it of items) {
-          const row = el("button", `peek__item${it.id === peekId ? " peek__item--on" : ""}`);
-          row.type = "button";
-          row.setAttribute("role", "menuitem");
-          const stage = it.kind === "q" ? stageOf(it.id) || 1 : 0;
-          const q = it.kind === "q" ? inbox[it.id] : sent[it.id];
-          row.append(el("span", `peek__ping ${it.kind === "q" ? `peek__ping--${stage}` : "peek__ping--answer"}`));
-          const who = el("b", null, it.kind === "q" ? q.name : `${q.to} answered`);
-          if (colorOf(it.kind === "q" ? q.from : q.to)) who.style.color = colorOf(it.kind === "q" ? q.from : q.to);
-          const what = el("span", "peek__itemtext");
-          what.append(who, " ", it.kind === "q" ? q.text : `${said(q.answer)} · ${q.text}`);
-          row.append(what);
-          row.title = it.kind === "q" ? q.text : `${said(q.answer)}: ${q.text}`;
-          row.addEventListener("click", (e) => {
-            e.stopPropagation();
-            peekId = it.id;
-            peekSince = Date.now();
-            peekMenu = false;
-            drawPeek();
-          });
-          menu.append(row);
-        }
-        parts.push(menu);
-      }
-    } else {
-      peekMenu = false;
+    }
+    // The X that clears this one (dismissed, unanswered, or an answer put away): in the
+    // chat dock it sits big in the card's top corner, so it's one tap to be rid of it.
+    parts.find((p) => p.classList?.contains("x"))?.classList.add("peek__dismiss");
+    // More than one: arrows either side to step through them (round and round).
+    if (items.length > 1) {
+      const at = items.findIndex((it) => it.id === peekId);
+      const step = (by, label, glyph) => {
+        const b = el("button", `peek__arrow peek__arrow--${by < 0 ? "prev" : "next"}`, glyph);
+        b.type = "button";
+        b.title = label;
+        b.setAttribute("aria-label", label);
+        b.addEventListener("click", (e) => {
+          e.stopPropagation();
+          peekId = items[(at + by + items.length) % items.length].id;
+          peekSince = Date.now();
+          peekMenu = false;
+          drawPeek();
+        });
+        return b;
+      };
+      parts.unshift(step(-1, "Previous one", "‹"));
+      parts.push(step(1, "Next one", "›"));
+      peekEl.classList.add("peek--paged");
     }
     peekEl.replaceChildren(...parts);
   }
@@ -2224,7 +2383,7 @@
     box.append(el("p", "ask__hint", askDraft.sent === mode ? "Sent ✓"
       : mode === "love" ? "Shows on their bar with your name, then disappears after 30 seconds."
       : mode === "info" ? "For things like incoming raids or minor technical difficulties. Shows on their bar with your name for 2 minutes. Only reaches people who are online."
-      : "They answer with ♥, ✓ or ✗, or type a reply."));
+      : "They answer with ♥, ✓, ✗ or ? (maybe), or type a reply."));
     if (askDraft.note) box.append(el("p", "ask__note", askDraft.note));
     return box;
   }
@@ -2299,9 +2458,9 @@
       if (mine) out.append(seenControl(id, reply, "pill"));
       else out.append(el("span", `receipt${q.seenAt ? " receipt--seen" : ""}`, q.seenAt ? "✓ Seen" : "Not seen yet"));
     } else if (q.note) {
-      out.append(el("span", `receipt${q.seenAt ? " receipt--seen" : ""}`, q.seenAt ? "✓ Seen" : q.dismissed ? "Dismissed" : "Not seen yet"));
+      out.append(el("span", `receipt${q.seenAt ? " receipt--seen" : ""}`, q.seenAt ? "✓ Seen" : q.withdrawn ? "Taken back" : q.dismissed ? "Dismissed" : "Not seen yet"));
     } else {
-      out.append(el("span", "receipt", mine ? (q.seen ? "Dismissed" : "Waiting for their answer") : "Dismissed"));
+      out.append(el("span", "receipt", q.withdrawn ? "Taken back" : mine ? (q.seen ? "Dismissed" : "Waiting for their answer") : "Dismissed"));
     }
     body.append(out);
     row.append(body, closeButton(() => setUi(id, { gone: true }), "Clear from history"));
@@ -2322,6 +2481,11 @@
   // @name pings someone.
   function chatPanel() {
     const panel = el("div", "panel chat");
+    // Chat is reached from Connections, so it leads back there.
+    const back = el("button", "chat__back", "‹ Connections");
+    back.type = "button";
+    back.addEventListener("click", () => show("people"));
+    panel.append(back);
     const owner = chatRoom();
     const room = rooms.find((r) => r.owner === owner);
     const mine = rooms.find((r) => r.owner === me.login);
@@ -2357,7 +2521,7 @@
       panel.append(el("div", "panel__head", "Chat"));
       const names = Object.keys(tags).sort();
       if (!names.length) {
-        panel.append(el("p", "panel__sub", "To talk privately with someone, click their picture, then Private chat. A streamer can also open a room for a tag (like Mods) and everyone in it can talk here."));
+        panel.append(el("p", "panel__sub", "To talk privately with someone, open Connections and press Chat by their name. A streamer can also open a room for a tag (like Mods) and everyone in it can talk here."));
         return panel;
       }
       panel.append(el("p", "panel__sub", "Open a room for one of your tags. Everyone in it can talk to each other here, and you can read along (it stays quiet for you unless someone @mentions you)."));
@@ -2413,7 +2577,8 @@
       }
     });
     panel.append(form);
-    setTimeout(() => document.activeElement === document.body && input.focus());
+    // Ready to type, without scrolling the page down to the box (the top says where you are).
+    setTimeout(() => document.activeElement === document.body && input.focus({ preventScroll: true }));
 
     if (mine && owner === me.login) panel.append(roomPicker(mine.tag, "Change"));
     return panel;
@@ -2443,12 +2608,36 @@
 
   // Connections: who you can ask and who can ask you, once both have added
   // each other; requests from people who've added you.
+  let tagOpen = ""; // Connections: whose + (add a tag) box is open
   function peoplePanel() {
     const panel = el("div", "panel");
     panel.append(
       el("div", "panel__head", "Connections"),
-      el("p", "panel__sub", "You can ask each other once you've both added each other. Tag people (Mods, Lead mods, Tech…) to ask a whole group at once; only you see your tags."),
+      el("p", "panel__sub", "You can ask each other once you've both added each other. Click someone for a private chat only the two of you see. Tag people (Mods, Lead mods, Tech…) to ask a whole group at once; only you see your tags."),
     );
+    // Group rooms (a streamer's room for one of their tags): one button each, plus opening
+    // your own if you have tags.
+    const groups = rooms.filter((r) => !r.direct);
+    if (groups.length || (Object.keys(tags).length && !groups.some((r) => r.owner === me.login))) {
+      const roomsRow = el("div", "people__rooms");
+      roomsRow.append(el("span", "people__roomslabel", "Rooms"));
+      for (const r of groups) {
+        const n = unread(r.owner);
+        const b = el("button", "pill", r.owner === me.login ? `Your room · ${r.tag}` : `${r.owner}'s room · ${r.tag}`);
+        b.type = "button";
+        if (n) b.append(el("span", "pill__count", String(n)));
+        b.addEventListener("click", () => show("chat", r.owner));
+        roomsRow.append(b);
+      }
+      if (!groups.some((r) => r.owner === me.login) && Object.keys(tags).length) {
+        const open = el("button", "pill", "+ Open a room");
+        open.type = "button";
+        open.title = "Open a room for one of your tags, so everyone in it can talk";
+        open.addEventListener("click", () => show("chat", me.login));
+        roomsRow.append(open);
+      }
+      panel.append(roomsRow);
+    }
     const form = el("form", "panel__form");
     const input = textBox("Their Twitch name");
     const add = el("button", null, "Add");
@@ -2487,13 +2676,32 @@
     panel.append(names);
     for (const { login, mutual, online } of connections) {
       const row = el("div", "people__row");
-      row.append(
-        el("span", "people__name", login),
-        el("span", `people__state${online ? " people__state--on" : ""}`, !mutual ? "hasn't added you yet" : online ? "online" : "offline"),
-        closeButton(() => relay({ t: "disconnect", login }), `Remove ${login}`),
-      );
-      // Their tags, each with ×, and a box to add one.
-      const tagRow = el("div", "people__tags");
+      // Who: their picture, name and how they are, all one button that opens your private
+      // chat (there's one for everyone you've both added each other with).
+      const direct = directWith(login);
+      const who = el(direct ? "button" : "div", `people__who${direct ? " people__who--chat" : ""}`);
+      if (direct) {
+        who.type = "button";
+        who.title = `Private chat with ${login}`;
+        who.addEventListener("click", () => show("chat", direct.owner));
+      }
+      const pic = el("span", "people__pic");
+      if (pics[login]) {
+        const img = el("img");
+        img.src = pics[login];
+        img.alt = "";
+        pic.append(img);
+      } else pic.append(el("span", "dot__letter", login[0].toUpperCase()));
+      const name = el("span", "people__name", login);
+      if (colorOf(login)) name.style.color = colorOf(login);
+      const words = el("span", "people__words");
+      words.append(name, el("span", `people__state${online ? " people__state--on" : ""}`, !mutual ? "hasn't added you yet" : online ? "online" : "offline"));
+      who.append(pic, words);
+      const n = direct ? unread(direct.owner) : 0;
+      if (n) who.append(el("span", "people__unread", String(n)));
+      row.append(who);
+      // Their tags on the right, each with ×, then + to add one (it opens a small box).
+      const tagsEl = el("div", "people__tags");
       for (const t of Object.keys(tags).sort().filter((t) => tags[t].includes(login))) {
         const chip = el("span", "tagchip", t);
         const x = el("button", "tagchip__x", "×");
@@ -2501,22 +2709,44 @@
         x.title = `Take ${login} out of ${t}`;
         x.addEventListener("click", () => relay({ t: "tag", login, tag: t, on: false }));
         chip.append(x);
-        tagRow.append(chip);
+        tagsEl.append(chip);
       }
-      const addTag = el("form", "tagadd");
-      const box = textBox("+ Tag");
-      box.dataset.key = `tag-${login}`;
-      box.maxLength = 20;
-      box.setAttribute("list", "tag-names");
-      addTag.append(box);
-      addTag.addEventListener("submit", (e) => {
-        e.preventDefault();
-        const tag = clean(box.value).slice(0, 20);
-        if (tag) relay({ t: "tag", login, tag, on: true });
-        box.value = "";
+      const plus = el("button", `people__plus${tagOpen === login ? " people__plus--on" : ""}`, "+");
+      plus.type = "button";
+      plus.title = `Tag ${login}`;
+      plus.setAttribute("aria-expanded", String(tagOpen === login));
+      plus.addEventListener("click", () => {
+        tagOpen = tagOpen === login ? "" : login;
+        render();
+        if (tagOpen) document.querySelector(`[data-key="tag-${login}"]`)?.focus();
       });
-      tagRow.append(addTag);
-      list.append(row, tagRow);
+      tagsEl.append(plus);
+      row.append(tagsEl, closeButton(() => relay({ t: "disconnect", login }), `Remove ${login}`));
+      list.append(row);
+      if (tagOpen === login) {
+        const addTag = el("form", "tagadd");
+        const box = textBox("+ Tag");
+        box.dataset.key = `tag-${login}`;
+        box.maxLength = 20;
+        box.setAttribute("list", "tag-names");
+        box.addEventListener("keydown", (e) => {
+          if (e.key !== "Escape") return;
+          tagOpen = "";
+          render();
+        });
+        const save = el("button", "pill", "Add tag");
+        save.type = "submit";
+        addTag.append(box, save);
+        addTag.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const tag = clean(box.value).slice(0, 20);
+          if (tag) relay({ t: "tag", login, tag, on: true });
+          box.value = "";
+          tagOpen = "";
+          render();
+        });
+        list.append(addTag);
+      }
     }
     if (!connections.length && !requests.length) list.append(el("p", "panel__sub", "Nobody yet."));
     panel.append(list);
@@ -2544,7 +2774,7 @@
     me = null;
     socket?.close();
     socket = null;
-    askBtn.hidden = peopleBtn.hidden = quickAsk.hidden = askFull.hidden = chatBtn.hidden = statsBtn.hidden = true;
+    askBtn.hidden = peopleBtn.hidden = homeChatBtn.hidden = dndBtn.hidden = quickAsk.hidden = askFull.hidden = chatBtn.hidden = statsBtn.hidden = true;
     dotsEl.replaceChildren();
     const again = el("button", "pill pill--warn pill--bad", message ? "Signed out · Sign in with Twitch" : "Sign in with Twitch");
     again.type = "button";
@@ -3323,6 +3553,7 @@
     } else if (m.t === "ask") gotQuestion({ id: `d${now}`, from: me.login, to: m.to, text: m.text, at: now, options: m.options, note: m.note, answer: null, dismissed: 0, seenAt: 0 });
     else if (m.t === "answer" && q) gotQuestion({ ...q, answer: { code: m.code, text: m.text, at: now } });
     else if (m.t === "dismiss" && q) gotQuestion({ ...q, dismissed: now });
+    else if (m.t === "withdraw" && q) gotQuestion({ ...q, withdrawn: now });
     else if (m.t === "seen" && q) gotQuestion({ ...q, seenAt: now });
     else if (m.t === "nudge" && q && m.warn) gotQuestion({ ...q, warns: (q.warns || 0) + 1, warnedAt: now, nudgedAt: now });
     else if (m.t === "nudge" && q) gotQuestion({ ...q, nudges: Math.min(3, (q.nudges || 0) + 1), nudgedAt: now });
@@ -3391,6 +3622,22 @@
   // ===== Start =============================================================================
 
   peopleBtn.addEventListener("click", () => show("people"));
+  dndBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openSettings(false);
+    if (dndOn()) setDnd(0); // on: off it goes
+    else openDndMenu(dndMenu.hidden); // off: how long?
+  });
+  // The chat dock's chat bubble: close whatever's open (a menu, Settings, the full list)
+  // and go straight back to the stream chat.
+  homeChatBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openSettings(false);
+    showAll = false;
+    view = HOME_VIEW;
+    render();
+    main.scrollTop = 0;
+  });
   chatBtn.addEventListener("click", () => show("chat", chatRoom()));
   statsBtn.addEventListener("click", () => show("stats", statsWho()));
   quickAsk.addEventListener("submit", (e) => {

@@ -3,3 +3,4 @@
 # Cloudflare tool caches and local test data (relay/)
 node_modules/
 .wrangler/
+dev/memes/

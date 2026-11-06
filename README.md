@@ -47,6 +47,21 @@ button (on hover); the 🔖 count in the chat bar goes back to them. **One click
 message puts an orange line under it, right across the chat, to mark where they were;
 clicking another moves it, clicking the same one again takes it away.
 
+What's waiting shows on one card under the bar. Questions are answered with ♥, ✓, ✗ or
+? (maybe), or a typed reply; the small × in its corner dismisses anything without
+answering. With several, they take turns, small ‹ › arrows flip through them, and a quiet
+"1 of 3" sits under the buttons. At the top right: a green **chat bubble** (closes any
+menu and goes straight back to chat), the **Do Not Disturb** hand (for 15 minutes or
+until it's clicked off: no sounds, no glow and no card meanwhile; everything still
+arrives and waits, and mods see "Do Not Disturb" in Streamer View), **Connections**, and
+the Settings gear.
+
+**Connections** (both sides) lists everyone you've added with their picture; clicking
+someone opens a private chat only the two of you see, with the box to type in always at
+the bottom. Their tags sit on the right, with a + to add one. Unread private messages
+show as a count on the Connections icon; a streamer's room for one of their tags is
+opened from there too.
+
 ### Pings
 
 When someone needs the streamer, a thin, faint line glows green round the edge of the
@@ -88,8 +103,10 @@ The top of the handshake side panel shows what the streamer's OBS dock is showin
 now: the edge's glow colour, everything waiting for them (from anyone, each with how far
 it has glowed), answers they haven't marked seen yet, and the quick notes and flagged
 chat lines in their bar. It follows the channel open in the Twitch tab beside the panel;
-with more than one streamer sharing, a picker switches between them. It only shows; it
-can be folded away by its title.
+with more than one streamer sharing, a picker switches between them. It can be folded
+away by its title. Your own questions, messages, notes and flagged lines in it have an ×
+that takes them back off the streamer's dock, while they're still unanswered or unseen.
+Above the mod's own lists, **Clear all** puts everything away at once.
 
 The streamer's dock sends this to the relay whenever it changes, and the relay passes it
 to their mutual connections only. It disappears when the dock closes, and while the
@@ -140,5 +157,8 @@ Things to know:
   talking through the local relay as pretend users, with buttons to send chat lines and
   questions. Start relay-local, streamer-buddy-local and mock-twitch, then open
   `http://localhost:8789/dev/sim.html`.
+- On localhost the pretend users (streamer, streamer2, mod1, mod2) get pictures from
+  `dev/memes/<login>.png` if you put some there (the folder is kept out of git), so a
+  glowing ring is easy to tell from a plain one. Real sign-ins never use them.
 - Receiving uses an EventSub WebSocket (`user.whisper.message`); sending uses
   `POST /helix/whispers`. Scopes: `user:read:whispers user:manage:whispers`.

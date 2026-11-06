@@ -59,13 +59,15 @@
 // Messages from a page:
 //   auth { token }          connect { login }        disconnect { login }
 //   ask { to, text, options, note }  answer { id, code, text }  dismiss { id }
+//   withdraw { id }         take back your own question or message before it's answered
 //   nudge { id, warn }      remind them of your unanswered question (up to 3; warn: past the
 //                           limits, as a warning; see nudge())
 //   status { status }       "online", "idle" or "offline"
 //   tag { login, tag, on }  put a connection in (or out of) one of your tags
 //   room { tag }            open your chat room to one of your tags (null closes it)
 //   say { owner, text }     post in someone's room (yours: owner is you)
-//   unflash { id }          clear a pinned flagged line, for everyone who has it
+//   unflash { id }          clear a pinned flagged line, for everyone who has it; or take
+//                           back your own quick note or !vanish (while it's still showing)
 //   flash { kind, to, text, chatter, color, channel }  something quick that
 //                           shows for a moment; see Flashes below
 //   statsShare { on }       share your stream stats with your connections
@@ -88,7 +90,7 @@
 // A plain "ping" gets "pong" without waking the hub (keeps idle pages cheap).
 //
 // Streamer View: a streamer's OBS dock sends a summary of what it shows whenever that
-// changes: { glow, waiting, answers, notes, chat }. It's kept as "v:<login>" while that
+// changes: { glow, waiting, answers, notes, chat, dnd }. It's kept as "v:<login>" while that
 // dock is connected and goes to their mutual connections (state's "views", and "view"
 // as it changes), unless they've set themselves to Offline. When the last dock that sent
 // one closes, it's dropped and connections get v: null.
@@ -97,12 +99,13 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_LEN = 200;
 const MAX_FLAGGED_LEN = 500; // a whole Twitch chat message
 const PIN_MS = 5 * 60 * 1000;
+const SENT_FLASH_MS = 3 * 60 * 1000; // how long a quick note or !vanish can be taken back
 const MAX_PIN_EMOTES = 30;
 const EMOTE_HOSTS = ["static-cdn.jtvnw.net", "cdn.betterttv.net", "cdn.frankerfacez.com", "cdn.7tv.app"];
 const MAX_OPEN_PER_PAIR = 3;
 const MAX_ASKS_PER_MINUTE = 10;
 const STANDARD = ["y", "n", "m", "s", "o", "t"];
-const ALWAYS_ANSWERS = ["t", "y", "n"]; // answerable on any question (dock.js STREAMER_ANSWERS)
+const ALWAYS_ANSWERS = ["t", "y", "n", "m"]; // answerable on any question (dock.js STREAMER_ANSWERS)
 const MAX_OPTIONS = 8;
 const MAX_OPTION_LEN = 30;
 const MAX_TAGS = 12;
@@ -169,6 +172,8 @@ export class Hub {
       else if (m.t === "view") await this.setView(ws, who, m.v);
       else if (m.t === "answer") await this.answer(ws, who, m);
       else if (m.t === "dismiss") await this.update(ws, who, m.id, (q) => q.to === who.login && !q.answer && !q.dismissed, (q) => (q.dismissed = Date.now()));
+      // Taking back your own question or message, while it's still waiting.
+      else if (m.t === "withdraw") await this.update(ws, who, m.id, (q) => q.from === who.login && !q.answer && !q.dismissed && !q.withdrawn && !(q.note && q.seenAt), (q) => (q.withdrawn = Date.now()));
       // Seen: the asker, of an answer; or the person a plain message went to.
       else if (m.t === "nudge") await this.nudge(ws, who, m.id, !!m.warn);
       else if (m.t === "seen") await this.update(ws, who, m.id, (q) => !q.seenAt && ((q.from === who.login && q.answer) || (q.to === who.login && q.note && !q.answer && !q.dismissed)), (q) => (q.seenAt = Date.now()));
@@ -563,6 +568,12 @@ export class Hub {
     }
     const online = targets.filter((l) => this.isOnline(l));
     for (const l of online) this.sendTo(l, { t: "flash", f: { ...f, to: l } });
+    // Kept for a few minutes (while it can still be showing), so its sender can take it
+    // back. In storage, as the hub sleeps between messages and forgets anything in memory.
+    const old = await this.ctx.storage.list({ prefix: "f:" });
+    const stale = [...old].filter(([, r]) => Date.now() - r.at > SENT_FLASH_MS).map(([k]) => k);
+    if (stale.length) await this.ctx.storage.delete(stale);
+    if (online.length) await this.ctx.storage.put(`f:${f.id}`, { from: who.login, to: online, at: f.at });
     this.send(ws, { t: "flashed", kind, reached: online.length });
   }
 
@@ -570,7 +581,15 @@ export class Hub {
   async unflash(who, m) {
     const key = `p:${String(m.id || "").slice(0, 8)}`;
     const f = await this.ctx.storage.get(key);
-    if (!f) return;
+    if (!f) {
+      // A quick note or !vanish: only its sender can take it back.
+      const sentKey = `f:${String(m.id || "").slice(0, 8)}`;
+      const r = await this.ctx.storage.get(sentKey);
+      if (!r || r.from !== who.login) return;
+      await this.ctx.storage.delete(sentKey);
+      for (const l of r.to) this.sendTo(l, { t: "unflash", id: String(m.id) });
+      return;
+    }
     const targets = pinTargets(f, await this.users());
     if (!targets.includes(who.login)) return;
     await this.ctx.storage.delete(key);
@@ -631,7 +650,7 @@ export class Hub {
     const offered = (q) => {
       const options = q.options || STANDARD;
       if (code === "c") return !!text;
-      if (ALWAYS_ANSWERS.includes(code)) return true; // heart, yes, no: the streamer's three
+      if (ALWAYS_ANSWERS.includes(code)) return true; // heart, yes, no, maybe: the streamer's four
       if (code === "x") return options.includes(`+${text}`);
       return STANDARD.includes(code) && options.includes(code);
     };
@@ -755,6 +774,7 @@ function cleanView(raw) {
   return {
     glow: stage(raw.glow),
     chat: raw.chat === "livechat" ? "livechat" : "dock",
+    dnd: num(raw.dnd), // Do Not Disturb until then (0: off)
     waiting: list(raw.waiting).map((q) => ({
       id: str(q.id, 60), from: login(q.from), text: str(q.text), at: num(q.at), note: !!q.note, stage: stage(q.stage), nudges: stage(q.nudges),
       options: list(q.options).map((o) => str(o, MAX_OPTION_LEN)),
