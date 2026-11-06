@@ -1532,10 +1532,12 @@
     // picture), just under the bar.
     if (LIVECHAT && !showAll) return wrap;
     if (!POPOUT && !DECK && !LIVECHAT) wrap.append(composer(null)); // the chat dock sends from its bar
-    const answers = Object.keys(sent).filter((id) => sent[id].answer && !sent[id].answer.seen).sort((a, b) => sent[a].answer.at - sent[b].answer.at);
-    const waiting = Object.keys(sent).filter((id) => !sent[id].answer && !sent[id].seen).sort((a, b) => sent[a].at - sent[b].at);
-    const open = Object.keys(inbox).filter((id) => !inbox[id].done).sort((a, b) => inbox[a].at - inbox[b].at);
-    const replied = Object.keys(inbox).filter((id) => inbox[id].answered && !inbox[id].cleared).sort((a, b) => inbox[a].answered.at - inbox[b].answered.at);
+    // Newest first in each list, so something new is at the top where it's seen; what's
+    // waiting on you puts warnings and nudged ones above the rest.
+    const answers = Object.keys(sent).filter((id) => sent[id].answer && !sent[id].answer.seen).sort((a, b) => sent[b].answer.at - sent[a].answer.at);
+    const waiting = Object.keys(sent).filter((id) => !sent[id].answer && !sent[id].seen).sort((a, b) => sent[b].at - sent[a].at);
+    const open = Object.keys(inbox).filter((id) => !inbox[id].done).sort((a, b) => stageFor(inbox[b]) - stageFor(inbox[a]) || inbox[b].at - inbox[a].at);
+    const replied = Object.keys(inbox).filter((id) => inbox[id].answered && !inbox[id].cleared).sort((a, b) => inbox[b].answered.at - inbox[a].answered.at);
     for (const login of requests) wrap.append(requestRow(login));
     if (open.length) wrap.append(inboxList(open)); // waiting on you: first
     if (answers.length) wrap.append(answerList(answers));
@@ -1626,6 +1628,16 @@
     );
     acts.lastChild.textContent = "×";
     row.append(dot, text, acts);
+    // Clicking the line itself (not one of its buttons): a message is marked seen, like the
+    // answers list; a question opens its reply box.
+    row.title = q.note ? `Click to let ${q.name} know you've seen this` : "Click to type a reply, or use the buttons";
+    row.addEventListener("click", (e) => {
+      if (e.target.closest("button, input, a") || q.sending) return;
+      if (q.note) return ack(id);
+      replyOpen.add(id);
+      render();
+      document.querySelector(`[data-key="reply-${id}"]`)?.focus();
+    });
     wrap.append(row);
     if (replyOpen.has(id)) {
       const own = el("form", "irow__reply");
@@ -2203,7 +2215,7 @@
       panel.append(talk);
     }
 
-    const fromThem = Object.keys(inbox).filter((id) => inbox[id].from === login && !inbox[id].done);
+    const fromThem = Object.keys(inbox).filter((id) => inbox[id].from === login && !inbox[id].done).sort((a, b) => stageFor(inbox[b]) - stageFor(inbox[a]) || inbox[b].at - inbox[a].at);
     if (fromThem.length) panel.append(inboxList(fromThem));
 
     // Everything finished or waiting on them, newest first.

@@ -42,10 +42,10 @@ they're just lurking, no ring, just their picture lit up. Once they leave the ch
 picture goes gray. Below it is Twitch's own embedded chat, unchanged. A line a mod flags in Chrome is pinned at the top of the chat, emotes included,
 for 10 seconds (5 minutes elsewhere), and with custom chat the line itself glows in the
 chat in the flagger's colour; the streamer or a mod can clear the pin for everyone with
-its X. With custom chat the streamer can also **bookmark** a message: double-click it (or
-its 🔖 button). As new messages push it up, the chat stops when it reaches the top so it
-stays in view, until "More messages below"; the 🔖 count in the chat bar goes back to
-bookmarks.
+its X. With custom chat the streamer can also **bookmark** a message for later with its 🔖
+button (on hover); the 🔖 count in the chat bar goes back to them. **One click** on a
+message puts an orange line under it, right across the chat, to mark where she was;
+clicking another moves it, clicking the same one again takes it away.
 
 ### Pings
 

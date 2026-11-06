@@ -46,6 +46,21 @@
   }
   const safeColor = (c) => (/^#[0-9a-f]{6}$/i.test(c || "") ? c : "");
 
+  // Little line icons for the message tools and the bookmark counter.
+  const ICON = {
+    bookmark: '<path d="M6 3.5h8a1 1 0 0 1 1 1v12l-5-3.2-5 3.2v-12a1 1 0 0 1 1-1z"/>',
+    reply: '<path d="M8.5 5 4 9.5 8.5 14M4.5 9.5H12a4 4 0 0 1 4 4V15"/>',
+    trash: '<path d="M4 6h12M8 6V4.5h4V6M6 6l.7 10h6.6L14 6M8.5 9v4.5M11.5 9v4.5"/>',
+  };
+  const icon = (name, size = 15) =>
+    `<svg viewBox="0 0 20 20" width="${size}" height="${size}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICON[name]}</svg>`;
+  function iconButton(className, name, onClick, title) {
+    const b = button(className, "", onClick, title);
+    b.innerHTML = icon(name);
+    b.setAttribute("aria-label", title);
+    return b;
+  }
+
   function start(host) {
     const { me, channel, urls } = host;
     let stopped = false;
@@ -70,7 +85,7 @@
     const bar = el("div", "oc-bar");
     const statusEl = el("span", "oc-status oc-status--wait", "Connecting…");
     const twitchBtn = button("oc-link", "Use Twitch chat", () => host.onChoose?.(), "Switch to Twitch's own chat");
-    const marksBtn = button("oc-marks", "", () => showMark(), "Go to a bookmarked message (click again for the next)");
+    const marksBtn = button("oc-marks", "", () => showMark(), "Go to your bookmarks (click again for the next)");
     marksBtn.hidden = true;
     bar.append(statusEl, marksBtn, twitchBtn);
     const heldEl = el("div", "oc-held");
@@ -80,7 +95,6 @@
     const moreBtn = button("oc-more", "More messages below", () => {
       follow = true;
       holdUntil = 0;
-      releaseStop();
       toBottom();
     });
     moreBtn.hidden = true;
@@ -412,11 +426,6 @@
     }
     list.addEventListener("scroll", () => {
       const nearEnd = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
-      if (quietScroll) {
-        quietScroll = false;
-        return;
-      }
-      if (nearEnd && atMark) releaseStop(); // scrolled on down past it by hand
       if (nearEnd !== follow && (nearEnd || Date.now() >= holdUntil)) follow = nearEnd;
       if (follow && Date.now() >= holdUntil) {
         unseen = false;
@@ -441,58 +450,33 @@
         if (first.dataset.id) byId.delete(first.dataset.id);
         first.remove();
       }
-      if (!held() && !stopAtMark()) toBottom();
+      if (!held()) toBottom();
       else if (unseen) moreBtn.hidden = false;
     }
 
-    // ----- Bookmarks -------------------------------------------------------------------
-    // Double-click a message (or its bookmark button) to bookmark it; again to take it off.
-    // The newest bookmark holds its place: when new messages would push it up past the top,
-    // the chat stops there so it stays in view, until "More messages below" (or scrolling
-    // down by hand) lets it carry on. The bookmark count in the bar goes back to them.
+    // ----- Bookmarks and "where I was" -------------------------------------------------
+    // Bookmark a message for later with its 🔖 button (shown on hover); again to take it
+    // off. The 🔖 count in the bar goes back to them, newest first.
+    //
+    // One click on a message puts an orange line under it, right across the chat: where
+    // you were. Clicking another message moves it; clicking the same one takes it away.
     const marks = []; // bookmarked message ids, oldest first
-    let stopId = null; // the bookmark that stops the chat when it reaches the top
-    let atMark = false; // it has: waiting for "More messages below"
-    let quietScroll = false;
     let markShown = -1;
+    let hereId = null;
     function drawMarks() {
       const n = marks.filter((id) => byId.has(id)).length;
       marksBtn.hidden = !n;
-      marksBtn.textContent = `🔖 ${n}`;
+      marksBtn.innerHTML = `${icon("bookmark", 12)}<span>${n}</span>`;
     }
     function toggleMark(line) {
       const id = line?.dataset.id;
       if (!id) return;
       const at = marks.indexOf(id);
-      if (at >= 0) {
-        marks.splice(at, 1);
-        line.classList.remove("oc-line--marked");
-        if (stopId === id) releaseStop();
-      } else {
-        marks.push(id);
-        line.classList.add("oc-line--marked");
-        stopId = id;
-        atMark = false;
-      }
+      if (at >= 0) marks.splice(at, 1);
+      else marks.push(id);
+      line.classList.toggle("oc-line--marked", at < 0);
+      markShown = -1;
       drawMarks();
-    }
-    // Would going to the newest message push the bookmark up past the top? Then stop with
-    // it at the top instead. Says whether it stopped.
-    function stopAtMark() {
-      const line = stopId && byId.get(stopId);
-      if (!line) return false;
-      const top = line.getBoundingClientRect().top - list.getBoundingClientRect().top;
-      const wouldMove = list.scrollHeight - list.clientHeight - list.scrollTop;
-      if (!atMark && top - wouldMove >= 0) return false; // still fits: carry on
-      quietScroll = true; // this scroll is ours, not the streamer's
-      list.scrollTop += top;
-      follow = false;
-      atMark = true;
-      return true;
-    }
-    function releaseStop() {
-      stopId = null;
-      atMark = false;
     }
     function showMark() {
       const live = marks.filter((id) => byId.has(id));
@@ -507,11 +491,14 @@
       line.classList.add("oc-line--flash");
       if (unseen) moreBtn.hidden = false;
     }
-    list.addEventListener("dblclick", (e) => {
+    list.addEventListener("click", (e) => {
       const line = e.target.closest?.(".oc-line[data-id]");
-      if (!line || e.target.closest("button, a, input")) return;
-      getSelection?.().removeAllRanges(); // a double-click also selects a word
-      toggleMark(line);
+      if (!line || e.target.closest("button, a, input, .oc-tools")) return;
+      if (String(getSelection?.() || "")) return; // selecting text, not marking a place
+      const old = hereId && byId.get(hereId);
+      old?.classList.remove("oc-line--here");
+      hereId = old === line ? null : line.dataset.id;
+      if (hereId) line.classList.add("oc-line--here");
     });
     timers.push(setInterval(flushLines, FLUSH_MS));
 
@@ -737,9 +724,9 @@
     const tools = el("div", "oc-tools");
     let toolsLine = null;
     tools.append(
-      button("oc-tool oc-tool--mark", "🔖", () => toolsLine && toggleMark(toolsLine), "Bookmark this message (or double-click it)"),
-      button("oc-tool", "Reply", () => toolsLine && startReply(toolsLine), "Reply"),
-      button("oc-tool oc-tool--mod", "Delete", () => toolsLine && deleteMessage(toolsLine), "Delete this message"),
+      iconButton("oc-tool oc-tool--mark", "bookmark", () => toolsLine && (toggleMark(toolsLine), drawToolMark()), "Bookmark for later"),
+      iconButton("oc-tool", "reply", () => toolsLine && startReply(toolsLine), "Reply"),
+      iconButton("oc-tool oc-tool--mod", "trash", () => toolsLine && deleteMessage(toolsLine), "Delete this message"),
     );
     list.addEventListener("mouseover", (e) => {
       const line = e.target.closest?.(".oc-line[data-id]");
@@ -747,9 +734,18 @@
       toolsLine = line;
       const canDelete = isMod && !line.dataset.staff;
       tools.querySelector(".oc-tool--mod").hidden = !canDelete;
-      tools.querySelector(".oc-tool--mark").title = line.classList.contains("oc-line--marked") ? "Take the bookmark off" : "Bookmark this message (or double-click it)";
+      drawToolMark();
       line.append(tools);
     });
+
+    // The bookmark tool: filled in on a bookmarked message.
+    function drawToolMark() {
+      const b = tools.querySelector(".oc-tool--mark");
+      const on = !!toolsLine?.classList.contains("oc-line--marked");
+      b.classList.toggle("oc-tool--on", on);
+      b.title = on ? "Take the bookmark off" : "Bookmark for later";
+      b.setAttribute("aria-label", b.title);
+    }
 
     function startReply(line) {
       replyTo = line.dataset.id;
