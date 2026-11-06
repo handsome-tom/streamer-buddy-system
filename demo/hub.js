@@ -452,12 +452,32 @@ const twitch = (() => {
       game: name === "Lump" ? "Just Chatting" : GAMES[(h >> 3) % GAMES.length],
     };
   }
-  // Some regulars are subscribed: Twitch's badge says for how many months.
+  // Badge pictures, drawn here (Twitch's own are its artwork): a coloured tile each.
+  const tile = (bg, mark) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36"><rect width="36" height="36" rx="7" fill="${bg}"/><text x="18" y="25" font-family="Arial" font-weight="bold" font-size="17" fill="#fff" text-anchor="middle">${mark}</text></svg>`)}`;
+  const badge = (set_id, id, title, bg, mark) => ({ set_id, versions: [{ id, title, image_url_1x: tile(bg, mark), image_url_2x: tile(bg, mark) }] });
+  const BADGES = [
+    { set_id: "subscriber", versions: [["0", "Subscriber", "#9147ff"], ["2000", "Tier 2 Subscriber", "#5c16c5"], ["3000", "Tier 3 Subscriber", "#e91916"]].map(([id, title, bg]) => ({ id, title, image_url_1x: tile(bg, "★"), image_url_2x: tile(bg, "★") })) },
+    badge("moderator", "1", "Moderator", "#00ad03", "⚔"),
+    badge("bits", "1000", "cheer 1000", "#a970ff", "◆"),
+    badge("premium", "1", "Prime Gaming", "#0e9dd8", "♛"),
+    badge("sub-gifter", "10", "10 Gift Subs", "#d2a000", "🎁"),
+    badge("hype-train", "1", "Hype Train conductor", "#ff6a00", "🚂"),
+    badge("glhf-pledge", "1", "GLHF Pledge", "#2d9c68", "✓"),
+  ];
+  const EXTRA_BADGES = ["bits/1000", "premium/1", "sub-gifter/10", "hype-train/1", "glhf-pledge/1"];
+  // Some regulars are subscribed (the badge says which tier and how many months) and wear
+  // a couple of other badges.
   const subBadge = (who) => {
     if (!CHATTERS.includes(who)) return [];
     let h = 7;
     for (const ch of who) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-    return h % 3 === 0 ? [] : [{ set_id: "subscriber", id: "0", info: String(1 + (h % 40)) }];
+    const worn = EXTRA_BADGES.filter((_, i) => (h >> (i + 2)) % 3 === 0).slice(0, 3).map((b) => {
+      const [set_id, id] = b.split("/");
+      return { set_id, id };
+    });
+    if (h % 3 === 0) return worn;
+    const tier = h % 7 === 0 ? "3000" : h % 5 === 0 ? "2000" : "0";
+    return [{ set_id: "subscriber", id: tier, info: String(1 + (h % 40)) }, ...worn];
   };
 
   function eventsub(socket) {
@@ -479,7 +499,7 @@ const twitch = (() => {
     socket._peer = { got() {}, gone: () => chatSockets.delete(socket) };
   }
 
-  const SCOPES = ["user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod", "moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions"];
+  const SCOPES = ["user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod", "moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions", "user:manage:whispers"];
   const json = (status, body) => new Response(status === 204 ? null : JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
   async function api(url, init = {}) {
     const u = new URL(url);
@@ -494,7 +514,9 @@ const twitch = (() => {
       const id = chat(String(sent.message || ""), "streamer");
       return json(200, { data: [{ message_id: id, is_sent: true, drop_reason: null }] });
     }
-    if (route === "/chat/badges/global" || route === "/chat/badges") return json(200, { data: [] });
+    if (route === "/chat/badges/global") return json(200, { data: BADGES });
+    if (route === "/chat/badges") return json(200, { data: [] });
+    if (route === "/whispers") return json(204, {});
     if (route === "/chat/emotes/user") return json(200, { data: [{ id: "25", name: "Kappa", format: ["static"] }, { id: "354", name: "4Head", format: ["static"] }] });
     if (route === "/users" && u.searchParams.get("id")) return json(200, { data: [person(u.searchParams.get("id").replace(/^u-/, ""))] });
     if (route === "/users") return json(200, { data: [{ id: `u-${u.searchParams.get("login")}`, display_name: u.searchParams.get("login") }] });

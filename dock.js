@@ -3557,6 +3557,7 @@
         onFail: (reason) => turn === chatTurn && chatFallback(reason),
         onChoose: chooseTwitchChat,
         onSignIn: ownChatSignIn, // to add a permission it would like (EXTRA_SCOPES)
+        pretend: SANDBOX, // the public demo: links to Twitch say what they'd do instead
       });
       if (location.hostname === "localhost") window.__ownChat = ownChat;
       for (const login of liveChatters) ownChat.here?.(login); // who was already here

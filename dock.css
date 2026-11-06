@@ -3063,3 +3063,43 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-topcard__num { color: var(--muted); white-space: nowrap; }
 .oc-topbar { height: 5px; margin-top: 3px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; overflow: hidden; }
 .oc-topbar__fill { height: 100%; background: var(--tc); border-radius: 3px; transition: width 0.4s; }
+/* The name card, laid out like Twitch's */
+.oc-card { padding: 10px 12px 12px; background: #18181b; }
+.oc-card__tools { position: absolute; top: 6px; right: 6px; display: flex; gap: 2px; }
+.oc-card__tool { display: inline-grid; place-items: center; width: 26px; height: 26px; padding: 0; font-size: 18px; line-height: 1; color: var(--text); background: none; border: 0; border-radius: 4px; cursor: pointer; text-decoration: none; }
+.oc-card__tool:hover { background: rgba(255, 255, 255, 0.1); }
+.oc-card .oc-card__close { position: static; width: 26px; height: 26px; }
+.oc-card__head { display: flex; gap: 10px; align-items: flex-start; margin: 0 56px 8px 0; }
+.oc-card__pic { width: 60px; height: 60px; }
+.oc-card__nopic { display: grid; place-items: center; width: 60px; height: 60px; flex: none; color: #18181b; background: #00c8af; border-radius: 50%; }
+.oc-card__nopic svg { width: 30px; height: 30px; }
+.oc-card__name { font-size: 15px; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+.oc-card__facts { display: grid; gap: 2px; margin: 4px 0 0; font-size: 13px; }
+.oc-card__fact { display: flex; gap: 5px; align-items: flex-start; }
+.oc-card__fact[hidden] { display: none; }
+.oc-card__icon { display: inline-grid; flex: none; margin-top: 2px; color: var(--text); }
+.oc-card__flags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.oc-card__section { margin: 4px 0 6px; font-size: 15px; font-weight: 700; }
+.oc-card__badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.oc-card__badge { width: 28px; height: 28px; padding: 3px; background: #26262c; border-radius: 4px; }
+.oc-card__acts { display: flex; gap: 6px; align-items: center; margin: 6px 0 10px; }
+.oc-card__btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 30px; padding: 0 12px; font: inherit; font-size: 13px; font-weight: 700; color: var(--text); background: #2f2f35; border: 0; border-radius: 15px; cursor: pointer; white-space: nowrap; }
+.oc-card__btn:hover { background: #3f3f46; }
+.oc-card__btn--gift { color: var(--muted); }
+.oc-card__btn--main { color: #fff; background: #9147ff; }
+.oc-card__btn--main:hover { background: #772ce8; }
+.oc-card__btn--more { width: 30px; padding: 0; margin-left: auto; background: none; }
+.oc-card__whisper { display: flex; gap: 6px; align-items: flex-end; margin: -4px 0 10px; }
+.oc-card__whispertext { flex: 1; resize: vertical; font: inherit; }
+.oc-card__mod { display: flex; gap: 10px; margin-bottom: 6px; }
+.oc-card__modbtn { display: inline-grid; place-items: center; width: 28px; height: 28px; padding: 0; color: var(--text); background: none; border: 0; border-radius: 4px; cursor: pointer; }
+.oc-card__modbtn svg { width: 20px; height: 20px; }
+.oc-card__modbtn:hover { background: rgba(255, 255, 255, 0.1); }
+.oc-card__modbtn--ban:hover, .oc-card__modbtn.oc-modicon--sure { color: #fff; background: #eb0400; }
+.oc-card__modbtn--warn:hover { color: #1f1f23; background: var(--amber); }
+.oc-card__lengths { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.oc-card__stats { display: flex; gap: 22px; margin-top: 4px; }
+.oc-card__stat { display: grid; font-size: 12px; color: var(--muted); }
+.oc-card__stat b { font-size: 14px; color: #bf94ff; }
+.oc-card__stat--click { cursor: pointer; }
+.oc-card__said { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); font-size: 12px; }

@@ -31,7 +31,7 @@
   // makes telling raiders from people already here exact even in big chats.
   // followers: "Following since" on a name's card; warnings: Warn, and seeing others' warns;
   // hype train, polls and predictions: their cards at the top (your own channel only).
-  const EXTRA_SCOPES = ["moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions"];
+  const EXTRA_SCOPES = ["moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions", "user:manage:whispers"]; // whispers: Whisper on a name's card
   const CHATTERS_EVERY_MS = 2 * 60 * 1000;
   const TIMEOUTS = [["1m", 60], ["10m", 600], ["1h", 3600], ["24h", 86400]];
   // Twitch's chat commands don't run through the API, and could post as plain text, so
@@ -61,6 +61,12 @@
     ban: '<circle cx="10" cy="10" r="6.5"/><path d="M5.4 14.6l9.2-9.2"/>',
     clock: '<circle cx="10" cy="10" r="6.5"/><path d="M10 6.2V10l2.6 1.6"/>',
     warn: '<path d="M10 3.2 17.2 16H2.8z"/><path d="M10 8.2v3.6M10 13.9v.1"/>',
+    calendar: '<rect x="3.5" y="4.5" width="13" height="12" rx="1.5"/><path d="M3.5 8.5h13M7 3v3M13 3v3"/>',
+    heart: '<path d="M10 16s-6-3.7-6-8a3.3 3.3 0 0 1 6-1.9A3.3 3.3 0 0 1 16 8c0 4.3-6 8-6 8z" fill="currentColor" stroke="none"/>',
+    gift: '<rect x="3.5" y="8" width="13" height="8.5" rx="1"/><path d="M2.8 5.5h14.4V8H2.8zM10 5.5v11M10 5.5c-1-2.6-4.4-2.6-4.4-.8 0 1 1.6.8 4.4.8zM10 5.5c1-2.6 4.4-2.6 4.4-.8 0 1-1.6.8-4.4.8z"/>',
+    popout: '<path d="M11.5 3.5h5v5M16.5 3.5 9.5 10.5M14.5 12v4.5h-11v-11H8"/>',
+    more: '<circle cx="10" cy="4.5" r="1.2" fill="currentColor"/><circle cx="10" cy="10" r="1.2" fill="currentColor"/><circle cx="10" cy="15.5" r="1.2" fill="currentColor"/>',
+    info: '<circle cx="10" cy="10" r="6.5"/><path d="M10 9v4.5M10 6.6v.1"/>',
   };
   const icon = (name, size = 15) =>
     `<svg viewBox="0 0 20 20" width="${size}" height="${size}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICON[name]}</svg>`;
@@ -366,7 +372,7 @@
       for (const path of ["/chat/badges/global", `/chat/badges?broadcaster_id=${broadcasterId}`]) {
         try {
           const j = await (await api(path)).json();
-          for (const set of j.data || []) for (const v of set.versions || []) badges.set(`${set.set_id}/${v.id}`, { url: v.image_url_1x, title: v.title || set.set_id });
+          for (const set of j.data || []) for (const v of set.versions || []) badges.set(`${set.set_id}/${v.id}`, { url: v.image_url_1x, big: v.image_url_2x, title: v.title || set.set_id });
         } catch {}
       }
     }
@@ -561,7 +567,12 @@
       line.dataset.text = m.text || "";
       const ranks = (m.badges || []).map((b) => b.set_id);
       const sub = (m.badges || []).find((b) => b.set_id === "subscriber" || b.set_id === "founder");
-      if (sub) line.dataset.sub = sub.info || "1"; // months, as Twitch's badge says
+      if (sub) {
+        line.dataset.sub = sub.info || "1"; // months, as Twitch's badge says
+        // The badge's version says the tier: 2000s for tier 2, 3000s for tier 3.
+        const v = Number(sub.id) || 0;
+        line.dataset.tier = v >= 3000 ? "3" : v >= 2000 ? "2" : "1";
+      }
       if (m.color) line.dataset.color = m.color;
       if (ranks.includes("broadcaster") || ranks.includes("moderator")) line.dataset.staff = "1";
       if (host.isConnection(m.login)) line.classList.add("oc-line--connection");
@@ -580,6 +591,7 @@
         if (!badge) continue;
         const img = el("img", "oc-badge");
         img.src = badge.url;
+        if (badge.big) img.dataset.big = badge.big; // sharper, for the name card
         img.alt = badge.title;
         img.title = badge.title;
         line.append(img);
@@ -804,6 +816,7 @@
         flushLines();
         const line = byId.get(e.message_id);
         if (line) hideLine(line);
+        if (line?.dataset.uid) modCount(line.dataset.uid, "deletes");
       } else if (type === "channel.chat.clear_user_messages") {
         flushLines();
         list.querySelectorAll(`[data-uid="${CSS.escape(e.target_user_id)}"]`).forEach(hideLine);
@@ -811,7 +824,10 @@
         // so lines don't just vanish. Twitch doesn't say which it was, or who did it.
         const mine = myBans.get(e.target_user_id);
         myBans.delete(e.target_user_id);
-        if (!(mine && Date.now() - mine < 15000)) addSystem(`${e.target_user_name || "Someone"} was banned or timed out, so their messages were removed.`);
+        if (!(mine && Date.now() - mine < 15000)) {
+          addSystem(`${e.target_user_name || "Someone"} was banned or timed out, so their messages were removed.`);
+          modCount(e.target_user_id, "removed");
+        }
       } else if (type === "channel.chat.clear") {
         flushLines();
         list.querySelectorAll(".oc-line[data-id]").forEach(hideLine);
@@ -894,6 +910,7 @@
           note(await why(r, `Twitch wouldn't do that to ${name}.`));
           return false;
         }
+        modCount(id, seconds ? "timeouts" : "bans");
         addSystem(seconds ? `You timed out ${name}.` : `You banned ${name}.`, { label: "Undo", run: () => unban(id, name) });
         return true;
       } catch {
@@ -1183,90 +1200,221 @@
       return `${years} ${years === 1 ? "year" : "years"}${rest ? `, ${rest} ${rest === 1 ? "month" : "months"}` : ""}`;
     }
 
+    // Mod actions on someone since this chat opened: Twitch's card counts bans, time-outs
+    // and deletes (all time; Twitch doesn't share that). Other mods' bans and time-outs
+    // arrive without saying which, so they're counted apart.
+    const actions = new Map(); // user id -> { bans, timeouts, deletes, removed }
+    function modCount(uid, kind) {
+      if (!uid) return;
+      const a = actions.get(uid) || { bans: 0, timeouts: 0, deletes: 0, removed: 0 };
+      a[kind]++;
+      actions.set(uid, a);
+    }
+    const iconEl = (name, className = "oc-card__icon") => {
+      const i = el("span", className);
+      i.innerHTML = icon(name, 15);
+      return i;
+    };
+    const plainDate = (t) => new Date(t).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+
+    // Laid out like Twitch's: picture and name, when they joined Twitch, followed and
+    // subscribed; their badges; Gift a Sub, Follow and Whisper; the mod buttons; and how
+    // many messages and mod actions. Following and gifting can't be done by an app (Twitch
+    // doesn't allow it), so those open the right Twitch page.
     function openCard(line) {
-      const { uid, name, login, staff, sub, color } = line.dataset;
+      const { uid, name, login, staff, sub, tier, color } = line.dataset;
       card.replaceChildren();
       card.dataset.uid = uid;
+      const self = login === me.login;
+
+      const tools = el("div", "oc-card__tools");
+      const open = el("a", "oc-card__tool");
+      open.href = `https://www.twitch.tv/${encodeURIComponent(login)}`;
+      open.target = "_blank";
+      open.rel = "noopener noreferrer";
+      open.title = `Open ${name}'s channel on Twitch`;
+      open.innerHTML = icon("popout", 16);
+      tools.append(open, button("oc-card__tool oc-card__close", "×", () => (card.hidden = true), "Close"));
+
       const head = el("div", "oc-card__head");
       const pic = el("img", "oc-card__pic");
       pic.alt = "";
       pic.hidden = true;
+      const blank = iconEl("info", "oc-card__nopic");
       const who = el("div", "oc-card__who");
       const profile = el("a", "oc-card__name", name);
-      profile.href = `https://www.twitch.tv/${encodeURIComponent(login)}`;
+      profile.href = open.href;
       profile.target = "_blank";
       profile.rel = "noopener noreferrer";
       const c = safeColor(color);
       if (c) profile.style.color = c;
-      const badgeRow = el("div", "oc-card__badges");
-      line.querySelectorAll(".oc-badge").forEach((b) => badgeRow.append(b.cloneNode()));
-      if (line.classList.contains("oc-line--first")) badgeRow.append(el("span", "oc-card__flag oc-card__flag--first", "First-time chatter"));
+      const facts = el("div", "oc-card__facts");
+      const fact = (iconName, text) => {
+        const f = el("div", "oc-card__fact");
+        f.append(iconEl(iconName), el("span", "", text));
+        facts.append(f);
+        return f;
+      };
+      const created = fact("calendar", "Account created …");
+      const follows = fact("heart", "Following …");
+      follows.hidden = self;
+      if (sub) fact("gift", `Tier ${tier || "1"} - Subbed for ${sub} ${sub === "1" ? "Month" : "Months"}`);
+      who.append(profile, facts);
+      head.append(pic, blank, who);
+      card.append(tools, head);
+
+      // Flags custom chat adds: first time here, came with a raid.
+      const flags = el("div", "oc-card__flags");
+      if (line.classList.contains("oc-line--first")) flags.append(el("span", "oc-card__flag oc-card__flag--first", "First-time chatter"));
       if (line.classList.contains("oc-line--raider")) {
         const raid = line.querySelector(".oc-raidtag");
-        badgeRow.append(el("span", "oc-card__flag oc-card__flag--raid", raid?.title.replace(/ \(.*\)$/, "") || "Came with a raid"));
+        flags.append(el("span", "oc-card__flag oc-card__flag--raid", raid?.title.replace(/ \(.*\)$/, "") || "Came with a raid"));
       }
-      who.append(profile, badgeRow);
-      const close = button("oc-card__close", "×", () => (card.hidden = true), "Close");
-      head.append(pic, who, close);
-      card.append(head);
+      if (flags.childElementCount) card.append(flags);
 
-      const facts = el("div", "oc-card__facts");
-      const fact = (text) => facts.append(el("div", "oc-card__fact", text));
-      if (sub) fact(`Subscribed for ${sub} ${sub === "1" ? "month" : "months"}`);
-      const loading = el("div", "oc-card__fact oc-card__fact--wait", "Loading their details from Twitch…");
-      facts.append(loading);
-      card.append(facts);
-      aboutPerson(uid).then(({ user, follow, channel }) => {
-        if (card.dataset.uid !== uid) return; // another card opened since
-        loading.remove();
-        if (user?.profile_image_url) {
-          pic.src = user.profile_image_url;
-          pic.hidden = false;
+      // Badges: the ones they wear in this chat (Twitch doesn't tell apps their whole set).
+      const worn = [...line.querySelectorAll(".oc-badge")];
+      if (worn.length) {
+        card.append(el("div", "oc-card__section", "Badges"));
+        const row = el("div", "oc-card__badges");
+        worn.forEach((b) => {
+          const big = b.cloneNode();
+          big.className = "oc-card__badge";
+          if (b.dataset.big) big.src = b.dataset.big;
+          row.append(big);
+        });
+        card.append(row);
+      }
+
+      // Gift a Sub, Follow, Whisper.
+      if (!self) {
+        const acts = el("div", "oc-card__acts");
+        const goTo = (url, what) => () => {
+          if (host.pretend) return note(`In the real chat this opens Twitch ${what}.`);
+          window.open(url, "_blank", "noopener");
+        };
+        const gift = button("oc-card__btn oc-card__btn--gift", "", goTo(`https://www.twitch.tv/subs/${encodeURIComponent(channel)}`, "so you can gift a sub"), `Gift ${name} a sub (opens Twitch's sub page for this channel)`);
+        gift.append(iconEl("gift"), " Gift a Sub");
+        const follow = button("oc-card__btn oc-card__btn--main", "Follow", goTo(open.href, `to ${name}'s channel, to follow them`), `Follow ${name} (opens their channel on Twitch)`);
+        const whisper = button("oc-card__btn oc-card__btn--main", "Whisper", () => toggleWhisper(), `Send ${name} a private whisper`);
+        const more = button("oc-card__btn oc-card__btn--more", "", () => (said.hidden = !said.hidden), "Their recent messages");
+        more.innerHTML = icon("more", 16);
+        acts.append(gift, follow, whisper, more);
+        card.append(acts);
+        aboutPerson(uid).then(({ follow: f }) => {
+          if (card.dataset.uid === uid && f) follow.textContent = "Following";
+        });
+
+        const box = el("form", "oc-card__whisper");
+        box.hidden = true;
+        const text = el("textarea", "oc-input oc-card__whispertext");
+        Object.assign(text, { rows: 2, maxLength: 500, placeholder: `Whisper to ${name}` });
+        const send = el("button", "oc-act oc-act--good", "Send");
+        send.type = "submit";
+        box.append(text, send);
+        card.append(box);
+        function toggleWhisper() {
+          box.hidden = !box.hidden;
+          if (!box.hidden) text.focus({ preventScroll: true });
         }
-        if (user?.created_at) fact(`Account created ${longDate(user.created_at)} (${howLong(user.created_at)} ago)`);
-        if (follow) fact(`Following since ${longDate(follow.followed_at)} (${howLong(follow.followed_at)})`);
-        else if (follow === false) fact("Not following");
-        if (channel?.game_name) fact(`Last streamed ${channel.game_name}`);
-        if (user?.description) facts.append(el("div", "oc-card__bio", user.description));
-        if (!user && follow === null) fact("Twitch didn't send their details.");
-      });
+        box.addEventListener("submit", async (ev) => {
+          ev.preventDefault();
+          const words = text.value.trim();
+          if (!words) return;
+          send.disabled = true;
+          try {
+            // Not api(): a missing permission here mustn't count as the sign-in ending.
+            const r = await fetch(`${urls.helix}/whispers?from_user_id=${me.id}&to_user_id=${encodeURIComponent(uid)}`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${host.token()}`, "Client-Id": host.clientId, "Content-Type": "application/json" },
+              body: JSON.stringify({ message: words }),
+            });
+            if (r.ok) {
+              text.value = "";
+              box.hidden = true;
+              note(`Whispered to ${name}.`);
+            } else if (r.status === 401 && host.onSignIn) {
+              addSystem("Whispering needs one more OK from Twitch.", { label: "Sign in", run: () => host.onSignIn() });
+            } else note(await why(r, `Twitch wouldn't send that whisper (it needs a verified phone number on your account).`));
+          } catch {
+            note("Couldn't reach Twitch. Try again.");
+          }
+          send.disabled = false;
+        });
+      }
 
-      // What they've said here, newest last.
-      const theirs = [...list.querySelectorAll(".oc-line[data-uid]")].filter((l) => l.dataset.uid === uid);
-      const said = el("div", "oc-card__said");
-      said.append(el("div", "oc-card__label", `${theirs.length} ${theirs.length === 1 ? "message" : "messages"} here`));
-      for (const l of theirs.slice(-3)) said.append(el("div", `oc-card__msg${l.classList.contains("oc-line--gone") ? " oc-card__msg--gone" : ""}`, l.dataset.text || ""));
-      card.append(said);
-
-      if (isMod && login !== me.login && !(staff && channel !== me.login)) {
-        const row = el("div", "oc-card__row");
-        for (const [label, seconds] of TIMEOUTS) {
-          row.append(button("oc-act", label, async () => {
-            if (await ban(uid, name, seconds)) card.hidden = true;
-          }, `Time out for ${label}`));
-        }
-        // A ban takes a second click, since the chat moves under the mouse.
-        const banBtn = button("oc-act oc-act--bad", "Ban", async () => {
+      // The mod buttons: ban (twice), time out (10 minutes, or pick a length), warn.
+      const canMod = isMod && !self && !(staff && channel !== me.login);
+      if (canMod) {
+        const row = el("div", "oc-card__mod");
+        const banBtn = iconButton("oc-card__modbtn oc-card__modbtn--ban", "ban", async () => {
           if (banBtn.dataset.sure) {
             if (await ban(uid, name)) card.hidden = true;
             return;
           }
           banBtn.dataset.sure = "1";
-          banBtn.textContent = "Really ban?";
+          banBtn.classList.add("oc-modicon--sure");
+          banBtn.title = `Click again to ban ${name}`;
           setTimeout(() => {
             delete banBtn.dataset.sure;
-            banBtn.textContent = "Ban";
+            banBtn.classList.remove("oc-modicon--sure");
+            banBtn.title = `Ban ${name}`;
           }, 3000);
-        });
-        row.append(button("oc-act", "Warn", () => {
+        }, `Ban ${name}`);
+        const lengths = el("div", "oc-card__lengths");
+        lengths.hidden = true;
+        for (const [label, seconds] of TIMEOUTS) {
+          lengths.append(button("oc-act", label, async () => {
+            if (await ban(uid, name, seconds)) card.hidden = true;
+          }, `Time out for ${label}`));
+        }
+        lengths.append(button("oc-act", "Unban", async () => {
+          if (await unban(uid, name)) card.hidden = true;
+        }, `Lift a ban or time-out on ${name}`));
+        const timeoutBtn = iconButton("oc-card__modbtn", "clock", () => (lengths.hidden = !lengths.hidden), `Time out ${name} (pick how long)`);
+        const warnBtn = iconButton("oc-card__modbtn oc-card__modbtn--warn", "warn", () => {
           card.hidden = true;
           askWarn(uid, name);
-        }, `Warn ${name}: they must read it before they can chat again`));
-        row.append(banBtn, button("oc-act", "Unban", async () => {
-          if (await unban(uid, name)) card.hidden = true;
-        }));
-        card.append(row);
+        }, `Warn ${name}: they must read it before they can chat again`);
+        row.append(banBtn, timeoutBtn, warnBtn);
+        card.append(row, lengths);
       }
+
+      // Messages and mod actions, counted since this chat opened.
+      const theirs = [...list.querySelectorAll(".oc-line[data-uid]")].filter((l) => l.dataset.uid === uid);
+      const a = actions.get(uid) || { bans: 0, timeouts: 0, deletes: 0, removed: 0 };
+      const stats = el("div", "oc-card__stats");
+      const stat = (value, label, title) => {
+        const st = el("div", "oc-card__stat");
+        st.title = title;
+        st.append(el("b", "", value), el("span", "", label));
+        stats.append(st);
+        return st;
+      };
+      const msgs = stat(theirs.length > 999 ? "999+" : String(theirs.length), "Messages", "Messages from them since this chat opened (click to see the latest)");
+      msgs.classList.add("oc-card__stat--click");
+      msgs.addEventListener("click", () => (said.hidden = !said.hidden));
+      stat(`${a.bans}/${a.timeouts}/${a.deletes}`, "Mod Actions", `Bans / time-outs / deletes since this chat opened${a.removed ? `, and ${a.removed} ban or time-out by another mod (Twitch doesn't say which)` : ""}`);
+      card.append(stats);
+
+      const said = el("div", "oc-card__said");
+      said.hidden = true;
+      for (const l of theirs.slice(-5)) said.append(el("div", `oc-card__msg${l.classList.contains("oc-line--gone") ? " oc-card__msg--gone" : ""}`, l.dataset.text || ""));
+      if (!theirs.length) said.append(el("div", "oc-card__msg oc-card__msg--gone", "Nothing yet"));
+      card.append(said);
+
+      aboutPerson(uid).then(({ user, follow }) => {
+        if (card.dataset.uid !== uid) return; // another card opened since
+        if (user?.profile_image_url) {
+          pic.src = user.profile_image_url;
+          pic.hidden = false;
+          blank.hidden = true;
+        }
+        created.lastChild.textContent = user?.created_at ? `Account Created ${plainDate(user.created_at)}` : "Account created: Twitch didn't say";
+        if (follow) follows.lastChild.textContent = `Following Since ${plainDate(follow.followed_at)}`;
+        else if (follow === false) follows.lastChild.textContent = "Not following";
+        else follows.hidden = true; // not a mod here, or that permission isn't given yet
+      });
       card.hidden = false;
     }
 
