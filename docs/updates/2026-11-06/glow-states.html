@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Streamer Buddy System: how a question glows</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #0b0b0d; color: #efeff1; font: 15px/1.4 Inter, "Helvetica Neue", Arial, sans-serif; }
+  .board { width: 1720px; padding: 36px 40px 40px; }
+  h1 { margin: 0 0 4px; font-size: 30px; letter-spacing: -0.01em; }
+  .sub { margin: 0 0 28px; color: #adadb8; font-size: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px 24px; }
+  figure { margin: 0; }
+  figure img { display: block; width: 100%; border-radius: 10px; border: 1px solid #2a2a2e; }
+  figcaption { margin-top: 10px; }
+  .tag { display: inline-flex; align-items: center; gap: 7px; font-weight: 700; font-size: 16px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .what { margin-top: 3px; color: #adadb8; font-size: 14px; }
+  .key { display: flex; flex-direction: column; justify-content: center; gap: 12px; padding: 24px; border: 1px solid #2a2a2e; border-radius: 10px; background: #141417; }
+  .key h2 { margin: 0 0 4px; font-size: 18px; }
+  .key p { margin: 0; color: #c8c8d0; font-size: 14.5px; }
+  .key b { color: #fff; }
+</style>
+</head>
+<body>
+<div class="board">
+  <h1>How a question glows on the streamer's OBS dock</h1>
+  <p class="sub">Streamer Buddy System · update, 6 November 2026 · screenshots from the test simulator</p>
+  <div class="grid">
+    <figure><img src="shots/1-new-green.jpg" alt=""><figcaption><span class="tag"><span class="dot" style="background:#00c27a"></span>New question</span><div class="what">Green glow and one clear beep. It shows in the message area under the bar with ♥ ✓ ✗.</div></figcaption></figure>
+    <figure><img src="shots/2-resting.jpg" alt=""><figcaption><span class="tag"><span class="dot" style="background:#53535f"></span>A few seconds later</span><div class="what">Fades down to almost nothing. Back up after 15 s, then every 10 s, while it's unanswered.</div></figcaption></figure>
+    <figure><img src="shots/3-nudge-orange.jpg" alt=""><figcaption><span class="tag"><span class="dot" style="background:#ff8a1f"></span>1st nudge</span><div class="what">The mod taps Nudge: orange, one soft beep.</div></figcaption></figure>
+    <figure><img src="shots/4-nudge-yellow.jpg" alt=""><figcaption><span class="tag"><span class="dot" style="background:#ffe14d"></span>2nd nudge</span><div class="what">Yellow. Nudges are at least 15 s apart.</div></figcaption></figure>
+    <figure><img src="shots/5-nudge-white.jpg" alt=""><figcaption><span class="tag"><span class="dot" style="background:#fff"></span>3rd nudge</span><div class="what">White, as far as normal nudges go.</div></figcaption></figure>
+    <figure><img src="shots/6-warning-red.jpg" alt=""><figcaption><span class="tag"><span class="dot" style="background:#ff3b30"></span>Warning</span><div class="what">Six quick taps on Nudge: red and a louder double beep. Once every 30 s at most.</div></figcaption></figure>
+    <figure><img src="shots/7-mod-streamer-view.jpg" alt=""><figcaption><span class="tag"><span class="dot" style="background:#9147ff"></span>What the mod sees</span><div class="what">Streamer View in the Chrome side panel mirrors her dock: "Glowing red", "Warned".</div></figcaption></figure>
+    <div class="key">
+      <h2>In short</h2>
+      <p><b>Nothing climbs on its own.</b> Every question starts green; only the person who asked can move it up.</p>
+      <p><b>It doesn't badger.</b> The glow shows briefly, then rests at a few percent until the next reminder.</p>
+      <p><b>She answers in one tap</b>: ♥ ✓ ✗, right in the bar, or types a reply. No pop-out windows.</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>
