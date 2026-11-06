@@ -3039,3 +3039,27 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-card__label { margin-bottom: 3px; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .oc-card__msg { padding: 2px 0; color: var(--text); overflow-wrap: anywhere; }
 .oc-card__msg--gone { color: var(--muted); text-decoration: line-through; }
+/* Custom chat: warn, and Twitch's cards at the top of chat */
+.oc-modicon--warn:hover { color: #1f1f23; background: var(--amber); }
+.oc-warnbox { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 8px; background: rgba(255, 179, 26, 0.1); border-top: 1px solid rgba(255, 179, 26, 0.4); }
+.oc-warnbox__head { width: 100%; font-size: 12px; font-weight: 700; color: var(--amber); }
+.oc-warnbox__reason { flex: 1; min-width: 120px; }
+.oc-top { display: grid; gap: 4px; max-height: 45%; overflow-y: auto; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.oc-topcard { --tc: var(--purple); padding: 6px 8px; font-size: 12px; background: color-mix(in srgb, var(--tc) 12%, #18181b); border: 1px solid color-mix(in srgb, var(--tc) 45%, transparent); border-radius: 6px; }
+.oc-topcard--pin { --tc: #adadb8; }
+.oc-topcard--gift { --tc: #9147ff; }
+.oc-topcard--hype { --tc: #ff6a00; }
+.oc-topcard--poll { --tc: #00b5f0; }
+.oc-topcard--pred { --tc: #387aff; }
+.oc-topcard__head { display: flex; align-items: center; gap: 6px; }
+.oc-topcard__label { flex: 1; min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
+.oc-topcard__time { font-variant-numeric: tabular-nums; color: var(--muted); }
+.oc-topcard__x { width: 20px; height: 20px; padding: 0; font-size: 16px; line-height: 1; color: var(--muted); background: none; border: 0; border-radius: 4px; cursor: pointer; }
+.oc-topcard__x:hover { color: var(--text); background: rgba(255, 255, 255, 0.1); }
+.oc-topcard__body { margin-top: 3px; overflow-wrap: anywhere; }
+.oc-topcard__note { margin-top: 3px; color: var(--muted); }
+.oc-topcard__choice { display: flex; justify-content: space-between; gap: 8px; margin-top: 5px; }
+.oc-topcard__choice--won { font-weight: 700; color: #fff; }
+.oc-topcard__num { color: var(--muted); white-space: nowrap; }
+.oc-topbar { height: 5px; margin-top: 3px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; overflow: hidden; }
+.oc-topbar__fill { height: 100%; background: var(--tc); border-radius: 3px; transition: width 0.4s; }

@@ -29,7 +29,9 @@
   const RAIDER_MS = 15 * 60 * 1000; // how long raiders' lines are marked after a raid
   // Asked for at sign-in but not needed: Twitch's full list of who's in the chat, which
   // makes telling raiders from people already here exact even in big chats.
-  const EXTRA_SCOPES = ["moderator:read:chatters", "moderator:read:followers"]; // followers: "Following since" on a name's card
+  // followers: "Following since" on a name's card; warnings: Warn, and seeing others' warns;
+  // hype train, polls and predictions: their cards at the top (your own channel only).
+  const EXTRA_SCOPES = ["moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions"];
   const CHATTERS_EVERY_MS = 2 * 60 * 1000;
   const TIMEOUTS = [["1m", 60], ["10m", 600], ["1h", 3600], ["24h", 86400]];
   // Twitch's chat commands don't run through the API, and could post as plain text, so
@@ -58,6 +60,7 @@
     trash: '<path d="M4 6h12M8 6V4.5h4V6M6 6l.7 10h6.6L14 6M8.5 9v4.5M11.5 9v4.5"/>',
     ban: '<circle cx="10" cy="10" r="6.5"/><path d="M5.4 14.6l9.2-9.2"/>',
     clock: '<circle cx="10" cy="10" r="6.5"/><path d="M10 6.2V10l2.6 1.6"/>',
+    warn: '<path d="M10 3.2 17.2 16H2.8z"/><path d="M10 8.2v3.6M10 13.9v.1"/>',
   };
   const icon = (name, size = 15) =>
     `<svg viewBox="0 0 20 20" width="${size}" height="${size}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICON[name]}</svg>`;
@@ -121,7 +124,14 @@
     input.setAttribute("data-lpignore", "true");
     const pickBtn = button("oc-emotebtn", "☺", () => togglePicker(), "Emotes");
     composer.append(input, pickBtn);
-    root.append(bar, heldEl, listWrap, noteEl, replyEl, picker, composer);
+    // Twitch's cards at the top of chat: the pinned message, gift bombs, hype trains, polls
+    // and predictions (see "Top of chat" below).
+    const topEl = el("div", "oc-top");
+    topEl.hidden = true;
+    // Warn takes a reason, which the person sees: asked for here, above the message box.
+    const warnEl = el("form", "oc-warnbox");
+    warnEl.hidden = true;
+    root.append(bar, heldEl, topEl, listWrap, noteEl, warnEl, replyEl, picker, composer);
     host.box.append(root);
 
     function setStatus(text, kind) {
@@ -262,6 +272,26 @@
       } catch (err) {
         return fail("it couldn't reach Twitch");
       }
+      // Nice to have, so a refusal (a permission not given, or not your channel) is fine.
+      const extra = async (type, versions, condition) => {
+        for (const version of versions) {
+          try {
+            const r = await fetch(urls.helix + "/eventsub/subscriptions", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${host.token()}`, "Client-Id": host.clientId, "Content-Type": "application/json" },
+              body: JSON.stringify({ type, version, condition, transport: { method: "websocket", session_id: session } }),
+            });
+            if (r.ok || r.status === 409) return true;
+          } catch {}
+        }
+        return false;
+      };
+      if (isMod) ["channel.warning.send", "channel.warning.acknowledge"].forEach((type) => extra(type, ["1"], asMod));
+      if (channel === me.login) {
+        const own = { broadcaster_user_id: broadcasterId };
+        ["channel.hype_train.begin", "channel.hype_train.progress", "channel.hype_train.end"].forEach((type) => extra(type, ["2", "1"], own));
+        ["channel.poll.begin", "channel.poll.progress", "channel.poll.end", "channel.prediction.begin", "channel.prediction.progress", "channel.prediction.lock", "channel.prediction.end"].forEach((type) => extra(type, ["1"], own));
+      }
       if (stopped || failed) return;
       if (everConnected && lostAt) {
         const secs = Math.round((Date.now() - lostAt) / 1000);
@@ -272,6 +302,7 @@
       ready = true;
       root.classList.toggle("oc--mod", isMod); // the mod icons before names
       setStatus(isMod ? "Custom chat" : "Custom chat (not a mod here)", "ok");
+      checkPin();
     }
 
     // Is this connection really getting chat? dock.js keeps a separate anonymous
@@ -721,6 +752,13 @@
         }
         return line;
       }
+      if (kind === "community_sub_gift" && e.community_sub_gift) giftCard(e);
+      // The single gifts that make up a gift bomb: Twitch's chat folds them into the bomb's
+      // line, and its card at the top counts them.
+      if (kind === "sub_gift" && e.sub_gift?.community_gift_id) {
+        giftLanded(e.sub_gift.community_gift_id, e.sub_gift.recipient_user_name);
+        return null;
+      }
       if (kind === "announcement") {
         const c = ANNOUNCE_COLORS[String(e.announcement?.color || "").toUpperCase()];
         if (c) line.style.setProperty("--notice", c);
@@ -760,7 +798,8 @@
       } else if (type === "channel.chat.notification") {
         if (known.has(e.message_id)) return;
         known.add(e.message_id);
-        addLine(noticeLine(e));
+        const line = noticeLine(e);
+        if (line) addLine(line);
       } else if (type === "channel.chat.message_delete") {
         flushLines();
         const line = byId.get(e.message_id);
@@ -777,7 +816,15 @@
         flushLines();
         list.querySelectorAll(".oc-line[data-id]").forEach(hideLine);
         addSystem("Chat was cleared by a moderator.");
-      } else if (type === "automod.message.hold") gotHold(e);
+      } else if (type.startsWith("channel.hype_train.")) hypeCard(type.split(".").pop(), e);
+      else if (type.startsWith("channel.poll.")) pollCard(type.split(".").pop(), e);
+      else if (type.startsWith("channel.prediction.")) predictionCard(type.split(".").pop(), e);
+      else if (type === "channel.warning.send") {
+        const mine = myWarns.get(e.user_id);
+        myWarns.delete(e.user_id);
+        if (!(mine && Date.now() - mine < 15000)) addSystem(`${e.moderator_user_name || "A moderator"} warned ${e.user_name}${e.reason ? `: ${e.reason}` : "."}`);
+      } else if (type === "channel.warning.acknowledge") addSystem(`${e.user_name} read the warning and can chat again.`);
+      else if (type === "automod.message.hold") gotHold(e);
       else if (type === "automod.message.update") {
         const row = heldEl.querySelector(`[data-id="${CSS.escape(e.message_id)}"]`);
         if (row) row.remove();
@@ -856,6 +903,217 @@
       }
     }
 
+    // ----- Warn ------------------------------------------------------------------------
+    // Like Twitch's: they see the reason and can't chat until they've read it.
+    const myWarns = new Map(); // user id -> when you warned them
+    function askWarn(uid, name) {
+      warnEl.replaceChildren();
+      const reason = el("input", "oc-input oc-warnbox__reason");
+      Object.assign(reason, { type: "text", maxLength: 500, placeholder: `Why? ${name} will see this`, autocomplete: "off" });
+      const go = el("button", "oc-act oc-act--bad", "Warn");
+      go.type = "submit";
+      warnEl.append(el("div", "oc-warnbox__head", `Warn ${name}`), reason, go, button("oc-act", "Cancel", () => (warnEl.hidden = true)));
+      warnEl.onsubmit = async (ev) => {
+        ev.preventDefault();
+        const said = reason.value.trim();
+        if (!said) return reason.focus();
+        go.disabled = true;
+        myWarns.set(uid, Date.now());
+        try {
+          // Not api(): a missing permission here mustn't count as the sign-in ending.
+          const r = await fetch(`${urls.helix}/moderation/warnings?${modQuery()}`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${host.token()}`, "Client-Id": host.clientId, "Content-Type": "application/json" },
+            body: JSON.stringify({ data: { user_id: uid, reason: said } }),
+          });
+          if (r.ok) {
+            warnEl.hidden = true;
+            addSystem(`You warned ${name}: ${said}`);
+          } else if ((r.status === 401 || r.status === 403) && host.onSignIn) {
+            myWarns.delete(uid);
+            warnEl.hidden = true;
+            addSystem("Warning someone needs one more OK from Twitch.", { label: "Sign in", run: () => host.onSignIn() });
+          } else {
+            myWarns.delete(uid);
+            note(await why(r, `Twitch wouldn't warn ${name}.`));
+          }
+        } catch {
+          myWarns.delete(uid);
+          note("Couldn't reach Twitch. Try again.");
+        }
+        go.disabled = false;
+      };
+      warnEl.hidden = false;
+      reason.focus({ preventScroll: true });
+    }
+
+    // ----- Top of chat -----------------------------------------------------------------
+    // Twitch's cards above the messages: the pinned message (for mods), a gift bomb while
+    // its gifts land, and on your own channel the hype train, polls and predictions. Each
+    // can be closed; ones with a clock count down.
+    const tops = new Map(); // key -> card
+    function topCard(key, kind, ms) {
+      let c = tops.get(key);
+      if (!c) {
+        c = el("div", `oc-topcard oc-topcard--${kind}`);
+        tops.set(key, c);
+        if (kind === "pin") topEl.prepend(c); // the pinned message stays first, as on Twitch
+        else topEl.append(c);
+      }
+      clearTimeout(c._gone);
+      if (ms) c._gone = setTimeout(() => dropTop(key), ms);
+      c.replaceChildren();
+      topEl.hidden = false;
+      return c;
+    }
+    function dropTop(key) {
+      const c = tops.get(key);
+      if (!c) return;
+      clearTimeout(c._gone);
+      c.remove();
+      tops.delete(key);
+      topEl.hidden = !tops.size;
+    }
+    function topHead(c, key, label, until, onClose) {
+      const head = el("div", "oc-topcard__head");
+      head.append(el("span", "oc-topcard__label", label));
+      if (until) {
+        const t = el("span", "oc-topcard__time");
+        t.dataset.until = String(new Date(until).getTime());
+        head.append(t);
+      }
+      head.append(button("oc-topcard__x", "×", () => {
+        onClose?.();
+        dropTop(key);
+      }, "Hide this"));
+      c.append(head);
+    }
+    const clockText = (ms) => {
+      const s = Math.max(0, Math.round(ms / 1000));
+      return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    };
+    timers.push(setInterval(() => {
+      for (const t of topEl.querySelectorAll("[data-until]")) t.textContent = clockText(Number(t.dataset.until) - Date.now());
+    }, 1000));
+    function meter(c, share, color) {
+      const b = el("div", "oc-topbar");
+      const fill = el("div", "oc-topbar__fill");
+      fill.style.width = `${Math.max(0, Math.min(100, share * 100)).toFixed(1)}%`;
+      if (color) fill.style.background = color;
+      b.append(fill);
+      c.append(b);
+      return b;
+    }
+
+    // The pinned message: Twitch only tells mods, and has no event for it, so it's looked
+    // up every so often.
+    let pinHidden = "";
+    async function checkPin() {
+      if (!isMod || stopped) return;
+      const j = await quiet(`/chat/pins?${modQuery()}`);
+      if (!j) return;
+      const p = j.data?.[0];
+      if (!p || p.message_id === pinHidden) {
+        if (!p) dropTop("pin");
+        return;
+      }
+      const c = topCard("pin", "pin");
+      topHead(c, "pin", `📌 Pinned by ${p.pinned_by_user_name || "a moderator"}`, p.ends_at, () => (pinHidden = p.message_id));
+      const body = el("div", "oc-topcard__body");
+      body.append(el("b", "", p.sender_user_name), ": ");
+      const words = el("span");
+      drawMessage(words, p.message?.fragments, p.message?.text || "");
+      body.append(words);
+      c.append(body);
+    }
+    timers.push(setInterval(checkPin, 10 * 1000));
+
+    // A gift bomb: the gifter, how many, and how many have landed so far.
+    const gifts = new Map(); // community gift id -> { total, landed, names, from }
+    function giftCard(e) {
+      const g = e.community_sub_gift;
+      const from = e.chatter_is_anonymous ? "Anonymous" : e.chatter_user_name;
+      const known = gifts.get(g.id) || { landed: 0, names: [] };
+      Object.assign(known, { total: g.total, from });
+      gifts.set(g.id, known);
+      drawGift(g.id);
+    }
+    function giftLanded(id, name) {
+      const g = gifts.get(id) || { landed: 0, names: [], total: 0, from: "" };
+      g.landed++;
+      if (name) g.names.push(name);
+      gifts.set(id, g);
+      if (g.total) drawGift(id);
+    }
+    function drawGift(id) {
+      const g = gifts.get(id);
+      const key = `gift-${id}`;
+      const c = topCard(key, "gift", 45 * 1000);
+      topHead(c, key, `🎁 ${g.from} is gifting ${g.total} ${g.total === 1 ? "sub" : "subs"}!`);
+      meter(c, g.total ? g.landed / g.total : 0);
+      const last = g.names.slice(-3).join(", ");
+      c.append(el("div", "oc-topcard__note", `${Math.min(g.landed, g.total)} of ${g.total} given${last ? ` · ${last}` : ""}`));
+    }
+
+    // Hype train (your channel): level, how close the next one is, and time left.
+    function hypeCard(stage, e) {
+      if (stage === "end") {
+        const c = topCard("hype", "hype", 30 * 1000);
+        topHead(c, "hype", `🚂 Hype Train over: level ${e.level}`);
+        c.append(el("div", "oc-topcard__note", `Thanks to everyone who helped${e.total ? ` (${Number(e.total).toLocaleString()} points)` : ""}!`));
+        return;
+      }
+      const c = topCard("hype", "hype");
+      topHead(c, "hype", `🚂 Hype Train · Level ${e.level || 1}`, e.expires_at);
+      meter(c, e.goal ? (e.progress || 0) / e.goal : 0);
+      const top = (e.top_contributions || []).slice(0, 3).map((t) => t.user_name).filter(Boolean);
+      c.append(el("div", "oc-topcard__note", `${Number(e.progress || 0).toLocaleString()} of ${Number(e.goal || 0).toLocaleString()} to level ${(e.level || 1) + 1}${top.length ? ` · top: ${top.join(", ")}` : ""}`));
+    }
+
+    // A poll (your channel): the choices and how the votes are going.
+    function pollCard(stage, e) {
+      const key = `poll-${e.id}`;
+      if (stage === "end" && e.status === "archived") return dropTop(key);
+      const done = stage === "end";
+      const c = topCard(key, "poll", done ? 30 * 1000 : 0);
+      topHead(c, key, `📊 ${done ? "Poll ended" : "Poll"}: ${e.title}`, done ? null : e.ends_at);
+      const choices = e.choices || [];
+      const total = choices.reduce((n, ch) => n + (ch.votes || 0), 0);
+      const best = Math.max(...choices.map((ch) => ch.votes || 0));
+      for (const ch of choices) {
+        const row = el("div", `oc-topcard__choice${done && total && ch.votes === best ? " oc-topcard__choice--won" : ""}`);
+        const share = total ? (ch.votes || 0) / total : 0;
+        row.append(el("span", "", ch.title), el("span", "oc-topcard__num", `${Math.round(share * 100)}% (${ch.votes || 0})`));
+        c.append(row);
+        meter(c, share);
+      }
+    }
+
+    // A prediction (your channel): the two (or more) sides, points on each, and the result.
+    const SIDE_COLORS = { blue: "#387aff", pink: "#f5009b" };
+    function predictionCard(stage, e) {
+      const key = `pred-${e.id}`;
+      if (stage === "end" && e.status === "canceled") {
+        const c = topCard(key, "pred", 15 * 1000);
+        topHead(c, key, `🔮 Prediction canceled: ${e.title}`);
+        return;
+      }
+      const done = stage === "end";
+      const c = topCard(key, "pred", done ? 45 * 1000 : 0);
+      const status = done ? "Prediction over" : stage === "lock" ? "Prediction locked" : "Prediction";
+      topHead(c, key, `🔮 ${status}: ${e.title}`, !done && stage !== "lock" ? e.locks_at : null);
+      const outcomes = e.outcomes || [];
+      const total = outcomes.reduce((n, o) => n + (o.channel_points || 0), 0);
+      for (const o of outcomes) {
+        const won = done && o.id === e.winning_outcome_id;
+        const row = el("div", `oc-topcard__choice${won ? " oc-topcard__choice--won" : ""}`);
+        const share = total ? (o.channel_points || 0) / total : 0;
+        row.append(el("span", "", `${won ? "🏆 " : ""}${o.title}`), el("span", "oc-topcard__num", `${Math.round(share * 100)}% · ${Number(o.channel_points || 0).toLocaleString()} pts · ${o.users || 0} ${o.users === 1 ? "person" : "people"}`));
+        c.append(row);
+        meter(c, share, SIDE_COLORS[o.color]);
+      }
+    }
+
     function modIcons(line) {
       const box = el("span", "oc-modicons");
       const { uid, name } = line.dataset;
@@ -880,6 +1138,7 @@
       box.append(
         banBtn,
         iconButton("oc-modicon", "clock", () => ban(uid, name, 600), `Time out ${name} for 10 minutes`),
+        iconButton("oc-modicon oc-modicon--warn", "warn", () => askWarn(uid, name), `Warn ${name}`),
         iconButton("oc-modicon", "trash", () => deleteMessage(line), "Delete this message"),
       );
       return box;
@@ -999,6 +1258,10 @@
             banBtn.textContent = "Ban";
           }, 3000);
         });
+        row.append(button("oc-act", "Warn", () => {
+          card.hidden = true;
+          askWarn(uid, name);
+        }, `Warn ${name}: they must read it before they can chat again`));
         row.append(banBtn, button("oc-act", "Unban", async () => {
           if (await unban(uid, name)) card.hidden = true;
         }));

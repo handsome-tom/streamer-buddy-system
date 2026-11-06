@@ -252,6 +252,11 @@ const twitch = (() => {
   const ircUser = (who) => `:${who}!${who}@${who}.tmi.twitch.tv`;
   const ircLine = (line) => chatSockets.forEach((s) => s._receive(line));
 
+  let pinned = null;
+  let pinTimer = 0;
+  let hypeTimer = 0;
+  let pollTimer = 0;
+  let predTimer = 0;
   const controls = {
     feed() {
       clearTimeout(feedTimer);
@@ -303,8 +308,102 @@ const twitch = (() => {
     gift() {
       const who = pick(CHATTERS);
       const total = pick([5, 5, 10, 20]);
-      notice("community_sub_gift", { who, system: `${who} is gifting ${total} Tier 1 Subs to the community!`, fields: { community_sub_gift: { id: `g${n}`, total, sub_tier: "1000" } } });
+      const giftId = `g${n}`;
+      notice("community_sub_gift", { who, system: `${who} is gifting ${total} Tier 1 Subs to the community!`, fields: { community_sub_gift: { id: giftId, total, sub_tier: "1000" } } });
+      // Then each gift lands, a moment apart, as Twitch sends them.
+      const lucky = [...CHATTERS, ...NEWBIES].filter((c) => c !== who).sort(() => Math.random() - 0.5);
+      for (let i = 0; i < total; i++) {
+        const to = lucky[i % lucky.length];
+        setTimeout(() => notice("sub_gift", { who, system: `${who} gifted a Tier 1 sub to ${to}!`, fields: { sub_gift: { recipient_user_name: to, recipient_user_login: to.toLowerCase(), sub_tier: "1000", community_gift_id: giftId, duration_months: 1 } } }), 600 + i * 350);
+      }
       return { who, total };
+    },
+    // The pinned message: mod2 pins a welcome for 5 minutes (custom chat looks every 10s).
+    pin() {
+      const text = "Welcome in! Be kind, no spoilers please. Type !commands to see what the bot can do";
+      const id = chat(text, "mod2", { badges: [{ set_id: "moderator", id: "1" }] });
+      pinned = {
+        message_id: id, broadcaster_id: "1", sender_user_id: "u-mod2", sender_user_login: "mod2", sender_user_name: "mod2",
+        pinned_by_user_id: "u-mod2", pinned_by_user_login: "mod2", pinned_by_user_name: "mod2",
+        message: { text, fragments: [{ type: "text", text }] }, starts_at: new Date().toISOString(), ends_at: new Date(Date.now() + 5 * 60000).toISOString(), updated_at: new Date().toISOString(),
+      };
+      clearTimeout(pinTimer);
+      pinTimer = setTimeout(() => (pinned = null), 5 * 60000);
+    },
+    // A hype train: it starts, climbs a few levels as people chip in, then ends.
+    hype() {
+      clearTimeout(hypeTimer);
+      const id = `h${++n}`;
+      let level = 1;
+      let progress = 0;
+      const goal = () => 1000 + level * 600;
+      const send = (stage) => {
+        const expires = new Date(Date.now() + 60000).toISOString();
+        event(`channel.hype_train.${stage}`, {
+          id, broadcaster_user_id: "1", level, total: level * 1500 + progress, progress, goal: goal(), expires_at: expires, started_at: new Date().toISOString(),
+          top_contributions: [{ user_name: "BigTimeTurtle", type: "bits", total: 900 }, { user_name: "OliveBranch", type: "subscription", total: 500 }],
+        });
+      };
+      send("begin");
+      let steps = 0;
+      const step = () => {
+        steps++;
+        progress += 300 + Math.floor(Math.random() * 500);
+        if (progress >= goal()) {
+          progress -= goal();
+          level++;
+        }
+        if (steps < 12) {
+          send("progress");
+          hypeTimer = setTimeout(step, 2500);
+        } else event("channel.hype_train.end", { id, broadcaster_user_id: "1", level, total: level * 1500 + progress, ended_at: new Date().toISOString() });
+      };
+      hypeTimer = setTimeout(step, 2000);
+    },
+    // A poll: votes come in for a while, then it ends with a winner.
+    poll() {
+      clearTimeout(pollTimer);
+      const id = `p${++n}`;
+      const choices = [{ id: "a", title: "Boss fight now", votes: 0 }, { id: "b", title: "Explore first", votes: 0 }, { id: "c", title: "Snack break", votes: 0 }];
+      const ends = new Date(Date.now() + 30000).toISOString();
+      const send = (stage, extra = {}) => event(`channel.poll.${stage}`, { id, broadcaster_user_id: "1", title: "What should we do next?", choices: choices.map((c) => ({ ...c })), ends_at: ends, ...extra });
+      send("begin");
+      let ticks = 0;
+      const tick = () => {
+        ticks++;
+        for (const c of choices) c.votes += Math.floor(Math.random() * (c.id === "a" ? 9 : 6));
+        if (ticks < 10) {
+          send("progress");
+          pollTimer = setTimeout(tick, 3000);
+        } else send("end", { status: "completed", ended_at: new Date().toISOString() });
+      };
+      pollTimer = setTimeout(tick, 1500);
+    },
+    // A prediction: people put points on a side, it locks, then a side wins.
+    prediction() {
+      clearTimeout(predTimer);
+      const id = `r${++n}`;
+      const outcomes = [{ id: "w", title: "We win this fight", color: "blue", users: 0, channel_points: 0 }, { id: "l", title: "We lose", color: "pink", users: 0, channel_points: 0 }];
+      const locks = new Date(Date.now() + 20000).toISOString();
+      const send = (stage, extra = {}) => event(`channel.prediction.${stage}`, { id, broadcaster_user_id: "1", title: "Will we beat the boss?", outcomes: outcomes.map((o) => ({ ...o })), locks_at: locks, ...extra });
+      send("begin");
+      let ticks = 0;
+      const tick = () => {
+        ticks++;
+        for (const o of outcomes) {
+          const people = Math.floor(Math.random() * 4);
+          o.users += people;
+          o.channel_points += people * (50 + Math.floor(Math.random() * 950));
+        }
+        if (ticks < 7) {
+          send("progress");
+          predTimer = setTimeout(tick, 2500);
+        } else {
+          send("lock", { locked_at: new Date().toISOString() });
+          predTimer = setTimeout(() => send("end", { status: "resolved", winning_outcome_id: Math.random() < 0.6 ? "w" : "l", ended_at: new Date().toISOString() }), 6000);
+        }
+      };
+      predTimer = setTimeout(tick, 1500);
     },
     cheer() {
       const who = pick(CHATTERS);
@@ -380,7 +479,7 @@ const twitch = (() => {
     socket._peer = { got() {}, gone: () => chatSockets.delete(socket) };
   }
 
-  const SCOPES = ["user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod", "moderator:read:chatters", "moderator:read:followers"];
+  const SCOPES = ["user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod", "moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions"];
   const json = (status, body) => new Response(status === 204 ? null : JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
   async function api(url, init = {}) {
     const u = new URL(url);
@@ -419,6 +518,15 @@ const twitch = (() => {
       return json(200, { data: [{}] });
     }
     if (route === "/moderation/automod/message") return json(204, {});
+    if (route === "/chat/pins") return json(200, { data: pinned ? [pinned] : [] });
+    if (route === "/moderation/warnings") {
+      // The person is warned; a few seconds later they read it, as Twitch reports.
+      const w = JSON.parse(body || "{}").data || {};
+      const name = String(w.user_id || "").replace(/^u-/, "");
+      event("channel.warning.send", { broadcaster_user_id: "1", moderator_user_id: "1", moderator_user_name: "streamer", user_id: w.user_id, user_login: name.toLowerCase(), user_name: name, reason: w.reason, chat_rules_cited: null });
+      setTimeout(() => event("channel.warning.acknowledge", { broadcaster_user_id: "1", user_id: w.user_id, user_login: name.toLowerCase(), user_name: name }), 4000);
+      return json(200, { data: [{ broadcaster_id: "1", user_id: w.user_id, moderator_id: "1", reason: w.reason }] });
+    }
     // Twitch's list of who's in the chat: the regulars and the lurkers (not raiders yet).
     if (route === "/chat/chatters") return json(200, { data: [...CHATTERS, ...NEWBIES, "mod1", "mod2"].map((c) => ({ user_login: c.toLowerCase(), user_name: c })), pagination: {} });
     return json(404, { message: `the demo doesn't do ${route}` });
