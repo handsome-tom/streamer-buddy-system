@@ -182,22 +182,47 @@ const twitch = (() => {
   };
   const pick = (list) => list[Math.floor(Math.random() * list.length)];
 
-  function chat(text, who = pick(CHATTERS)) {
+  // A chat message, as Twitch sends it to custom chat. A first message in the channel is
+  // also marked on Twitch's public chat, the way Twitch really says so (first-msg=1).
+  function chat(text, who = pick(CHATTERS), { kind = "text", bits = 0, first = false } = {}) {
     const id = `m${++n}`;
     lastIds.push(id);
     if (lastIds.length > 50) lastIds.shift();
     colorOf[who] ||= hue();
+    if (first) ircLine(`@display-name=${who};first-msg=1;id=${id};user-id=u-${who} ${ircUser(who.toLowerCase())} PRIVMSG #streamer :${text}`);
+    const fragments = bits ? [{ type: "cheermote", text: `Cheer${bits}` }, { type: "text", text: ` ${text}` }] : [{ type: "text", text }];
     event("channel.chat.message", {
       broadcaster_user_id: "1", chatter_user_id: `u-${who}`, chatter_user_login: who.toLowerCase(), chatter_user_name: who,
-      message_id: id, message: { text, fragments: [{ type: "text", text }] }, message_type: "text", badges: [], color: colorOf[who], reply: null,
+      message_id: id, message: { text: bits ? `Cheer${bits} ${text}` : text, fragments }, message_type: kind, badges: [], color: colorOf[who], reply: null,
+      cheer: bits ? { bits } : null,
     });
     return id;
+  }
+
+  // Twitch's notices: raids, subs, gifts, announcements.
+  function notice(notice_type, extra = {}) {
+    const who = extra.who || pick(CHATTERS);
+    const text = extra.text || "";
+    event("channel.chat.notification", {
+      broadcaster_user_id: "1", chatter_user_id: `u-${who}`, chatter_user_login: who.toLowerCase(), chatter_user_name: who, color: colorOf[who] || hue(),
+      message_id: `n${++n}`, notice_type, system_message: extra.system || "", message: { text, fragments: text ? [{ type: "text", text }] : [] },
+      ...extra.fields,
+    });
+  }
+  const NEWBIES = ["fresh_fern", "NewHereHi", "pebble_pusher", "WanderingWes", "kettlecorn99", "SoftServeSam", "dewdrop_dev", "MarbleMoth"];
+  const RAIDERS = ["CozyCastleTV", "MidnightMango", "TurboTortoise", "PaperCraneLive"];
+  const RAID_LINES = ["RAID HYPE", "hi from the raid!", "we're here!!", "raid raid raid", "hello new streamer o7", "the raid has arrived"];
+  const firstOne = () => {
+    const who = pick(NEWBIES);
+    chat(pick(["hi everyone, first time here!", "hello! just found this stream", "hey, been lurking, first message", "this is my first time chatting, hi"]), who, { first: true });
+    return who;
   }
 
   let feedTimer = 0;
   function feedOnce() {
     const r = Math.random();
-    chat(pick(r < 0.45 ? SHORT : r < 0.88 ? MEDIUM : LONG));
+    if (Math.random() < 0.03) firstOne(); // now and then someone new says hello
+    else chat(pick(r < 0.45 ? SHORT : r < 0.88 ? MEDIUM : LONG));
     feedTimer = setTimeout(feedOnce, 600 + Math.random() * 3000);
   }
 
@@ -218,6 +243,48 @@ const twitch = (() => {
     part(who) {
       here.delete(who);
       ircLine(`${ircUser(who)} PART #streamer`);
+    },
+    // A raid: the notice, then the raiders saying hello.
+    raid() {
+      const from = pick(RAIDERS);
+      const count = 8 + Math.floor(Math.random() * 140);
+      notice("raid", {
+        who: from,
+        system: `${count} raiders from ${from} have joined!`,
+        fields: { raid: { user_id: `u-${from}`, user_name: from, user_login: from.toLowerCase(), viewer_count: count, profile_image_url: new URL("pics/raider.svg", import.meta.url).href } },
+      });
+      const raiders = CHATTERS.slice().sort(() => Math.random() - 0.5).slice(0, 6);
+      raiders.forEach((who, i) => setTimeout(() => chat(pick(RAID_LINES), who), 900 + i * 450));
+      return { from, count };
+    },
+    first: () => firstOne(),
+    sub() {
+      const who = pick(CHATTERS);
+      if (Math.random() < 0.5) notice("sub", { who, system: `${who} subscribed at Tier 1.`, fields: { sub: { sub_tier: "1000", is_prime: false, duration_months: 1 } } });
+      else {
+        const months = 2 + Math.floor(Math.random() * 30);
+        notice("resub", { who, system: `${who} subscribed at Tier 1. They've subscribed for ${months} months!`, text: "love this community", fields: { resub: { cumulative_months: months, sub_tier: "1000" } } });
+      }
+      return who;
+    },
+    gift() {
+      const who = pick(CHATTERS);
+      const total = pick([5, 5, 10, 20]);
+      notice("community_sub_gift", { who, system: `${who} is gifting ${total} Tier 1 Subs to the community!`, fields: { community_sub_gift: { id: `g${n}`, total, sub_tier: "1000" } } });
+      return { who, total };
+    },
+    cheer() {
+      const who = pick(CHATTERS);
+      chat(pick(["great stream!", "for the snack fund", "that play deserved it"]), who, { bits: pick([100, 250, 500, 1000]) });
+      return who;
+    },
+    highlight() {
+      const who = pick(CHATTERS);
+      chat(pick(["can you say hi to my cat", "HAPPY BIRTHDAY to the streamer!", "this is my highlighted message, hello!"]), who, { kind: "channel_points_highlighted" });
+      return who;
+    },
+    announce() {
+      notice("announcement", { who: "mod2", text: "Giveaway at the end of the stream, type !enter to join", fields: { announcement: { color: "GREEN" } } });
     },
     say(who, text) {
       if (!here.has(who)) controls.join(who);
@@ -266,7 +333,10 @@ const twitch = (() => {
       return json(204, {});
     }
     if (route === "/moderation/bans") {
-      if ((init.method || "GET") === "POST") event("channel.chat.clear_user_messages", { target_user_id: JSON.parse(body || "{}").data?.user_id });
+      if ((init.method || "GET") === "POST") {
+        const id = JSON.parse(body || "{}").data?.user_id || "";
+        event("channel.chat.clear_user_messages", { target_user_id: id, target_user_name: id.replace(/^u-/, ""), target_user_login: id.replace(/^u-/, "").toLowerCase() });
+      }
       return json(200, { data: [{}] });
     }
     if (route === "/moderation/automod/message") return json(204, {});

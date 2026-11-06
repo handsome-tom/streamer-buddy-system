@@ -122,6 +122,15 @@ the relay. `&ownchat=off` switches it off again.
 
 Before each viewer's name, Twitch-style mod icons: ban (a second click within 3 seconds),
 time out for 10 minutes, and delete, while you're a mod there (Settings can hide them).
+When another mod bans or times someone out, a line says so (Twitch doesn't say which, or who).
+
+Twitch's own events show the way Twitch's chat shows them: raids (who, how many viewers,
+their picture, and a Welcome them button that fills in a welcome to send), subs and resubs,
+gifted subs, bits badge tiers, announcements in their colour, cheers (a bits tag),
+channel-points highlighted messages and gigantified emotes. First-time chatters are marked
+in green with "First-time chatter", as Twitch marks them for mods: Twitch only says so on
+its public chat (the `first-msg` tag), so the page's own public-chat connection (the one
+for who's here) asks for tags and passes those on.
 
 Switching between custom chat and Twitch's (Settings, or the link above the chat) never
 loses messages: both stay running, and switching only changes which one shows. Custom

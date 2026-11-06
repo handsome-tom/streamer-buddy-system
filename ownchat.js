@@ -527,6 +527,9 @@
       if (ranks.includes("broadcaster") || ranks.includes("moderator")) line.dataset.staff = "1";
       if (host.isConnection(m.login)) line.classList.add("oc-line--connection");
       if (m.history) line.classList.add("oc-line--old");
+      // How Twitch dressed the message up: a channel-points highlight, a gigantified emote.
+      if (m.kind === "channel_points_highlighted" || m.kind === "power_ups_message_effect") line.classList.add("oc-line--highlight");
+      if (m.kind === "power_ups_gigantified_emote") line.classList.add("oc-line--giant");
       if (m.reply) {
         const r = el("div", "oc-replied");
         r.textContent = `Replying to @${m.reply.parent_user_name}: ${m.reply.parent_message_body}`;
@@ -556,9 +559,21 @@
         body.textContent = m.text;
         codeError(err);
       }
+      if (m.bits) line.append(el("span", "oc-bits", `${m.bits} bits`), " ");
       line.append(who, ": ", body);
       byId.set(m.id, line);
+      // Someone's first message in this channel, as Twitch marks it for mods. Twitch's
+      // public chat says so (dock.js passes it on, see firstChat), and it can arrive before
+      // or after the line itself.
+      if (m.first || m.kind === "user_intro" || firstIds.delete(m.id)) markFirst(line, m.kind === "user_intro");
       return line;
+    }
+
+    const firstIds = new Set(); // first messages Twitch told us about before they arrived
+    function markFirst(line, intro) {
+      if (line.classList.contains("oc-line--first")) return;
+      line.classList.add("oc-line--first");
+      line.prepend(el("div", "oc-firsttag", intro ? "First-time chatter, introducing themselves" : "First-time chatter"));
     }
 
     // A removed line stops showing its words (this dock might be on screen), with a way
@@ -573,6 +588,59 @@
         body.hidden = !body.hidden;
       });
       line.append(shown);
+    }
+
+    // Twitch's chat notices: raids, subs and gifts, cheers' badges, announcements, and the
+    // same from the other channels in a shared chat ("shared_chat_" in front).
+    const SUB_NOTICES = ["sub", "resub", "sub_gift", "community_sub_gift", "gift_paid_upgrade", "prime_paid_upgrade", "pay_it_forward"];
+    const ANNOUNCE_COLORS = { BLUE: "#00b5f0", GREEN: "#00db84", ORANGE: "#ff9a1f", PURPLE: "#a970ff" };
+    function noticeLine(e) {
+      const kind = String(e.notice_type || "").replace(/^shared_chat_/, "");
+      const what = SUB_NOTICES.includes(kind) ? "sub" : kind === "bits_badge_tier" || kind === "charity_donation" ? "gold" : kind;
+      const line = el("div", `oc-line oc-notice oc-notice--${what}`);
+      const fromChannel = e.source_broadcaster_user_id && e.source_broadcaster_user_id !== broadcasterId ? e.source_broadcaster_user_name : "";
+      if (kind === "raid" && e.raid) {
+        // Who's raiding, with how many, their picture, and a quick welcome.
+        const r = e.raid;
+        const head = el("div", "oc-raid");
+        if (r.profile_image_url) {
+          const pic = el("img", "oc-raid__pic");
+          pic.src = r.profile_image_url.replace("%{width}", "70").replace("%{height}", "70");
+          pic.alt = "";
+          head.append(pic);
+        }
+        const words = el("div", "oc-raid__words");
+        const name = el("a", "oc-raid__name", r.user_name || r.user_login);
+        name.href = `https://www.twitch.tv/${encodeURIComponent(r.user_login || "")}`;
+        name.target = "_blank";
+        name.rel = "noopener noreferrer";
+        const n = Number(r.viewer_count) || 0;
+        words.append(el("div", "oc-raid__title", "Raid!"), name, ` is raiding with ${n.toLocaleString()} ${n === 1 ? "viewer" : "viewers"}`);
+        if (fromChannel) words.append(` (to ${fromChannel})`);
+        head.append(words);
+        line.append(head);
+        if (!fromChannel) {
+          line.append(button("oc-act oc-raid__hi", "Welcome them", () => {
+            input.value = `Welcome in, @${r.user_name || r.user_login} and the raiders! <3`;
+            input.focus();
+          }, "Puts a welcome in the message box for you to send"));
+        }
+        return line;
+      }
+      if (kind === "announcement") {
+        const c = ANNOUNCE_COLORS[String(e.announcement?.color || "").toUpperCase()];
+        if (c) line.style.setProperty("--notice", c);
+        line.append(el("div", "oc-notice__head", `${e.chatter_user_name || "A moderator"} · Announcement`));
+      } else {
+        if (fromChannel) line.append(el("span", "oc-shared", fromChannel));
+        line.append(el("div", "oc-notice__head", e.system_message || kind.replace(/_/g, " ") || "Notice"));
+      }
+      if (e.message?.text) {
+        const body = el("div", "oc-body");
+        drawMessage(body, e.message.fragments, e.message.text);
+        line.append(body);
+      }
+      return line;
     }
 
     function gotEvent(type, e) {
@@ -591,19 +659,14 @@
           fragments: e.message?.fragments,
           text: e.message?.text || "",
           reply: e.reply,
+          kind: e.message_type,
+          bits: e.cheer?.bits || 0,
           fromChannel: e.source_broadcaster_user_id && e.source_broadcaster_user_id !== broadcasterId ? e.source_broadcaster_user_name : "",
         }));
       } else if (type === "channel.chat.notification") {
         if (known.has(e.message_id)) return;
         known.add(e.message_id);
-        const line = el("div", `oc-line oc-notice${e.notice_type === "announcement" ? " oc-notice--announce" : ""}`);
-        line.append(el("div", "oc-notice__head", e.system_message || e.notice_type || "Notice"));
-        if (e.message?.text) {
-          const body = el("div", "oc-body");
-          drawMessage(body, e.message.fragments, e.message.text);
-          line.append(body);
-        }
-        addLine(line);
+        addLine(noticeLine(e));
       } else if (type === "channel.chat.message_delete") {
         flushLines();
         const line = byId.get(e.message_id);
@@ -611,6 +674,11 @@
       } else if (type === "channel.chat.clear_user_messages") {
         flushLines();
         list.querySelectorAll(`[data-uid="${CSS.escape(e.target_user_id)}"]`).forEach(hideLine);
+        // A ban or time-out. Yours already says so (with Undo); someone else's says so here,
+        // so lines don't just vanish. Twitch doesn't say which it was, or who did it.
+        const mine = myBans.get(e.target_user_id);
+        myBans.delete(e.target_user_id);
+        if (!(mine && Date.now() - mine < 15000)) addSystem(`${e.target_user_name || "Someone"} was banned or timed out, so their messages were removed.`);
       } else if (type === "channel.chat.clear") {
         flushLines();
         list.querySelectorAll(".oc-line[data-id]").forEach(hideLine);
@@ -674,16 +742,21 @@
       }
     }
 
+    const myBans = new Map(); // user id -> when you banned or timed them out here
     async function ban(id, name, seconds) {
+      // Noted before asking: Twitch can report the removal before it answers.
+      myBans.set(id, Date.now());
       try {
         const r = await api(`/moderation/bans?${modQuery()}`, { method: "POST", body: JSON.stringify({ data: { user_id: id, ...(seconds ? { duration: seconds } : {}) } }) });
         if (!r.ok) {
+          myBans.delete(id);
           note(await why(r, `Twitch wouldn't do that to ${name}.`));
           return false;
         }
         addSystem(seconds ? `You timed out ${name}.` : `You banned ${name}.`, { label: "Undo", run: () => unban(id, name) });
         return true;
       } catch {
+        myBans.delete(id);
         note("Couldn't reach Twitch. Try again.");
         return false;
       }
@@ -972,6 +1045,8 @@
         fragments,
         text,
         history: true,
+        first: tags["first-msg"] === "1",
+        bits: Number(tags.bits) || 0,
       });
     }
 
@@ -1018,6 +1093,14 @@
         return lastOk;
       },
       ircSaw,
+      // Twitch's public chat marked this message as someone's first here (dock.js).
+      firstChat(id) {
+        if (!id) return;
+        const line = byId.get(id);
+        if (line) return markFirst(line);
+        firstIds.add(id);
+        if (firstIds.size > 200) firstIds.delete(firstIds.values().next().value);
+      },
       // A mod flagged this chatter's line (dock.js): it glows in their colour from now on.
       // The newest line from them that matches; says whether it found one.
       glowLine({ chatter, text, color }) {

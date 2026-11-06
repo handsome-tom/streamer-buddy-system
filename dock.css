@@ -2978,3 +2978,20 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-modicon:hover, .oc-modicon:focus-visible { color: var(--text); background: rgba(255, 255, 255, 0.1); }
 .oc-modicon--ban:hover, .oc-modicon--sure { color: #fff; background: color-mix(in srgb, var(--red, #eb0400) 70%, transparent); }
 .oc-modicon svg { width: 14px; height: 14px; }
+
+/* Custom chat: Twitch's notices and special messages (raids, subs, first-time chatters...) */
+.oc-notice--announcement { --notice: var(--purple); background: color-mix(in srgb, var(--notice) 16%, transparent); box-shadow: inset 3px 0 0 var(--notice); }
+.oc-notice--gold { background: rgba(255, 179, 26, 0.13); box-shadow: inset 3px 0 0 var(--amber); }
+.oc-notice--raid { margin: 4px 0; padding: 6px 8px; background: linear-gradient(90deg, rgba(255, 106, 0, 0.26), rgba(255, 106, 0, 0.08)); box-shadow: inset 3px 0 0 #ff6a00; }
+.oc-raid { display: flex; align-items: center; gap: 8px; }
+.oc-raid__pic { width: 34px; height: 34px; flex: none; border-radius: 50%; border: 2px solid #ff6a00; }
+.oc-raid__words { min-width: 0; line-height: 1.3; }
+.oc-raid__title { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #ff9a4d; }
+.oc-raid__name { font-weight: 700; color: var(--text); text-decoration: none; }
+.oc-raid__name:hover { text-decoration: underline; }
+.oc-raid__hi { margin: 6px 0 0 42px; }
+.oc-line--first { margin: 2px 0; background: rgba(0, 219, 132, 0.1); box-shadow: inset 3px 0 0 #00db84; }
+.oc-firsttag { font-size: 11px; font-weight: 700; color: #3ce59f; }
+.oc-line--highlight { background: rgba(145, 71, 255, 0.22); box-shadow: inset 3px 0 0 #bf94ff; }
+.oc-line--giant .oc-emote { height: 84px; margin: 2px; }
+.oc-bits { margin-right: 4px; padding: 0 5px; font-size: 11px; font-weight: 700; color: #1f1f23; background: var(--amber); border-radius: 3px; }

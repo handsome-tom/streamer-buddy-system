@@ -663,7 +663,7 @@
   // In the streamer's chat dock the pin only sticks at the top of the chat for
   // PIN_STICK_MS, and the line itself glows in the chat (custom chat), so it's easy to
   // find again without taking up the top for long.
-  const FLASH_MS = { info: 120000, chat: 300000, love: 30000, seen: 60000 };
+  const FLASH_MS = { info: 120000, chat: 300000, love: 30000, seen: 5000 }; // "Seen" is just a quick tick
   const PIN_STICK_MS = 10 * 1000;
   const flashMs = (kind) => (kind === "chat" && LIVECHAT ? PIN_STICK_MS : FLASH_MS[kind]);
   const FUZZ_MS = 1400;
@@ -705,7 +705,8 @@
       } catch {}
       if (late > PIN_STICK_MS) return; // brought back by a reload: its moment at the top has passed
     }
-    if (f.kind !== "love" && mine && late < 5000) arrived(); // not when a reload brings back an old pin
+    // A love note and a "Seen" come in quietly; not when a reload brings back an old pin.
+    if (f.kind !== "love" && f.kind !== "seen" && mine && late < 5000) arrived();
     const chip = el("div", `qflash qflash--${f.kind}`);
     const color = f.color || colorOf(f.from);
     if (color && f.kind !== "love" && f.kind !== "seen") chip.style.setProperty("--c", color);
@@ -3293,7 +3294,9 @@
   }
 
   function liveJoin(ws) {
-    ws.send("CAP REQ :twitch.tv/membership");
+    // Tags too: they say which messages are someone's first in the channel (custom chat
+    // marks those, like Twitch does for mods).
+    ws.send("CAP REQ :twitch.tv/membership twitch.tv/tags");
     ws.send("PASS SCHMOOPIIE");
     ws.send(`NICK justinfan${Math.floor(Math.random() * 90000) + 10000}`);
     ws.send(`JOIN #${liveChannel}`);
@@ -3306,7 +3309,7 @@
     ws.onmessage = (e) => {
       for (const line of e.data.split("\r\n")) {
         if (line.startsWith("PING")) ws.send("PONG :tmi.twitch.tv");
-        const login = line.match(/^:(\w+)!\S+ JOIN /)?.[1];
+        const login = line.match(/^(?:@\S+ )?:(\w+)!\S+ JOIN /)?.[1];
         if (login) there.add(login);
       }
     };
@@ -3341,10 +3344,11 @@
           for (const login of names.split(" ")) liveChatters.add(login);
           changed = true;
         }
-        const [, login, what] = line.match(/^:(\w+)!\S+ (JOIN|PART|PRIVMSG) /) || [];
+        const [, tags, login, what] = line.match(/^(?:@(\S+) )?:(\w+)!\S+ (JOIN|PART|PRIVMSG) /) || [];
         if (what === "PRIVMSG") {
           try {
             ownChat?.ircSaw(login); // lets custom chat check it isn't missing messages
+            if (tags && /(^|;)first-msg=1(;|$)/.test(tags)) ownChat?.firstChat(tags.match(/(?:^|;)id=([^;]+)/)?.[1]);
           } catch {}
         }
         if (!login || !trusted().includes(login)) continue;

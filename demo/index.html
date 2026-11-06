@@ -62,6 +62,15 @@
       <button id="cSay" type="button">says something</button>
       <button id="cPart" type="button">leaves</button>
     </span>
+    <span class="group">On Twitch:
+      <button id="tRaid" type="button">a raid</button>
+      <button id="tFirst" type="button">first-time chatter</button>
+      <button id="tSub" type="button">a sub</button>
+      <button id="tGift" type="button">gifted subs</button>
+      <button id="tCheer" type="button">a cheer</button>
+      <button id="tHighlight" type="button">highlighted message</button>
+      <button id="tAnnounce" type="button">announcement</button>
+    </span>
     <button id="feed" type="button" class="on">Chat feed: on</button>
     <button id="reload" type="button">Start over</button>
     <span class="said" id="said"></span>
@@ -210,6 +219,21 @@
   document.getElementById("cJoin").addEventListener("click", () => (pretendTwitch.join(chatter()), said(`${chatter()} joined the chat`)));
   document.getElementById("cSay").addEventListener("click", () => (pretendTwitch.say(chatter(), pick(LINES)), said(`${chatter()} chatted`)));
   document.getElementById("cPart").addEventListener("click", () => (pretendTwitch.part(chatter()), said(`${chatter()} left the chat`)));
+  // Twitch's own events, shown in the streamer's custom chat on the right.
+  const on = (id, run) => document.getElementById(id).addEventListener("click", run);
+  on("tRaid", () => {
+    const { from, count } = pretendTwitch.raid();
+    said(`${from} raided with ${count} viewers: see the streamer's chat`);
+  });
+  on("tFirst", () => said(`${pretendTwitch.first()} chatted for the first time`));
+  on("tSub", () => said(`${pretendTwitch.sub()} subscribed`));
+  on("tGift", () => {
+    const { who, total } = pretendTwitch.gift();
+    said(`${who} gifted ${total} subs`);
+  });
+  on("tCheer", () => said(`${pretendTwitch.cheer()} cheered bits`));
+  on("tHighlight", () => said(`${pretendTwitch.highlight()} highlighted a message with channel points`));
+  on("tAnnounce", () => (pretendTwitch.announce(), said("mod2 made an announcement")));
   document.getElementById("reload").addEventListener("click", () => location.reload());
 
   // ===== Start: everyone added to each other, then the two panels ==========================

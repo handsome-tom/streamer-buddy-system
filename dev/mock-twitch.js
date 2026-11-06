@@ -8,6 +8,8 @@
 //
 // Then make things happen: curl "http://localhost:8789/mock/control?do=<what>"
 //   line        a chat message (also: emote, reply, sub, hold, delete, clearuser, clear)
+//   raid        a raid (&who=, &n= viewers); first: a first-time chatter; cheer; highlight;
+//               announce
 //   feed        a busy pretend chat: made-up chatters, each with their own colour, saying
 //               short, medium and long things at uneven times (feedoff stops it)
 //   quiet       the connection stays open but stops pinging (it should fail over)
@@ -65,7 +67,8 @@ function chat(text, opts = {}) {
     chatter_user_name: who,
     message_id: id,
     message: { text, fragments: opts.fragments || [{ type: "text", text }] },
-    message_type: "text",
+    message_type: opts.kind || "text",
+    cheer: opts.cheer || null,
     badges: opts.badges || [{ set_id: "moderator", id: "1" }].slice(0, who === "amod" ? 1 : 0),
     color: opts.color ?? "#ff7f50",
     reply: opts.reply || null,
@@ -139,6 +142,19 @@ const controls = {
   html: () => chat(`<img src=x onerror="document.title='HACKED'"><b>not bold</b>`),
   emote: () => chat("Kappa nice", { fragments: [{ type: "emote", text: "Kappa", emote: { id: "25", format: ["static"] } }, { type: "text", text: " nice " }, { type: "mention", text: "@you", mention: { user_login: "you" } }] }),
   reply: () => chat("replying here", { reply: { parent_message_id: lastIds.at(-1), parent_message_body: "the earlier message", parent_user_name: "viewer1" } }),
+  raid: (q) => {
+    const who = q.get("who") || "CozyCastleTV";
+    const count = Number(q.get("n")) || 42;
+    event("channel.chat.notification", { message_id: `n${++n}`, notice_type: "raid", chatter_user_name: who, system_message: `${count} raiders from ${who} have joined!`, message: { text: "", fragments: [] }, raid: { user_id: `u-${who}`, user_name: who, user_login: who.toLowerCase(), viewer_count: count, profile_image_url: "/dev/memes/streamer2.png" } });
+  },
+  first: () => {
+    const id = `m${n + 1}`;
+    ircLine(`@display-name=newbie;first-msg=1;id=${id};user-id=u-newbie ${ircUser("newbie")} PRIVMSG #streamer :hi, first time here!`);
+    chat("hi, first time here!", { who: "newbie" });
+  },
+  cheer: () => chat("Cheer100 great stream", { fragments: [{ type: "cheermote", text: "Cheer100" }, { type: "text", text: " great stream" }], cheer: { bits: 100 } }),
+  highlight: () => chat("my highlighted message", { kind: "channel_points_highlighted" }),
+  announce: () => event("channel.chat.notification", { message_id: `n${++n}`, notice_type: "announcement", chatter_user_name: "amod", system_message: "", message: { text: "Giveaway later!", fragments: [{ type: "text", text: "Giveaway later!" }] }, announcement: { color: "GREEN" } }),
   sub: () => event("channel.chat.notification", { message_id: `n${++n}`, notice_type: "sub", system_message: "viewer2 subscribed at Tier 1.", message: { text: "", fragments: [] } }),
   hold: () => event("automod.message.hold", { user_id: "u-rude", user_name: "rudeperson", message_id: `h${++n}`, message: { text: "something rude", fragments: [{ type: "text", text: "something rude" }] }, reason: "automod", automod: { category: "swearing", level: 3 } }),
   delete: () => event("channel.chat.message_delete", { message_id: lastIds.at(-1), target_user_id: "x" }),
@@ -201,7 +217,10 @@ function api(req, res, url, body) {
     return json(res, 204, {});
   }
   if (route === "/moderation/bans") {
-    if (req.method === "POST") event("channel.chat.clear_user_messages", { target_user_id: JSON.parse(body).data.user_id });
+    if (req.method === "POST") {
+      const id = JSON.parse(body).data.user_id;
+      event("channel.chat.clear_user_messages", { target_user_id: id, target_user_name: id.replace(/^u-/, "") });
+    }
     return json(res, 200, { data: [{}] });
   }
   if (route === "/moderation/automod/message") {
