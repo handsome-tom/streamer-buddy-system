@@ -683,6 +683,8 @@
       if (kind === "raid" && e.raid) {
         // Who's raiding, with how many, their picture, and a quick welcome.
         const r = e.raid;
+        const raidColor = safeColor(e.color);
+        if (raidColor) line.style.setProperty("--raid", raidColor);
         const raidPic = r.profile_image_url ? r.profile_image_url.replace("%{width}", "70").replace("%{height}", "70") : "";
         if (!fromChannel) gotRaid(r.user_name || r.user_login, raidPic);
         const head = el("div", "oc-raid");

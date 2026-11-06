@@ -3004,3 +3004,11 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-raid__hi { margin-left: 64px; }
 .oc-raidtag { display: inline-flex; align-items: center; gap: 3px; vertical-align: 1px; }
 .oc-raidtag__pic { width: 14px; height: 14px; margin-left: -3px; border-radius: 50%; border: 1px solid #fff; object-fit: cover; }
+/* Quieter backgrounds for first-time chatters and raiders (labels unchanged) */
+.oc-line--first { background: rgba(0, 219, 132, 0.045); box-shadow: inset 2px 0 0 rgba(0, 219, 132, 0.6); }
+.oc-line--raider { background: rgba(255, 106, 0, 0.045); box-shadow: inset 2px 0 0 rgba(255, 106, 0, 0.6); }
+.oc-line--raider.oc-line--first { background: linear-gradient(90deg, rgba(255, 106, 0, 0.06), rgba(0, 219, 132, 0.04)); }
+/* The raid card in the raiding streamer's own name colour (orange if they have none) */
+.oc-notice--raid { --raid: #ff6a00; background: linear-gradient(90deg, color-mix(in srgb, var(--raid) 26%, transparent), color-mix(in srgb, var(--raid) 8%, transparent)); box-shadow: inset 3px 0 0 var(--raid); }
+.oc-notice--raid .oc-raid__pic { border-color: var(--raid); }
+.oc-notice--raid .oc-raid__title { color: color-mix(in srgb, var(--raid) 70%, #fff); }
