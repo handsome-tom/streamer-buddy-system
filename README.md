@@ -151,6 +151,12 @@ Things to know:
   opened from: the GitHub Pages address above, and `http://localhost:8787/`
   for local testing (`python3 -m http.server 8787`).
 - Open the page with `?demo` to try the cards without signing in.
+- **Public demo:** https://handsome-tom.github.io/streamer-buddy-system/demo/ shows a mod's
+  side panel and the streamer's OBS dock side by side, with pretend people and buttons to
+  make things happen. It all runs in the visitor's browser (`demo/hub.js` runs the real
+  relay code with in-memory stand-ins, plus a pretend Twitch), the two panels get storage
+  of their own (`demo/sandbox.js`), so it never touches the real relay, Twitch or anyone's
+  saved sign-in, and every visitor has a sandbox of their own.
 - `dev/mock-twitch.js` is a pretend Twitch for testing custom chat, including making it
   fail on purpose. How to use it is at the top of that file.
 - `dev/sim.html` puts a mod's side panel and the streamer's OBS chat dock side by side,

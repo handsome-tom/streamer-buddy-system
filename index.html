@@ -105,7 +105,9 @@
       css.href = `dock.css?v=${v}`;
       document.head.append(css);
       // ownchat.js is optional: if it doesn't load, the chat dock uses Twitch's chat.
-      for (const src of ["config.js", "ownchat.js", "dock.js"]) {
+      // Inside the public demo (demo/): its pretend relay, Twitch and storage come first.
+      const demo = new URLSearchParams(location.search).has("sandbox") && window.parent !== window;
+      for (const src of [...(demo ? ["demo/sandbox.js"] : []), "config.js", "ownchat.js", "dock.js"]) {
         await new Promise((done) => {
           const s = document.createElement("script");
           s.src = `${src}?v=${v}`;

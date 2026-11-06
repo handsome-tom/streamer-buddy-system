@@ -82,7 +82,12 @@
   const UPDATE_CHECK_MS = 60 * 1000;
   const params = new URLSearchParams(location.search);
   const DEMO = params.has("demo");
-  const DEV = location.hostname === "localhost" ? params.get("dev") : null;
+  // The public demo (demo/index.html): the page is inside it, with a pretend relay and a
+  // pretend Twitch running in the demo page and storage of its own (demo/sandbox.js), so it
+  // behaves like testing on this Mac and never reaches the real relay or anyone's sign-in.
+  const SANDBOX = params.has("sandbox") && window.parent !== window && !!window.SANDBOX_RELAY;
+  const TESTING = location.hostname === "localhost" || SANDBOX;
+  const DEV = TESTING ? params.get("dev") : null;
   // The popped-out window (OBS): its own connection to the relay, same saved data.
   const POPOUT = params.has("popout");
   // Inside Twitch Space's side panel: sign-in comes from the extension.
@@ -197,9 +202,9 @@
   // so only where someone's put them), so a ring glowing round a picture is easy to tell
   // from one that isn't. Never saved.
   if (DEV) {
-    for (const who of ["streamer", "streamer2", "mod1", "mod2"]) {
+    for (const who of SANDBOX ? ["streamer", "mod1", "mod2"] : ["streamer", "streamer2", "mod1", "mod2"]) {
       if (pics[who]) continue;
-      const url = `/dev/memes/${who}.png`;
+      const url = SANDBOX ? `demo/pics/${who}.png` : `/dev/memes/${who}.png`;
       fetch(url, { method: "HEAD" }).then((r) => r.ok && ((pics[who] = url), me && render())).catch(() => {});
     }
   }
@@ -972,7 +977,7 @@
   let viewTimer = 0;
   // The channel in the Twitch tab beside the side panel. On this Mac, ?watch=<channel>
   // stands in for the extension saying so (testing without Chrome).
-  let watching = (location.hostname === "localhost" && params.get("watch")?.toLowerCase()) || "";
+  let watching = (TESTING && params.get("watch")?.toLowerCase()) || "";
   let svPicked = "";
 
   function viewNow() {
@@ -3231,7 +3236,7 @@
   const LIVE_RECHECK_MS = DEV && params.has("recheck") ? Number(params.get("recheck")) : 3 * 60 * 1000; // ?recheck=<ms> for testing
   const LIVE_ATTENDANCE_MS = (DEV && params.has("mock") ? 3 : 90) * 1000; // the pretend Twitch answers at once
   // Twitch's public chat, or the pretend one (dev/mock-twitch.js) on this Mac.
-  const IRC_URL = () => (location.hostname === "localhost" && params.has("mock") ? `ws://${location.host}/mock/irc` : "wss://irc-ws.chat.twitch.tv:443");
+  const IRC_URL = () => (TESTING && params.has("mock") ? `ws://${location.host}/mock/irc` : "wss://irc-ws.chat.twitch.tv:443");
   let liveChannel = "";
   const liveChatters = new Set(); // logins Twitch says are in the chat
   let liveSaid = {}; // connection's login -> when they last chatted here (saved, for restarts)
@@ -3245,7 +3250,7 @@
   // Until attendance has named people (it never does in very big chats), chatting in
   // the last 30 minutes counts as being there. ?lightms=<ms> on this Mac counts a
   // "minute" as that long, for testing.
-  const LIGHT_MINUTE = (location.hostname === "localhost" && Number(params.get("lightms"))) || 60 * 1000;
+  const LIGHT_MINUTE = (TESTING && Number(params.get("lightms"))) || 60 * 1000;
   function liveLight(login) {
     const min = liveSaid[login] ? (Date.now() - liveSaid[login]) / LIGHT_MINUTE : Infinity;
     const here = liveChatters.has(login) || (!liveListed && !liveLeft.has(login) && min <= 30);
@@ -3368,7 +3373,7 @@
   const OWNCHAT_START_MS = 15 * 1000; // must be connected by then
   const OWNCHAT_SILENCE_MS = 30 * 1000; // ownchat.js gives up at 20, so this is the backstop
   const OWNCHAT_RETRY_AFTER_MS = 30 * 60 * 1000; // if it failed this recently, don't start on it
-  const MOCK = location.hostname === "localhost" && params.has("mock"); // dev/mock-twitch.js
+  const MOCK = TESTING && params.has("mock"); // dev/mock-twitch.js
   let ownChat = null;
   let ownChatWatch = 0;
   let ownChatStartTimer = 0;
