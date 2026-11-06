@@ -193,7 +193,7 @@ const twitch = (() => {
     const fragments = bits ? [{ type: "cheermote", text: `Cheer${bits}` }, { type: "text", text: ` ${text}` }] : [{ type: "text", text }];
     event("channel.chat.message", {
       broadcaster_user_id: "1", chatter_user_id: `u-${who}`, chatter_user_login: who.toLowerCase(), chatter_user_name: who,
-      message_id: id, message: { text: bits ? `Cheer${bits} ${text}` : text, fragments }, message_type: kind, badges, color: colorOf[who], reply: null,
+      message_id: id, message: { text: bits ? `Cheer${bits} ${text}` : text, fragments }, message_type: kind, badges: badges.length ? badges : subBadge(who), color: colorOf[who], reply: null,
       cheer: bits ? { bits } : null,
     });
     if (text.startsWith("!") && who !== BOT) botReply(text, who);
@@ -326,6 +326,41 @@ const twitch = (() => {
     },
   };
 
+  // What Twitch would say about a chatter, made up but the same each time for one name:
+  // a picture, when the account was made, whether and since when they follow, a bio, and
+  // what they last streamed.
+  const BIOS = ["Just here for the vibes.", "Cozy games, late nights, too much tea.", "Lurker by day, lurker by night.", "Speedrunner in training. Mostly falling off ledges.",
+    "Artist, cat parent, chronic backseater.", "", "", "Here since the old days o7"];
+  const GAMES = ["Just Chatting", "Minecraft", "Stardew Valley", "Elden Ring", "", "", "Art", "Fortnite"];
+  const PICS = { lump: "pics/raider.png", mod1: "pics/mod1.png", mod2: "pics/mod2.png", streamer: "pics/streamer.png" };
+  function person(login) {
+    const name = [...CHATTERS, ...NEWBIES, ...RAIDER_NAMES, "Lump", "mod1", "mod2", BOT].find((c) => c.toLowerCase() === login.toLowerCase()) || login;
+    let h = 0;
+    for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    const day = 86400000;
+    const newbie = NEWBIES.includes(name) || RAIDER_NAMES.includes(name);
+    const age = newbie ? (20 + (h % 400)) * day : (300 + (h % 2600)) * day;
+    const follows = name === BOT ? false : newbie ? h % 3 === 0 : h % 5 !== 0;
+    const color = colorOf[name] || "#9147ff";
+    const letter = name.replace(/[^a-z]/i, "")[0]?.toUpperCase() || "?";
+    const drawn = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 70"><rect width="70" height="70" fill="${color}"/><text x="35" y="47" font-family="Arial" font-weight="bold" font-size="34" fill="#18181b" text-anchor="middle">${letter}</text></svg>`)}`;
+    return {
+      id: `u-${name}`, login: name.toLowerCase(), display_name: name, broadcaster_type: "", type: "",
+      description: name === "Lump" ? "Big green streamer. Raids with love." : BIOS[h % BIOS.length],
+      profile_image_url: PICS[name.toLowerCase()] ? new URL(PICS[name.toLowerCase()], import.meta.url).href : drawn,
+      created_at: new Date(Date.now() - age).toISOString(),
+      followedAt: follows ? new Date(Date.now() - Math.min(age - day, (5 + (h % 700)) * day)).toISOString() : "",
+      game: name === "Lump" ? "Just Chatting" : GAMES[(h >> 3) % GAMES.length],
+    };
+  }
+  // Some regulars are subscribed: Twitch's badge says for how many months.
+  const subBadge = (who) => {
+    if (!CHATTERS.includes(who)) return [];
+    let h = 7;
+    for (const ch of who) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return h % 3 === 0 ? [] : [{ set_id: "subscriber", id: "0", info: String(1 + (h % 40)) }];
+  };
+
   function eventsub(socket) {
     eventsubSockets.add(socket);
     say(socket, "session_welcome", { session: { id: `s${Date.now()}`, keepalive_timeout_seconds: 10 } });
@@ -345,7 +380,7 @@ const twitch = (() => {
     socket._peer = { got() {}, gone: () => chatSockets.delete(socket) };
   }
 
-  const SCOPES = ["user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod", "moderator:read:chatters"];
+  const SCOPES = ["user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod", "moderator:read:chatters", "moderator:read:followers"];
   const json = (status, body) => new Response(status === 204 ? null : JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
   async function api(url, init = {}) {
     const u = new URL(url);
@@ -362,7 +397,16 @@ const twitch = (() => {
     }
     if (route === "/chat/badges/global" || route === "/chat/badges") return json(200, { data: [] });
     if (route === "/chat/emotes/user") return json(200, { data: [{ id: "25", name: "Kappa", format: ["static"] }, { id: "354", name: "4Head", format: ["static"] }] });
+    if (route === "/users" && u.searchParams.get("id")) return json(200, { data: [person(u.searchParams.get("id").replace(/^u-/, ""))] });
     if (route === "/users") return json(200, { data: [{ id: `u-${u.searchParams.get("login")}`, display_name: u.searchParams.get("login") }] });
+    if (route === "/channels/followers") {
+      const p = person(u.searchParams.get("user_id").replace(/^u-/, ""));
+      return json(200, { data: p.followedAt ? [{ user_id: p.id, user_login: p.login, user_name: p.display_name, followed_at: p.followedAt }] : [], total: 1 });
+    }
+    if (route === "/channels") {
+      const p = person(u.searchParams.get("broadcaster_id").replace(/^u-/, ""));
+      return json(200, { data: [{ broadcaster_id: p.id, broadcaster_name: p.display_name, game_name: p.game, title: "" }] });
+    }
     if (route === "/moderation/chat") {
       event("channel.chat.message_delete", { message_id: u.searchParams.get("message_id"), target_user_id: "x" });
       return json(204, {});

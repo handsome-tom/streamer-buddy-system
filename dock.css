@@ -3017,3 +3017,25 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-line--raider.oc-line--first { background: linear-gradient(90deg, color-mix(in srgb, var(--raid) 7%, transparent), rgba(0, 219, 132, 0.04)); }
 .oc-line--raider .oc-raidtag { color: var(--raid-ink); background: var(--raid); }
 .oc-line--raider .oc-raidtag__pic { border-color: var(--raid-ink); }
+/* A chatter's card (click a name), like Twitch's */
+.oc-card { max-height: calc(100% - 12px); overflow-y: auto; z-index: 5; }
+.oc-card__head { justify-content: flex-start; gap: 10px; align-items: flex-start; }
+.oc-card__pic { width: 52px; height: 52px; flex: none; border-radius: 50%; object-fit: cover; background: #2f2f35; }
+.oc-card__who { flex: 1; min-width: 0; padding-top: 3px; }
+.oc-card__name { font-size: 16px; text-decoration: none; }
+.oc-card__name:hover { text-decoration: underline; }
+.oc-card__badges { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 4px; }
+.oc-card__badges .oc-badge { margin: 0; vertical-align: 0; }
+.oc-card__flag { padding: 0 5px; font-size: 10px; font-weight: 700; border-radius: 3px; }
+.oc-card__flag--first { color: #3ce59f; border: 1px solid rgba(0, 219, 132, 0.5); }
+.oc-card__flag--raid { color: #ffb27a; border: 1px solid rgba(255, 106, 0, 0.5); }
+.oc-card__close { flex: none; width: 24px; height: 24px; padding: 0; font-size: 18px; line-height: 1; color: var(--muted); background: none; border: 0; border-radius: 4px; cursor: pointer; }
+.oc-card__close:hover { color: var(--text); background: #2f2f35; }
+.oc-card__facts { display: grid; gap: 3px; margin: 8px 0; font-size: 12px; }
+.oc-card__fact { color: var(--text); }
+.oc-card__fact--wait { color: var(--muted); font-style: italic; }
+.oc-card__bio { margin-top: 3px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.oc-card__said { margin-bottom: 8px; padding-top: 6px; border-top: 1px solid var(--line); font-size: 12px; }
+.oc-card__label { margin-bottom: 3px; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.oc-card__msg { padding: 2px 0; color: var(--text); overflow-wrap: anywhere; }
+.oc-card__msg--gone { color: var(--muted); text-decoration: line-through; }

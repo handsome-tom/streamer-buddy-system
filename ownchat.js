@@ -29,7 +29,7 @@
   const RAIDER_MS = 15 * 60 * 1000; // how long raiders' lines are marked after a raid
   // Asked for at sign-in but not needed: Twitch's full list of who's in the chat, which
   // makes telling raiders from people already here exact even in big chats.
-  const EXTRA_SCOPES = ["moderator:read:chatters"];
+  const EXTRA_SCOPES = ["moderator:read:chatters", "moderator:read:followers"]; // followers: "Following since" on a name's card
   const CHATTERS_EVERY_MS = 2 * 60 * 1000;
   const TIMEOUTS = [["1m", 60], ["10m", 600], ["1h", 3600], ["24h", 86400]];
   // Twitch's chat commands don't run through the API, and could post as plain text, so
@@ -529,6 +529,9 @@
       line.dataset.name = m.name;
       line.dataset.text = m.text || "";
       const ranks = (m.badges || []).map((b) => b.set_id);
+      const sub = (m.badges || []).find((b) => b.set_id === "subscriber" || b.set_id === "founder");
+      if (sub) line.dataset.sub = sub.info || "1"; // months, as Twitch's badge says
+      if (m.color) line.dataset.color = m.color;
       if (ranks.includes("broadcaster") || ranks.includes("moderator")) line.dataset.staff = "1";
       if (host.isConnection(m.login)) line.classList.add("oc-line--connection");
       if (m.history) line.classList.add("oc-line--old");
@@ -882,16 +885,100 @@
       return box;
     }
 
+    // ----- A chatter's card, like Twitch's when you click a name -----------------------
+    // Their picture and name, badges, when the account was made, how long they've
+    // followed and been subscribed, their bio, what they've said here, and (for mods) the
+    // timeout and ban buttons. Twitch's details load in a moment; they're kept a while.
+    const people = new Map(); // user id -> { at, user, follow, channel }
+    async function quiet(path) {
+      // Not api(): a refusal here (say, a permission this sign-in doesn't have) mustn't
+      // count as the sign-in ending.
+      try {
+        const r = await fetch(urls.helix + path, { headers: { Authorization: `Bearer ${host.token()}`, "Client-Id": host.clientId } });
+        return r.ok ? await r.json() : null;
+      } catch {
+        return null;
+      }
+    }
+    async function aboutPerson(uid) {
+      const known = people.get(uid);
+      if (known && Date.now() - known.at < 5 * 60 * 1000) return known;
+      const [u, f, c] = await Promise.all([
+        quiet(`/users?id=${encodeURIComponent(uid)}`),
+        quiet(`/channels/followers?broadcaster_id=${broadcasterId}&user_id=${encodeURIComponent(uid)}`),
+        quiet(`/channels?broadcaster_id=${encodeURIComponent(uid)}`),
+      ]);
+      const about = { at: Date.now(), user: u?.data?.[0] || null, follow: f ? f.data?.[0] || false : null, channel: c?.data?.[0] || null };
+      people.set(uid, about);
+      return about;
+    }
+    const longDate = (t) => new Date(t).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    function howLong(t) {
+      const days = Math.floor((Date.now() - new Date(t)) / 86400000);
+      if (days < 1) return "today";
+      if (days < 31) return `${days} ${days === 1 ? "day" : "days"}`;
+      const months = Math.floor(days / 30.44);
+      if (months < 12) return `${months} ${months === 1 ? "month" : "months"}`;
+      const years = Math.floor(months / 12);
+      const rest = months % 12;
+      return `${years} ${years === 1 ? "year" : "years"}${rest ? `, ${rest} ${rest === 1 ? "month" : "months"}` : ""}`;
+    }
+
     function openCard(line) {
-      const { uid, name, login, staff } = line.dataset;
+      const { uid, name, login, staff, sub, color } = line.dataset;
       card.replaceChildren();
+      card.dataset.uid = uid;
       const head = el("div", "oc-card__head");
+      const pic = el("img", "oc-card__pic");
+      pic.alt = "";
+      pic.hidden = true;
+      const who = el("div", "oc-card__who");
       const profile = el("a", "oc-card__name", name);
       profile.href = `https://www.twitch.tv/${encodeURIComponent(login)}`;
       profile.target = "_blank";
       profile.rel = "noopener noreferrer";
-      head.append(profile, button("oc-link", "Close", () => (card.hidden = true)));
+      const c = safeColor(color);
+      if (c) profile.style.color = c;
+      const badgeRow = el("div", "oc-card__badges");
+      line.querySelectorAll(".oc-badge").forEach((b) => badgeRow.append(b.cloneNode()));
+      if (line.classList.contains("oc-line--first")) badgeRow.append(el("span", "oc-card__flag oc-card__flag--first", "First-time chatter"));
+      if (line.classList.contains("oc-line--raider")) {
+        const raid = line.querySelector(".oc-raidtag");
+        badgeRow.append(el("span", "oc-card__flag oc-card__flag--raid", raid?.title.replace(/ \(.*\)$/, "") || "Came with a raid"));
+      }
+      who.append(profile, badgeRow);
+      const close = button("oc-card__close", "×", () => (card.hidden = true), "Close");
+      head.append(pic, who, close);
       card.append(head);
+
+      const facts = el("div", "oc-card__facts");
+      const fact = (text) => facts.append(el("div", "oc-card__fact", text));
+      if (sub) fact(`Subscribed for ${sub} ${sub === "1" ? "month" : "months"}`);
+      const loading = el("div", "oc-card__fact oc-card__fact--wait", "Loading their details from Twitch…");
+      facts.append(loading);
+      card.append(facts);
+      aboutPerson(uid).then(({ user, follow, channel }) => {
+        if (card.dataset.uid !== uid) return; // another card opened since
+        loading.remove();
+        if (user?.profile_image_url) {
+          pic.src = user.profile_image_url;
+          pic.hidden = false;
+        }
+        if (user?.created_at) fact(`Account created ${longDate(user.created_at)} (${howLong(user.created_at)} ago)`);
+        if (follow) fact(`Following since ${longDate(follow.followed_at)} (${howLong(follow.followed_at)})`);
+        else if (follow === false) fact("Not following");
+        if (channel?.game_name) fact(`Last streamed ${channel.game_name}`);
+        if (user?.description) facts.append(el("div", "oc-card__bio", user.description));
+        if (!user && follow === null) fact("Twitch didn't send their details.");
+      });
+
+      // What they've said here, newest last.
+      const theirs = [...list.querySelectorAll(".oc-line[data-uid]")].filter((l) => l.dataset.uid === uid);
+      const said = el("div", "oc-card__said");
+      said.append(el("div", "oc-card__label", `${theirs.length} ${theirs.length === 1 ? "message" : "messages"} here`));
+      for (const l of theirs.slice(-3)) said.append(el("div", `oc-card__msg${l.classList.contains("oc-line--gone") ? " oc-card__msg--gone" : ""}`, l.dataset.text || ""));
+      card.append(said);
+
       if (isMod && login !== me.login && !(staff && channel !== me.login)) {
         const row = el("div", "oc-card__row");
         for (const [label, seconds] of TIMEOUTS) {
@@ -1121,9 +1208,10 @@
         at = s.to + 1;
       }
       if (at < chars.length) fragments.push({ type: "text", text: chars.slice(at).join("") });
+      const months = (tags["badge-info"] || "").match(/(?:^|,)(?:subscriber|founder)\/(\d+)/)?.[1];
       const badgeList = (tags.badges || "").split(",").filter(Boolean).map((b) => {
         const [set_id, id] = b.split("/");
-        return { set_id, id };
+        return { set_id, id, info: set_id === "subscriber" || set_id === "founder" ? months : undefined };
       });
       known.add(tags.id);
       return chatLine({
