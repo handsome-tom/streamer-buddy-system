@@ -44,7 +44,7 @@ for 10 seconds (5 minutes elsewhere), and with custom chat the line itself glows
 chat in the flagger's colour; the streamer or a mod can clear the pin for everyone with
 its X. With custom chat the streamer can also **bookmark** a message for later with its 🔖
 button (on hover); the 🔖 count in the chat bar goes back to them. **One click** on a
-message puts an orange line under it, right across the chat, to mark where she was;
+message puts an orange line under it, right across the chat, to mark where they were;
 clicking another moves it, clicking the same one again takes it away.
 
 ### Pings
@@ -68,8 +68,8 @@ with one softer reminder beep and a brief flash of the edge:
 
 Three nudges at most, and at most one every 15 seconds. While it can't be nudged (just
 nudged, or already white), tapping **Nudge** six times quickly sends the streamer a
-**warning**: a heads-up that something needs her right now (a mod looking out for her,
-not a mark against her). It shows red on the streamer's screen with a louder double beep (even with reminders
+**warning**: a heads-up that something needs attention right now (a mod looking out
+for the streamer, not a mark against anyone). It shows red on the streamer's screen with a louder double beep (even with reminders
 off), at most one every 30 seconds. Answering, dismissing or marking
 it seen stops it. The bar shows the most urgent message first.
 

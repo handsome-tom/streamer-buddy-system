@@ -2,124 +2,274 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Streamer Buddy System: update and upcoming features, 6 November 2026</title>
+<title>Streamer Buddy System: what's new, 6 November 2026</title>
+<!-- A slide deck: one 16:9 page per slide, rendered to PDF with headless Chrome.
+     Wording stays neutral: "the streamer", never he or she. -->
 <style>
-  @page { size: Letter; margin: 0.6in 0.65in; }
+  @page { size: 13.333in 7.5in; margin: 0; }
   * { box-sizing: border-box; }
-  body { margin: 0; color: #1d1d22; font: 11pt/1.5 Inter, "Helvetica Neue", Arial, sans-serif; }
-  h1 { margin: 0; font-size: 24pt; line-height: 1.15; letter-spacing: -0.01em; }
-  .sub { margin: 6px 0 22px; color: #5b5b66; font-size: 11pt; }
-  h2 { margin: 26px 0 8px; padding-bottom: 5px; font-size: 14pt; border-bottom: 2px solid #9147ff; }
-  h2 .pill { margin-left: 8px; padding: 2px 9px; font-size: 8.5pt; font-weight: 700; vertical-align: 2px; color: #fff; background: #9147ff; border-radius: 10px; }
-  h2 .pill.next { background: #e07a00; }
-  h2 .pill.later { background: #6b6b76; }
-  h3 { margin: 14px 0 3px; font-size: 11.5pt; }
-  h2, h3 { break-after: avoid; page-break-after: avoid; }
-  p { margin: 0 0 6px; }
-  ul { margin: 2px 0 8px; padding-left: 18px; }
-  li { margin: 2px 0; }
-  .who { color: #5b5b66; font-weight: 600; }
-  .summary { padding: 12px 14px; background: #f4f0ff; border-radius: 8px; }
-  .summary li { margin: 3px 0; }
-  table { width: 100%; margin: 6px 0 10px; border-collapse: collapse; font-size: 10pt; }
-  th, td { padding: 5px 8px; text-align: left; border-bottom: 1px solid #e3e3ea; }
-  th { color: #5b5b66; font-weight: 600; }
-  .sw { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 50%; vertical-align: -1px; border: 1px solid #0003; }
-  .board { page-break-before: always; }
-  .board img { display: block; width: 100%; margin-top: 8px; border-radius: 6px; }
-  .note { color: #5b5b66; font-size: 9.5pt; }
-  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
-  .pair figure { margin: 0; }
-  .pair img { margin-top: 0; }
-  .pair figcaption { margin-top: 5px; color: #5b5b66; font-size: 9pt; }
+  html, body { margin: 0; background: #0b0b0e; }
+  body { color: #efeff1; font: 16pt/1.4 Inter, "Helvetica Neue", Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .slide {
+    position: relative;
+    width: 13.333in;
+    height: 7.5in;
+    padding: 0.6in 0.75in;
+    overflow: hidden;
+    break-after: page;
+    background:
+      radial-gradient(ellipse 60% 70% at 100% 0%, rgba(145, 71, 255, 0.18), transparent 70%),
+      radial-gradient(ellipse 50% 60% at 0% 100%, rgba(0, 194, 122, 0.08), transparent 70%),
+      #0b0b0e;
+  }
+  .slide:last-child { break-after: auto; }
+  .kicker { margin: 0 0 6px; font-size: 11pt; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #bf94ff; }
+  h1 { margin: 0; font-size: 46pt; line-height: 1.05; letter-spacing: -0.02em; }
+  h2 { margin: 0 0 18px; font-size: 32pt; line-height: 1.1; letter-spacing: -0.015em; }
+  .lead { margin: 14px 0 0; max-width: 8.6in; font-size: 19pt; color: #c8c8d2; }
+  p { margin: 0 0 10px; }
+  ul.points { margin: 0; padding: 0; list-style: none; }
+  ul.points li { position: relative; margin: 0 0 14px; padding-left: 26px; font-size: 16pt; color: #d6d6de; }
+  ul.points li::before { content: ""; position: absolute; left: 0; top: 0.5em; width: 10px; height: 10px; border-radius: 50%; background: var(--dot, #9147ff); }
+  ul.points b { color: #fff; }
+  .split { display: grid; grid-template-columns: 1fr 4.3in; gap: 0.6in; align-items: center; height: 100%; }
+  .shot { width: 100%; max-height: 6.2in; object-fit: contain; border-radius: 14px; border: 1px solid #2a2a30; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55); }
+  .footer { position: absolute; left: 0.75in; right: 0.75in; bottom: 0.32in; display: flex; justify-content: space-between; font-size: 9.5pt; color: #6f6f7a; }
+  .num { font-variant-numeric: tabular-nums; }
+  /* Title slide */
+  .title { display: flex; flex-direction: column; justify-content: center; }
+  .title h1 { font-size: 56pt; }
+  .title .get { margin-top: 34px; display: flex; gap: 18px; }
+  .chip { padding: 12px 18px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid #2a2a30; font-size: 13pt; color: #c8c8d2; }
+  .chip b { display: block; margin-bottom: 2px; color: #fff; font-size: 14pt; }
+  .chip a { color: #bf94ff; text-decoration: none; }
+  /* Highlights grid */
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 10px; }
+  .tile { padding: 20px 22px; min-height: 2.05in; border-radius: 16px; background: rgba(255, 255, 255, 0.04); border: 1px solid #25252b; }
+  .tile .ic { width: 38px; height: 38px; margin-bottom: 10px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 19pt; font-weight: 700; background: color-mix(in srgb, var(--c) 22%, transparent); color: var(--c); }
+  .tile h3 { margin: 0 0 6px; font-size: 16pt; }
+  .tile p { margin: 0; font-size: 12.5pt; color: #b8b8c4; line-height: 1.4; }
+  /* Glow strip */
+  .glows { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-top: 8px; }
+  .glows figure { margin: 0; }
+  .glows img { width: 100%; border-radius: 10px; border: 1px solid #2a2a30; }
+  .glows figcaption { margin-top: 8px; font-size: 11.5pt; color: #b8b8c4; line-height: 1.3; }
+  .glows figcaption b { display: flex; align-items: center; gap: 7px; color: #fff; font-size: 12.5pt; }
+  .sw { display: inline-block; width: 11px; height: 11px; border-radius: 50%; }
+  .note { margin-top: 16px; font-size: 13pt; color: #9a9aa6; }
+  /* Legend rows */
+  .legend { display: grid; grid-template-columns: auto 1fr; gap: 12px 16px; margin-top: 10px; font-size: 13.5pt; color: #d6d6de; align-items: center; }
+  .ring { width: 30px; height: 30px; border-radius: 50%; background: #4a4a56; }
+  /* Two cards */
+  .steps { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-top: 10px; }
+  .card { padding: 22px 24px; border-radius: 16px; background: rgba(255, 255, 255, 0.04); border: 1px solid #25252b; }
+  .card h3 { margin: 0 0 10px; font-size: 18pt; }
+  .card ol { margin: 0; padding-left: 22px; font-size: 13pt; color: #d6d6de; }
+  .card li { margin: 0 0 8px; }
+  code { padding: 2px 7px; border-radius: 6px; background: rgba(145, 71, 255, 0.18); color: #e6d9ff; font-size: 11pt; }
+  a { color: #bf94ff; }
 </style>
 </head>
 <body>
-  <h1>Streamer Buddy System</h1>
-  <p class="sub">What's new and what's next · 6 November 2026</p>
 
-  <div class="summary">
-    <ul>
-      <li><b>Get it:</b> mods install <b>Twitch Space 2.5.0</b> (the handshake side panel is back in it): <a href="https://github.com/handsome-tom/MytwitchTom-Tester/releases/latest">github.com/handsome-tom/MytwitchTom-Tester/releases/latest</a>. The streamer only needs the OBS dock; no extension.</li>
-      <li><b>The streamer's OBS dock got calmer and quicker to use:</b> no pop-out windows, one message area that takes turns, one-tap answers (♥ ✓ ✗), a glow that rests, and notes as big as questions.</li>
-      <li><b>Mods can see what the streamer sees</b> (Streamer View), <b>nudge</b> a question instead of it escalating by itself, and <b>send her a warning</b> when something needs her right now.</li>
-    </ul>
+<!-- 1. Title -->
+<section class="slide title">
+  <p class="kicker">Streamer Buddy System · update · 6 November 2026</p>
+  <h1>Mods look out for the streamer.<br>The streamer stays on stream.</h1>
+  <p class="lead">A calmer OBS dock for the streamer, and a side panel that lets mods see what the streamer sees, nudge, and warn when something can't wait.</p>
+  <div class="get">
+    <div class="chip"><b>Mods: Twitch Space 2.5.0</b><a href="https://github.com/handsome-tom/MytwitchTom-Tester/releases/latest">github.com/handsome-tom/MytwitchTom-Tester/releases/latest</a></div>
+    <div class="chip"><b>Streamer: the OBS dock</b>No extension needed; two-minute setup</div>
   </div>
+  <div class="footer"><span>Streamer Buddy System</span><span class="num">1</span></div>
+</section>
 
-  <h2>Live now <span class="pill">shipped today</span></h2>
+<!-- 2. Highlights -->
+<section class="slide">
+  <p class="kicker">Highlights</p>
+  <h2>What changed today</h2>
+  <div class="tiles">
+    <div class="tile" style="--c:#00c27a"><div class="ic">◉</div><h3>A message area, not pop-ups</h3><p>Everything waiting shows in one calm spot under the streamer's bar, taking turns. No pop-out windows.</p></div>
+    <div class="tile" style="--c:#ff7ab8"><div class="ic">♥</div><h3>One-tap answers</h3><p>♥ ✓ ✗ right in the bar, on any question, or a quick typed reply.</p></div>
+    <div class="tile" style="--c:#ff8a1f"><div class="ic">↑</div><h3>Nudge, don't nag</h3><p>Questions arrive green and only move up when the mod who asked taps Nudge.</p></div>
+    <div class="tile" style="--c:#ff3b30"><div class="ic">!</div><h3>A warning when it matters</h3><p>Six quick taps sends the streamer a red heads-up: trouble in chat, a safety issue.</p></div>
+    <div class="tile" style="--c:#9147ff"><div class="ic">◐</div><h3>Streamer View</h3><p>Mods see exactly what's on the streamer's dock before adding anything more.</p></div>
+    <div class="tile" style="--c:#3fb2ff"><div class="ic">≡</div><h3>Cleaner everywhere</h3><p>Slim lists for mods, full-size notes for the streamer, and chat bookmarks.</p></div>
+  </div>
+  <div class="footer"><span>Streamer Buddy System</span><span class="num">2</span></div>
+</section>
 
-  <h3>For the streamer (OBS chat dock)</h3>
-  <ul>
-    <li><b>Message area.</b> The place to look, just under the bar, a little larger than everything else, in a soft glow coloured by what it shows. With more than one message they take turns every 6 seconds, holding still while her mouse is over it or she's typing a reply; something new jumps straight in. A small <b>"2 of 5 ▾"</b> chip drops down a short one-line list of everything waiting; picking one shows it, and the list closes itself after 8 idle seconds so the turns carry on.</li>
-    <li><b>One-tap answers: ♥ ✓ ✗</b>, heart on the left, on any question, or a typed reply.</li>
-    <li><b>No pop-out windows.</b> The full list, Connections, chat and stats open just under the bar with a Close button.</li>
-    <li><b>Quick info and !vanish notes as big as questions:</b> full width, sender first, larger text, a soft blue glow for quick info (2 minutes) and pink for !vanish (30 seconds). A !vanish note blooms into a pink haze that spills into the background, then breathes gently until it fades.</li>
-    <li><b>Pictures show who's in chat.</b> A ring for how recently each mod chatted (green within 5 minutes, then orange, yellow and white), just the picture lit up when they're quiet, and gray once they've left.</li>
-    <li><b>Settings gear:</b> sound on or off, volume, reminder beeps, edge glow, the quick-questions row, custom or Twitch chat, chat text size, and whether to share Streamer View.</li>
-    <li><b>Starts with the right person.</b> Sending starts with the last person she talked to, never a group.</li>
-  </ul>
+<!-- 3. The streamer's message area -->
+<section class="slide">
+  <div class="split">
+    <div>
+      <p class="kicker">For the streamer · OBS dock</p>
+      <h2>One place to look</h2>
+      <ul class="points" style="--dot:#00c27a">
+        <li><b>The message area</b> sits just under the bar, a little larger than everything else, in a soft glow.</li>
+        <li><b>One tap to answer:</b> ♥ ✓ ✗ (heart on the left), or type a reply.</li>
+        <li><b>Several waiting?</b> They take turns every 6 seconds, holding still while the mouse is over them or a reply is being typed.</li>
+        <li><b>"2 of 5 ▾"</b> drops down a short list of everything waiting; pick one to show it.</li>
+        <li><b>No pop-out windows.</b> Anything bigger opens just under the bar, with a Close button.</li>
+      </ul>
+    </div>
+    <img class="shot" src="shots/1-new-green.jpg" alt="">
+  </div>
+  <div class="footer"><span>Streamer Buddy System</span><span class="num">3</span></div>
+</section>
 
-  <h3>For the streamer: custom chat (optional)</h3>
-  <ul>
-    <li><b>Message tools as icons.</b> Hovering a message shows a small floating pill: <b>bookmark</b>, <b>reply</b>, and <b>delete</b> (only where she's allowed; it's a real delete on Twitch, for everyone).</li>
-    <li><b>Bookmarks for later.</b> A bookmarked message gets a soft amber outline and icon; the bookmark counter in the chat bar jumps back to them, newest first.</li>
-    <li><b>"Where I was" line.</b> One click on a message draws an orange line under it across the whole chat; clicking another moves it, clicking the same one removes it.</li>
-    <li><b>Flagged lines glow.</b> A line a mod flags glows in her chat in the flagger's colour, and its pinned copy sits at the top of her chat for 10 seconds instead of 5 minutes.</li>
-  </ul>
+<!-- 4. The glow -->
+<section class="slide">
+  <p class="kicker">For the streamer · the glow</p>
+  <h2>A glow that reminds, without badgering</h2>
+  <div class="glows">
+    <figure><img src="shots/1-new-green.jpg" alt=""><figcaption><b><span class="sw" style="background:#00c27a"></span>Arrives</b>Green, one clear beep</figcaption></figure>
+    <figure><img src="shots/2-resting.jpg" alt=""><figcaption><b><span class="sw" style="background:#53535f"></span>Rests</b>Fades to 2%; back after 15 s, then every 10 s</figcaption></figure>
+    <figure><img src="shots/3-nudge-orange.jpg" alt=""><figcaption><b><span class="sw" style="background:#ff8a1f"></span>1st nudge</b>Orange, one soft beep</figcaption></figure>
+    <figure><img src="shots/4-nudge-yellow.jpg" alt=""><figcaption><b><span class="sw" style="background:#ffe14d"></span>2nd nudge</b>Yellow</figcaption></figure>
+    <figure><img src="shots/5-nudge-white.jpg" alt=""><figcaption><b><span class="sw" style="background:#fff"></span>3rd nudge</b>White, as far as nudges go</figcaption></figure>
+    <figure><img src="shots/6-warning-red.jpg" alt=""><figcaption><b><span class="sw" style="background:#ff3b30"></span>Warning</b>Red, louder double beep</figcaption></figure>
+  </div>
+  <p class="note">Nothing climbs on its own. The words always stay readable; only the colour behind them fades.</p>
+  <div class="footer"><span>Streamer Buddy System</span><span class="num">4</span></div>
+</section>
 
-  <h3>For mods (Twitch Space side panel)</h3>
-  <ul>
-    <li><b>Streamer View.</b> The top of the panel shows what the streamer's dock shows right now: its glow colour, everything waiting for her, unseen answers, and notes in her bar. It follows the channel you're watching.</li>
-    <li><b>Simple Ask box.</b> One typing bar, with Ask, Quick info or !vanish picked at its left. It starts with the streamer you're watching. No answer-button editor or quick questions: every question offers her ♥ ✓ ✗.</li>
-    <li><b>Slim lists, newest first.</b> Messages and questions to you come first, one line each, with small ♥ ✓ ✗ or Seen buttons, a reply box only when you open it, and × to dismiss; clicking a message line marks it seen. Answers to your questions are one line each; hovering turns a line into a glowing pill, and clicking marks it seen.</li>
-    <li><b>Status menu.</b> Online, Idle or Offline, picked from a small menu.</li>
-    <li><b>Flag a chat line</b> from Twitch's chat for the streamer to see.</li>
-  </ul>
+<!-- 5. Nudge and warning -->
+<section class="slide">
+  <div class="split">
+    <div>
+      <p class="kicker">For mods · nudge and warning</p>
+      <h2>Nudge when it's waiting.<br>Warn when it can't wait.</h2>
+      <ul class="points" style="--dot:#ff8a1f">
+        <li><b>Nudge</b> moves an unanswered question up a colour on the streamer's screen: orange, yellow, white. Up to three, 15 seconds apart.</li>
+        <li style="--dot:#ff3b30"><b>Send a warning</b> by tapping Nudge six times quickly. The button counts down, then says "Warning sent", and the question turns red with a louder beep.</li>
+        <li><b>It's protective.</b> A warning is a mod looking out for the streamer: trouble in chat, a safety issue. At most one every 30 seconds.</li>
+      </ul>
+    </div>
+    <img class="shot" src="shots/7-mod-streamer-view.jpg" alt="">
+  </div>
+  <div class="footer"><span>Streamer Buddy System</span><span class="num">5</span></div>
+</section>
 
-  <h3>Nudges, warnings and the glow</h3>
-  <h3 style="font-size:10.5pt;margin-top:8px">Nudge instead of a timer</h3>
-  <p>Every question arrives green. Nothing climbs by itself: if it isn't answered, the person who asked taps <b>Nudge</b> (on their question or in Streamer View) and it moves up a colour on her screen, up to three times, 15 seconds apart.</p>
-  <h3 style="font-size:10.5pt;margin-top:8px">Sending the streamer a warning</h3>
-  <p>For when something needs her attention right now: trouble in chat, a safety issue, anything that can't wait. A mod taps Nudge six times quickly (while it's waiting, or after the third nudge); the button counts down ("Send warning: 3 more") and then says "Warning sent". The question turns <b>red</b> on her screen with a louder double beep, even if she's turned reminder beeps off. It's a mod looking out for the streamer, not a mark against her. At most one every 30 seconds per question, so it can't be spammed.</p>
-  <h3 style="font-size:10.5pt;margin-top:8px">A glow that rests</h3>
-  <p>The glow no longer stays on. It shows for about 2 seconds, fades down to 2%, and only comes back if the question is still unanswered: after 15 seconds, then every 10 seconds, resting at 5% in between. The words stay fully readable the whole time.</p>
-  <table>
-    <tr><th>Moment</th><th>Colour</th><th>Sound</th></tr>
-    <tr><td>Question arrives</td><td><span class="sw" style="background:#00c27a"></span>Green</td><td>One clear beep</td></tr>
-    <tr><td>1st nudge</td><td><span class="sw" style="background:#ff8a1f"></span>Orange</td><td>One soft beep</td></tr>
-    <tr><td>2nd nudge</td><td><span class="sw" style="background:#ffe14d"></span>Yellow</td><td>One soft beep</td></tr>
-    <tr><td>3rd nudge</td><td><span class="sw" style="background:#fff"></span>White</td><td>One soft beep</td></tr>
-    <tr><td>Warning to her (six quick taps)</td><td><span class="sw" style="background:#ff3b30"></span>Red</td><td>Louder double beep</td></tr>
-  </table>
+<!-- 6. Streamer View and the mod panel -->
+<section class="slide">
+  <div class="split">
+    <div>
+      <p class="kicker">For mods · Twitch Space side panel</p>
+      <h2>See what the streamer sees</h2>
+      <ul class="points">
+        <li><b>Streamer View</b> mirrors the streamer's dock: its glow, everything waiting (from anyone), unseen answers, and notes. It follows the channel being watched.</li>
+        <li><b>One typing bar:</b> pick Ask, Quick info or !vanish at its left. It starts with the streamer of the stream that's open.</li>
+        <li><b>Slim lists, newest first.</b> One line each, small ♥ ✓ ✗ or Seen buttons, a reply box only when wanted. Hover turns a line into a glowing pill.</li>
+        <li><b>Status menu</b> (Online, Idle, Offline) and <b>flagging chat lines</b> from Twitch's chat.</li>
+      </ul>
+    </div>
+    <img class="shot" src="shots/8-mod-panel-lists.jpg" alt="">
+  </div>
+  <div class="footer"><span>Streamer Buddy System</span><span class="num">6</span></div>
+</section>
 
-  <h3>Twitch Space 2.5.0</h3>
-  <ul>
-    <li>The handshake button and side panel are back in the public Twitch Space download, so any mod can use everything above. Update by replacing the files in your existing Twitch Space folder and clicking reload on its card; Chrome may ask to allow the side panel.</li>
-    <li>Release and download: <a href="https://github.com/handsome-tom/MytwitchTom-Tester/releases/latest">github.com/handsome-tom/MytwitchTom-Tester/releases/latest</a> (TwitchSpace-2.5.0.zip, with the feature guide as a PDF).</li>
-  </ul>
+<!-- 7. Notes as big as questions -->
+<section class="slide">
+  <div class="split">
+    <div>
+      <p class="kicker">For the streamer · notes</p>
+      <h2>Notes get the same space as questions</h2>
+      <ul class="points" style="--dot:#3fb2ff">
+        <li><b>Quick info</b> (blue, 2 minutes) for things like an incoming raid or a technical hiccup.</li>
+        <li style="--dot:#ff7ab8"><b>!vanish notes</b> (pink, 30 seconds) bloom into a soft pink haze that spills into the background, then fade.</li>
+        <li><b>Full width,</b> the sender first, the same larger text as a question. No more little pills.</li>
+      </ul>
+    </div>
+    <img class="shot" src="shots/9-streamer-notes.jpg" alt="">
+  </div>
+  <div class="footer"><span>Streamer Buddy System</span><span class="num">7</span></div>
+</section>
 
-  <h3>Behind the scenes</h3>
-  <ul>
-    <li><b>Two-machine simulator</b> for testing on one computer: a mod's panel and the streamer's dock side by side as pretend users, a fake chat with made-up chatters in their own colours, and buttons for asking, nudging, warning, auto-play, and mods joining, chatting and leaving.</li>
-    <li>Updates reach an open OBS dock and side panel by themselves within about a minute.</li>
-  </ul>
+<!-- 8. Custom chat -->
+<section class="slide">
+  <div class="split">
+    <div>
+      <p class="kicker">For the streamer · custom chat (optional)</p>
+      <h2>Chat tools that stay out of the way</h2>
+      <ul class="points" style="--dot:#ffb31a">
+        <li><b>Icon tools on hover:</b> bookmark, reply, and delete (a real delete on Twitch, only where allowed).</li>
+        <li><b>Bookmarks for later,</b> with an amber marker and a counter in the chat bar that jumps back to them.</li>
+        <li style="--dot:#ff8a1f"><b>"Where I was":</b> one click draws an orange line across the chat under a message.</li>
+        <li style="--dot:#3fb2ff"><b>Flagged lines glow</b> in the flagging mod's colour; their pin stays at the top for 10 seconds.</li>
+      </ul>
+    </div>
+    <img class="shot" src="shots/10-custom-chat.jpg" alt="">
+  </div>
+  <div class="footer"><span>Streamer Buddy System</span><span class="num">8</span></div>
+</section>
 
-  <h2>Coming next <span class="pill next">ideas to decide on</span></h2>
-  <ul>
-    <li><b>Live test with a real streamer</b>, she in OBS and a mod in Chrome, to check the timing and sounds on a real stream.</li>
-    <li><b>Who sees Streamer View.</b> Today every mutual connection sees everything waiting for her, including other people's questions. It could be limited to her Mods tag.</li>
-    <li><b>The streamer's quick-questions row</b> ("Clip that!"). It can be hidden in Settings; it could be removed like the mod's.</li>
-    <li><b>Keeping bookmarks</b> in custom chat after the dock reloads (today they last until a reload).</li>
-  </ul>
-
-  <div class="board">
-    <h2>What it looks like</h2>
-    <p class="note">From the test simulator. The first six are the streamer's OBS dock; the seventh is the mod's side panel at the same moment, after sending the warning.</p>
-    <img src="glow-states.png" alt="Screenshots of each glow state">
-    <div class="pair">
-      <figure><img src="shots/8-mod-panel-lists.jpg" alt="The mod's side panel with the slim lists"><figcaption>The mod's side panel now: Streamer View with Nudge, the Ask bar, and slim newest-first lines with small buttons.</figcaption></figure>
-      <figure><img src="shots/9-streamer-notes.jpg" alt="Quick info and !vanish notes on the streamer's dock"><figcaption>Quick info (blue) and a !vanish note (pink haze), as big as a question on the streamer's dock.</figcaption></figure>
+<!-- 9. Who's in chat + settings -->
+<section class="slide">
+  <p class="kicker">For the streamer · at a glance</p>
+  <h2>Who's around, and how it sounds</h2>
+  <div class="steps">
+    <div class="card">
+      <h3>Who's in chat</h3>
+      <p style="font-size:13pt;color:#b8b8c4">Each mod's picture in the bar shows how recently they chatted.</p>
+      <div class="legend">
+        <span class="ring" style="box-shadow:0 0 0 3px #00c27a, 0 0 10px rgba(0,194,122,.6)"></span><span>Chatted in the last 5 minutes: green</span>
+        <span class="ring" style="box-shadow:0 0 0 3px #ff8a1f"></span><span>Then orange, yellow and white as time passes</span>
+        <span class="ring" style="background:#7a7a86"></span><span>In chat but quiet: lit, no ring</span>
+        <span class="ring" style="background:#2a2a30;opacity:.55"></span><span>Not in chat: gray</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Settings gear</h3>
+      <ul class="points" style="--dot:#9147ff">
+        <li style="font-size:13pt;margin-bottom:9px">Sound on or off; volume quiet, normal or loud</li>
+        <li style="font-size:13pt;margin-bottom:9px">Softer reminder beeps on or off</li>
+        <li style="font-size:13pt;margin-bottom:9px">Edge glow, the quick-questions row, chat text size</li>
+        <li style="font-size:13pt;margin-bottom:9px">Custom or Twitch chat</li>
+        <li style="font-size:13pt;margin-bottom:9px">Share Streamer View with mods, or not</li>
+      </ul>
     </div>
   </div>
+  <div class="footer"><span>Streamer Buddy System</span><span class="num">9</span></div>
+</section>
+
+<!-- 10. Get it -->
+<section class="slide">
+  <p class="kicker">Get started</p>
+  <h2>Two minutes on each side</h2>
+  <div class="steps">
+    <div class="card">
+      <h3>Mods: Twitch Space 2.5.0</h3>
+      <ol>
+        <li>Download <b>TwitchSpace-2.5.0.zip</b> from <a href="https://github.com/handsome-tom/MytwitchTom-Tester/releases/latest">the latest release</a> and unzip it.</li>
+        <li>Updating? Replace the files in the existing Twitch Space folder and click reload on its card. New? <code>chrome://extensions</code>, Developer mode, Load unpacked.</li>
+        <li>Allow the side panel if Chrome asks. Click the <b>handshake button</b> on Twitch, sign in, and add the streamer.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>Streamer: the OBS dock</h3>
+      <ol>
+        <li>OBS: <b>Docks → Custom Browser Docks…</b></li>
+        <li>Name it <code>Streamer Buddy System</code>, URL<br><code>https://handsome-tom.github.io/streamer-buddy-system/?livechat</code></li>
+        <li>Sign in with Twitch, open Connections (two-people icon), and <b>Add back</b> the mods. It updates itself from then on.</li>
+      </ol>
+    </div>
+  </div>
+  <div class="footer"><span>Streamer Buddy System</span><span class="num">10</span></div>
+</section>
+
+<!-- 11. Coming next -->
+<section class="slide">
+  <p class="kicker">Coming next</p>
+  <h2>Ideas to decide on</h2>
+  <ul class="points" style="--dot:#ffb31a;max-width:9.5in">
+    <li><b>A live test</b> with a real streamer in OBS and a mod in Chrome, to tune the timing and sounds on an actual stream.</li>
+    <li><b>Who sees Streamer View.</b> Today every mutual connection sees everything waiting, including other people's questions. It could be limited to the streamer's Mods tag.</li>
+    <li><b>The streamer's quick-questions row</b> ("Clip that!"). It can be hidden in Settings; it could go, like the mods' did.</li>
+    <li><b>Keeping chat bookmarks</b> after the dock reloads (today they last until a reload).</li>
+  </ul>
+  <div class="footer"><span>Streamer Buddy System</span><span class="num">11</span></div>
+</section>
+
 </body>
 </html>
