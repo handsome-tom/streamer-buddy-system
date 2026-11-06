@@ -204,7 +204,8 @@ const twitch = (() => {
   // (a mod, so no mod icons on its lines), the way it does on Twitch.
   const BOT = "StreamElements";
   const BOT_COMMANDS = {
-    "!commands": () => "Commands: !discord !socials !schedule !uptime !lurk !hug",
+    "!command": () => "command test", // a plain one for trying it out
+    "!commands": () => "Commands: !command !discord !socials !schedule !uptime !lurk !hug",
     "!discord": () => "Join the community Discord: discord.gg/your-server",
     "!socials": () => "Follow along: twitter.com/yourname · instagram.com/yourname · tiktok.com/@yourname",
     "!schedule": () => "Live Monday, Wednesday and Friday at 7pm Central",
