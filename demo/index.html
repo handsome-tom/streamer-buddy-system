@@ -310,6 +310,18 @@
   .junk--netscape { top: 230px; }
   .junk--cursor { top: 40px; }
   @media (max-width: 1360px) { .junk { display: none; } }
+
+  /* Rather than the margins (too narrow on most laptops), the junk sits in the empty space to
+     the right of each section's headline. */
+  .band > .junk { left: auto; right: auto; }
+  .band > .junk--top8 { right: 30px; top: 30px; width: 150px; }
+  .band > .junk--construction { right: 40px; top: 34px; width: 150px; }
+  .band > .junk--glitter { right: 230px; top: 92px; width: 170px; font-size: 16px; }
+  .band > .junk--counter { right: 40px; top: 40px; }
+  .band > .junk--netscape { right: 230px; top: 30px; width: 150px; }
+  .band > .junk--cursor { right: 200px; top: 112px; }
+  @media (max-width: 1360px) { .junk { display: block; } }
+  @media (max-width: 980px) { .junk { display: none !important; } }
 </style>
 </head>
 <body>
