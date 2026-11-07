@@ -197,6 +197,7 @@ const twitch = (() => {
       cheer: bits ? { bits } : null,
       channel_points_custom_reward_id: reward ? "rw-demo" : null,
     });
+    sentText[id] = { who, text };
     if (text.startsWith("!") && who !== BOT) botReply(text, who);
     return id;
   }
@@ -253,6 +254,7 @@ const twitch = (() => {
   const ircUser = (who) => `:${who}!${who}@${who}.tmi.twitch.tv`;
   const ircLine = (line) => chatSockets.forEach((s) => s._receive(line));
 
+  const sentText = {}; // message id -> { who, text }, for pinning
   let pinned = null;
   let pinTimer = 0;
   let hypeTimer = 0;
@@ -576,7 +578,29 @@ const twitch = (() => {
       return json(200, { data: [{}] });
     }
     if (route === "/moderation/automod/message") return json(204, {});
-    if (route === "/chat/pins") return json(200, { data: pinned ? [pinned] : [] });
+    if (route === "/chat/pins") {
+      const method = init.method || "GET";
+      if (method === "GET") return json(200, { data: pinned ? [pinned] : [] });
+      // Pinning a message from the chat: the pretend Twitch remembers it, like Twitch does.
+      if (method === "PUT") {
+        const id = u.searchParams.get("message_id");
+        const said = sentText[id] || {};
+        const secs = Number(u.searchParams.get("duration_seconds")) || 0;
+        pinned = {
+          message_id: id, broadcaster_id: "1", sender_user_id: `u-${said.who || "someone"}`, sender_user_login: (said.who || "someone").toLowerCase(), sender_user_name: said.who || "someone",
+          pinned_by_user_id: "1", pinned_by_user_login: "streamer", pinned_by_user_name: "streamer",
+          message: { text: said.text || "", fragments: [{ type: "text", text: said.text || "" }] }, starts_at: new Date().toISOString(),
+          ends_at: secs ? new Date(Date.now() + secs * 1000).toISOString() : null, updated_at: new Date().toISOString(),
+        };
+        clearTimeout(pinTimer);
+        if (secs) pinTimer = setTimeout(() => (pinned = null), secs * 1000);
+        return json(204, {});
+      }
+      if (method === "DELETE") {
+        pinned = null;
+        return json(204, {});
+      }
+    }
     if (route === "/moderation/warnings") {
       // The person is warned; a few seconds later they read it, as Twitch reports.
       const w = JSON.parse(body || "{}").data || {};

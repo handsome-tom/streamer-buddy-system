@@ -3137,3 +3137,16 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-topcard__sender { font-weight: 800; }
 .oc-topcard .oc-topcard__pin { background: var(--tc); }
 .oc-topcard--pin .oc-topcard__pin { background: #9147ff; }
+/* Hover buttons on a message, like Twitch's: separate round dark buttons sitting on the
+   top edge of the line, at the right */
+.oc-tools { top: 0; right: 10px; gap: 4px; padding: 0; background: none; border: 0; box-shadow: none; transform: translateY(-45%) scale(0.94); }
+.oc-line:hover > .oc-tools { transform: translateY(-45%); }
+.oc-tool { width: 30px; height: 30px; color: #efeff1; background: #1f1f23; border: 1px solid #35353b; border-radius: 50%; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
+.oc-tool svg { width: 17px; height: 17px; }
+.oc-tool:hover { color: #fff; background: #2f2f35; }
+.oc-tool--mark:hover { background: #2f2f35; color: var(--amber); }
+.oc-pinmenu { position: absolute; top: 34px; right: 0; display: grid; min-width: 150px; padding: 4px; background: #1f1f23; border: 1px solid #35353b; border-radius: 6px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6); }
+.oc-pinmenu__item { padding: 6px 10px; font: inherit; font-size: 12px; text-align: left; color: var(--text); background: none; border: 0; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+.oc-pinmenu__item:hover { background: #2f2f35; }
+.oc-pinmenu__head { padding: 3px 10px 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.oc-topcard__unpin { margin-top: 6px; padding: 2px 10px; font-size: 11px; }

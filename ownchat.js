@@ -33,6 +33,7 @@
   // hype train, polls and predictions: their cards at the top (your own channel only).
   const EXTRA_SCOPES = ["moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions", "user:manage:whispers", "channel:read:redemptions"]; // redemptions: your own channel only // whispers: Whisper on a name's card
   const CHATTERS_EVERY_MS = 2 * 60 * 1000;
+  const PIN_LENGTHS = [["1 minute", 60], ["5 minutes", 300], ["10 minutes", 600], ["30 minutes", 1800], ["Until the stream ends", 0]];
   const TIMEOUTS = [["1m", 60], ["10m", 600], ["1h", 3600], ["24h", 86400]];
   // Twitch's chat commands don't run through the API, and could post as plain text, so
   // anything that looks like one is stopped here. Dots are how some people type them.
@@ -74,6 +75,7 @@
     crown: '<path d="M3 15.5 2.5 6l4 3.5L10 4l3.5 5.5 4-3.5-.5 9.5z" fill="currentColor" stroke="none"/>',
     heartfill: '<path d="M10 17s-7-4.3-7-9.2A3.8 3.8 0 0 1 10 5.5a3.8 3.8 0 0 1 7 2.3C17 12.7 10 17 10 17z" fill="currentColor" stroke="none"/>',
     chart: '<path d="M4 16.5V9h3v7.5zM8.5 16.5V4h3v12.5zM13 16.5v-5h3v5z" fill="currentColor" stroke="none"/>',
+    pinline: '<path d="M7.5 3.5h5M8.5 3.5v5l-2.5 3h8l-2.5-3v-5M10 11.5v5"/>',
     pin: '<path d="M12.6 2.8 17.2 7.4l-2 .5-3.1 3.1.4 3.7-1.4 1.4-3.1-3.1-4.3 4.3-.7-.7 4.3-4.3-3.1-3.1 1.4-1.4 3.7.4 3.1-3.1z" fill="currentColor" stroke="none"/>',
   };
   const icon = (name, size = 15) =>
@@ -1170,6 +1172,7 @@
       drawMessage(words, p.message?.fragments, p.message?.text || "");
       body.append(words);
       c.append(body);
+      if (isMod) c.append(button("oc-act oc-topcard__unpin", "Unpin", () => unpin(p.message_id), "Unpin it for everyone"));
     }
     timers.push(setInterval(checkPin, 10 * 1000));
 
@@ -1546,20 +1549,56 @@
     // One set of line buttons, moved to whichever line the mouse is on.
     const tools = el("div", "oc-tools");
     let toolsLine = null;
+    // Like Twitch's: pin (mods) and reply, plus a bookmark. Deleting is the bin before the
+    // name (the mod icons), as on Twitch.
+    const pinMenu = el("div", "oc-pinmenu");
+    pinMenu.hidden = true;
+    pinMenu.append(el("div", "oc-pinmenu__head", "Pin for"));
+    for (const [label, seconds] of PIN_LENGTHS) {
+      pinMenu.append(button("oc-pinmenu__item", label, () => {
+        pinMenu.hidden = true;
+        if (toolsLine) pinLine(toolsLine, seconds);
+      }));
+    }
     tools.append(
       iconButton("oc-tool oc-tool--mark", "bookmark", () => toolsLine && (toggleMark(toolsLine), drawToolMark()), "Bookmark for later"),
+      iconButton("oc-tool oc-tool--pin", "pinline", () => (pinMenu.hidden = !pinMenu.hidden), "Pin this message"),
       iconButton("oc-tool", "reply", () => toolsLine && startReply(toolsLine), "Reply"),
-      iconButton("oc-tool oc-tool--mod", "trash", () => toolsLine && deleteMessage(toolsLine), "Delete this message"),
+      pinMenu,
     );
     list.addEventListener("mouseover", (e) => {
       const line = e.target.closest?.(".oc-line[data-id]");
       if (!line || line === toolsLine || line.classList.contains("oc-line--gone")) return;
       toolsLine = line;
-      const canDelete = isMod && !line.dataset.staff;
-      tools.querySelector(".oc-tool--mod").hidden = !canDelete;
+      pinMenu.hidden = true;
+      tools.querySelector(".oc-tool--pin").hidden = !isMod;
       drawToolMark();
       line.append(tools);
     });
+
+    // Pinning: for as long as you pick (Twitch allows up to 30 minutes), or until the
+    // stream ends. Unpinning is on the pinned card.
+    async function pinLine(line, seconds) {
+      const q = `${modQuery()}&message_id=${encodeURIComponent(line.dataset.id)}${seconds ? `&duration_seconds=${seconds}` : ""}`;
+      try {
+        const r = await fetch(`${urls.helix}/chat/pins?${q}`, { method: "PUT", headers: { Authorization: `Bearer ${host.token()}`, "Client-Id": host.clientId } });
+        if (r.ok) {
+          pinHidden = "";
+          checkPin();
+        } else note(await why(r, "Twitch wouldn't pin that."));
+      } catch {
+        note("Couldn't reach Twitch. Try again.");
+      }
+    }
+    async function unpin(id) {
+      try {
+        const r = await fetch(`${urls.helix}/chat/pins?${modQuery()}&message_id=${encodeURIComponent(id)}`, { method: "DELETE", headers: { Authorization: `Bearer ${host.token()}`, "Client-Id": host.clientId } });
+        if (r.ok) dropTop("pin");
+        else note(await why(r, "Twitch wouldn't unpin that."));
+      } catch {
+        note("Couldn't reach Twitch. Try again.");
+      }
+    }
 
     // The bookmark tool: filled in on a bookmarked message.
     function drawToolMark() {
