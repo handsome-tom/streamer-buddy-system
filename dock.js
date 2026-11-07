@@ -2302,7 +2302,7 @@
   // Quick questions: saved on this device; in a one-row bar they're one tap
   // to everyone.
   const MAX_PRESETS = 8;
-  const presets = () => get("presets", ["Clip that!", "Anyone free to help?"]);
+  const presets = () => get("presets", ["Can you post the Discord link?", "Anyone free to help?"]);
   if (DECK && localStorage.getItem("askOpen") === null) put("askOpen", false);
   let quickSent = ""; // the quick question just sent, shown as "Sent" for a moment
 
@@ -2865,7 +2865,7 @@
   // picked at the top. "Edit" adds and removes tiles (saved on this phone).
 
   const DECK_TILES = [
-    { kind: "ask", text: "Clip that!" },
+    { kind: "ask", text: "Can you post the Discord link?" },
     { kind: "ask", text: "Anyone free to help?" },
     { kind: "info", text: "Your mic is muted" },
     { kind: "info", text: "Game audio is loud" },

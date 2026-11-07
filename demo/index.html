@@ -696,7 +696,7 @@
   const MOD_ASKS = ["Can I run the poll now?", "Should I start the giveaway?", "Timeout the spammer?", "Raid them after this game?", "Want me to clip that?"];
   const MOD_SAYS = ["Mic is a little quiet", "Chat's asking about your settings", "Poll is ready when you are", "Someone new followed, say hi"];
   const MOD_NOTES = ["Raid incoming in 1 min", "Ad break in 2 min", "Big donation just came in"];
-  const STREAMER_ASKS = ["Can you clip that?", "Can you pin the schedule?", "Who just raided?", "Can you start the poll?"];
+  const STREAMER_ASKS = ["Can you post the Discord link?", "Can you pin the schedule?", "Who just raided?", "Can you start the poll?"];
   const modAsk = () => send("mod1", { t: "ask", to: "streamer", text: pick(MOD_ASKS), options: ["t", "y", "n"] });
   const modSay = () => send("mod1", { t: "ask", to: "streamer", text: pick(MOD_SAYS), note: true });
   const modNote = () => send("mod1", { t: "flash", kind: "info", to: "streamer", text: pick(MOD_NOTES) });
