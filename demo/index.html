@@ -316,6 +316,8 @@
   .screen:last-child iframe { border-color: rgba(240, 163, 48, 0.4); }
   .screen:last-child .menu__more { color: var(--honey); }
   .demo { border-top: 0; }
+  /* Room to scroll between the hero and the demo, for the Mods | Streamers moment. */
+  .splitzone { height: 85vh; }
 </style>
 </head>
 <body>
@@ -389,6 +391,7 @@
     </div>
   </section>
 
+  <div class="splitzone" aria-hidden="true"></div>
   <section class="demo" id="demo">
     <div class="wrap">
       <div class="demo__head">
@@ -603,11 +606,13 @@
       const st = stage.getBoundingClientRect();
       // Nothing while any of the hero is still on screen (under the 58px top bar).
       const hero = document.querySelector(".hero").getBoundingClientRect();
-      const coming = clamp((58 - hero.bottom) / (vh * 0.25));
+      const coming = clamp((58 - hero.bottom) / (vh * 0.2));
       const leaving = clamp(d.bottom / (vh * 0.6)); // 1 until the demo's end comes up
-      const screensIn = clamp((vh * 0.75 - st.top) / (vh * 0.35)); // the screens arriving
+      // The words: in the empty stretch between the hero and the demo, gone before the demo's
+      // own heading comes up.
+      const wordsOut = clamp((vh * 0.85 - d.top) / (vh * 0.35));
       root.style.setProperty("--split-color", (coming * leaving).toFixed(3));
-      root.style.setProperty("--split-text", (clamp(coming * 1.4) * (1 - screensIn)).toFixed(3));
+      root.style.setProperty("--split-text", (clamp(coming * 1.3) * (1 - wordsOut)).toFixed(3));
     }
     const queue = () => { if (!queued) { queued = true; requestAnimationFrame(draw); } };
     addEventListener("scroll", queue, { passive: true });
