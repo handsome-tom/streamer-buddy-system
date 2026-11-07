@@ -3282,3 +3282,4 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-topcard__label, .oc-topcard--pin .oc-topcard__label { font-family: var(--display); font-size: 15px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--tc); }
 .oc-topcard__time, .oc-topcard--pin .oc-topcard__time { font-family: var(--display); font-size: 15px; font-weight: 700; padding: 0; color: var(--text); background: none; }
 .oc-topcard__num { font-family: var(--display); font-size: 14px; font-weight: 700; }
+.oc-redeem, .oc-notice--announcement, .oc-notice--raid { margin-left: 6px; margin-right: 6px; border-radius: 2px; }
