@@ -3398,3 +3398,13 @@ body.no-modicons .oc-modicons { display: none; }
 }
 .oc-topcard .oc-topcard__pin { --ev: var(--tc); }
 .oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin { width: 24px; height: 24px; border-radius: 5px; }
+
+/* Darker cards so what's on them stands out: a barely-there gradient, and a lighter-black
+   edge so each card's outline still shows against the chat. */
+:root { --card: #141416; --card-top: #18181b; --edge: #2e2e34; }
+.oc-event, .oc-event--bomb, .oc-redeem, .oc-notice--announcement, .oc-notice--raid, .oc-notice:not(.oc-event),
+.oc-topcard, .oc-topcard--pin {
+  background: linear-gradient(180deg, var(--card-top), var(--card));
+  border: 1px solid var(--edge);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.5);
+}
