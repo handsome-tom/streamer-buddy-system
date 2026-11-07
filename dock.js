@@ -1340,7 +1340,7 @@
     const head = (text) => el("div", "set__head", text);
 
     const parts = [head("Sound")];
-    parts.push(sw("sound", "Sound when something arrives", PINGS_HERE, (on) => on && ping(1)));
+    parts.push(sw("sound", "Notification sounds", PINGS_HERE, (on) => on && ping(1)));
     if (soundOn()) {
       parts.push(choice("Volume", [["quiet", "Quiet"], ["normal", "Normal"], ["loud", "Loud"]], get("volume", "normal"), (v) => {
         put("volume", v);
