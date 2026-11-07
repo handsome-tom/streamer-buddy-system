@@ -456,6 +456,15 @@ const twitch = (() => {
     announce() {
       notice("announcement", { who: "mod2", text: "Giveaway at the end of the stream, type !enter to join", fields: { announcement: { color: "GREEN" } } });
     },
+    // A recent line from a viewer (not a bot or a mod), for a mod to flag.
+    recentLine() {
+      const ids = lastIds.slice().reverse();
+      for (const id of ids) {
+        const m = sentText[id];
+        if (m && m.who !== BOT && !/^mod\d$/.test(m.who) && m.who !== "streamer") return { ...m, color: colorOf[m.who] };
+      }
+      return null;
+    },
     say(who, text) {
       if (!here.has(who)) controls.join(who);
       ircLine(`${ircUser(who)} PRIVMSG #streamer :${text}`);

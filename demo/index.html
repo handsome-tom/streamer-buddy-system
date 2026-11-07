@@ -85,6 +85,7 @@
       <div class="row"><span class="row__label">mod1 then</span>
         <button id="modNudge" type="button">nudges</button>
         <button id="modWarn" type="button">warns</button>
+        <button id="modFlag" type="button">flags a chat line</button>
       </div>
       <div class="row"><span class="row__label">Streamer</span>
         <button id="streamerAsk" type="button">asks mod1</button>
@@ -296,6 +297,15 @@
       said(what);
     });
   }
+
+  // A mod flags a line in chat: it glows in the streamer's custom chat, and its pin sits at
+  // the top for a few seconds.
+  document.getElementById("modFlag").addEventListener("click", () => {
+    const line = pretendTwitch.recentLine();
+    if (!line) return said("Nothing in chat to flag yet: turn the chat feed on, or have someone talk");
+    send("mod1", { t: "flash", kind: "chat", to: "streamer", channel: "streamer", chatter: line.who.toLowerCase(), chatterName: line.who, chatterColor: line.color, text: line.text, color: "#3fb2ff" });
+    said(`mod1 flagged ${line.who}'s line: it glows in the streamer's chat`);
+  });
 
   // ===== Auto-play: mod1 and the streamer talk on their own ================================
   let auto = 0;
