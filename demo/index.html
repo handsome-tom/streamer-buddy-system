@@ -150,6 +150,26 @@
   .band__title span { color: var(--brand-light); }
   .foot .tom { display: inline-flex; align-items: center; gap: 8px; color: #6f6f78; }
   .foot .tom img { width: 26px; height: 26px; border-radius: 3px; opacity: 0.85; filter: saturate(0.6); }
+
+  /* ===== The demo, condensed: a short menu above each screen, everything else folded away ===== */
+  .demo__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 6px 6px 6px 0; border-bottom: 1px solid var(--line); }
+  .demo__bar .console__said { flex: 1; border: 0; padding: 6px 0; }
+  .demo__run { display: flex; gap: 6px; }
+  .menu { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 9px; background: linear-gradient(180deg, var(--card-top), var(--card)); border: 1px solid #263150; border-radius: 4px; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5); }
+  .menu__head { width: 100%; margin-bottom: 1px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--brand-light); }
+  .menu .chip { padding: 6px 10px; font-size: 12.5px; }
+  .chip .go { margin-left: 2px; font-weight: 800; color: var(--brand-light); }
+  .menu__more { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--brand-light); text-decoration: none; }
+  .menu__more:hover { text-decoration: underline; }
+  .screen { width: min(420px, 92vw); }
+  .screen iframe { width: 100%; }
+  .all { margin-top: 24px; background: linear-gradient(180deg, var(--card-top), var(--card)); border: 1px solid #263150; border-radius: 4px; }
+  .all summary { display: flex; align-items: baseline; gap: 10px; padding: 12px 14px; font-weight: 800; cursor: pointer; list-style: none; }
+  .all summary::-webkit-details-marker { display: none; }
+  .all summary::before { content: "▸"; color: var(--brand-light); transition: transform 0.15s; }
+  .all[open] summary::before { transform: rotate(90deg); }
+  .all summary small { font-weight: 500; color: #7d7d87; }
+  .all .console { margin: 0 10px 10px; box-shadow: none; }
 </style>
 </head>
 <body>
@@ -194,22 +214,58 @@
           <p>On the left, a mod's side panel in Chrome. On the right, the streamer's OBS dock with chat. Everyone here is pretend, and nothing is sent anywhere.</p>
         </div>
         <ol class="steps">
-          <li>Pick something to happen</li>
+          <li>Pick something from either menu</li>
           <li>Watch both sides react</li>
           <li>Answer, bookmark, click around</li>
         </ol>
       </div>
 
+      <div class="demo__bar">
+        <div class="console__said" id="said" aria-live="polite"></div>
+        <div class="demo__run">
+          <button id="auto" type="button" class="chip" data-tip="mod1 and the streamer talk on their own, every few seconds, so you can just watch.">Auto-play: off</button>
+          <button id="reload" type="button" class="chip" data-tip="Resets everything and starts the demo fresh.">Start over</button>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="screen">
+          <div class="screen__label">Mod's side panel <small>you're mod1, watching the streamer</small>
+            <span class="info" tabindex="0" data-tip="What a mod sees in Chrome, next to Twitch: Streamer View at the top shows what's on the streamer's screen right now, then the box to ask, send quick info or a !vanish note.">?</span></div>
+          <div class="menu" aria-label="Try as mod1">
+            <span class="menu__head">Try as mod1</span>
+            <button type="button" class="chip" data-click="modAsk" data-tip="→ mod1 asks the streamer a yes-or-no question. It waits on the streamer's dock with ♥ ✓ ✗ ?">Ask<span class="go" aria-hidden="true">→</span></button>
+            <button type="button" class="chip" data-click="modNote" data-tip="→ A heads-up on the streamer's bar, with a lightning bolt. It goes after 2 minutes.">Quick info<span class="go" aria-hidden="true">→</span></button>
+            <button type="button" class="chip" data-click="modVanish" data-tip="→ A short kind note on the streamer's bar, with a little devil. Gone in 30 seconds.">!vanish<span class="go" aria-hidden="true">→</span></button>
+            <button type="button" class="chip" data-click="modNudge" data-tip="→ Bumps mod1's waiting question up a colour on the streamer's dock: orange, yellow, white.">Nudge<span class="go" aria-hidden="true">→</span></button>
+            <button type="button" class="chip" data-click="modWarn" data-tip="→ For something that can't wait: the question turns red on the streamer's dock, with a louder beep.">Warn<span class="go" aria-hidden="true">→</span></button>
+            <button type="button" class="chip" data-click="modFlag" data-tip="→ mod1 flags a viewer's message. It glows in the streamer's chat.">Flag a line<span class="go" aria-hidden="true">→</span></button>
+          </div>
+          <iframe id="mod" title="Mod side panel"></iframe>
+        </div>
+        <div class="screen">
+          <div class="screen__label">Streamer's OBS dock <small>you're the streamer</small>
+            <span class="info" tabindex="0" data-tip="What the streamer sees in OBS: mods' pictures and the message area at the top, then their chat, with Twitch's events and mod tools built in. Hover a chat line to bookmark, pin or reply.">?</span></div>
+          <div class="menu" aria-label="Try on the streamer's side">
+            <span class="menu__head">On the streamer's side</span>
+            <button type="button" class="chip" data-click="streamerAsk" data-tip="← The streamer asks mod1 something. It shows up in the mod's panel.">Ask mod1<span class="go" aria-hidden="true">←</span></button>
+            <button type="button" class="chip" data-click="tRaid" data-k style="--k:#8fd14f" data-tip="Lump raids with a crowd. Raiders get a RAID tag with Lump's picture.">Raid</button>
+            <button type="button" class="chip" data-click="tGift" data-k style="--k:#e2568f" data-tip="20 gifted subs: a progress card on top, and a card listing everyone who got one.">Gift bomb</button>
+            <button type="button" class="chip" data-click="tFirst" data-k style="--k:#3fc98e" data-tip="Someone chats in the channel for the very first time.">First-timer</button>
+            <button type="button" class="chip" data-click="tStreak" data-k style="--k:#ee7a2f" data-tip="A viewer shares their watch streak.">Streak</button>
+            <button type="button" class="chip" data-click="tPoll" data-k style="--k:#5a8de8" data-tip="A poll, with live votes at the top of chat.">Poll</button>
+            <a class="menu__more" href="#allControls" data-tip="Every other Twitch event and chat control, below the screens.">More…</a>
+          </div>
+          <iframe id="obs" title="Streamer's OBS dock"></iframe>
+        </div>
+      </div>
+      <details class="all" id="allControls">
+        <summary>Every demo control <small>chat, every Twitch event, and the rest</small></summary>
       <div class="console">
         <div class="console__bar">
           <div class="tabs" role="tablist" aria-label="What to try">
             <button class="tab" role="tab" type="button" aria-selected="true" aria-controls="paneMods" id="tabMods">Mods and streamer</button>
             <button class="tab" role="tab" type="button" aria-selected="false" aria-controls="paneChat" id="tabChat">Chat</button>
             <button class="tab" role="tab" type="button" aria-selected="false" aria-controls="paneTwitch" id="tabTwitch">Twitch events</button>
-          </div>
-          <div class="console__run">
-            <button id="auto" type="button" class="chip" data-tip="mod1 and the streamer talk on their own, every few seconds, so you can just watch.">Auto-play: off</button>
-            <button id="reload" type="button" class="chip" data-tip="Resets everything and starts the demo fresh.">Start over</button>
           </div>
         </div>
         <div class="pane" role="tabpanel" id="paneMods" aria-labelledby="tabMods">
@@ -249,21 +305,9 @@
         <button id="tPoll" type="button" class="chip" data-k style="--k:#5a8de8" data-tip="A poll, with live votes at the top of chat.">Poll</button>
         <button id="tPred" type="button" class="chip" data-k style="--k:#c788e8" data-tip="A prediction: it locks after 20 seconds, then a side wins.">Prediction</button>
         </div>
-        <div class="console__said" id="said" aria-live="polite"></div>
       </div>
 
-      <div class="stage">
-        <div class="screen">
-          <div class="screen__label">Mod's side panel <small>you're mod1, watching the streamer</small>
-            <span class="info" tabindex="0" data-tip="What a mod sees in Chrome, next to Twitch: Streamer View at the top shows what's on the streamer's screen right now, then the box to ask, send quick info or a !vanish note.">?</span></div>
-          <iframe id="mod" title="Mod side panel"></iframe>
-        </div>
-        <div class="screen">
-          <div class="screen__label">Streamer's OBS dock <small>you're the streamer</small>
-            <span class="info" tabindex="0" data-tip="What the streamer sees in OBS: mods' pictures and the message area at the top, then their chat, with Twitch's events and mod tools built in. Hover a chat line to bookmark, pin or reply.">?</span></div>
-          <iframe id="obs" title="Streamer's OBS dock"></iframe>
-        </div>
-      </div>
+      </details>
     </div>
   </section>
 
@@ -498,6 +542,10 @@
   on("tPred", () => (pretendTwitch.prediction(), said("A prediction started: it locks after 20 seconds, then a side wins")));
   on("tAnnounce", () => (pretendTwitch.announce(), said("mod2 made an announcement")));
   document.getElementById("reload").addEventListener("click", () => location.reload());
+
+  // The short menus above the screens press the same buttons as the full menu below.
+  for (const b of document.querySelectorAll("[data-click]")) b.addEventListener("click", () => document.getElementById(b.dataset.click).click());
+  document.querySelector(".menu__more")?.addEventListener("click", () => (document.getElementById("allControls").open = true));
 
   // The console's tabs: one row of actions at a time.
   const tabs = [...document.querySelectorAll(".tab")];
