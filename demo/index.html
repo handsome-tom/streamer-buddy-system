@@ -26,26 +26,46 @@
   .brand img { display: block; height: 34px; width: auto; }
   .intro p { margin: 0; color: var(--muted); max-width: 820px; }
   .intro b { color: #efeff1; }
-  .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 16px 10px; border-bottom: 1px solid var(--line); }
-  .tools button, .tools select { padding: 5px 10px; font: inherit; color: #efeff1; background: #2f2f35; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
-  .tools button:hover { background: #3a3a40; }
-  .tools button.sim { font-weight: 700; color: #fff; background: #ff6a00; border-color: #ff8a33; }
-  .tools button.sim--first { background: #00a86b; border-color: #00db84; }
-  .tools button.sim--gift { background: #9147ff; border-color: #bf94ff; }
-  .tools button.sim--streak { background: #e0520f; border-color: #ff8a33; }
-  .tools button.sim:hover { filter: brightness(1.12); }
+  /* The controls: one card per kind of thing, each with a small heading. */
+  .tools { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; padding: 10px 16px 12px; border-bottom: 1px solid var(--line); }
+  .panel { display: flex; flex-direction: column; gap: 7px; padding: 10px 12px 12px; background: linear-gradient(180deg, #18181b, #131315); border: 1px solid #2a2a30; border-radius: 10px; }
+  .panel--wide { grid-column: span 2; }
+  @media (max-width: 720px) { .panel--wide { grid-column: auto; } }
+  .panel h3 { margin: 0; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+  .row__label { min-width: 74px; font-size: 11px; color: #7d7d87; }
+  .tools button, .tools select { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; font: inherit; font-size: 12.5px; color: #efeff1; background: #26262c; border: 1px solid #34343b; border-radius: 6px; cursor: pointer; }
+  .tools button:hover { background: #303037; border-color: #44444c; }
+  /* Twitch events: a small dot in the colour that kind of notice has in the chat. */
+  .tools button[data-k]::before { content: ""; width: 7px; height: 7px; flex: none; border-radius: 2px; background: var(--k); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5); }
+  .tools button.big { padding: 7px 12px; font-weight: 700; background: color-mix(in srgb, var(--k) 16%, #1c1c20); border-color: color-mix(in srgb, var(--k) 45%, #2a2a30); }
+  .tools button.big:hover { background: color-mix(in srgb, var(--k) 26%, #1c1c20); }
   .tools .on { background: #772ce8; border-color: var(--purple); }
-  .tools .group { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 2px 6px; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; }
-  .tools .said { flex: 1 1 200px; text-align: right; color: var(--muted); font-size: 12px; }
+  .panel--run { justify-content: space-between; }
+  .said { min-height: 2.9em; color: var(--muted); font-size: 12px; }
   .stage { flex: 1; display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; padding: 14px; }
   .side { display: flex; flex-direction: column; gap: 6px; }
   .side h2 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
   .side h2 span { font-weight: 400; text-transform: none; letter-spacing: 0; }
-  iframe { height: min(760px, calc(100vh - 190px)); min-height: 520px; border: 1px solid var(--line); border-radius: 8px; background: #0e0e10; }
+  iframe { height: min(760px, calc(100vh - 40px)); min-height: 520px; border: 1px solid var(--line); border-radius: 8px; background: #0e0e10; }
   #mod { width: min(400px, 92vw); }
   #obs { width: min(420px, 92vw); }
+  /* What it does: one card per part, each a list of features. Add a <div> to a list (or a new
+     <section class="feat">) as things are added. */
+  .features { padding: 26px 16px 34px; border-top: 1px solid var(--line); background: #0b0b0d; }
+  .features__inner { max-width: 1180px; margin: 0 auto; }
+  .features h2 { margin: 0 0 4px; font-size: 20px; }
+  .features__lead { margin: 0 0 18px; max-width: 760px; color: var(--muted); }
+  .feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 14px; }
+  .feat { padding: 16px 18px 8px; background: linear-gradient(180deg, #18181b, #131315); border: 1px solid #2a2a30; border-radius: 12px; }
+  .feat h3 { margin: 0 0 2px; font-size: 15px; }
+  .feat__sub { margin: 0 0 10px; color: var(--muted); font-size: 12px; }
+  .feat dl { margin: 0; }
+  .feat dl > div { padding: 8px 0; border-top: 1px solid #222227; }
+  .feat dt { font-weight: 700; color: #efeff1; }
+  .feat dd { margin: 2px 0 0; color: #b9b9c3; }
+  .feat__note { color: #7d7d87; font-size: 12px; }
   .foot { padding: 6px 16px 14px; color: #6f6f78; font-size: 12px; text-align: center; }
-  .foot a { color: var(--muted); }
 </style>
 </head>
 <body>
@@ -54,39 +74,70 @@
     <p>Mods quietly ask the streamer things and look out for them, without cluttering the stream. On the left, a <b>mod's side panel</b> in Chrome; on the right, the <b>streamer's OBS dock</b> with chat. Click around both. Everyone here is pretend, nothing is sent anywhere, and reloading starts over.</p>
   </div>
   <div class="tools">
-    <button id="auto" type="button">Auto-play: off</button>
-    <button id="modAsk" type="button">mod1 asks</button>
-    <button id="modSay" type="button">mod1 messages</button>
-    <button id="modNote" type="button">mod1 quick note</button>
-    <button id="modNudge" type="button">mod1 nudges</button>
-    <button id="modWarn" type="button">mod1 warns</button>
-    <button id="streamerAsk" type="button">Streamer asks mod1</button>
-    <span class="group">In chat:
-      <select id="chatter" title="Who"><option>mod1</option><option>mod2</option></select>
-      <button id="cJoin" type="button">joins</button>
-      <button id="cSay" type="button">says something</button>
-      <button id="cPart" type="button">leaves</button>
-    </span>
-    <span class="group">Simulate on Twitch:
-      <button id="tRaid" type="button" class="sim">🚀 Raid</button>
-      <button id="tFirst" type="button" class="sim sim--first">👋 First-time chatter</button>
-      <button id="tGift" type="button" class="sim sim--gift">🎁 Gifted subs</button>
-      <button id="tStreak" type="button" class="sim sim--streak">🔥 Watch streak</button>
-      <button id="tCmd" type="button">!command</button>
-      <button id="tSub" type="button">a sub</button>
-      <button id="tRedeem" type="button">channel points</button>
-      <button id="tCheer" type="button">a cheer</button>
-      <button id="tBadge" type="button">bits badge</button>
-      <button id="tHighlight" type="button">highlighted message</button>
-      <button id="tAnnounce" type="button">announcement</button>
-      <button id="tPin" type="button">pinned message</button>
-      <button id="tHype" type="button">hype train</button>
-      <button id="tPoll" type="button">poll</button>
-      <button id="tPred" type="button">prediction</button>
-    </span>
-    <button id="feed" type="button" class="on">Chat feed: on</button>
-    <button id="reload" type="button">Start over</button>
-    <span class="said" id="said"></span>
+    <section class="panel">
+      <h3>Mod and streamer</h3>
+      <div class="row"><span class="row__label">mod1 sends</span>
+        <button id="modAsk" type="button">a question</button>
+        <button id="modSay" type="button">a message</button>
+        <button id="modNote" type="button">quick info</button>
+        <button id="modVanish" type="button">a !vanish</button>
+      </div>
+      <div class="row"><span class="row__label">mod1 then</span>
+        <button id="modNudge" type="button">nudges</button>
+        <button id="modWarn" type="button">warns</button>
+      </div>
+      <div class="row"><span class="row__label">Streamer</span>
+        <button id="streamerAsk" type="button">asks mod1</button>
+      </div>
+    </section>
+    <section class="panel">
+      <h3>Chat</h3>
+      <div class="row"><span class="row__label">In chat</span>
+        <select id="chatter" title="Who"><option>mod1</option><option>mod2</option></select>
+        <button id="cJoin" type="button">joins</button>
+        <button id="cSay" type="button">talks</button>
+        <button id="cPart" type="button">leaves</button>
+      </div>
+      <div class="row"><span class="row__label">Bot</span>
+        <button id="tCmd" type="button">!command</button>
+      </div>
+      <div class="row"><span class="row__label">Busy chat</span>
+        <button id="feed" type="button" class="on">Chat feed: on</button>
+      </div>
+    </section>
+    <section class="panel panel--wide">
+      <h3>Simulate on Twitch</h3>
+      <div class="row">
+        <button id="tRaid" type="button" class="big" data-k style="--k:#8fd14f">Raid</button>
+        <button id="tFirst" type="button" class="big" data-k style="--k:#3fc98e">First-time chatter</button>
+        <button id="tGift" type="button" class="big" data-k style="--k:#e2568f">Gifted subs</button>
+        <button id="tStreak" type="button" class="big" data-k style="--k:#ee7a2f">Watch streak</button>
+      </div>
+      <div class="row"><span class="row__label">Subs and bits</span>
+        <button id="tSub" type="button" data-k style="--k:#9d6bf0">a sub</button>
+        <button id="tCheer" type="button" data-k style="--k:#2bbfa4">a cheer</button>
+        <button id="tBadge" type="button" data-k style="--k:#2bbfa4">bits badge</button>
+      </div>
+      <div class="row"><span class="row__label">Points</span>
+        <button id="tRedeem" type="button" data-k style="--k:#3aa9db">a redemption</button>
+        <button id="tHighlight" type="button" data-k style="--k:#3aa9db">highlighted message</button>
+      </div>
+      <div class="row"><span class="row__label">Top of chat</span>
+        <button id="tPin" type="button" data-k style="--k:#b8b8c2">pinned message</button>
+        <button id="tHype" type="button" data-k style="--k:#a9cf45">hype train</button>
+        <button id="tPoll" type="button" data-k style="--k:#5a8de8">poll</button>
+        <button id="tPred" type="button" data-k style="--k:#c788e8">prediction</button>
+        <button id="tAnnounce" type="button" data-k style="--k:#e0a53a">announcement</button>
+      </div>
+    </section>
+    <section class="panel panel--run">
+      <h3>Run</h3>
+      <div class="row">
+        <button id="auto" type="button">Auto-play: off</button>
+        <button id="reload" type="button">Start over</button>
+      </div>
+      <div class="said" id="said" aria-live="polite"></div>
+    </section>
   </div>
   <div class="stage">
     <div class="side">
@@ -98,7 +149,73 @@
       <iframe id="obs" title="Streamer's OBS dock"></iframe>
     </div>
   </div>
-  <p class="foot">In the real thing, mods use the Twitch Space extension and the streamer adds the dock to OBS. Here, "mod2" is a pretend mod who answers whatever you send them a few seconds later. A "minute" for the pictures' rings is 6 seconds.</p>
+  <section class="features" aria-labelledby="featuresTitle">
+    <div class="features__inner">
+      <h2 id="featuresTitle">What it does</h2>
+      <p class="features__lead">Streamer Buddy System lets mods look out for the streamer and ask quick things, without cluttering the stream. Mods use a side panel in Chrome (part of the Twitch Space extension); the streamer adds one dock to OBS, which is also their chat.</p>
+      <div class="feat-grid">
+
+        <section class="feat">
+          <h3>For mods: the side panel</h3>
+          <p class="feat__sub">Opens beside Twitch, from the handshake button.</p>
+          <dl>
+            <div><dt>Streamer View</dt><dd>What the streamer's OBS dock is showing right now: its glow colour, everything waiting there (from anyone), answers not yet seen, and the notes on their bar. It follows the channel you're watching. Your own things there have an ×, which takes them back off the streamer's dock if they haven't been answered or seen yet.</dd></div>
+            <div><dt>Ask, Quick info or !vanish</dt><dd>One typing bar: pick the kind, type, press Enter. Questions get a one-tap answer: ♥, ✓, ✗ or ? (maybe), or a typed reply. Quick info shows on the streamer's bar for 2 minutes; a !vanish note for 30 seconds.</dd></div>
+            <div><dt>Nudge</dt><dd>Every question arrives green. If it isn't answered, Nudge moves it up to orange, then yellow, then white, with one soft beep each. At most three, 15 seconds apart, and nothing climbs by itself.</dd></div>
+            <div><dt>Send a warning</dt><dd>When something needs the streamer right now, tap Nudge six times quickly. It turns red on the streamer's screen with a louder double beep. At most one every 30 seconds.</dd></div>
+            <div><dt>Your lists</dt><dd>Newest first, one line each, with small answer buttons, a reply box and ×. Clear all puts everything away at once.</dd></div>
+            <div><dt>Connections and private chat</dt><dd>Everyone you've added, with their picture. Click someone for a chat only the two of you see. Tags sit on the right.</dd></div>
+            <div><dt>Status</dt><dd>Online, Idle (away for a bit) or Offline. Things still reach you either way.</dd></div>
+            <div><dt>Flag a chat line</dt><dd>Point at a line in Twitch's chat and click the flag. It goes to the streamer with who said it and who flagged it, and glows in the chat of everyone connected with the streamer.</dd></div>
+          </dl>
+        </section>
+
+        <section class="feat">
+          <h3>For the streamer: the OBS dock</h3>
+          <p class="feat__sub">One panel in OBS, with nothing on stream.</p>
+          <dl>
+            <div><dt>The message area</dt><dd>What's waiting shows just under the bar, in a soft glow coloured by how urgent it is. Answer with one tap (♥ ✓ ✗ ?) or type a reply; × dismisses it. With several, they take turns, and ‹ › flips through them.</dd></div>
+            <div><dt>The glow</dt><dd>Green when something arrives; orange, yellow and white as a mod nudges it; red for a warning. It glows for a moment, then rests, and only comes back while it's unanswered.</dd></div>
+            <div><dt>Quick info and !vanish</dt><dd>Full width, like a question: the lightning bolt for quick info (2 minutes), the little devil for !vanish (30 seconds).</dd></div>
+            <div><dt>Who's in chat</dt><dd>Each mod's picture in the bar, ringed by how recently they chatted, and grey once they've left. The small dot in the corner shows the connection is working.</dd></div>
+            <div><dt>Do Not Disturb</dt><dd>The hand: for 15 minutes or until it's turned off. No sounds, no glow, no message card, and no quick info or !vanish notes; everything waits and shows once it's over. Mods see "Do Not Disturb" in Streamer View.</dd></div>
+            <div><dt>Back to chat</dt><dd>The chat bubble closes whatever's open and goes straight back to chat.</dd></div>
+            <div><dt>Asking your mods</dt><dd>Type in the bar's Message field and press Enter; the picker beside it starts with the last person you talked to.</dd></div>
+            <div><dt>Settings</dt><dd>Sound, volume, reminder beeps, edge glow, the quick-questions row, custom or Twitch chat, chat text size, and whether mods see Streamer View.</dd></div>
+          </dl>
+        </section>
+
+        <section class="feat">
+          <h3>Custom chat</h3>
+          <p class="feat__sub">The streamer's chat, inside the dock, with Twitch's own features and a few of its own.</p>
+          <dl>
+            <div><dt>Hover a message</dt><dd>Bookmark it for later, pin it to the top of chat (for how long you pick), or reply. Click a message to draw a "where I was" line under it.</dd></div>
+            <div><dt>Mod icons</dt><dd>Before each name: ban, time out, warn and delete, all real actions on Twitch. Settings can hide them.</dd></div>
+            <div><dt>Name card</dt><dd>Click a name for Twitch's info: picture, when the account was made, following since, sub tier and months, badges, and Gift a Sub, Follow, Whisper and the mod actions.</dd></div>
+            <div><dt>Raids</dt><dd>A card with the raiding streamer's picture and viewer count, in their name colour, and a Welcome button. People who came with the raid get a RAID tag with that streamer's small picture for 15 minutes. <span class="feat__note">Twitch doesn't tell apps who the raiders are, so this is a careful guess: new in chat since the raid, and not here before.</span></dd></div>
+            <div><dt>First-time chatters</dt><dd>A green "First-time chatter" label, just like Twitch.</dd></div>
+            <div><dt>Subs, gifts, streaks and bits</dt><dd>Cards with a big number: months subscribed, watch streaks, bits badges and cheers. A gift bomb lists everyone who got a sub.</dd></div>
+            <div><dt>Channel points</dt><dd>Highlighted messages stand out, and redemptions show who redeemed what. <span class="feat__note">Every redemption shows on the streamer's own channel; elsewhere, only ones with a message.</span></dd></div>
+            <div><dt>Top of chat</dt><dd>The pinned message, gift progress, hype train, polls and predictions, live, each with its own card. <span class="feat__note">Twitch shares the hype train, polls and predictions only with the streamer, and the pinned message with the streamer and mods.</span></dd></div>
+            <div><dt>Announcements and bots</dt><dd>Announcements get their own card, and bot replies (like StreamElements commands) show as normal chat.</dd></div>
+            <div><dt>One colour per kind</dt><dd>Subs purple, gifts pink, streaks orange, bits teal, channel points blue, announcements amber, first-time chatters green, so you know what it is at a glance.</dd></div>
+            <div><dt>Sharp emotes</dt><dd>Twitch, 7TV, BTTV and FFZ emotes and badges load crisp copies on high-resolution screens.</dd></div>
+          </dl>
+        </section>
+
+        <section class="feat">
+          <h3>Good to know</h3>
+          <p class="feat__sub">Privacy, and this demo.</p>
+          <dl>
+            <div><dt>Who sees what</dt><dd>Questions, answers and flagged lines go only to the people you've connected with. Nothing shows on stream.</dd></div>
+            <div><dt>It's all real Twitch data</dt><dd>In the real thing, chat, names, badges, events and mod actions come straight from Twitch.</dd></div>
+            <div><dt>This demo</dt><dd>Everyone here is pretend and nothing is sent anywhere. "mod2" answers whatever you send a few seconds later, and a "minute" for the pictures' rings is 6 seconds. Start over resets everything.</dd></div>
+          </dl>
+        </section>
+
+      </div>
+    </div>
+  </section>
 
 <script type="module">
   import { Socket, pretendTwitch } from "./hub.js";
@@ -154,6 +271,8 @@
   const modAsk = () => send("mod1", { t: "ask", to: "streamer", text: pick(MOD_ASKS), options: ["t", "y", "n"] });
   const modSay = () => send("mod1", { t: "ask", to: "streamer", text: pick(MOD_SAYS), note: true });
   const modNote = () => send("mod1", { t: "flash", kind: "info", to: "streamer", text: pick(MOD_NOTES) });
+  const MOD_VANISH = ["You've got this", "Looking good today", "That was hilarious", "Drink some water"];
+  const modVanish = () => send("mod1", { t: "flash", kind: "love", to: "streamer", text: pick(MOD_VANISH) });
   const streamerAsk = () => send("streamer", { t: "ask", to: "mod1", text: pick(STREAMER_ASKS), options: ["y", "n", "s", "o", "m", "t"] });
   const waitingOnStreamer = () => Object.values(open).filter((q) => q.from === "mod1" && q.to === "streamer" && !q.note && !q.answer && !q.dismissed && !q.withdrawn).sort((a, b) => a.at - b.at);
   // Nudge mod1's oldest unanswered question (it moves up a colour on the streamer's side).
@@ -171,7 +290,7 @@
     send("mod1", { t: "nudge", id: q.id, warn: true });
     said(`mod1 sent the streamer a warning: ${q.text}`);
   });
-  for (const [id, go, what] of [["modAsk", modAsk, "mod1 asked the streamer"], ["modSay", modSay, "mod1 messaged the streamer"], ["modNote", modNote, "mod1 sent a quick note"], ["streamerAsk", streamerAsk, "the streamer asked mod1"]]) {
+  for (const [id, go, what] of [["modAsk", modAsk, "mod1 asked the streamer"], ["modSay", modSay, "mod1 messaged the streamer"], ["modNote", modNote, "mod1 sent quick info: it shows on the streamer's bar for 2 minutes"], ["modVanish", modVanish, "mod1 sent a !vanish note: it shows for 30 seconds"], ["streamerAsk", streamerAsk, "the streamer asked mod1"]]) {
     document.getElementById(id).addEventListener("click", () => {
       go();
       said(what);
