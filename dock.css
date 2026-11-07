@@ -3182,3 +3182,11 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-notice--raid { margin: 5px 6px; border-radius: 6px; background: color-mix(in srgb, var(--raid) 14%, #1f1f23); box-shadow: inset 3px 0 0 var(--raid), 0 2px 6px rgba(0, 0, 0, 0.7); }
 .oc-redeem { box-shadow: inset 2px 0 0 rgba(0, 181, 240, 0.7), 0 1px 4px rgba(0, 0, 0, 0.5); }
 .oc-card__fact:nth-child(2) .oc-card__icon svg { fill: currentColor; } /* Twitch's heart is solid */
+/* Cards: a thin line in their colour along the top and bottom (no side bar), barely rounded */
+.oc-event, .oc-event--bomb { border-top: 1px solid var(--ev); border-bottom: 1px solid var(--ev); border-radius: 2px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7); }
+.oc-notice--raid { border-top: 1px solid var(--raid); border-bottom: 1px solid var(--raid); border-radius: 2px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7); }
+.oc-topcard, .oc-topcard--pin { border: 0; border-top: 1px solid var(--tc); border-bottom: 1px solid var(--tc); border-radius: 2px; }
+.oc-redeem { border-top: 1px solid rgba(0, 181, 240, 0.7); border-bottom: 1px solid rgba(0, 181, 240, 0.7); border-radius: 2px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
+.oc-notice:not(.oc-event):not(.oc-notice--raid) { --notice: var(--purple); border-top: 1px solid var(--notice); border-bottom: 1px solid var(--notice); border-radius: 2px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
+.oc-notice--gold:not(.oc-event) { --notice: var(--amber); }
+.oc-giftee { border-radius: 2px; }
