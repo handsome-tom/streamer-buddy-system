@@ -279,6 +279,7 @@
   .credits a { text-decoration: none; border-bottom: 1px solid rgba(125, 176, 239, 0.35); }
   .credits a:hover { color: #fff; border-bottom-color: #fff; }
   .credits__name { color: #c4c4cc; }
+  .credits__thanks { margin-left: 14px; }
 
   /* ===== Squared up: two equal columns, same-height labels, same-shape menus, screens level ===== */
   .stage { display: grid; grid-template-columns: repeat(2, minmax(0, 420px)); justify-content: center; align-items: start; gap: 28px; }
@@ -292,10 +293,33 @@
   .menu__more { margin: 0; font-size: 11px; letter-spacing: 0; text-transform: none; }
   .menu .chip { justify-content: center; width: 100%; min-width: 0; height: 34px; padding: 0 8px; white-space: nowrap; border-radius: 3px; }
   .chip, .console select, .btn, .tab, .tabs, .console, .all, .tour, .tour__count, iframe { border-radius: 3px; }
+
+  /* ===== Scrolling toward the demo: Mods on the left, Streamers on the right, a line between.
+     The sides warm up (green for mods, honey for streamers) as the demo comes in, and the
+     words step aside once the two screens are in view. Driven by --split-text and --split-color. */
+  :root { --mod-green: #3fc98e; --honey: #f0a330; }
+  #split { position: fixed; inset: 0; z-index: 0; display: grid; grid-template-columns: 1fr 1px 1fr; pointer-events: none; opacity: var(--split-color, 0); }
+  .split__half { display: grid; place-items: center; }
+  .split__half--mods { background: linear-gradient(90deg, rgba(63, 201, 142, 0.16), rgba(63, 201, 142, 0.05) 70%, transparent); }
+  .split__half--streamers { background: linear-gradient(270deg, rgba(240, 163, 48, 0.16), rgba(240, 163, 48, 0.05) 70%, transparent); }
+  .split__line { background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.5) 20%, rgba(255, 255, 255, 0.5) 80%, transparent); box-shadow: 0 0 18px rgba(255, 255, 255, 0.25); }
+  .split__half span { font-size: clamp(48px, 9vw, 150px); font-weight: 800; letter-spacing: -0.03em; opacity: var(--split-text, 0); transform: translateY(calc((1 - var(--split-text, 0)) * 30px)) scale(calc(0.94 + var(--split-text, 0) * 0.06)); }
+  .split__half--mods span { color: var(--mod-green); text-shadow: 0 0 40px rgba(63, 201, 142, 0.4); }
+  .split__half--streamers span { color: var(--honey); text-shadow: 0 0 40px rgba(240, 163, 48, 0.4); }
+  .top { z-index: 50; }
+  /* The two sides of the demo pick up the same colors. */
+  .screen:first-child .menu__head { color: var(--mod-green); }
+  .screen:last-child .menu__head { color: var(--honey); }
+  .screen:first-child .menu { border-color: rgba(63, 201, 142, 0.35); }
+  .screen:last-child .menu { border-color: rgba(240, 163, 48, 0.35); }
+  .screen:first-child iframe { border-color: rgba(63, 201, 142, 0.4); }
+  .screen:last-child iframe { border-color: rgba(240, 163, 48, 0.4); }
+  .screen:last-child .menu__more { color: var(--honey); }
 </style>
 </head>
 <body>
   <div id="space" aria-hidden="true"><div class="planet"></div></div>
+  <div id="split" aria-hidden="true"><div class="split__half split__half--mods"><span>Mods</span></div><div class="split__line"></div><div class="split__half split__half--streamers"><span>Streamers</span></div></div>
   <div id="retro" aria-hidden="true" hidden>
     <div class="r-wrap">
       <div class="r-top"><div class="r-top__in"><div class="r-logo">twitchspace<small>a place for streamers</small></div>
@@ -530,10 +554,8 @@
     <div class="wrap">
       <span class="tom"><img src="brand/tom.png" alt="" width="26" height="26"> <img src="brand/twitch-space.svg" alt="Twitch Space" style="width:auto;height:20px"></span>
       <span>Questions, answers and flagged lines go only to the people you've connected with. In this demo everyone is pretend and nothing is sent anywhere.</span>
-      <p class="credits">Thanks to
-        <a href="https://www.twitch.tv/myspacetomofficial" target="_blank" rel="noopener">MyspaceTomOfficial</a>,
-        <a href="https://www.twitch.tv/tallglassofbees" target="_blank" rel="noopener">TallGlassOfBees</a>
-        and <span class="credits__name">TallGlassOfWasps</span>.</p>
+      <p class="credits">Created by <a href="https://www.twitch.tv/myspacetomofficial" target="_blank" rel="noopener">MyspaceTomOfficial</a>.
+        <span class="credits__thanks">Credits: <a href="https://www.twitch.tv/tallglassofbees" target="_blank" rel="noopener">TallGlassOfBees</a> and <span class="credits__name">TallGlassOfWasps</span>.</span></p>
     </div>
   </footer>
 
@@ -561,6 +583,34 @@
     };
     const t = setTimeout(glitch, 1900);
     r.addEventListener("click", () => (clearTimeout(t), glitch()));
+  })();
+</script>
+<script>
+  // The Mods | Streamers split: fades in as the demo comes up the screen, the words fade out
+  // once the two screens are in view, and it all goes once the demo has scrolled past.
+  (() => {
+    const root = document.documentElement;
+    const clamp = (v) => Math.max(0, Math.min(1, v));
+    let queued = false;
+    function draw() {
+      queued = false;
+      const demo = document.getElementById("demo");
+      const stage = document.querySelector(".stage");
+      if (!demo || !stage) return;
+      const vh = innerHeight;
+      const d = demo.getBoundingClientRect();
+      const st = stage.getBoundingClientRect();
+      const coming = clamp((vh - d.top) / (vh * 0.9)); // 0 while the demo is below the screen
+      const leaving = clamp(d.bottom / (vh * 0.6)); // 1 until the demo's end comes up
+      const screensIn = clamp((vh * 0.95 - st.top) / (vh * 0.45)); // the screens arriving
+      root.style.setProperty("--split-color", (coming * leaving).toFixed(3));
+      root.style.setProperty("--split-text", (clamp(coming * 1.4) * (1 - screensIn)).toFixed(3));
+    }
+    const queue = () => { if (!queued) { queued = true; requestAnimationFrame(draw); } };
+    addEventListener("scroll", queue, { passive: true });
+    addEventListener("resize", queue);
+    addEventListener("load", queue);
+    queue();
   })();
 </script>
 <script type="module">
