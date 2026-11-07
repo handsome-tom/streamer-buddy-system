@@ -3373,3 +3373,16 @@ body.no-modicons .oc-modicons { display: none; }
 /* Icon symbols: thicker strokes, in near-black on the coloured tiles. */
 .oc-event__icon, .oc-event--streak .oc-event__icon, .oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin { color: #0b0b0d; }
 .oc-event__icon svg, .oc-topcard__pin svg { stroke-width: 2.75; filter: none; }
+
+/* Big numbers in Archivo Black; headlines in capitals; deep dark shadows around the icon tiles. */
+@font-face { font-family: "Archivo Black"; font-weight: 400; font-display: swap; src: url("fonts/archivo-black.woff2") format("woff2"); }
+.oc-event__value, .oc-event--streak .oc-event__value { font-family: "Archivo Black", var(--label); font-weight: 400; font-size: 21px; letter-spacing: 0.01em; }
+.oc-event--bomb .oc-event__value { font-size: 27px; }
+.oc-event__what, .oc-notice--announcement .oc-notice__head, .oc-topcard__label, .oc-topcard--pin .oc-topcard__label, .oc-raid__title, .oc-notice--raid .oc-raid__title {
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.oc-event__what { font-size: 13px; }
+.oc-topcard__label, .oc-topcard--pin .oc-topcard__label { font-size: 12px; }
+.oc-event__icon::after { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.55), 0 6px 14px rgba(0, 0, 0, 0.85), 0 2px 4px rgba(0, 0, 0, 0.9); }
+.oc-event__icon::before { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8); }
+.oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.85), 0 1px 3px rgba(0, 0, 0, 0.9); }
