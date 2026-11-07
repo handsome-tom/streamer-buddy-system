@@ -3194,3 +3194,91 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-event, .oc-event--bomb, .oc-notice--raid, .oc-redeem, .oc-notice:not(.oc-event):not(.oc-notice--raid) { border: 1px solid #000; border-radius: 2px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.85), 0 2px 4px rgba(0, 0, 0, 0.7); }
 .oc-topcard, .oc-topcard--pin { border: 1px solid #000; border-radius: 2px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.85), 0 2px 4px rgba(0, 0, 0, 0.7); }
 .oc-event, .oc-event--bomb, .oc-notice--raid, .oc-redeem, .oc-notice { position: relative; z-index: 1; margin-top: 8px; margin-bottom: 8px; }
+
+/* ===== One colour per kind of notice, on one calm dark card =====
+   Every card sits on the same mid-dark grey; the kind's colour is on its icon, its big number
+   and its label, so that's what catches the eye. Big numbers and labels use Barlow Condensed
+   (fonts/, SIL Open Font Licence). */
+@font-face { font-family: "Barlow Condensed"; font-weight: 700; font-display: swap; src: url("fonts/barlow-condensed-700.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 800; font-display: swap; src: url("fonts/barlow-condensed-800.woff2") format("woff2"); }
+:root {
+  --card: #25252b;
+  --display: "Barlow Condensed", "Arial Narrow", Inter, sans-serif;
+  --k-sub: #a970ff;
+  --k-gift: #ff5fa2;
+  --k-streak: #ff7a1a;
+  --k-bits: #1fd1b2;
+  --k-charity: #ff5252;
+  --k-first: #3ce59f;
+  --k-points: #31c4f3;
+  --k-announce: #ffb31a;
+  --k-hype: #c6f135;
+  --k-poll: #4d8dff;
+  --k-pred: #e08cff;
+  --k-pin: #e6e6ea;
+}
+.oc-event--sub { --ev: var(--k-sub); }
+.oc-event--gift, .oc-event--bomb { --ev: var(--k-gift); }
+.oc-event--streak { --ev: var(--k-streak); }
+.oc-event--bits { --ev: var(--k-bits); }
+.oc-event--charity { --ev: var(--k-charity); }
+.oc-redeem { --ev: var(--k-points); }
+.oc-notice--announcement { --ev: var(--k-announce); }
+
+/* The card itself: the same grey for every kind. */
+.oc-event, .oc-event--bomb, .oc-redeem, .oc-notice--announcement, .oc-notice--raid, .oc-notice:not(.oc-event) {
+  background: var(--card);
+}
+.oc-redeem, .oc-notice--announcement { display: flex; gap: 9px; align-items: flex-start; padding: 8px 10px; }
+
+/* The icon: a solid circle in the kind's colour. */
+.oc-event__icon, .oc-event--streak .oc-event__icon { width: 34px; height: 34px; color: #151518; background: var(--ev); border-radius: 50%; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7); }
+.oc-event--bomb .oc-event__icon { width: 44px; height: 44px; }
+
+/* The big number, then the label: tall condensed type. */
+.oc-event__big { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; line-height: 1.1; }
+.oc-event__value, .oc-event--streak .oc-event__value { font-family: var(--display); font-size: 30px; font-weight: 800; line-height: 0.95; letter-spacing: 0; color: var(--ev); }
+.oc-event--bomb .oc-event__value { font-size: 40px; }
+.oc-event__what { font-family: var(--display); font-size: 16px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text); }
+.oc-event--bomb .oc-event__big { font-size: inherit; }
+.oc-event__who { margin-top: 2px; font-size: 12px; color: var(--muted); }
+
+/* Gift bombs: the list of names, in the gift colour. */
+.oc-giftees__count { font-family: var(--display); font-size: 13px; letter-spacing: 0.06em; color: var(--k-gift); }
+.oc-giftee { background: #1b1b20; border: 1px solid #000; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); }
+.oc-giftee svg { color: var(--k-gift); }
+
+/* Channel points: who redeemed what, and the cost. */
+.oc-redeem__head { color: var(--muted); }
+.oc-redeem__title { color: var(--k-points); }
+.oc-redeem__cost { font-family: var(--display); font-size: 15px; font-weight: 800; color: var(--k-points); }
+.oc-redeem__cost::before { content: none; }
+.oc-redeem .oc-body { margin-top: 2px; }
+
+/* Announcements: the label in the announcement colour. */
+.oc-notice--announcement .oc-notice__head { font-family: var(--display); font-size: 15px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--k-announce); }
+
+/* Raids keep the raiding streamer's own name colour. */
+.oc-raid__title, .oc-notice--raid .oc-raid__title { font-family: var(--display); font-size: 20px; font-weight: 800; letter-spacing: 0.04em; color: var(--raid); }
+.oc-raidtag { font-family: var(--display); font-size: 12px; font-weight: 700; letter-spacing: 0.05em; }
+
+/* Cheers and highlighted messages (both bits and points, tinted only lightly). */
+.oc-bits { color: #10241f; background: var(--k-bits); }
+.oc-bits b { font-family: var(--display); font-size: 14px; }
+.oc-cheer { color: var(--k-bits); }
+.oc-line--highlight { background: color-mix(in srgb, var(--k-points) 9%, transparent); box-shadow: inset 2px 0 0 var(--k-points); }
+
+/* First-time chatters. */
+.oc-firsttag { font-family: var(--display); font-size: 13px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--k-first); }
+
+/* The cards along the top: the same grey, the kind's colour on the icon, label and bar. */
+.oc-topcard--pin { --tc: var(--k-pin); }
+.oc-topcard--gift { --tc: var(--k-gift); }
+.oc-topcard--hype { --tc: var(--k-hype); }
+.oc-topcard--poll { --tc: var(--k-poll); }
+.oc-topcard--pred { --tc: var(--k-pred); }
+.oc-topcard, .oc-topcard--pin { background: var(--card); }
+.oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin { width: 24px; height: 24px; color: #151518; background: var(--tc); }
+.oc-topcard__label, .oc-topcard--pin .oc-topcard__label { font-family: var(--display); font-size: 15px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--tc); }
+.oc-topcard__time, .oc-topcard--pin .oc-topcard__time { font-family: var(--display); font-size: 15px; font-weight: 700; padding: 0; color: var(--text); background: none; }
+.oc-topcard__num { font-family: var(--display); font-size: 14px; font-weight: 700; }

@@ -77,6 +77,8 @@
     heartfill: '<path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"/>',
     chart: '<path d="M3 3v16a2 2 0 0 0 2 2h16"/> <path d="M18 17V9"/> <path d="M13 17V5"/> <path d="M8 17v-3"/>',
     pinline: '<path d="M12 17v5"/> <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
+    megaphone: '<path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/> <path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/> <path d="M8 6v8"/>',
+    sparkles: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/> <path d="M20 3v4"/> <path d="M22 5h-4"/>',
     pin: '<path d="M12 17v5"/> <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
   };
   const icon = (name, size = 15) =>
@@ -721,11 +723,15 @@
     };
     function redemptionLine(name, title, cost, words) {
       const line = el("div", "oc-line oc-redeem");
+      const art = el("span", "oc-event__icon");
+      art.innerHTML = icon("sparkles", 18);
+      const box = el("div", "oc-event__words");
       const head = el("div", "oc-redeem__head");
-      head.append(el("b", "", name), " redeemed ", el("b", "", title));
+      head.append(el("b", "", name), " redeemed ", el("b", "oc-redeem__title", title));
       if (cost) head.append(el("span", "oc-redeem__cost", ` ${Number(cost).toLocaleString()}`));
-      line.append(head);
-      if (words) line.append(el("div", "oc-body", words));
+      box.append(head);
+      if (words) box.append(el("div", "oc-body", words));
+      line.append(art, box);
       return line;
     }
 
@@ -922,8 +928,18 @@
       }
       if (kind === "announcement") {
         const c = ANNOUNCE_COLORS[String(e.announcement?.color || "").toUpperCase()];
-        if (c) line.style.setProperty("--notice", c);
-        line.append(el("div", "oc-notice__head", `${e.chatter_user_name || "A moderator"} · Announcement`));
+        if (c) line.style.setProperty("--twitch-color", c);
+        const art = el("span", "oc-event__icon");
+        art.innerHTML = icon("megaphone", 18);
+        const box = el("div", "oc-event__words");
+        box.append(el("div", "oc-notice__head", `${e.chatter_user_name || "A moderator"} · Announcement`));
+        if (e.message?.text) {
+          const body = el("div", "oc-body");
+          drawMessage(body, e.message.fragments, e.message.text);
+          box.append(body);
+        }
+        line.append(art, box);
+        return line;
       } else {
         if (fromChannel) line.append(el("span", "oc-shared", fromChannel));
         line.append(el("div", "oc-notice__head", e.system_message || kind.replace(/_/g, " ") || "Notice"));
