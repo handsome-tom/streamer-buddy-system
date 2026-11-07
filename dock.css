@@ -3190,3 +3190,7 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-notice:not(.oc-event):not(.oc-notice--raid) { --notice: var(--purple); border-top: 1px solid var(--notice); border-bottom: 1px solid var(--notice); border-radius: 2px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
 .oc-notice--gold:not(.oc-event) { --notice: var(--amber); }
 .oc-giftee { border-radius: 2px; }
+/* Cards: a black border all round and a big black shadow; nothing coloured on the edges */
+.oc-event, .oc-event--bomb, .oc-notice--raid, .oc-redeem, .oc-notice:not(.oc-event):not(.oc-notice--raid) { border: 1px solid #000; border-radius: 2px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.85), 0 2px 4px rgba(0, 0, 0, 0.7); }
+.oc-topcard, .oc-topcard--pin { border: 1px solid #000; border-radius: 2px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.85), 0 2px 4px rgba(0, 0, 0, 0.7); }
+.oc-event, .oc-event--bomb, .oc-notice--raid, .oc-redeem, .oc-notice { position: relative; z-index: 1; margin-top: 8px; margin-bottom: 8px; }
