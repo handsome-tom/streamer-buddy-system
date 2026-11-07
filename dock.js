@@ -573,7 +573,10 @@
       else if (m.t === "q") gotQuestion(m.q);
       else if (m.t === "msg") gotMessage(m.m);
       else if (m.t === "flash") gotFlash(m.f);
-      else if (m.t === "unflash") (pinLeaving.get(m.id) || flashLeaving.get(m.id))?.();
+      else if (m.t === "unflash") {
+        heldFlashes.delete(m.id); // taken back while it waited out Do Not Disturb: it never shows
+        (pinLeaving.get(m.id) || flashLeaving.get(m.id))?.();
+      }
       else if (m.t === "flashed") gotFlashed(m);
       else if (m.t === "view") gotView(m.owner, m.v);
       else if (m.t === "stats") {
@@ -684,13 +687,24 @@
   const FUZZ_MS = 1400;
   const FLASH_ICONS = {
     info: `<path d="M11 2 4 11.5h5L8 18l7-9.5h-5z" ${LINE} stroke-width="1.7"/>`,
-    love: '<path d="M10 17s-6.5-4-6.5-8.6A3.6 3.6 0 0 1 10 6.2a3.6 3.6 0 0 1 6.5 2.2C16.5 13 10 17 10 17z" fill="currentColor"/>',
+    // !vanish: a little devil face (horns, sly brows, grin), like the 😈.
+    love: `<path d="M5.2 7.6 4 3.2l3.6 2.4M14.8 7.6 16 3.2l-3.6 2.4" ${LINE} stroke-width="1.7"/><circle cx="10" cy="11.2" r="6" ${LINE} stroke-width="1.7"/><path d="M6.9 9.3l2.1 1.1M13.1 9.3 11 10.4" ${LINE} stroke-width="1.7"/><path d="M7.1 13.1q2.9 2.7 5.8 0" ${LINE} stroke-width="1.7"/>`,
     chat: `<path d="M3 4h14v9H8l-4 3v-3H3z" ${LINE} stroke-width="1.8"/>`,
     seen: `<path d="M4 10.5l4 4 8-9" ${LINE} stroke-width="2.4"/>`,
   };
   const seenFlashes = new Set();
   const pinLeaving = new Map(); // pinned line's id -> takes it away
   const flashLeaving = new Map(); // a quick note's or !vanish's id -> takes it away (its sender took it back)
+  // Do Not Disturb: quick info and !vanish notes wait here, and show (with their full time
+  // on screen) once it's over. A "Seen" tick isn't worth waiting for, so it's dropped.
+  const heldFlashes = new Map(); // id -> the note
+  function releaseFlashes() {
+    if (dndOn() || !heldFlashes.size) return;
+    const notes = [...heldFlashes.values()];
+    heldFlashes.clear();
+    for (const f of notes) gotFlash({ ...f, at: Date.now(), released: true });
+    if (notes.some((f) => f.kind === "info")) arrived(); // one glow and chime for what waited
+  }
 
   function gotPins(pins) {
     const still = new Set(pins.map((f) => f.id));
@@ -712,6 +726,10 @@
   function gotFlash(f) {
     const mine = f.to === me.login;
     if ((!mine && f.kind !== "chat") || seenFlashes.has(f.id)) return; // connections get flagged chat too
+    if (mine && dndOn() && f.kind !== "chat") {
+      if (f.kind !== "seen") heldFlashes.set(f.id, f);
+      return;
+    }
     seenFlashes.add(f.id);
     const late = Date.now() - (f.at || Date.now());
     if (f.kind === "chat" && LIVECHAT && f.channel === liveChannel) {
@@ -721,7 +739,7 @@
       if (late > PIN_STICK_MS) return; // brought back by a reload: its moment at the top has passed
     }
     // A love note and a "Seen" come in quietly; not when a reload brings back an old pin.
-    if (f.kind !== "love" && f.kind !== "seen" && mine && late < 5000) arrived();
+    if (f.kind !== "love" && f.kind !== "seen" && mine && late < 5000 && !f.released) arrived();
     const chip = el("div", `qflash qflash--${f.kind}`);
     const color = f.color || colorOf(f.from);
     if (color && f.kind !== "love" && f.kind !== "seen") chip.style.setProperty("--c", color);
@@ -741,7 +759,7 @@
       // The chat dock shows these as big as a question: who first, in their colour.
       const who = el("b", "qflash__from", f.from);
       if (colorOf(f.from)) who.style.color = colorOf(f.from);
-      body.append(who, " ", document.createTextNode(f.text), el("span", "qflash__who", f.kind === "love" ? "  !vanish" : "  quick info"));
+      body.append(who, " ", document.createTextNode(f.text), ...(f.kind === "love" ? [el("span", "qflash__who", "  !vanish")] : []));
     } else {
       body.append(document.createTextNode(f.text), el("span", "qflash__who", ` ${f.from}`));
     }
@@ -1152,6 +1170,7 @@
     if (on !== dndWas) {
       dndWas = on;
       render(); // it ended by itself (or another dock changed it): show what waited
+      releaseFlashes();
     } else drawDnd();
   }, 1000);
   window.addEventListener("storage", (e) => e.key?.endsWith("dndUntil") && render());
