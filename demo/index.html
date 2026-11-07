@@ -236,16 +236,18 @@
   @media (max-width: 720px) { #retro .r-page { grid-template-columns: 1fr; } #retro .r-search { display: none; } }
 
   /* ===== The guided tour ===== */
-  .tour { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 16px; margin-bottom: 12px; padding: 16px 18px; background: linear-gradient(135deg, rgba(63, 125, 216, 0.16), rgba(31, 63, 149, 0.08)), linear-gradient(180deg, var(--card-top), var(--card)); border: 1px solid #2f4a80; border-radius: 4px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55); }
+  .tour { position: relative; overflow: hidden; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 28px 36px; min-height: 25vh; margin-bottom: 18px; padding: 36px 40px 42px; background: radial-gradient(120% 140% at 0% 0%, rgba(79, 141, 230, 0.28), transparent 55%), linear-gradient(135deg, rgba(63, 125, 216, 0.16), rgba(31, 63, 149, 0.08)), linear-gradient(180deg, var(--card-top), var(--card)); border: 1px solid #3d5f9e; border-radius: 4px; box-shadow: 0 0 0 1px rgba(125, 176, 239, 0.08), 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 80px rgba(63, 125, 216, 0.18); }
+  .tour::after { content: ""; position: absolute; left: 0; bottom: 0; height: 5px; width: calc(var(--tour-progress, 0) * 100%); background: linear-gradient(90deg, #4f8de6, var(--brand-light)); box-shadow: 0 0 14px rgba(125, 176, 239, 0.6); transition: width 0.45s ease; }
   .tour[hidden] { display: none; }
-  .tour__count { display: grid; place-items: center; width: 52px; height: 52px; font-weight: 800; font-size: 13px; color: #fff; background: linear-gradient(160deg, #4f8de6, var(--brand) 45%, var(--brand-deep)); border-radius: 4px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 6px 16px rgba(0, 0, 0, 0.6); }
-  .tour h3 { margin: 0 0 3px; font-size: 17px; font-weight: 800; }
-  .tour p { margin: 0; max-width: 680px; color: #b9b9c3; }
+  .tour__count { display: grid; place-items: center; width: 96px; height: 96px; font-weight: 800; font-size: 22px; color: #fff; background: linear-gradient(160deg, #4f8de6, var(--brand) 45%, var(--brand-deep)); border-radius: 4px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 6px 16px rgba(0, 0, 0, 0.6); }
+  .tour h3 { margin: 0 0 10px; font-size: clamp(24px, 2.6vw, 36px); font-weight: 800; letter-spacing: -0.015em; line-height: 1.15; }
+  .tour p { margin: 0; max-width: 760px; font-size: clamp(16px, 1.3vw, 19px); line-height: 1.55; color: #c6c6d0; }
+  .tour__actions .btn { padding: 15px 26px; font-size: 16px; }
   .tour__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
   .tour__actions .btn[hidden] { display: none; }
   .tour__skip { padding: 6px 4px; font: inherit; font-size: 12px; color: #7d7d87; background: none; border: 0; cursor: pointer; text-decoration: underline; }
   .tour__skip[hidden] { display: none; }
-  @media (max-width: 760px) { .tour { grid-template-columns: auto 1fr; } .tour__actions { grid-column: 1 / -1; justify-content: flex-start; } }
+  @media (max-width: 760px) { .tour { grid-template-columns: auto 1fr; gap: 18px; padding: 24px 20px 30px; } .tour__count { width: 64px; height: 64px; font-size: 16px; } .tour__actions { grid-column: 1 / -1; justify-content: flex-start; } }
   .screen.spot iframe { border-color: var(--brand-light); box-shadow: 0 0 0 3px rgba(125, 176, 239, 0.25), 0 18px 44px rgba(0, 0, 0, 0.6); }
 
   /* ===== The backdrop: a vague space scene that stays put while the page scrolls over it ===== */
@@ -315,7 +317,7 @@
   .screen:last-child .menu__more { color: var(--honey); }
   .demo { border-top: 0; }
   /* Room to scroll between the hero and the demo, for the Mods | Streamers moment. */
-  .splitzone { height: 100vh; }
+  .splitzone { height: 55vh; }
 
   /* ===== Feature icons: shades of the brand blue, see-through glass tiles ===== */
   .ft:nth-child(5n+1) { --k: #7db0ef !important; }
@@ -863,6 +865,7 @@
       const st = STEPS[this.at];
       document.getElementById("tour").hidden = false;
       document.getElementById("tourCount").textContent = `${this.at + 1} / ${STEPS.length}`;
+      document.getElementById("tour").style.setProperty("--tour-progress", ((this.at + 1) / STEPS.length).toFixed(3));
       document.getElementById("tourTitle").textContent = st.title;
       document.getElementById("tourText").textContent = st.text;
       document.getElementById("tourDo").textContent = st.button;
