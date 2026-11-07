@@ -184,7 +184,7 @@ const twitch = (() => {
 
   // A chat message, as Twitch sends it to custom chat. A first message in the channel is
   // also marked on Twitch's public chat, the way Twitch really says so (first-msg=1).
-  function chat(text, who = pick(CHATTERS), { kind = "text", bits = 0, first = false, badges = [] } = {}) {
+  function chat(text, who = pick(CHATTERS), { kind = "text", bits = 0, first = false, badges = [], reward = false } = {}) {
     const id = `m${++n}`;
     lastIds.push(id);
     if (lastIds.length > 50) lastIds.shift();
@@ -195,6 +195,7 @@ const twitch = (() => {
       broadcaster_user_id: "1", chatter_user_id: `u-${who}`, chatter_user_login: who.toLowerCase(), chatter_user_name: who,
       message_id: id, message: { text: bits ? `Cheer${bits} ${text}` : text, fragments }, message_type: kind, badges: badges.length ? badges : subBadge(who), color: colorOf[who], reply: null,
       cheer: bits ? { bits } : null,
+      channel_points_custom_reward_id: reward ? "rw-demo" : null,
     });
     if (text.startsWith("!") && who !== BOT) botReply(text, who);
     return id;
@@ -405,6 +406,27 @@ const twitch = (() => {
       };
       predTimer = setTimeout(tick, 1500);
     },
+    // A channel points redemption: a custom reward (some with words typed in), or now and
+    // then one of Twitch's own (unlocking an emote).
+    redeem() {
+      const who = pick(CHATTERS);
+      const REWARDS = [
+        { title: "Hydrate!", cost: 500 }, { title: "Posture check", cost: 300 }, { title: "Say something nice", cost: 1000, words: true },
+        { title: "Pick the next song", cost: 2500, words: true }, { title: "Do 10 push-ups", cost: 5000 },
+      ];
+      if (Math.random() < 0.2) {
+        event("channel.channel_points_automatic_reward_redemption.add", { broadcaster_user_id: "1", user_id: `u-${who}`, user_login: who.toLowerCase(), user_name: who, id: `a${++n}`, reward: { type: "random_sub_emote_unlock", channel_points: 160 }, message: { text: "", fragments: [] } });
+        return { who, title: "Unlock a random sub emote" };
+      }
+      const r = pick(REWARDS);
+      const words = r.words ? pick(["you're doing great tonight", "play the lofi one please", "the chat loves you", "something from the 90s!"]) : "";
+      if (words) chat(words, who, { reward: true }); // Twitch posts typed-in ones in chat too
+      event("channel.channel_points_custom_reward_redemption.add", {
+        id: `x${++n}`, broadcaster_user_id: "1", user_id: `u-${who}`, user_login: who.toLowerCase(), user_name: who, user_input: words, status: "unfulfilled",
+        reward: { id: `rw-${r.title}`, title: r.title, cost: r.cost, prompt: "" }, redeemed_at: new Date().toISOString(),
+      });
+      return { who, title: r.title };
+    },
     cheer() {
       const who = pick(CHATTERS);
       chat(pick(["great stream!", "for the snack fund", "that play deserved it"]), who, { bits: pick([100, 250, 500, 1000]) });
@@ -499,7 +521,7 @@ const twitch = (() => {
     socket._peer = { got() {}, gone: () => chatSockets.delete(socket) };
   }
 
-  const SCOPES = ["user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod", "moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions", "user:manage:whispers"];
+  const SCOPES = ["user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod", "moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions", "user:manage:whispers", "channel:read:redemptions"];
   const json = (status, body) => new Response(status === 204 ? null : JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
   async function api(url, init = {}) {
     const u = new URL(url);

@@ -71,6 +71,7 @@
       <button id="tCmd" type="button">!command</button>
       <button id="tSub" type="button">a sub</button>
       <button id="tGift" type="button">gifted subs</button>
+      <button id="tRedeem" type="button">channel points</button>
       <button id="tCheer" type="button">a cheer</button>
       <button id="tHighlight" type="button">highlighted message</button>
       <button id="tAnnounce" type="button">announcement</button>
@@ -245,6 +246,10 @@
   });
   on("tCheer", () => said(`${pretendTwitch.cheer()} cheered bits`));
   on("tHighlight", () => said(`${pretendTwitch.highlight()} highlighted a message with channel points`));
+  on("tRedeem", () => {
+    const { who, title } = pretendTwitch.redeem();
+    said(`${who} redeemed ${title}`);
+  });
   on("tPin", () => (pretendTwitch.pin(), said("mod2 pinned a message: it shows at the top of the streamer's chat within 10 seconds")));
   on("tHype", () => (pretendTwitch.hype(), said("A hype train started: see the top of the streamer's chat")));
   on("tPoll", () => (pretendTwitch.poll(), said("A poll started: watch the votes at the top of the streamer's chat")));

@@ -31,7 +31,7 @@
   // makes telling raiders from people already here exact even in big chats.
   // followers: "Following since" on a name's card; warnings: Warn, and seeing others' warns;
   // hype train, polls and predictions: their cards at the top (your own channel only).
-  const EXTRA_SCOPES = ["moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions", "user:manage:whispers"]; // whispers: Whisper on a name's card
+  const EXTRA_SCOPES = ["moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions", "user:manage:whispers", "channel:read:redemptions"]; // redemptions: your own channel only // whispers: Whisper on a name's card
   const CHATTERS_EVERY_MS = 2 * 60 * 1000;
   const TIMEOUTS = [["1m", 60], ["10m", 600], ["1h", 3600], ["24h", 86400]];
   // Twitch's chat commands don't run through the API, and could post as plain text, so
@@ -296,6 +296,8 @@
       if (channel === me.login) {
         const own = { broadcaster_user_id: broadcasterId };
         ["channel.hype_train.begin", "channel.hype_train.progress", "channel.hype_train.end"].forEach((type) => extra(type, ["2", "1"], own));
+        extra("channel.channel_points_custom_reward_redemption.add", ["1"], own).then((ok) => (redemptionsOn = ok));
+        extra("channel.channel_points_automatic_reward_redemption.add", ["2", "1"], own);
         ["channel.poll.begin", "channel.poll.progress", "channel.poll.end", "channel.prediction.begin", "channel.prediction.progress", "channel.prediction.lock", "channel.prediction.end"].forEach((type) => extra(type, ["1"], own));
       }
       if (stopped || failed) return;
@@ -611,6 +613,8 @@
         codeError(err);
       }
       if (m.bits) line.append(el("span", "oc-bits", `${m.bits} bits`), " ");
+      // Twitch only tells the channel owner which reward it was.
+      if (m.reward) line.append(el("span", "oc-reward", "Redeemed"), " ");
       const raid = !line.dataset.staff && m.login !== me.login && raidOf(m.login, m.history);
       if (raid) {
         line.classList.add("oc-line--raider");
@@ -659,6 +663,26 @@
         body.hidden = !body.hidden;
       });
       line.append(shown);
+    }
+
+    // ----- Channel points --------------------------------------------------------------
+    // Every redemption, on your own channel (Twitch only tells the channel owner).
+    let redemptionsOn = false; // Twitch agreed to send them (so typed ones aren't shown twice)
+    const AUTO_REWARDS = {
+      single_message_bypass_sub_mode: "Send a message in sub-only mode",
+      random_sub_emote_unlock: "Unlock a random sub emote",
+      chosen_sub_emote_unlock: "Choose an emote to unlock",
+      chosen_modified_sub_emote_unlock: "Modify a single emote",
+      celebration: "On-screen celebration",
+    };
+    function redemptionLine(name, title, cost, words) {
+      const line = el("div", "oc-line oc-redeem");
+      const head = el("div", "oc-redeem__head");
+      head.append(el("b", "", name), " redeemed ", el("b", "", title));
+      if (cost) head.append(el("span", "oc-redeem__cost", ` ${Number(cost).toLocaleString()}`));
+      line.append(head);
+      if (words) line.append(el("div", "oc-body", words));
+      return line;
     }
 
     // ----- Who came with a raid ---------------------------------------------------------
@@ -790,6 +814,9 @@
     function gotEvent(type, e) {
       if (type === "channel.chat.message") {
         sawHere(e.chatter_user_login);
+        // A reward someone typed into. On your own channel the redemption itself says so
+        // (with the reward's name and their words), so its chat copy isn't shown twice.
+        if (e.channel_points_custom_reward_id && channel === me.login && redemptionsOn) return;
         if (known.has(e.message_id)) return;
         known.add(e.message_id);
         if (known.size > 5000) known.clear();
@@ -804,6 +831,7 @@
           text: e.message?.text || "",
           reply: e.reply,
           kind: e.message_type,
+          reward: !!e.channel_points_custom_reward_id,
           bits: e.cheer?.bits || 0,
           fromChannel: e.source_broadcaster_user_id && e.source_broadcaster_user_id !== broadcasterId ? e.source_broadcaster_user_name : "",
         }));
@@ -832,6 +860,14 @@
         flushLines();
         list.querySelectorAll(".oc-line[data-id]").forEach(hideLine);
         addSystem("Chat was cleared by a moderator.");
+      } else if (type === "channel.channel_points_custom_reward_redemption.add") {
+        addLine(redemptionLine(e.user_name, e.reward?.title || "a reward", e.reward?.cost, e.user_input));
+      } else if (type === "channel.channel_points_automatic_reward_redemption.add") {
+        const kind = e.reward?.type || "";
+        // Highlights, effects and giant emotes already show on the message itself.
+        if (!["send_highlighted_message", "message_effect", "gigantify_an_emote"].includes(kind)) {
+          addLine(redemptionLine(e.user_name, AUTO_REWARDS[kind] || kind.replace(/_/g, " ") || "a reward", e.reward?.channel_points ?? e.reward?.cost, e.message?.text || e.user_input));
+        }
       } else if (type.startsWith("channel.hype_train.")) hypeCard(type.split(".").pop(), e);
       else if (type.startsWith("channel.poll.")) pollCard(type.split(".").pop(), e);
       else if (type.startsWith("channel.prediction.")) predictionCard(type.split(".").pop(), e);

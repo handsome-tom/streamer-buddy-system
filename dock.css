@@ -3103,3 +3103,10 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-card__stat b { font-size: 14px; color: #bf94ff; }
 .oc-card__stat--click { cursor: pointer; }
 .oc-card__said { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); font-size: 12px; }
+/* Channel point redemptions */
+.oc-redeem { margin: 2px 0; padding: 4px 8px; background: rgba(0, 181, 240, 0.08); box-shadow: inset 2px 0 0 rgba(0, 181, 240, 0.7); }
+.oc-redeem__head { color: var(--muted); }
+.oc-redeem__head b { color: var(--text); }
+.oc-redeem__cost { font-weight: 700; color: #5fd3ff; }
+.oc-redeem__cost::before { content: "◉"; margin-right: 2px; font-size: 10px; vertical-align: 1px; }
+.oc-reward { margin-right: 4px; padding: 0 5px; font-size: 10px; font-weight: 700; color: #5fd3ff; border: 1px solid rgba(0, 181, 240, 0.6); border-radius: 3px; }
