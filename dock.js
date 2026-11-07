@@ -22,7 +22,7 @@
 // What's on screen:
 //   - the top bar: one profile-picture dot per connection, ring glowing green while
 //     they're online, faded until they've added you back. Something waiting
-//     from someone makes their dot pulse in their Twitch chat colour with a
+//     from someone makes their dot pulse in their Twitch chat color with a
 //     count. Clicking a waiting dot shows the cards (popped out into a window
 //     of their own in OBS, which closes itself once nothing's waiting);
 //     clicking a quiet dot opens their page: an Ask box for them and the log of
@@ -63,7 +63,7 @@
 //              chat by hand, and when and why it last fell back
 //   "ui"       { question id: { closed, waitClosed, cleared, gone } }  what you've
 //              closed or cleared here (per device; the relay keeps the rest)
-//   "ids", "pics", "colors"  Twitch user ids, profile pictures, chat colours
+//   "ids", "pics", "colors"  Twitch user ids, profile pictures, chat colors
 //   "sound"    whether to make a sound when something arrives (on by default in OBS)
 //   "pings"    what's been pinged, so a reload doesn't ping again
 //   "lastTo"   who you last sent to, where sending starts from next time (OBS)
@@ -498,7 +498,7 @@
     location.reload();
   }
 
-  // ===== Twitch API (pictures, colours, checking a name) ===================================
+  // ===== Twitch API (pictures, colors, checking a name) ===================================
 
   async function helix(path) {
     const r = await fetch(HELIX + path, { headers: { Authorization: `Bearer ${get("token")}`, "Client-Id": TWITCH_CLIENT_ID } });
@@ -522,10 +522,10 @@
     return { login: u.login };
   }
 
-  // Profile pictures and chat colours for the dots, once per load (people change them).
+  // Profile pictures and chat colors for the dots, once per load (people change them).
   let picsFor = "";
   async function loadPics() {
-    const logins = [...new Set([me?.login, ...trusted(), ...requests].filter(Boolean))]; // you too: your colour tints your bookmarks
+    const logins = [...new Set([me?.login, ...trusted(), ...requests].filter(Boolean))]; // you too: your color tints your bookmarks
     if (DEV || DEMO || !logins.length || picsFor === logins.join()) return;
     picsFor = logins.join();
     try {
@@ -541,7 +541,7 @@
     } catch {}
   }
 
-  // Black or white, whichever reads better on a colour.
+  // Black or white, whichever reads better on a color.
   function inkOn(hex) {
     const n = parseInt(hex.slice(1), 16);
     const lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
@@ -756,7 +756,7 @@
       body.title = `Seen by ${f.from}: ${f.text}`;
       body.append(el("b", null, `Seen by ${f.from}`), el("span", "qflash__who", ` ${f.text}`));
     } else if (LIVECHAT) {
-      // The chat dock shows these as big as a question: who first, in their colour.
+      // The chat dock shows these as big as a question: who first, in their color.
       const who = el("b", "qflash__from", f.from);
       if (colorOf(f.from)) who.style.color = colorOf(f.from);
       body.append(who, " ", document.createTextNode(f.text), ...(f.kind === "love" ? [el("span", "qflash__who", "  !vanish")] : []));
@@ -904,7 +904,7 @@
   function chime() {
     if (!POPOUT && soundOn() && !dndOn()) tones([659, 880], 0.14, 0.18 * vol(), 0.35);
   }
-  // Something new: one clear note. A reminder (it moved up a colour): one softer note,
+  // Something new: one clear note. A reminder (it moved up a color): one softer note,
   // unless reminders are switched off in Settings.
   // A warning: two quick, higher notes, a little louder (even with reminders off).
   function ping(stage) {
@@ -918,7 +918,7 @@
   // Someone needs the streamer. The edge of the panel glows (a thin, faint line), over
   // whichever chat is showing. Everything arrives green, with one clear note. If it isn't
   // answered, the person who asked can nudge it (q.nudges): each nudge moves it up a
-  // colour (orange, yellow, then white) with one softer note and a brief flash of the
+  // color (orange, yellow, then white) with one softer note and a brief flash of the
   // edge. Nothing climbs by itself. Answering, dismissing or marking it seen stops it.
   // Anything over an hour old when this panel first shows it doesn't ping or glow, unless
   // it's nudged after that.
@@ -932,7 +932,7 @@
   const stageFor = (q) => (q.warns ? PING_WARN : Math.min(PING_TOP, 1 + (q.nudges || 0)));
   const pingLog = get("pings", {}); // question id -> { stage, stale }, kept so a reload doesn't ping again
   let pingGlow = null;
-  let glowNow = 0; // the edge's colour right now (0 = no glow), for Streamer View
+  let glowNow = 0; // the edge's color right now (0 = no glow), for Streamer View
 
   // Looks at everything waiting; says whether anything moved up.
   function pingCheck() {
@@ -982,7 +982,7 @@
     }
     if (glow !== glowNow) pingGlow.className = glow ? `glow glow--${glow}` : "glow";
     glowNow = glow;
-    // Something new (or up a colour): glow up now and start the 15-second cycle again,
+    // Something new (or up a color): glow up now and start the 15-second cycle again,
     // on the edge and behind the message area. See .glow in dock.css.
     if (loudest && glow) {
       pingGlow.style.animation = "none";
@@ -1284,7 +1284,7 @@
   // localStorage, so OBS keeps it between restarts:
   //   "sound"          sound when something arrives (also under Connections)
   //   "volume"         "quiet" | "normal" | "loud"
-  //   "reminderBeeps"  the softer note each time something waiting moves up a colour
+  //   "reminderBeeps"  the softer note each time something waiting moves up a color
   //   "edgeGlow"       the thin line round the edge
   //   "showQuick"      the quick-questions row (chat dock)
   //   "chatSize"       "small" | "normal" | "large": custom chat's text (chat dock)
@@ -1662,10 +1662,10 @@
   document.addEventListener("keydown", (e) => e.key === "Escape" && !presenceMenu.hidden && openPresence(false));
 
   // The dots: one per connection; glowing green ring while online, faded until they've
-  // added you back; pulsing in their chat colour for a question from them,
+  // added you back; pulsing in their chat color for a question from them,
   // ringed for their answer to yours, with how many.
   function drawDots() {
-    // Your own chat colour, for the glow round lines you bookmarked.
+    // Your own chat color, for the glow round lines you bookmarked.
     if (me && colorOf(me.login)) document.body.style.setProperty("--my-color", colorOf(me.login));
     const dots = connections.map(({ login, mutual, online, idle }) => {
       const fromThem = Object.values(inbox).filter((q) => q.from === login && !q.done);
@@ -1676,7 +1676,7 @@
       // The chat dock: only people who are or have been in the chat this stream (or
       // have something waiting). Bright while they're there, faded once they leave.
       const light = LIVECHAT && mutual ? liveLight(login) : null;
-      // Never been in the chat this stream: no picture. Been and gone: grey. Gone for 30
+      // Never been in the chat this stream: no picture. Been and gone: gray. Gone for 30
       // minutes: no picture again (unless something from them is waiting).
       if (light && !light.away) liveSeenNow(login);
       const longGone = light?.away && Date.now() - liveSeenAt(login) > LIVE_GONE_MINUTES * LIGHT_MINUTE;
@@ -1684,7 +1684,7 @@
       const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}${online && !LIVECHAT ? " dot--online" : ""}${idle ? " dot--idle" : ""}${light?.ring ? ` dot--${light.ring}` : ""}${light?.away ? " dot--away" : light && !light.ring ? " dot--here" : ""}`);
       dot.type = "button";
       // The streamer's dock: a mod set to Idle, or not on Streamer Buddy right now (or set to
-      // Offline), is greyed out with a white badge, so it's clear to leave them be.
+      // Offline), is grayed out with a white badge, so it's clear to leave them be.
       const resting = LIVECHAT && mutual && (idle || !online) ? (idle ? "idle" : "offline") : "";
       if (resting) dot.classList.add("dot--resting", `dot--resting-${resting}`);
       if (colorOf(login)) {
@@ -2027,7 +2027,7 @@
   // The bar's message area: what's waiting for you (questions and messages to you, and
   // answers to your questions you haven't marked seen), one at a time, with its answers;
   // or else a connection request. In the streamer's chat dock it's the place to look:
-  // boxed, a little larger, in the colour of what it shows.
+  // boxed, a little larger, in the color of what it shows.
   //
   // More than one: they take turns, a new one every PEEK_TURN_MS, with dots for how many
   // and which (click one to show it). Something new jumps straight in. It holds still
@@ -2229,7 +2229,7 @@
   }
 
   // Nudge: remind them of a question you asked that's still unanswered. On their screen
-  // it moves up a colour each time: orange, yellow, then white (see "Pings"). For a
+  // it moves up a color each time: orange, yellow, then white (see "Pings"). For a
   // question to several people, it nudges everyone who hasn't answered.
   //
   // While it can't be nudged (just nudged, or already white), the button still takes
@@ -2246,18 +2246,18 @@
     const key = ids.join();
     const nudges = Math.max(0, ...qs.map((q) => q.nudges));
     const warns = Math.max(0, ...qs.map((q) => q.warns));
-    const next = Math.min(PING_TOP, nudges + 2); // the colour a nudge turns it
+    const next = Math.min(PING_TOP, nudges + 2); // the color a nudge turns it
     const done = nudges >= PING_TOP - 1;
     const wait = Math.max(0, ...qs.map((q) => q.nudgedAt + NUDGE_GAP_MS - Date.now()));
     const warnWait = Math.max(0, ...qs.map((q) => q.warnedAt + WARN_GAP_MS - Date.now()));
     const canNudge = !done && wait <= 0;
     const taps = (warnTaps.get(key) || []).filter((t) => Date.now() - t < WARN_WINDOW_MS);
     const busy = ids.some((id) => nudging.has(id));
-    const colour = warns ? PING_WARN : canNudge ? next : done ? PING_TOP : nudges + 1;
-    const b = el("button", `nudge nudge--${colour}${warns ? " nudge--warned" : ""}${taps.length ? " nudge--arming" : ""}`);
+    const color = warns ? PING_WARN : canNudge ? next : done ? PING_TOP : nudges + 1;
+    const b = el("button", `nudge nudge--${color}${warns ? " nudge--warned" : ""}${taps.length ? " nudge--arming" : ""}`);
     b.type = "button";
     const label = taps.length ? `Send warning: ${WARN_TAPS - taps.length} more` : warns ? "Warning sent" : canNudge ? (nudges ? "Nudge again" : "Nudge") : done ? "Nudged 3×" : "Nudged";
-    b.append(el("span", `peek__ping peek__ping--${colour}`), el("span", null, label));
+    b.append(el("span", `peek__ping peek__ping--${color}`), el("span", null, label));
     b.disabled = busy || (!canNudge && warnWait > 0);
     b.title = canNudge
       ? `Remind them: it turns ${PING_NAMES[next].toLowerCase()} on their screen, with a soft beep`

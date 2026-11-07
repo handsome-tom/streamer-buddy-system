@@ -41,7 +41,7 @@ green within 5 minutes, then orange (10), yellow (20) and white (30); after that
 they're just lurking, no ring, just their picture lit up. Once they leave the chat the
 picture goes gray. Below it is Twitch's own embedded chat, unchanged. A line a mod flags in Chrome is pinned at the top of the chat, emotes included,
 for 10 seconds (5 minutes elsewhere), and with custom chat the line itself glows in the
-chat in the flagger's colour; the streamer or a mod can clear the pin for everyone with
+chat in the flagger's color; the streamer or a mod can clear the pin for everyone with
 its X. With custom chat the streamer can also **bookmark** a message for later with its 🔖
 button (on hover); the 🔖 count in the chat bar goes back to them. **One click** on a
 message puts an orange line under it, right across the chat, to mark where they were;
@@ -70,7 +70,7 @@ of seconds and fades down to almost nothing. If it's still unanswered it comes b
 after 15 seconds, then every 10, resting a touch brighter in between, so it reminds
 without badgering. This works over either chat. Nothing climbs by itself: if a
 question isn't answered, the person who asked can **Nudge** it (on their waiting
-question, or in Streamer View). Each nudge moves it up a colour on the streamer's screen
+question, or in Streamer View). Each nudge moves it up a color on the streamer's screen
 with one softer reminder beep and a brief flash of the edge:
 
 | | Glow | Ping |
@@ -100,7 +100,7 @@ connections. They're kept in OBS between restarts.
 ### Streamer View (for mods, in the Chrome side panel)
 
 The top of the handshake side panel shows what the streamer's OBS dock is showing right
-now: the edge's glow colour, everything waiting for them (from anyone, each with how far
+now: the edge's glow color, everything waiting for them (from anyone, each with how far
 it has glowed), answers they haven't marked seen yet, and the quick notes and flagged
 chat lines in their bar. It follows the channel open in the Twitch tab beside the panel;
 with more than one streamer sharing, a picker switches between them. It can be folded
@@ -126,7 +126,7 @@ When another mod bans or times someone out, a line says so (Twitch doesn't say w
 
 Twitch's own events show the way Twitch's chat shows them: raids (who, how many viewers,
 their picture, and a Welcome them button that fills in a welcome to send), subs and resubs,
-gifted subs, bits badge tiers, announcements in their colour, cheers (a bits tag),
+gifted subs, bits badge tiers, announcements in their color, cheers (a bits tag),
 channel-points highlighted messages and gigantified emotes. First-time chatters are marked
 in green with "First-time chatter", as Twitch marks them for mods: Twitch only says so on
 its public chat (the `first-msg` tag), so the page's own public-chat connection (the one

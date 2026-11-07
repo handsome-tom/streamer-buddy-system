@@ -55,7 +55,7 @@
   const safeColor = (c) => (/^#[0-9a-f]{6}$/i.test(c || "") ? c : "");
 
   // Little line icons for the message tools and the bookmark counter.
-  // Line icons: Lucide (lucide.dev, ISC licence), the same set throughout.
+  // Line icons: Lucide (lucide.dev, ISC license), the same set throughout.
   const ICON = {
     bookmark: '<path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"/>',
     reply: '<path d="M20 18v-2a4 4 0 0 0-4-4H4"/> <path d="m9 17-5-5 5-5"/>',
@@ -665,7 +665,7 @@
       if (raid) {
         line.classList.add("oc-line--raider");
         if (raid.color) {
-          // In the raiding streamer's name colour, with words that stay readable on it.
+          // In the raiding streamer's name color, with words that stay readable on it.
           line.style.setProperty("--raid", raid.color);
           const [r, g, b] = [1, 3, 5].map((i) => parseInt(raid.color.slice(i, i + 2), 16));
           line.style.setProperty("--raid-ink", 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#18181b" : "#fff");
@@ -1220,7 +1220,7 @@
       topHead(c, "pin", `Pinned by ${p.pinned_by_user_name || "a moderator"}`, p.ends_at, () => (pinHidden = p.message_id), "pin");
       const body = el("div", "oc-topcard__body oc-topcard__pinned");
       const sender = el("b", "oc-topcard__sender", p.sender_user_name);
-      // Their chat colour, from a line of theirs if there is one.
+      // Their chat color, from a line of theirs if there is one.
       const theirs = [...list.querySelectorAll(".oc-line[data-uid]")].reverse().find((l) => l.dataset.uid === p.sender_user_id);
       const color = safeColor(theirs?.dataset.color);
       if (color) sender.style.color = color;
@@ -1936,7 +1936,7 @@
         firstIds.add(id);
         if (firstIds.size > 200) firstIds.delete(firstIds.values().next().value);
       },
-      // A mod flagged this chatter's line (dock.js): it glows in their colour from now on.
+      // A mod flagged this chatter's line (dock.js): it glows in their color from now on.
       // The newest line from them that matches; says whether it found one.
       glowLine({ chatter, text, color }) {
         const login = String(chatter || "").toLowerCase();

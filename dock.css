@@ -1,4 +1,4 @@
-/* Streamer Buddy System: Twitch's dark colours, so it sits well next to the
+/* Streamer Buddy System: Twitch's dark colors, so it sits well next to the
    Twitch chat dock in OBS. Cards match Twitch Space's. */
 :root {
   --bg: #0e0e10;
@@ -96,7 +96,7 @@ button:disabled {
 .dot:hover {
   box-shadow: 0 0 0 2px var(--purple);
 }
-/* --c is their Twitch chat colour (set on the dot), amber if they have none. */
+/* --c is their Twitch chat color (set on the dot), amber if they have none. */
 .dot--answer {
   box-shadow: 0 0 0 2px var(--c, var(--purple));
 }
@@ -1953,7 +1953,7 @@ body.livechat main:has(> .cards:empty) {
    a picture on top, so clicks go straight through. */
 .glow { display: none; position: fixed; inset: 0; z-index: 1000; pointer-events: none; }
 /* A thin, faint line. It glows for a couple of seconds when something arrives or moves
-   up a colour, then fades down to almost nothing (2%). If it's still unanswered it comes
+   up a color, then fades down to almost nothing (2%). If it's still unanswered it comes
    back up after 15 seconds, then every 10 seconds, resting a touch brighter (5%) in
    between. dock.js restarts the cycle on anything new. */
 .glow--1, .glow--2, .glow--3, .glow--4 { display: block; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ping) 60%, transparent), inset 0 0 8px color-mix(in srgb, var(--ping) 25%, transparent); }
@@ -2216,7 +2216,7 @@ body.livechat main:has(> .cards:empty) {
 }
 
 /* ===== Streamer View (side panel) ======================================================= */
-/* What the streamer's OBS dock shows now. The box's edge takes the dock's glow colour,
+/* What the streamer's OBS dock shows now. The box's edge takes the dock's glow color,
    and flashes like it does from orange up. */
 .sv {
   --ping: var(--line);
@@ -2428,7 +2428,7 @@ body.livechat main { max-height: 55vh; }
 .peek__dot:hover { opacity: 1; }
 
 /* In the streamer's chat dock: the place to look, a little larger than everything round
-   it. No edges: a soft glow in the colour of what it shows, fading out at the sides. */
+   it. No edges: a soft glow in the color of what it shows, fading out at the sides. */
 body.livechat .peek--on {
   --ping: var(--good);
   position: relative;
@@ -2596,7 +2596,7 @@ body.livechat .peek--5 { --ping: var(--red); }
 /* ===== Questions and messages to you: a slim list ======================================== */
 /* One line each (the message wraps if it's long), small buttons on the right, a reply box
    under it only when asked for. Hovering turns the line into a glowing pill. The dot is
-   its colour: green, then orange, yellow, white with nudges, red for a warning. */
+   its color: green, then orange, yellow, white with nudges, red for a warning. */
 .ilist { display: flex; flex-direction: column; gap: 3px; width: 100%; }
 .irow__wrap + .irow__wrap { border-top: 1px solid var(--line); padding-top: 3px; }
 .irow {
@@ -2704,7 +2704,7 @@ body.livechat .peek--5 { --ping: var(--red); }
 .oc-marks[hidden] { display: none; }
 .oc-marks:not([hidden]) + .oc-link { margin-left: 0; } /* the chat switch stays top right */
 
-/* A line a mod flagged: a glow round it in the flagger's colour (custom chat). */
+/* A line a mod flagged: a glow round it in the flagger's color (custom chat). */
 .oc-line--flagged {
   --flag: #3fb2ff;
   border-radius: 8px;
@@ -2798,7 +2798,7 @@ body.livechat .peek__line .peek__answer { margin-right: 8px; }
 
 /* ===== Quick info and !vanish notes in the streamer's chat dock ========================== */
 /* Not little pills: they take the same room as a question in the message area, just
-   above it, full width, the same larger text, and a soft glow in their colour (blue for
+   above it, full width, the same larger text, and a soft glow in their color (blue for
    quick info, pink for !vanish) with no hard edge. "Seen by" notices stay small. */
 body.livechat .flashes {
   order: 5;
@@ -3008,11 +3008,11 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-line--first { background: rgba(0, 219, 132, 0.045); box-shadow: inset 2px 0 0 rgba(0, 219, 132, 0.6); }
 .oc-line--raider { background: rgba(255, 106, 0, 0.045); box-shadow: inset 2px 0 0 rgba(255, 106, 0, 0.6); }
 .oc-line--raider.oc-line--first { background: linear-gradient(90deg, rgba(255, 106, 0, 0.06), rgba(0, 219, 132, 0.04)); }
-/* The raid card in the raiding streamer's own name colour (orange if they have none) */
+/* The raid card in the raiding streamer's own name color (orange if they have none) */
 .oc-notice--raid { --raid: #ff6a00; background: linear-gradient(90deg, color-mix(in srgb, var(--raid) 26%, transparent), color-mix(in srgb, var(--raid) 8%, transparent)); box-shadow: inset 3px 0 0 var(--raid); }
 .oc-notice--raid .oc-raid__pic { border-color: var(--raid); }
 .oc-notice--raid .oc-raid__title { color: color-mix(in srgb, var(--raid) 70%, #fff); }
-/* Raiders in the raiding streamer's name colour (orange if they have none) */
+/* Raiders in the raiding streamer's name color (orange if they have none) */
 .oc-line--raider { --raid: #ff6a00; --raid-ink: #fff; background: color-mix(in srgb, var(--raid) 5%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--raid) 60%, transparent); }
 .oc-line--raider.oc-line--first { background: linear-gradient(90deg, color-mix(in srgb, var(--raid) 7%, transparent), rgba(0, 219, 132, 0.04)); }
 .oc-line--raider .oc-raidtag { color: var(--raid-ink); background: var(--raid); }
@@ -3165,7 +3165,7 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-modicons { gap: 0; margin-right: 3px; }
 .oc-modicon { width: 16px; height: 18px; }
 .oc-line { padding-top: 4px; padding-bottom: 4px; }
-/* Flatter: solid cards with a coloured edge and a black shadow, no glow */
+/* Flatter: solid cards with a colored edge and a black shadow, no glow */
 .oc-event, .oc-event--bomb { margin: 5px 6px; padding: 8px 10px; background: color-mix(in srgb, var(--ev) 13%, #1f1f23); border-radius: 6px; box-shadow: inset 3px 0 0 var(--ev), 0 2px 6px rgba(0, 0, 0, 0.7); }
 .oc-event__icon { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
 .oc-event--streak .oc-event__icon { color: #fff; background: #e0520f; }
@@ -3182,7 +3182,7 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-notice--raid { margin: 5px 6px; border-radius: 6px; background: color-mix(in srgb, var(--raid) 14%, #1f1f23); box-shadow: inset 3px 0 0 var(--raid), 0 2px 6px rgba(0, 0, 0, 0.7); }
 .oc-redeem { box-shadow: inset 2px 0 0 rgba(0, 181, 240, 0.7), 0 1px 4px rgba(0, 0, 0, 0.5); }
 .oc-card__fact:nth-child(2) .oc-card__icon svg { fill: currentColor; } /* Twitch's heart is solid */
-/* Cards: a thin line in their colour along the top and bottom (no side bar), barely rounded */
+/* Cards: a thin line in their color along the top and bottom (no side bar), barely rounded */
 .oc-event, .oc-event--bomb { border-top: 1px solid var(--ev); border-bottom: 1px solid var(--ev); border-radius: 2px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7); }
 .oc-notice--raid { border-top: 1px solid var(--raid); border-bottom: 1px solid var(--raid); border-radius: 2px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7); }
 .oc-topcard, .oc-topcard--pin { border: 0; border-top: 1px solid var(--tc); border-bottom: 1px solid var(--tc); border-radius: 2px; }
@@ -3190,16 +3190,16 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-notice:not(.oc-event):not(.oc-notice--raid) { --notice: var(--purple); border-top: 1px solid var(--notice); border-bottom: 1px solid var(--notice); border-radius: 2px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
 .oc-notice--gold:not(.oc-event) { --notice: var(--amber); }
 .oc-giftee { border-radius: 2px; }
-/* Cards: a black border all round and a big black shadow; nothing coloured on the edges */
+/* Cards: a black border all round and a big black shadow; nothing colored on the edges */
 .oc-event, .oc-event--bomb, .oc-notice--raid, .oc-redeem, .oc-notice:not(.oc-event):not(.oc-notice--raid) { border: 1px solid #000; border-radius: 2px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.85), 0 2px 4px rgba(0, 0, 0, 0.7); }
 .oc-topcard, .oc-topcard--pin { border: 1px solid #000; border-radius: 2px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.85), 0 2px 4px rgba(0, 0, 0, 0.7); }
 .oc-event, .oc-event--bomb, .oc-notice--raid, .oc-redeem, .oc-notice { position: relative; z-index: 1; margin-top: 8px; margin-bottom: 8px; }
 
 
-/* ===== One colour per kind of notice, on one calm dark card =====
-   Every card sits on the same mid-dark grey; the kind's colour is on its icon, its big number
+/* ===== One color per kind of notice, on one calm dark card =====
+   Every card sits on the same mid-dark gray; the kind's color is on its icon, its big number
    and its label, so that's what catches the eye. Numbers and labels are Plus Jakarta Sans
-    (fonts/, SIL Open Font Licence). */
+    (fonts/, SIL Open Font License). */
 @font-face { font-family: "Plus Jakarta Sans"; font-weight: 400 800; font-display: swap; src: url("fonts/plus-jakarta-sans.woff2") format("woff2"); }
 :root {
   --card: #25252b;
@@ -3226,12 +3226,12 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-redeem { --ev: var(--k-points); }
 .oc-notice--announcement { --ev: var(--k-announce); }
 
-/* The card itself: the same grey for every kind, lined up with each other. */
+/* The card itself: the same gray for every kind, lined up with each other. */
 .oc-event, .oc-event--bomb, .oc-redeem, .oc-notice--announcement, .oc-notice--raid, .oc-notice:not(.oc-event) { background: var(--card); }
 .oc-redeem, .oc-notice--announcement { display: flex; gap: 9px; align-items: flex-start; padding: 8px 10px; }
 .oc-redeem, .oc-notice--announcement, .oc-notice--raid { margin-left: 6px; margin-right: 6px; border-radius: 2px; }
 
-/* The icon: a solid circle in the kind's colour. */
+/* The icon: a solid circle in the kind's color. */
 .oc-event__icon, .oc-event--streak .oc-event__icon { width: 34px; height: 34px; color: #151518; background: var(--ev); border-radius: 50%; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7); }
 .oc-event--bomb .oc-event__icon { width: 44px; height: 44px; }
 
@@ -3243,7 +3243,7 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-event--bomb .oc-event__big { font-size: inherit; }
 .oc-event__who { margin-top: 2px; font-family: var(--label); font-size: 12px; letter-spacing: 0.02em; color: var(--muted); }
 
-/* Gift bombs: the list of names, in the gift colour. */
+/* Gift bombs: the list of names, in the gift color. */
 .oc-giftees__count { font-family: var(--label); font-size: 12px; letter-spacing: 0.06em; color: var(--k-gift); }
 .oc-giftee { font-family: var(--label); letter-spacing: 0.02em; background: #1b1b20; border: 1px solid #000; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); }
 .oc-giftee svg { color: var(--k-gift); }
@@ -3255,10 +3255,10 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-redeem__cost::before { content: none; }
 .oc-redeem .oc-body { margin-top: 2px; }
 
-/* Announcements: the label in the announcement colour. */
+/* Announcements: the label in the announcement color. */
 .oc-notice--announcement .oc-notice__head { font-family: var(--label); font-size: 14px; font-weight: 700; letter-spacing: 0.03em; color: var(--k-announce); }
 
-/* Raids keep the raiding streamer's own name colour. */
+/* Raids keep the raiding streamer's own name color. */
 .oc-raid__title, .oc-notice--raid .oc-raid__title { font-family: var(--serif); font-size: 18px; font-weight: 700; letter-spacing: 0.04em; text-transform: none; color: var(--raid); }
 .oc-raidtag { font-family: var(--label); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; }
 
@@ -3271,7 +3271,7 @@ body.no-modicons .oc-modicons { display: none; }
 /* First-time chatters. */
 .oc-firsttag { font-family: var(--label); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; color: var(--k-first); }
 
-/* The cards along the top: the same grey, the kind's colour on the icon, label and bar. */
+/* The cards along the top: the same gray, the kind's color on the icon, label and bar. */
 .oc-topcard--pin { --tc: var(--k-pin); }
 .oc-topcard--gift { --tc: var(--k-gift); }
 .oc-topcard--hype { --tc: var(--k-hype); }
@@ -3283,7 +3283,7 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-topcard__time, .oc-topcard--pin .oc-topcard__time { font-family: var(--serif); font-size: 13px; font-weight: 700; padding: 0; color: var(--text); background: none; }
 .oc-topcard__num { font-family: var(--label); letter-spacing: 0.02em; }
 
-/* Icons: a deeper tone of the kind's colour, lit from the top, with a soft shadow, in a
+/* Icons: a deeper tone of the kind's color, lit from the top, with a soft shadow, in a
    rounded square, so they read as polished rather than as flat bright dots. */
 .oc-event__icon, .oc-event--streak .oc-event__icon, .oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin {
   color: #fff;
@@ -3295,7 +3295,7 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-event__icon svg, .oc-topcard__pin svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45)); }
 .oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin { border-radius: 7px; }
 .oc-topcard .oc-topcard__pin { --ev: var(--tc); }
-/* Calmer, deeper colours for the kinds. */
+/* Calmer, deeper colors for the kinds. */
 :root {
   --k-sub: #9d6bf0;
   --k-gift: #e2568f;
@@ -3327,7 +3327,7 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-topcard, .oc-topcard--pin { margin: 0; padding: 9px 11px; border-radius: 12px; }
 .oc-top { gap: 6px; padding: 6px 8px; }
 
-/* Icon tiles: a gradient tile in the kind's colour, with a second tile peeking out behind it. */
+/* Icon tiles: a gradient tile in the kind's color, with a second tile peeking out behind it. */
 .oc-event__icon, .oc-event--streak .oc-event__icon {
   position: relative; isolation: isolate;
   width: 36px; height: 36px; color: #fff;
@@ -3370,7 +3370,7 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-topbar { height: 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.07); }
 .oc-topbar__fill { border-radius: 6px; background: linear-gradient(90deg, color-mix(in srgb, var(--tc) 70%, #000), var(--tc)); }
 
-/* Icon symbols: thicker strokes, in near-black on the coloured tiles. */
+/* Icon symbols: thicker strokes, in near-black on the colored tiles. */
 .oc-event__icon, .oc-event--streak .oc-event__icon, .oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin { color: #0b0b0d; }
 .oc-event__icon svg, .oc-topcard__pin svg { stroke-width: 2.75; filter: none; }
 
@@ -3387,7 +3387,7 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-event__icon::before { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8); }
 .oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.85), 0 1px 3px rgba(0, 0, 0, 0.9); }
 
-/* Icon tiles, the same everywhere: one size, barely rounded corners, the kind's colour with a
+/* Icon tiles, the same everywhere: one size, barely rounded corners, the kind's color with a
    faint black gradient toward the bottom. */
 .oc-event__icon, .oc-event--streak .oc-event__icon, .oc-event--bomb .oc-event__icon { width: 34px; height: 34px; border-radius: 6px; }
 .oc-event--bomb .oc-event__icon svg { width: 18px; height: 18px; }
@@ -3412,7 +3412,7 @@ body.no-modicons .oc-modicons { display: none; }
 /* The connection glow: a small soft spot tucked into the top-left corner. */
 .bar__status::before { bottom: auto; width: 34px; height: 22px; opacity: 0.5; background: radial-gradient(ellipse at top left, var(--glow), transparent 70%); }
 
-/* A mod who's Idle or offline in Streamer Buddy, on the streamer's dock: greyed out, no ring,
+/* A mod who's Idle or offline in Streamer Buddy, on the streamer's dock: grayed out, no ring,
    and a white badge (a moon for Idle, a power symbol for offline), so they're left be. */
 .dot--resting img, .dot--resting .dot__letter { filter: grayscale(1) brightness(0.55); opacity: 0.8; }
 body.livechat .dot--resting:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: none; }
@@ -3421,7 +3421,7 @@ body.livechat .dot--resting:not(:hover):not(.dot--answer):not(.dot--ask) { box-s
 .dot__rest svg { display: block; }
 
 /* Bookmarked lines and lines a mod flagged: a black pool with soft, fuzzy edges and a faint
-   glow in their colour (amber for a bookmark, the mod's colour for a flag), instead of a
+   glow in their color (amber for a bookmark, the mod's color for a flag), instead of a
    tinted box with a hard outline. */
 .oc-line--marked, .oc-line--flagged {
   position: relative; z-index: 1;
@@ -3437,8 +3437,8 @@ body.livechat .dot--resting:not(:hover):not(.dot--answer):not(.dot--ask) { box-s
 .oc-line--flagged { --glowc: var(--flag); }
 .oc-line--marked.oc-line--flagged { --glowc: var(--flag); }
 
-/* ...tinted, not black: a soft pool in the colour of whoever picked the line (your own chat
-   colour for a bookmark, the mod's for a flag), with fuzzy edges and more room round it. */
+/* ...tinted, not black: a soft pool in the color of whoever picked the line (your own chat
+   color for a bookmark, the mod's for a flag), with fuzzy edges and more room round it. */
 .oc-line--marked { --glowc: var(--my-color, var(--amber)); }
 .oc-line--marked, .oc-line--flagged {
   --pool: color-mix(in srgb, var(--glowc) 16%, #141417);
@@ -3454,7 +3454,7 @@ body.livechat .dot--resting:not(:hover):not(.dot--answer):not(.dot--ask) { box-s
 /* Square corners; the softness comes only from the blurred edge. */
 .oc-line--marked, .oc-line--flagged { border-radius: 0; }
 
-/* Something waiting from someone: a quiet ring in their colour, no pulsing glow, and the
+/* Something waiting from someone: a quiet ring in their color, no pulsing glow, and the
    count as a small dark tag that barely takes any room. */
 .dot--ask { animation: none; box-shadow: 0 0 0 1.5px var(--c, var(--amber)); }
 .dot__count, .dot--answer .dot__count {

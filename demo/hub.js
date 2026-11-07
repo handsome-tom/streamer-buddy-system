@@ -165,7 +165,7 @@ const twitch = (() => {
   const SHORT = ["lol", "W", "nice", "LETS GO", "oof", "gg", "true", "hi chat", "no way", "clean", "rip", "o7", "yo", "hahaha", "first try?"];
   const MEDIUM = [
     "that was actually so clean", "how is the mic so good today", "wait what just happened", "chat is moving fast tonight",
-    "did anyone else hear that", "I joined right on time", "this map is my favourite", "ok that jump was insane",
+    "did anyone else hear that", "I joined right on time", "this map is my favorite", "ok that jump was insane",
     "can we get a replay of that", "hydrate check everyone", "who's here from the raid", "back from making food, what did I miss",
   ];
   const LONG = [
@@ -278,7 +278,7 @@ const twitch = (() => {
     // A raid: the notice, then the raiders saying hello.
     raid() {
       const from = "Lump"; // the raiding streamer (demo/pics/raider.png)
-      colorOf[from] = "#8fd14f"; // Lump's name colour, which the raid card takes
+      colorOf[from] = "#8fd14f"; // Lump's name color, which the raid card takes
       const count = 8 + Math.floor(Math.random() * 140);
       notice("raid", {
         who: from,
@@ -500,7 +500,7 @@ const twitch = (() => {
     };
   }
   // Badge pictures, drawn here (Twitch's own are its artwork): a shaded tile in the badge's
-  // colour with a clean line icon (Lucide, ISC licence) on it.
+  // color with a clean line icon (Lucide, ISC license) on it.
   const MARKS = {
     star: ['<path fill="#fff" d="M12 2.5l2.94 5.96 6.56.95-4.75 4.63 1.12 6.54L12 17.5l-5.87 3.08 1.12-6.54L2.5 9.41l6.56-.95z"/>'],
     sword: ['<path d="M14.5 17.5 3 6V3h3l11.5 11.5"/>', '<path d="m13 19 6-6"/>', '<path d="m16 16 4 4"/>', '<path d="m19 21 2-2"/>'],
@@ -644,7 +644,7 @@ const twitch = (() => {
 // with a pretend sign-in; Streamer View starts open.
 function seed(login) {
   const base = { svOpen: "true" };
-  if (login === "streamer") Object.assign(base, { chatToken: JSON.stringify("mock"), ownChat: "true", colors: JSON.stringify({ streamer: "#ff7f50" }) }); // the streamer's chat colour
+  if (login === "streamer") Object.assign(base, { chatToken: JSON.stringify("mock"), ownChat: "true", colors: JSON.stringify({ streamer: "#ff7f50" }) }); // the streamer's chat color
   return base;
 }
 
