@@ -3451,3 +3451,5 @@ body.livechat .dot--resting:not(:hover):not(.dot--answer):not(.dot--ask) { box-s
     0 0 26px 8px color-mix(in srgb, var(--glowc) 16%, transparent);
 }
 .oc-line--marked::before { background: var(--glowc); }
+/* Square corners; the softness comes only from the blurred edge. */
+.oc-line--marked, .oc-line--flagged { border-radius: 0; }
