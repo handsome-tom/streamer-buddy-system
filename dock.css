@@ -3150,3 +3150,14 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-pinmenu__item:hover { background: #2f2f35; }
 .oc-pinmenu__head { padding: 3px 10px 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
 .oc-topcard__unpin { margin-top: 6px; padding: 2px 10px; font-size: 11px; }
+/* A gift bomb: a big card that lists everyone who got a sub */
+.oc-event--bomb { flex-wrap: wrap; margin: 6px 0; padding: 10px 12px 12px; border-radius: 0 6px 6px 0; background: linear-gradient(135deg, rgba(191, 90, 242, 0.32), rgba(145, 71, 255, 0.1)); }
+.oc-event--bomb .oc-event__icon { width: 44px; height: 44px; }
+.oc-event--bomb .oc-event__icon svg { width: 26px; height: 26px; }
+.oc-event--bomb .oc-event__value { font-size: 28px; }
+.oc-event--bomb .oc-event__big { font-size: 16px; }
+.oc-giftees__count { width: 100%; margin: 8px 0 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #e2c6ff; }
+.oc-giftees { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; }
+.oc-giftee { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 6px; font-size: 12px; font-weight: 600; color: #fff; background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(191, 148, 255, 0.35); border-radius: 12px; animation: oc-giftee-in 0.35s ease-out; }
+.oc-giftee svg { color: #d9a6ff; }
+@keyframes oc-giftee-in { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: none; } }

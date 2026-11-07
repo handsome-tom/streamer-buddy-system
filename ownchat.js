@@ -877,6 +877,18 @@
           words.append(body);
         }
         line.append(art, words);
+        // A gift bomb lists everyone who got one, filling in as the gifts land (Twitch's
+        // chat does the same).
+        if (kind === "community_sub_gift" && e.community_sub_gift?.id) {
+          line.classList.add("oc-event--bomb");
+          const box = el("div", "oc-giftees");
+          const count = el("div", "oc-giftees__count");
+          line.append(count, box);
+          const g = gifts.get(e.community_sub_gift.id) || { landed: 0, names: [] };
+          gifts.set(e.community_sub_gift.id, Object.assign(g, { box, count, total: e.community_sub_gift.total }));
+          for (const n of g.names) box.append(giftee(n));
+          drawGiftCount(g);
+        }
         return line;
       }
       if (kind === "announcement") {
@@ -1189,9 +1201,26 @@
     function giftLanded(id, name) {
       const g = gifts.get(id) || { landed: 0, names: [], total: 0, from: "" };
       g.landed++;
-      if (name) g.names.push(name);
+      if (name) {
+        g.names.push(name);
+        if (g.box) {
+          const stay = !held();
+          g.box.append(giftee(name));
+          if (stay) toBottom(); // the card grows; keep the newest in view
+        }
+      }
       gifts.set(id, g);
-      if (g.total) drawGift(id);
+      drawGiftCount(g);
+      if (g.total && g.from) drawGift(id);
+    }
+    function giftee(name) {
+      const chip = el("span", "oc-giftee");
+      chip.innerHTML = icon("giftfill", 12);
+      chip.append(name);
+      return chip;
+    }
+    function drawGiftCount(g) {
+      if (g.count) g.count.textContent = `${Math.min(g.landed, g.total || g.landed)} of ${g.total || "?"} gifted${g.landed < g.total ? "…" : ""}`;
     }
     function drawGift(id) {
       const g = gifts.get(id);
