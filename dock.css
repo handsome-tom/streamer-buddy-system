@@ -3386,3 +3386,15 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-event__icon::after { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.55), 0 6px 14px rgba(0, 0, 0, 0.85), 0 2px 4px rgba(0, 0, 0, 0.9); }
 .oc-event__icon::before { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8); }
 .oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.85), 0 1px 3px rgba(0, 0, 0, 0.9); }
+
+/* Icon tiles, the same everywhere: one size, barely rounded corners, the kind's colour with a
+   faint black gradient toward the bottom. */
+.oc-event__icon, .oc-event--streak .oc-event__icon, .oc-event--bomb .oc-event__icon { width: 34px; height: 34px; border-radius: 6px; }
+.oc-event--bomb .oc-event__icon svg { width: 18px; height: 18px; }
+.oc-event__icon::after, .oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.28) 100%),
+    linear-gradient(150deg, color-mix(in srgb, var(--ev, var(--tc)) 80%, #fff) 0%, var(--ev, var(--tc)) 55%);
+}
+.oc-topcard .oc-topcard__pin { --ev: var(--tc); }
+.oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin { width: 24px; height: 24px; border-radius: 5px; }
