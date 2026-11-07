@@ -3465,3 +3465,18 @@ body.livechat .dot--resting:not(:hover):not(.dot--answer):not(.dot--ask) { box-s
   border: 1px solid #000; border-radius: 6px;
   box-shadow: none;
 }
+
+/* ===== Corners: everything that isn't chat, a dropdown or a button is only just rounded ===== */
+.acard, .arow, .ask, .ask__menu, .chat__log, .dnd-menu, .presence__menu, .peek__menu, .oc-pinmenu,
+.irow, .irow:hover, .irow:focus-within, .irow--open,
+.oc-card, .oc-event, .oc-event--bomb, .oc-redeem, .oc-notice, .oc-notice--raid, .oc-notice--announcement,
+.oc-topcard, .oc-topcard--pin, .oc-topbar, .oc-topbar__fill, .oc-giftee, .oc-bits, .oc-raid__pic,
+.peek__item, body.livechat .peek--on, .people__row .people__who,
+.qflash, .pins .qflash, body.livechat .qflash--love, .qcard, .qcard__answer, .rcard, .receipt,
+.settings, .stats__cell, .stats__live, .sv, .sv__row, .sv__tag, .tagchip, .tile {
+  border-radius: 3px;
+}
+/* Icon tiles and the count tag: a touch less. */
+.oc-event__icon, .oc-event--streak .oc-event__icon, .oc-event--bomb .oc-event__icon,
+.oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin, .dot__count, .dot--answer .dot__count { border-radius: 3px; }
+.oc-event__icon::before, .oc-event__icon::after { border-radius: 3px; }
