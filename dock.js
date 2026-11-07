@@ -1665,6 +1665,8 @@
   // added you back; pulsing in their chat colour for a question from them,
   // ringed for their answer to yours, with how many.
   function drawDots() {
+    // Your own chat colour, for the glow round lines you bookmarked.
+    if (me && colorOf(me.login)) document.body.style.setProperty("--my-color", colorOf(me.login));
     const dots = connections.map(({ login, mutual, online, idle }) => {
       const fromThem = Object.values(inbox).filter((q) => q.from === login && !q.done);
       const asks = fromThem.length;

@@ -3436,3 +3436,18 @@ body.livechat .dot--resting:not(:hover):not(.dot--answer):not(.dot--ask) { box-s
 .oc-line--marked { --glowc: var(--amber); }
 .oc-line--flagged { --glowc: var(--flag); }
 .oc-line--marked.oc-line--flagged { --glowc: var(--flag); }
+
+/* ...tinted, not black: a soft pool in the colour of whoever picked the line (your own chat
+   colour for a bookmark, the mod's for a flag), with fuzzy edges and more room round it. */
+.oc-line--marked { --glowc: var(--my-color, var(--amber)); }
+.oc-line--marked, .oc-line--flagged {
+  --pool: color-mix(in srgb, var(--glowc) 16%, #141417);
+  margin: 10px 8px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--pool);
+  box-shadow:
+    0 0 8px 5px var(--pool),
+    0 0 26px 8px color-mix(in srgb, var(--glowc) 16%, transparent);
+}
+.oc-line--marked::before { background: var(--glowc); }
