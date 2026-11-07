@@ -3161,3 +3161,7 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-giftee { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 6px; font-size: 12px; font-weight: 600; color: #fff; background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(191, 148, 255, 0.35); border-radius: 12px; animation: oc-giftee-in 0.35s ease-out; }
 .oc-giftee svg { color: #d9a6ff; }
 @keyframes oc-giftee-in { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: none; } }
+/* Mod icons a little tighter together; a little more room between chat lines */
+.oc-modicons { gap: 0; margin-right: 3px; }
+.oc-modicon { width: 16px; height: 18px; }
+.oc-line { padding-top: 4px; padding-bottom: 4px; }
