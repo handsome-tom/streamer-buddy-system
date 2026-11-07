@@ -170,9 +170,109 @@
   .all[open] summary::before { transform: rotate(90deg); }
   .all summary small { font-weight: 500; color: #7d7d87; }
   .all .console { margin: 0 10px 10px; box-shadow: none; }
+
+  /* ===== The way in: a page like a 2006 social profile for a moment, then it glitches into this one ===== */
+  #retro { position: fixed; inset: 0; z-index: 1000; overflow: hidden; background: #e5e5e5; color: #000; font: 11px/1.35 Verdana, Arial, sans-serif; cursor: pointer; }
+  #retro .r-top { background: #039; color: #fff; }
+  #retro .r-top__in { display: flex; align-items: center; gap: 14px; width: 800px; max-width: 96vw; margin: 0 auto; padding: 10px 0 6px; }
+  #retro .r-logo { font: bold 30px/1 Arial, sans-serif; letter-spacing: -1px; }
+  #retro .r-logo small { display: block; margin-top: 2px; font: 10px Verdana, sans-serif; letter-spacing: 0; color: #cdf; }
+  #retro .r-search { margin-left: auto; display: flex; gap: 4px; align-items: center; font-size: 10px; }
+  #retro .r-search span { display: inline-block; width: 150px; height: 15px; background: #fff; border: 1px solid #7f9db9; }
+  #retro .r-search b { padding: 1px 6px; color: #000; background: #ddd; border: 1px solid #888; font-weight: normal; }
+  #retro .r-nav { background: #6698cb; border-top: 1px solid #99c; }
+  #retro .r-nav__in { width: 800px; max-width: 96vw; margin: 0 auto; padding: 3px 0; color: #fff; font-size: 10px; font-weight: bold; }
+  #retro .r-nav__in a { color: #fff; text-decoration: none; }
+  #retro .r-page { display: grid; grid-template-columns: 300px 1fr; gap: 12px; width: 800px; max-width: 96vw; margin: 10px auto; padding: 10px; background: #fff; }
+  #retro h2 { margin: 0 0 6px; font: bold 18px Arial, sans-serif; }
+  #retro .r-pic { display: flex; gap: 8px; }
+  #retro .r-pic img { width: 120px; height: 120px; border: 1px solid #999; image-rendering: pixelated; }
+  #retro .r-pic p { margin: 0 0 4px; }
+  #retro .r-online { color: #3a3; font-weight: bold; animation: rblink 0.7s steps(1) infinite; }
+  @keyframes rblink { 50% { opacity: 0; } }
+  #retro .r-box { margin-top: 10px; border: 1px solid #6698cb; }
+  #retro .r-box h3 { margin: 0; padding: 3px 5px; font: bold 11px Verdana, sans-serif; color: #fff; background: #6698cb; }
+  #retro .r-box--orange { border-color: #f90; }
+  #retro .r-box--orange h3 { color: #f60; background: #fc9; }
+  #retro .r-box ul { margin: 0; padding: 5px 5px 5px 22px; }
+  #retro .r-box a, #retro .r-link { color: #039; }
+  #retro .r-box table { width: 100%; border-collapse: collapse; }
+  #retro .r-box td { padding: 3px 5px; border-top: 1px solid #fff; background: #bfd3eb; }
+  #retro .r-box td:first-child { width: 90px; color: #369; font-weight: bold; background: #dbe8f5; }
+  #retro .r-network { padding: 12px; font: bold 18px Arial, sans-serif; text-align: center; border: 1px solid #ccc; }
+  #retro .r-blog { padding: 6px; }
+  #retro .r-friends { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 8px; text-align: center; }
+  #retro .r-friend b { display: block; margin-bottom: 3px; color: #039; text-decoration: underline; font-size: 10px; }
+  #retro .r-friend i { display: block; width: 62px; height: 62px; margin: 0 auto; background: var(--f); border: 1px solid #999; }
+  #retro .r-player { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 5px; color: #fff; background: linear-gradient(#444, #111); border: 1px solid #000; font-size: 10px; }
+  #retro .r-player span:first-child { display: inline-block; width: 0; height: 0; border-left: 8px solid #6f6; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+  #retro .r-marquee { overflow: hidden; white-space: nowrap; }
+  #retro .r-marquee span { display: inline-block; padding-left: 100%; animation: rscroll 6s linear infinite; }
+  @keyframes rscroll { to { transform: translateX(-100%); } }
+  #retro .r-count { display: inline-block; padding: 1px 4px; font: bold 12px "Courier New", monospace; color: #0f0; background: #000; letter-spacing: 2px; }
+  #retro .r-skip { position: absolute; right: 12px; bottom: 10px; font-size: 10px; color: #666; }
+  /* The glitch: slices jump sideways, colours split, scanlines, then it's gone */
+  #retro::before, #retro::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; }
+  #retro::before { background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.25) 0 1px, transparent 1px 3px); mix-blend-mode: multiply; }
+  #retro::after { background: linear-gradient(90deg, rgba(255, 0, 80, 0.35), rgba(0, 200, 255, 0.35)); mix-blend-mode: screen; }
+  #retro.glitch { animation: rglitch 0.65s steps(2, end) forwards; }
+  #retro.glitch::before { opacity: 1; }
+  #retro.glitch::after { animation: rsplit 0.65s steps(3, end) forwards; }
+  #retro.glitch .r-wrap { animation: rshift 0.65s steps(2, end) forwards; }
+  @keyframes rglitch {
+    0% { clip-path: inset(0 0 0 0); filter: none; }
+    15% { clip-path: inset(12% 0 58% 0); transform: translateX(-14px); filter: hue-rotate(90deg) saturate(2); }
+    30% { clip-path: inset(48% 0 20% 0); transform: translateX(18px); filter: invert(1); }
+    45% { clip-path: inset(0 0 72% 0); transform: translateX(-8px) skewX(-6deg); filter: hue-rotate(200deg) contrast(2); }
+    60% { clip-path: inset(70% 0 4% 0); transform: translateX(24px); filter: invert(1) hue-rotate(40deg); }
+    75% { clip-path: inset(30% 0 40% 0); transform: translateX(-20px); opacity: 0.8; }
+    90% { clip-path: inset(0 0 92% 0); transform: none; opacity: 0.4; }
+    100% { clip-path: inset(50% 0 50% 0); opacity: 0; }
+  }
+  @keyframes rsplit { 0% { opacity: 0; } 30% { opacity: 1; transform: translateX(10px); } 60% { opacity: 0.6; transform: translateX(-12px); } 100% { opacity: 0; } }
+  @keyframes rshift { 0% { text-shadow: none; } 40% { text-shadow: 3px 0 #f05, -3px 0 #0cf; } 100% { text-shadow: -6px 0 #f05, 6px 0 #0cf; } }
+  .site-in { animation: sitein 0.5s ease-out; }
+  @keyframes sitein { 0% { filter: brightness(1.8) contrast(1.4) hue-rotate(-30deg); transform: translateX(6px); } 30% { transform: translateX(-4px); } 100% { filter: none; transform: none; } }
+  @media (max-width: 720px) { #retro .r-page { grid-template-columns: 1fr; } #retro .r-search { display: none; } }
 </style>
 </head>
 <body>
+  <div id="retro" aria-hidden="true" hidden>
+    <div class="r-wrap">
+      <div class="r-top"><div class="r-top__in"><div class="r-logo">twitchspace<small>a place for streamers</small></div>
+        <div class="r-search">Search: <span></span> <b>Search</b></div></div></div>
+      <div class="r-nav"><div class="r-nav__in"><a>Home</a> | <a>Browse</a> | <a>Streams</a> | <a>Mods</a> | <a>Chat</a> | <a>Clips</a> | <a>Raids</a> | <a>Emotes</a> | <a>Bits</a> | <a>Help</a></div></div>
+      <div class="r-page">
+        <div>
+          <h2>Tom</h2>
+          <div class="r-pic"><img src="brand/tom.png" alt="">
+            <div><p>"looking out for u"</p><p>Male<br>31 years old<br>Somewhere, Twitch</p><p class="r-online">&#9679; Online Now!</p><p>Last Login: 11/6/2006</p></div></div>
+          <p style="margin:8px 0 0">Mood: watching chat 😎<br>View My: <a class="r-link">Pics</a> | <a class="r-link">Videos</a></p>
+          <div class="r-box"><h3>Contacting Tom</h3><ul style="list-style:none;padding-left:5px"><li><a>✉ Send Message</a> &nbsp; <a>＋ Add to Friends</a></li><li><a>💬 Instant Message</a> &nbsp; <a>⭐ Add to Favorites</a></li></ul></div>
+          <div class="r-box"><h3>Tom's Interests</h3><table><tr><td>General</td><td>streams, emotes, chat, raids, not spamming</td></tr><tr><td>Music</td><td>whatever's on stream</td></tr><tr><td>Heroes</td><td>mods</td></tr></table></div>
+          <div class="r-player"><span></span><div class="r-marquee"><span>Now playing: "Raid Incoming (Ad Break Remix)" ♪ ♫</span></div></div>
+        </div>
+        <div>
+          <div class="r-network">Tom is in your extended network</div>
+          <div class="r-box r-box--orange"><h3>Tom's Latest Blog Entry</h3><div class="r-blog">new extension, who dis <a class="r-link">(view more)</a><br>my mods can ask me stuff now without spamming chat <a class="r-link">(view more)</a></div></div>
+          <div class="r-box r-box--orange"><h3>Tom's Friend Space</h3>
+            <div class="r-blog"><b>Tom has <span style="color:#c00">8</span> friends.</b></div>
+            <div class="r-friends">
+              <div class="r-friend"><b>mod1</b><i style="--f:linear-gradient(135deg,#3fc98e,#1a6)"></i></div>
+              <div class="r-friend"><b>mod2</b><i style="--f:linear-gradient(135deg,#5a8de8,#235)"></i></div>
+              <div class="r-friend"><b>Lump</b><i style="--f:linear-gradient(135deg,#8fd14f,#350)"></i></div>
+              <div class="r-friend"><b>quietlurker</b><i style="--f:linear-gradient(135deg,#ccc,#555)"></i></div>
+              <div class="r-friend"><b>sleepycat42</b><i style="--f:linear-gradient(135deg,#e2568f,#612)"></i></div>
+              <div class="r-friend"><b>OliveBranch</b><i style="--f:linear-gradient(135deg,#a9cf45,#340)"></i></div>
+              <div class="r-friend"><b>vortexvic</b><i style="--f:linear-gradient(135deg,#c788e8,#425)"></i></div>
+              <div class="r-friend"><b>NightOwl_88</b><i style="--f:linear-gradient(135deg,#e0a53a,#530)"></i></div>
+            </div></div>
+          <p style="margin:8px 0 0">Profile views: <span class="r-count">0001337</span></p>
+        </div>
+      </div>
+    </div>
+    <span class="r-skip">click to skip</span>
+  </div>
   <header class="top">
     <div class="wrap">
       <a href="#" aria-label="Twitch Space"><img src="brand/twitch-space.svg" alt="Twitch Space" width="160" height="32"></a>
@@ -363,6 +463,30 @@
     </div>
   </footer>
 
+<script>
+  // The way in: the retro page shows for a moment, glitches, and the real site is underneath.
+  // Once per visit (a reload in the same tab skips it); never for reduced motion; a click skips.
+  (() => {
+    const r = document.getElementById("retro");
+    let seen = false;
+    try { seen = sessionStorage.getItem("retroSeen") === "1"; sessionStorage.setItem("retroSeen", "1"); } catch {}
+    if (seen || matchMedia("(prefers-reduced-motion: reduce)").matches || location.hash) return;
+    r.hidden = false;
+    let done = false;
+    const glitch = () => {
+      if (done) return;
+      done = true;
+      r.classList.add("glitch");
+      setTimeout(() => {
+        r.remove();
+        document.body.classList.add("site-in");
+        setTimeout(() => document.body.classList.remove("site-in"), 600);
+      }, 650);
+    };
+    const t = setTimeout(glitch, 1900);
+    r.addEventListener("click", () => (clearTimeout(t), glitch()));
+  })();
+</script>
 <script type="module">
   import { Socket, pretendTwitch } from "./hub.js?v=114"; // the number: bump it when hub.js changes, so browsers fetch the new one
 
