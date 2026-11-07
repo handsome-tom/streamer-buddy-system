@@ -248,9 +248,59 @@
   @media (max-width: 760px) { .tour { grid-template-columns: auto 1fr; } .tour__actions { grid-column: 1 / -1; justify-content: flex-start; } }
   .screen.spot iframe { border-color: var(--brand-light); box-shadow: 0 0 0 3px rgba(125, 176, 239, 0.25), 0 18px 44px rgba(0, 0, 0, 0.6); }
   .screen.spot .screen__label::after { content: "Look here"; margin-left: auto; padding: 2px 8px; font-size: 11px; font-weight: 800; color: #0b1a3a; background: var(--brand-light); border-radius: 3px; }
+
+  /* ===== The backdrop: a vague space scene that stays put, with 2006 internet junk drifting past ===== */
+  html, body { background: transparent; }
+  html { background: #04050b; }
+  body { background: none; }
+  #space { position: fixed; inset: 0; z-index: -1; pointer-events: none; background:
+    radial-gradient(60% 45% at 18% 12%, rgba(63, 125, 216, 0.22), transparent 70%),
+    radial-gradient(50% 40% at 88% 28%, rgba(122, 70, 210, 0.18), transparent 70%),
+    radial-gradient(55% 45% at 60% 88%, rgba(226, 86, 143, 0.09), transparent 70%),
+    radial-gradient(40% 30% at 30% 65%, rgba(31, 63, 149, 0.20), transparent 70%),
+    linear-gradient(180deg, #050713, #04050b 60%, #070512); }
+  #space::before, #space::after { content: ""; position: absolute; inset: 0; }
+  #space::before { background-image: radial-gradient(1.2px 1.2px at 165px 77px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 24px 37px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 187px 298px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 259px 109px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 44px 222px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 35px 123px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 282px 217px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 289px 63px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 298px 31px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 25px 113px, rgba(255,255,255,.85), transparent), radial-gradient(1px 1px at 285px 68px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 214px 73px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 292px 157px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 52px 297px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 190px 49px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 288px 30px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 254px 272px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 160px 238px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 185px 153px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 92px 124px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 294px 153px, rgba(255,255,255,.85), transparent), radial-gradient(1px 1px at 175px 229px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 311px 37px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 262px 214px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 175px 77px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 215px 20px, rgba(255,255,255,.85), transparent), radial-gradient(1px 1px at 285px 293px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 174px 179px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 296px 233px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 47px 138px, rgba(255,255,255,.85), transparent), radial-gradient(1px 1px at 33px 31px, rgba(255,255,255,.85), transparent), radial-gradient(1px 1px at 295px 228px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 197px 177px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 236px 181px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 312px 59px, rgba(255,255,255,.85), transparent), radial-gradient(1px 1px at 30px 111px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 66px 126px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 200px 254px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 85px 229px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 281px 142px, rgba(255,255,255,.85), transparent); background-size: 320px 320px; opacity: 0.55; }
+  #space::after { background-image: radial-gradient(2px 2px at 440px 285px, rgba(180,210,255,.95), transparent), radial-gradient(2px 2px at 425px 367px, rgba(180,210,255,.95), transparent), radial-gradient(1.2px 1.2px at 389px 236px, rgba(180,210,255,.95), transparent), radial-gradient(1.2px 1.2px at 84px 180px, rgba(180,210,255,.95), transparent), radial-gradient(1.2px 1.2px at 237px 238px, rgba(180,210,255,.95), transparent), radial-gradient(1.5px 1.5px at 496px 186px, rgba(180,210,255,.95), transparent), radial-gradient(1.2px 1.2px at 288px 4px, rgba(180,210,255,.95), transparent), radial-gradient(1.5px 1.5px at 429px 547px, rgba(180,210,255,.95), transparent), radial-gradient(2px 2px at 326px 128px, rgba(180,210,255,.95), transparent), radial-gradient(1.5px 1.5px at 527px 55px, rgba(180,210,255,.95), transparent), radial-gradient(1.5px 1.5px at 401px 407px, rgba(180,210,255,.95), transparent), radial-gradient(1.5px 1.5px at 403px 106px, rgba(180,210,255,.95), transparent), radial-gradient(1.2px 1.2px at 410px 63px, rgba(180,210,255,.95), transparent), radial-gradient(1.5px 1.5px at 68px 213px, rgba(180,210,255,.95), transparent); background-size: 560px 560px; opacity: 0.7; animation: twinkle 4s ease-in-out infinite alternate; }
+  @keyframes twinkle { from { opacity: 0.35; } to { opacity: 0.85; } }
+  #space .planet { position: absolute; right: 7%; top: 18%; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #5a8de8, #1f3f95 55%, #0b1530 75%); box-shadow: inset -24px -18px 40px rgba(0, 0, 0, 0.7), 0 0 60px rgba(63, 125, 216, 0.25); opacity: 0.35; filter: blur(0.3px); }
+  #space .planet::after { content: ""; position: absolute; left: -40%; top: 44%; width: 180%; height: 14%; border-radius: 50%; border: 2px solid rgba(125, 176, 239, 0.35); transform: rotate(-14deg); }
+  .top { background: rgba(4, 5, 11, 0.78); }
+  .hero { background: radial-gradient(700px 420px at 78% 40%, rgba(63, 125, 216, 0.20), transparent 65%); }
+  .hero, .demo, .band, .foot { position: relative; }
+  .hero > .wrap, .demo > .wrap, .band > :not(.junk), .foot > .wrap { position: relative; z-index: 1; }
+  .foot { background: rgba(4, 5, 11, 0.6); }
+  @media (prefers-reduced-motion: reduce) { #space::after, .junk * { animation: none !important; } }
+
+  /* The junk: low-key, behind everything, mostly out in the margins */
+  .junk { position: absolute; z-index: 0; pointer-events: none; opacity: 0.55; font-family: Verdana, Arial, sans-serif; }
+  @media (max-width: 1100px) { .junk { display: none; } }
+  .junk--top8 { left: -170px; top: 110px; width: 150px; padding: 6px; background: #fff; border: 1px solid #f90; transform: rotate(-5deg); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6); }
+  .junk--top8 b { display: block; padding: 2px 4px; margin-bottom: 5px; font-size: 9px; color: #f60; background: #fc9; }
+  .junk--top8 div { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .junk--top8 i { aspect-ratio: 1; background: var(--f); border: 1px solid #999; }
+  .junk--top8 span { display: block; margin-top: 5px; font-size: 8px; color: #039; text-decoration: underline; text-align: center; }
+  .junk--construction { right: -175px; top: 90px; width: 150px; padding: 10px 6px; text-align: center; font: bold 12px/1.2 Arial, sans-serif; color: #000; background: repeating-linear-gradient(-45deg, #ffd400 0 12px, #111 12px 24px); border: 2px solid #000; transform: rotate(4deg); image-rendering: pixelated; }
+  .junk--construction span { display: inline-block; padding: 4px 6px; background: #ffd400; border: 2px solid #000; animation: blink 0.8s steps(1) infinite; }
+  .junk--construction small { display: block; margin-top: 6px; padding: 2px; font: 9px Verdana, sans-serif; color: #ffd400; background: #000; }
+  @keyframes blink { 50% { opacity: 0.2; } }
+  .junk--glitter { left: -185px; top: 220px; width: 170px; font: bold 17px/1.2 "Comic Sans MS", "Comic Sans", cursive; text-align: center; transform: rotate(-3deg); background: linear-gradient(90deg, #ff7ad9, #ffe07a, #7affd1, #7ab8ff, #ff7ad9); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: glitter 2.5s linear infinite; filter: drop-shadow(0 0 4px rgba(255, 122, 217, 0.5)); }
+  @keyframes glitter { to { background-position: 300% 0; } }
+  .junk--new { right: -120px; top: 40px; display: grid; place-items: center; width: 84px; height: 84px; font: bold 18px Arial, sans-serif; color: #ff0; background: #e00; clip-path: polygon(50% 0, 61% 18%, 82% 10%, 80% 32%, 100% 40%, 86% 56%, 98% 76%, 76% 78%, 70% 100%, 50% 86%, 30% 100%, 24% 78%, 2% 76%, 14% 56%, 0 40%, 20% 32%, 18% 10%, 39% 18%); animation: spin 6s linear infinite; text-shadow: 1px 1px #800; }
+  .junk--new span { animation: blink 0.6s steps(1) infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .junk--counter { left: -165px; top: 120px; padding: 6px 8px; font: 10px Verdana, sans-serif; color: #ccc; background: #111; border: 1px solid #444; transform: rotate(2deg); }
+  .junk--counter b { display: block; margin-top: 3px; padding: 2px 4px; font: bold 13px "Courier New", monospace; letter-spacing: 3px; color: #0f0; background: #000; border: 1px inset #333; }
+  .junk--netscape { right: -175px; top: 160px; width: 150px; padding: 5px; font: 9px/1.3 Verdana, sans-serif; text-align: center; color: #c0c0c0; background: #000080; border: 2px outset #c0c0c0; transform: rotate(-3deg); }
+  .junk--netscape b { display: block; margin-bottom: 3px; color: #fff; }
+  .junk--cursor { right: -110px; top: 340px; width: 28px; height: 28px; color: #fff; filter: drop-shadow(0 0 6px #7db0ef); animation: sparkle 1.6s ease-in-out infinite; }
+  @keyframes sparkle { 50% { transform: scale(0.6) rotate(45deg); opacity: 0.4; } }
+  .junk--email { left: -150px; bottom: 40px; padding: 6px 8px; font: bold 11px Arial, sans-serif; color: #fff; background: linear-gradient(#5a5af0, #22229a); border: 2px outset #8a8aff; animation: bob 2s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-6px); } }
 </style>
 </head>
 <body>
+  <div id="space" aria-hidden="true"><div class="planet"></div></div>
   <div id="retro" aria-hidden="true" hidden>
     <div class="r-wrap">
       <div class="r-top"><div class="r-top__in"><div class="r-logo">twitchspace<small>a place for streamers</small></div>
@@ -320,6 +370,7 @@
   </section>
 
   <section class="demo" id="demo">
+    <div class="junk junk--new" aria-hidden="true" style="right:24px;top:24px"><span>NEW!</span></div>
     <div class="wrap">
       <div class="demo__head">
         <div>
@@ -439,6 +490,7 @@
 
   <main class="wrap">
       <section class="band" id="streamer">
+        <div class="junk junk--top8" aria-hidden="true"><b>My Top 8</b><div><i style="--f:#3fc98e"></i><i style="--f:#5a8de8"></i><i style="--f:#8fd14f"></i><i style="--f:#aaa"></i><i style="--f:#e2568f"></i><i style="--f:#a9cf45"></i><i style="--f:#c788e8"></i><i style="--f:#e0a53a"></i></div><span>view all of Tom's friends</span></div>
         <p class="band__eyebrow">Streamers</p>
         <h3 class="band__title">Keep yapping. We'll keep track.</h3>
         <p class="band__lead">Your chat, your mods and the Twitch bits you care about, in one OBS dock that's easy to read and stays quiet until something actually needs you. Talk to chat, bookmark what you want to come back to, and let everything else take care of itself.</p>
@@ -453,6 +505,8 @@
         </ul>
       </section>
       <section class="band" id="mods">
+        <div class="junk junk--glitter" aria-hidden="true">~*~ thanks 4 the add ~*~</div>
+        <div class="junk junk--construction" aria-hidden="true"><span>UNDER CONSTRUCTION</span><small>pardon our dust!!</small></div>
         <p class="band__eyebrow">For mods</p>
         <h3 class="band__title">Help the streamer without cluttering their chat.</h3>
         <p class="band__lead">A side panel next to Twitch for asking, nudging and looking out, all kept between you and the streamer.</p>
@@ -466,6 +520,9 @@
         </ul>
       </section>
       <section class="band" id="qol">
+        <svg class="junk junk--cursor" aria-hidden="true" viewBox="0 0 24 24"><path fill="currentColor" d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z"/></svg>
+        <div class="junk junk--netscape" aria-hidden="true"><b>Best viewed in</b>Netscape Navigator at 800 x 600</div>
+        <div class="junk junk--counter" aria-hidden="true">you are visitor #<b>0000815</b></div>
         <p class="band__eyebrow">Quality of life</p>
         <h3 class="band__title">Twitch, just a bit nicer to use.</h3>
         <p class="band__lead">The rest of Twitch Space: small fixes and extras for anyone who watches a lot of Twitch.</p>
@@ -483,6 +540,7 @@
   </main>
 
   <footer class="foot">
+    <div class="junk junk--email" aria-hidden="true" style="left:30px;bottom:auto;top:-46px">✉ e-mail me!!</div>
     <div class="wrap">
       <span class="tom"><img src="brand/tom.png" alt="" width="26" height="26"> <img src="brand/twitch-space.svg" alt="Twitch Space" style="width:auto;height:20px"></span>
       <span>Questions, answers and flagged lines go only to the people you've connected with. In this demo everyone is pretend and nothing is sent anywhere.</span>
