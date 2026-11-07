@@ -3453,3 +3453,15 @@ body.livechat .dot--resting:not(:hover):not(.dot--answer):not(.dot--ask) { box-s
 .oc-line--marked::before { background: var(--glowc); }
 /* Square corners; the softness comes only from the blurred edge. */
 .oc-line--marked, .oc-line--flagged { border-radius: 0; }
+
+/* Something waiting from someone: a quiet ring in their colour, no pulsing glow, and the
+   count as a small dark tag that barely takes any room. */
+.dot--ask { animation: none; box-shadow: 0 0 0 1.5px var(--c, var(--amber)); }
+.dot__count, .dot--answer .dot__count {
+  top: -3px; right: -4px;
+  min-width: 12px; height: 12px; padding: 0 3px;
+  font-size: 8.5px; font-weight: 700; line-height: 12px;
+  color: #b9b9c3; background: #1a1a1e;
+  border: 1px solid #000; border-radius: 6px;
+  box-shadow: none;
+}
