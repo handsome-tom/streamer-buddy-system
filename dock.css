@@ -3165,3 +3165,20 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-modicons { gap: 0; margin-right: 3px; }
 .oc-modicon { width: 16px; height: 18px; }
 .oc-line { padding-top: 4px; padding-bottom: 4px; }
+/* Flatter: solid cards with a coloured edge and a black shadow, no glow */
+.oc-event, .oc-event--bomb { margin: 5px 6px; padding: 8px 10px; background: color-mix(in srgb, var(--ev) 13%, #1f1f23); border-radius: 6px; box-shadow: inset 3px 0 0 var(--ev), 0 2px 6px rgba(0, 0, 0, 0.7); }
+.oc-event__icon { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+.oc-event--streak .oc-event__icon { color: #fff; background: #e0520f; }
+.oc-event--streak .oc-event__value { color: #ff9a4d; }
+.oc-event--bomb .oc-event__icon { width: 40px; height: 40px; }
+.oc-giftees__count { color: #c9a8ff; }
+.oc-giftee { background: #18181b; border-color: #3a3a3d; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+.oc-giftee svg { color: #bf94ff; }
+.oc-bits { background: #7b3fe4; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+.oc-topcard, .oc-topcard--pin { background: color-mix(in srgb, var(--tc) 12%, #1f1f23); border: 1px solid #35353b; border-left: 3px solid var(--tc); border-radius: 6px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7); }
+.oc-topcard--pin { --tc: #9147ff; }
+.oc-topcard--pin .oc-topcard__label { color: #bf94ff; }
+.oc-topcard .oc-topcard__pin { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+.oc-notice--raid { margin: 5px 6px; border-radius: 6px; background: color-mix(in srgb, var(--raid) 14%, #1f1f23); box-shadow: inset 3px 0 0 var(--raid), 0 2px 6px rgba(0, 0, 0, 0.7); }
+.oc-redeem { box-shadow: inset 2px 0 0 rgba(0, 181, 240, 0.7), 0 1px 4px rgba(0, 0, 0, 0.5); }
+.oc-card__fact:nth-child(2) .oc-card__icon svg { fill: currentColor; } /* Twitch's heart is solid */
