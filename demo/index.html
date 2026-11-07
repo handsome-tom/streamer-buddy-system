@@ -315,6 +315,7 @@
   .screen:first-child iframe { border-color: rgba(63, 201, 142, 0.4); }
   .screen:last-child iframe { border-color: rgba(240, 163, 48, 0.4); }
   .screen:last-child .menu__more { color: var(--honey); }
+  .demo { border-top: 0; }
 </style>
 </head>
 <body>
@@ -600,9 +601,11 @@
       const vh = innerHeight;
       const d = demo.getBoundingClientRect();
       const st = stage.getBoundingClientRect();
-      const coming = clamp((vh - d.top) / (vh * 0.9)); // 0 while the demo is below the screen
+      // Nothing while any of the hero is still on screen (under the 58px top bar).
+      const hero = document.querySelector(".hero").getBoundingClientRect();
+      const coming = clamp((58 - hero.bottom) / (vh * 0.25));
       const leaving = clamp(d.bottom / (vh * 0.6)); // 1 until the demo's end comes up
-      const screensIn = clamp((vh * 0.95 - st.top) / (vh * 0.45)); // the screens arriving
+      const screensIn = clamp((vh * 0.75 - st.top) / (vh * 0.35)); // the screens arriving
       root.style.setProperty("--split-color", (coming * leaving).toFixed(3));
       root.style.setProperty("--split-text", (clamp(coming * 1.4) * (1 - screensIn)).toFixed(3));
     }
