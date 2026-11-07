@@ -1677,6 +1677,10 @@
       if (LIVECHAT && !(asks + answers + said) && !(light && liveWasHere(login))) return null;
       const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}${online && !LIVECHAT ? " dot--online" : ""}${idle ? " dot--idle" : ""}${light?.ring ? ` dot--${light.ring}` : ""}${light?.away ? " dot--away" : light && !light.ring ? " dot--here" : ""}`);
       dot.type = "button";
+      // The streamer's dock: a mod set to Idle, or not on Streamer Buddy right now (or set to
+      // Offline), is greyed out with a white badge, so it's clear to leave them be.
+      const resting = LIVECHAT && mutual && (idle || !online) ? (idle ? "idle" : "offline") : "";
+      if (resting) dot.classList.add("dot--resting", `dot--resting-${resting}`);
       if (colorOf(login)) {
         dot.style.setProperty("--c", colorOf(login));
         dot.style.setProperty("--ink", inkOn(colorOf(login)));
@@ -1689,6 +1693,8 @@
         : asks ? `${login} ${fromThem.every((q) => q.note) ? "sent you a message" : "asked you something"}`
         : answers ? `${login} answered you`
         : said ? `${login} sent you a message`
+        : resting === "idle" ? `${login} is idle: they'd like to be left alone for now${light ? ` (${light.says})` : ""}`
+        : resting ? `${login} is offline in Streamer Buddy: anything you send waits for them${light ? ` (${light.says})` : ""}`
         : light ? `${login}: ${light.says}${idle ? ", set to idle" : ""}`
         : `${login}${idle ? " (idle)" : online ? " (online)" : ""}`;
       if (pics[login]) {
@@ -1698,6 +1704,14 @@
         dot.append(img);
       } else {
         dot.append(el("span", "dot__letter", login[0].toUpperCase()));
+      }
+      if (resting) {
+        const badge = el("span", "dot__rest");
+        // Idle: a moon. Offline: a small power symbol.
+        badge.innerHTML = resting === "idle"
+          ? svg(`<path d="M15.5 12.2A6 6 0 1 1 7.8 4.5a4.7 4.7 0 0 0 7.7 7.7z" ${LINE} stroke-width="2.4"/>`, 9)
+          : svg(`<path d="M10 3.5v6" ${LINE} stroke-width="2.6"/><path d="M6.2 6.2a5.6 5.6 0 1 0 7.6 0" ${LINE} stroke-width="2.6"/>`, 9);
+        dot.append(badge);
       }
       if (asks + answers + said) dot.append(el("span", "dot__count", String(asks + answers + said)));
       dot.addEventListener("click", () => {

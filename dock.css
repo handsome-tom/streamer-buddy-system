@@ -3411,3 +3411,11 @@ body.no-modicons .oc-modicons { display: none; }
 
 /* The connection glow: a small soft spot tucked into the top-left corner. */
 .bar__status::before { bottom: auto; width: 34px; height: 22px; opacity: 0.5; background: radial-gradient(ellipse at top left, var(--glow), transparent 70%); }
+
+/* A mod who's Idle or offline in Streamer Buddy, on the streamer's dock: greyed out, no ring,
+   and a white badge (a moon for Idle, a power symbol for offline), so they're left be. */
+.dot--resting img, .dot--resting .dot__letter { filter: grayscale(1) brightness(0.55); opacity: 0.8; }
+body.livechat .dot--resting:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: none; }
+.dot--resting::before, .dot--resting::after { display: none !important; }
+.dot__rest { position: absolute; z-index: 2; right: -3px; bottom: -3px; display: grid; place-items: center; width: 14px; height: 14px; color: #111114; background: #fff; border: 2px solid var(--panel, #18181b); border-radius: 50%; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); pointer-events: none; }
+.dot__rest svg { display: block; }
