@@ -279,6 +279,19 @@
   .credits a { text-decoration: none; border-bottom: 1px solid rgba(125, 176, 239, 0.35); }
   .credits a:hover { color: #fff; border-bottom-color: #fff; }
   .credits__name { color: #c4c4cc; }
+
+  /* ===== Squared up: two equal columns, same-height labels, same-shape menus, screens level ===== */
+  .stage { display: grid; grid-template-columns: repeat(2, minmax(0, 420px)); justify-content: center; align-items: start; gap: 28px; }
+  @media (max-width: 920px) { .stage { grid-template-columns: minmax(0, 420px); } }
+  .screen { width: auto; min-width: 0; }
+  .screen iframe, #mod, #obs { width: 100%; }
+  .screen__label { position: relative; height: 24px; }
+  .screen.spot .screen__label::after { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+  .menu { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 10px; border-radius: 3px; }
+  .menu__head { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; min-height: 16px; margin: 0 0 2px; }
+  .menu__more { margin: 0; font-size: 11px; letter-spacing: 0; text-transform: none; }
+  .menu .chip { justify-content: center; width: 100%; min-width: 0; height: 34px; padding: 0 8px; white-space: nowrap; border-radius: 3px; }
+  .chip, .console select, .btn, .tab, .tabs, .console, .all, .tour, .tour__count, iframe { border-radius: 3px; }
 </style>
 </head>
 <body>
@@ -404,14 +417,13 @@
           <div class="screen__label">Streamer's OBS dock <small>you're the streamer</small>
             <span class="info" tabindex="0" data-tip="What the streamer sees in OBS: mods' pictures and the message area at the top, then their chat, with Twitch's events and mod tools built in. Hover a chat line to bookmark, pin or reply.">?</span></div>
           <div class="menu" aria-label="Try on the streamer's side">
-            <span class="menu__head">On the streamer's side</span>
+            <span class="menu__head">On the streamer's side <a class="menu__more" href="#allControls" data-tip="Every other Twitch event and chat control, below the screens.">More…</a></span>
             <button type="button" class="chip" data-click="streamerAsk" data-tip="← The streamer asks mod1 something. It shows up in the mod's panel.">Ask mod1<span class="go" aria-hidden="true">←</span></button>
             <button type="button" class="chip" data-click="tRaid" data-k style="--k:#8fd14f" data-tip="Lump raids with a crowd. Raiders get a RAID tag with Lump's picture.">Raid</button>
             <button type="button" class="chip" data-click="tGift" data-k style="--k:#e2568f" data-tip="20 gifted subs: a progress card on top, and a card listing everyone who got one.">Gift bomb</button>
             <button type="button" class="chip" data-click="tFirst" data-k style="--k:#3fc98e" data-tip="Someone chats in the channel for the very first time.">First-timer</button>
             <button type="button" class="chip" data-click="tStreak" data-k style="--k:#ee7a2f" data-tip="A viewer shares their watch streak.">Streak</button>
             <button type="button" class="chip" data-click="tPoll" data-k style="--k:#5a8de8" data-tip="A poll, with live votes at the top of chat.">Poll</button>
-            <a class="menu__more" href="#allControls" data-tip="Every other Twitch event and chat control, below the screens.">More…</a>
           </div>
           <iframe id="obs" title="Streamer's OBS dock"></iframe>
         </div>
