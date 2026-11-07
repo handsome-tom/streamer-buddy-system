@@ -1337,9 +1337,6 @@
         more.innerHTML = icon("more", 16);
         acts.append(gift, follow, whisper, more);
         card.append(acts);
-        aboutPerson(uid).then(({ follow: f }) => {
-          if (card.dataset.uid === uid && f) follow.textContent = "Following";
-        });
 
         const box = el("form", "oc-card__whisper");
         box.hidden = true;
