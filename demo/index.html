@@ -247,7 +247,6 @@
   .tour__skip[hidden] { display: none; }
   @media (max-width: 760px) { .tour { grid-template-columns: auto 1fr; } .tour__actions { grid-column: 1 / -1; justify-content: flex-start; } }
   .screen.spot iframe { border-color: var(--brand-light); box-shadow: 0 0 0 3px rgba(125, 176, 239, 0.25), 0 18px 44px rgba(0, 0, 0, 0.6); }
-  .screen.spot .screen__label::after { content: "Look here"; margin-left: auto; padding: 2px 8px; font-size: 11px; font-weight: 800; color: #0b1a3a; background: var(--brand-light); border-radius: 3px; }
 
   /* ===== The backdrop: a vague space scene that stays put while the page scrolls over it ===== */
   html, body { background: transparent; }
@@ -287,7 +286,6 @@
   .screen { width: auto; min-width: 0; }
   .screen iframe, #mod, #obs { width: 100%; }
   .screen__label { position: relative; height: 24px; }
-  .screen.spot .screen__label::after { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
   .menu { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 10px; border-radius: 3px; }
   .menu__head { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; min-height: 16px; margin: 0 0 2px; }
   .menu__more { margin: 0; font-size: 11px; letter-spacing: 0; text-transform: none; }
