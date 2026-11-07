@@ -272,6 +272,13 @@
   .foot { background: rgba(4, 5, 11, 0.6); }
   @media (prefers-reduced-motion: reduce) { #space::after { animation: none !important; } }
 
+
+  /* Credits, at the very bottom */
+  .credits { width: 100%; margin: 6px 0 0; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12.5px; color: #8d8d97; }
+  .credits a, .credits__name { font-weight: 700; color: var(--brand-light); }
+  .credits a { text-decoration: none; border-bottom: 1px solid rgba(125, 176, 239, 0.35); }
+  .credits a:hover { color: #fff; border-bottom-color: #fff; }
+  .credits__name { color: #c4c4cc; }
 </style>
 </head>
 <body>
@@ -511,6 +518,10 @@
     <div class="wrap">
       <span class="tom"><img src="brand/tom.png" alt="" width="26" height="26"> <img src="brand/twitch-space.svg" alt="Twitch Space" style="width:auto;height:20px"></span>
       <span>Questions, answers and flagged lines go only to the people you've connected with. In this demo everyone is pretend and nothing is sent anywhere.</span>
+      <p class="credits">Thanks to
+        <a href="https://www.twitch.tv/myspacetomofficial" target="_blank" rel="noopener">MyspaceTomOfficial</a>,
+        <a href="https://www.twitch.tv/tallglassofbees" target="_blank" rel="noopener">TallGlassOfBees</a>
+        and <span class="credits__name">TallGlassOfWasps</span>.</p>
     </div>
   </footer>
 
