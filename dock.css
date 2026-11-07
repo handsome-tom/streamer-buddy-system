@@ -3198,15 +3198,13 @@ body.no-modicons .oc-modicons { display: none; }
 
 /* ===== One colour per kind of notice, on one calm dark card =====
    Every card sits on the same mid-dark grey; the kind's colour is on its icon, its big number
-   and its label, so that's what catches the eye. Big numbers are Outfit, labels PT Sans,
-   with a little extra letter spacing (fonts/, SIL Open Font Licence). */
-@font-face { font-family: "PT Sans"; font-weight: 400; font-display: swap; src: url("fonts/pt-sans-400.woff2") format("woff2"); }
-@font-face { font-family: "PT Sans"; font-weight: 700; font-display: swap; src: url("fonts/pt-sans-700.woff2") format("woff2"); }
-@font-face { font-family: "Outfit"; font-weight: 500 700; font-display: swap; src: url("fonts/outfit.woff2") format("woff2"); }
+   and its label, so that's what catches the eye. Numbers and labels are Plus Jakarta Sans
+    (fonts/, SIL Open Font Licence). */
+@font-face { font-family: "Plus Jakarta Sans"; font-weight: 400 800; font-display: swap; src: url("fonts/plus-jakarta-sans.woff2") format("woff2"); }
 :root {
   --card: #25252b;
-  --serif: "Outfit", Inter, sans-serif;
-  --label: "PT Sans", Inter, sans-serif;
+  --serif: "Plus Jakarta Sans", Inter, sans-serif;
+  --label: "Plus Jakarta Sans", Inter, sans-serif;
   --k-sub: #a970ff;
   --k-gift: #ff5fa2;
   --k-streak: #ff7a1a;
@@ -3237,7 +3235,7 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-event__icon, .oc-event--streak .oc-event__icon { width: 34px; height: 34px; color: #151518; background: var(--ev); border-radius: 50%; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7); }
 .oc-event--bomb .oc-event__icon { width: 44px; height: 44px; }
 
-/* The big number in Outfit, then the label in PT Sans. */
+/* The big number, then the label. */
 .oc-event__big { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; line-height: 1.2; }
 .oc-event__value, .oc-event--streak .oc-event__value { font-family: var(--serif); font-size: 22px; font-weight: 700; line-height: 1.05; letter-spacing: 0.02em; color: var(--ev); }
 .oc-event--bomb .oc-event__value { font-size: 28px; }
@@ -3313,3 +3311,61 @@ body.no-modicons .oc-modicons { display: none; }
   --k-pin: #b8b8c2;
 }
 .oc-event__value, .oc-event--streak .oc-event__value { font-weight: 700; letter-spacing: 0.01em; }
+
+/* ===== Soft cards, like a polished app: rounded, a faint lit edge, a deep soft shadow =====
+   (replaces the black borders), and icon tiles that look like a glassy layered stack. */
+:root { --card: #202024; --card-top: #27272c; --edge: rgba(255, 255, 255, 0.07); }
+.oc-event, .oc-event--bomb, .oc-redeem, .oc-notice--announcement, .oc-notice--raid, .oc-notice:not(.oc-event),
+.oc-topcard, .oc-topcard--pin {
+  margin-left: 8px; margin-right: 8px;
+  background: linear-gradient(180deg, var(--card-top), var(--card) 60%);
+  border: 1px solid var(--edge);
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 12px 28px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+.oc-event, .oc-event--bomb, .oc-redeem, .oc-notice--announcement, .oc-notice--raid { padding: 10px 12px; gap: 12px; }
+.oc-topcard, .oc-topcard--pin { margin: 0; padding: 9px 11px; border-radius: 12px; }
+.oc-top { gap: 6px; padding: 6px 8px; }
+
+/* Icon tiles: a gradient tile in the kind's colour, with a second tile peeking out behind it. */
+.oc-event__icon, .oc-event--streak .oc-event__icon {
+  position: relative; isolation: isolate;
+  width: 36px; height: 36px; color: #fff;
+  background: none; border: 0; border-radius: 11px; box-shadow: none;
+}
+.oc-event__icon::before, .oc-event__icon::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.oc-event__icon::before { z-index: 0; background: var(--ev); opacity: 0.55; transform: translate(5px, -4px) rotate(9deg); }
+.oc-event__icon::after {
+  z-index: 1;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--ev) 72%, #fff) 0%, var(--ev) 45%, color-mix(in srgb, var(--ev) 70%, #000) 100%);
+  border: 1px solid color-mix(in srgb, var(--ev) 55%, #fff);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 6px 16px color-mix(in srgb, var(--ev) 30%, transparent), 0 3px 8px rgba(0, 0, 0, 0.5);
+}
+.oc-event__icon svg { position: relative; z-index: 2; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35)); }
+.oc-event--bomb .oc-event__icon { width: 44px; height: 44px; border-radius: 13px; }
+
+/* Top card icons: the same lit gradient tile, smaller and without the stack. */
+.oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin {
+  width: 26px; height: 26px; border-radius: 8px; color: #fff;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--tc) 72%, #fff) 0%, var(--tc) 45%, color-mix(in srgb, var(--tc) 70%, #000) 100%);
+  border: 1px solid color-mix(in srgb, var(--tc) 55%, #fff);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Type: one clean sans throughout the cards. */
+.oc-event, .oc-redeem, .oc-notice, .oc-topcard { font-family: var(--label); }
+.oc-event__value, .oc-event--streak .oc-event__value { font-family: var(--label); font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
+.oc-event--bomb .oc-event__value { font-size: 28px; }
+.oc-event__what { font-size: 14px; font-weight: 700; letter-spacing: 0; }
+.oc-event__who { font-size: 12px; letter-spacing: 0; color: #9a9aa5; }
+.oc-topcard__label, .oc-topcard--pin .oc-topcard__label { font-size: 13px; font-weight: 700; letter-spacing: 0; color: var(--text); }
+.oc-topcard__time, .oc-topcard--pin .oc-topcard__time { font-family: var(--label); font-weight: 700; color: var(--tc); }
+.oc-notice--announcement .oc-notice__head { font-weight: 700; letter-spacing: 0; }
+.oc-raid__title, .oc-notice--raid .oc-raid__title { font-family: var(--label); font-weight: 800; letter-spacing: 0.02em; }
+.oc-raid__pic { border-radius: 12px; }
+.oc-firsttag, .oc-raidtag, .oc-giftees__count, .oc-giftee, .oc-redeem__head, .oc-redeem__cost, .oc-bits b { font-family: var(--label); letter-spacing: 0.01em; }
+
+/* Little tinted chips (gift names), like the reference's soft orange notice. */
+.oc-giftee { background: color-mix(in srgb, var(--k-gift) 10%, #1b1b1f); border: 1px solid color-mix(in srgb, var(--k-gift) 22%, transparent); border-radius: 8px; box-shadow: none; }
+.oc-topbar { height: 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.07); }
+.oc-topbar__fill { border-radius: 6px; background: linear-gradient(90deg, color-mix(in srgb, var(--tc) 70%, #000), var(--tc)); }
