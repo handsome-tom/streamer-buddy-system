@@ -427,6 +427,20 @@ const twitch = (() => {
       });
       return { who, title: r.title };
     },
+    // A watch streak someone shares, as Twitch posts it.
+    streak() {
+      const who = pick(CHATTERS);
+      const n = pick([5, 12, 25, 55, 100]);
+      notice("watch_streak", { who, system: `${who} watched ${n} consecutive streams and sparked a watch streak!`, text: pick(["", "never missing one", "BIRD CITY", "here every time o7"]) });
+      return { who, n };
+    },
+    // Someone's total bits reaches a new badge.
+    bitsBadge() {
+      const who = pick(CHATTERS);
+      const tier = pick([1000, 5000, 10000]);
+      notice("bits_badge_tier", { who, system: `bits badge tier notification`, fields: { bits_badge_tier: { tier } } });
+      return { who, tier };
+    },
     cheer() {
       const who = pick(CHATTERS);
       chat(pick(["great stream!", "for the snack fund", "that play deserved it"]), who, { bits: pick([100, 250, 500, 1000]) });

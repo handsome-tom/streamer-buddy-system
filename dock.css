@@ -3110,3 +3110,30 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-redeem__cost { font-weight: 700; color: #5fd3ff; }
 .oc-redeem__cost::before { content: "◉"; margin-right: 2px; font-size: 10px; vertical-align: 1px; }
 .oc-reward { margin-right: 4px; padding: 0 5px; font-size: 10px; font-weight: 700; color: #5fd3ff; border: 1px solid rgba(0, 181, 240, 0.6); border-radius: 3px; }
+/* Twitch's event notices: icon on the left, the number big and bold */
+.oc-event { --ev: #9147ff; display: flex; gap: 9px; align-items: flex-start; margin: 4px 0; padding: 7px 10px; background: linear-gradient(90deg, color-mix(in srgb, var(--ev) 22%, transparent), color-mix(in srgb, var(--ev) 6%, transparent)); box-shadow: inset 3px 0 0 var(--ev); }
+.oc-event--streak { --ev: #ff7a1a; }
+.oc-event--sub { --ev: #9147ff; }
+.oc-event--gift { --ev: #bf5af2; }
+.oc-event--bits { --ev: #9c6bff; }
+.oc-event--charity { --ev: #ff4f8b; }
+.oc-event__icon { display: grid; place-items: center; width: 34px; height: 34px; flex: none; color: #fff; background: var(--ev); border-radius: 50%; box-shadow: 0 0 12px color-mix(in srgb, var(--ev) 60%, transparent); }
+.oc-event--streak .oc-event__icon { color: #ffe08a; background: radial-gradient(circle at 50% 70%, #ff5a00, #c23b00); }
+.oc-event__words { min-width: 0; }
+.oc-event__big { font-size: 14px; font-weight: 700; line-height: 1.25; }
+.oc-event__value { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; color: #fff; }
+.oc-event--streak .oc-event__value { color: #ffb066; }
+.oc-event__who { margin-top: 1px; font-size: 12px; color: var(--muted); }
+.oc-event__msg { margin-top: 4px; color: var(--text); }
+/* Cheers: a gem and the number in bold */
+.oc-bits { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px 1px 5px; font-size: 12px; color: #fff; background: linear-gradient(90deg, #7b3fe4, #9c6bff); border-radius: 10px; vertical-align: 1px; }
+.oc-bits b { font-size: 13px; font-weight: 800; }
+/* The pinned message */
+.oc-topcard--pin { --tc: #bf94ff; background: linear-gradient(135deg, rgba(145, 71, 255, 0.24), rgba(145, 71, 255, 0.07)); border-color: rgba(191, 148, 255, 0.45); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); }
+.oc-topcard__pin { display: grid; place-items: center; width: 22px; height: 22px; flex: none; color: #fff; background: #9147ff; border-radius: 50%; }
+.oc-topcard--pin .oc-topcard__label { font-size: 11px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: #d4bcff; }
+.oc-topcard--pin .oc-topcard__time { padding: 0 6px; font-size: 11px; color: #fff; background: rgba(0, 0, 0, 0.3); border-radius: 8px; }
+.oc-topcard__pinned { margin-top: 5px; font-size: 14px; line-height: 1.4; }
+.oc-topcard__sender { font-weight: 800; }
+.oc-topcard .oc-topcard__pin { background: var(--tc); }
+.oc-topcard--pin .oc-topcard__pin { background: #9147ff; }

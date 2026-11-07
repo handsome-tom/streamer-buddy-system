@@ -67,6 +67,14 @@
     popout: '<path d="M11.5 3.5h5v5M16.5 3.5 9.5 10.5M14.5 12v4.5h-11v-11H8"/>',
     more: '<circle cx="10" cy="4.5" r="1.2" fill="currentColor"/><circle cx="10" cy="10" r="1.2" fill="currentColor"/><circle cx="10" cy="15.5" r="1.2" fill="currentColor"/>',
     info: '<circle cx="10" cy="10" r="6.5"/><path d="M10 9v4.5M10 6.6v.1"/>',
+    flame: '<path d="M10 2.5c.6 2.6 4.8 4.6 4.8 9.1A4.8 4.8 0 0 1 10 16.5a4.8 4.8 0 0 1-4.8-4.9c0-2.1 1-3.4 2-4.4.2 1.4.9 2.4 1.9 2.9C9 7.6 9 5 10 2.5z" fill="currentColor" stroke="none"/>',
+    star: '<path d="m10 2.8 2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7z" fill="currentColor" stroke="none"/>',
+    giftfill: '<path d="M3 8h14v3H3zM4 11h12v6H4z" fill="currentColor" stroke="none"/><path d="M10 8v9M10 8c-1-3-5-3-5-1 0 1 2 1 5 1zM10 8c1-3 5-3 5-1 0 1-2 1-5 1z" stroke="currentColor" stroke-width="1.5" fill="none"/>',
+    gem: '<path d="M5.5 3.5h9l3 4-7.5 9-7.5-9z" fill="currentColor" stroke="none"/><path d="M2.5 7.5h15M7.5 3.5 10 16.5l2.5-13" stroke="#18181b" stroke-width="0.9" fill="none" opacity="0.45"/>',
+    crown: '<path d="M3 15.5 2.5 6l4 3.5L10 4l3.5 5.5 4-3.5-.5 9.5z" fill="currentColor" stroke="none"/>',
+    heartfill: '<path d="M10 17s-7-4.3-7-9.2A3.8 3.8 0 0 1 10 5.5a3.8 3.8 0 0 1 7 2.3C17 12.7 10 17 10 17z" fill="currentColor" stroke="none"/>',
+    chart: '<path d="M4 16.5V9h3v7.5zM8.5 16.5V4h3v12.5zM13 16.5v-5h3v5z" fill="currentColor" stroke="none"/>',
+    pin: '<path d="M12.6 2.8 17.2 7.4l-2 .5-3.1 3.1.4 3.7-1.4 1.4-3.1-3.1-4.3 4.3-.7-.7 4.3-4.3-3.1-3.1 1.4-1.4 3.7.4 3.1-3.1z" fill="currentColor" stroke="none"/>',
   };
   const icon = (name, size = 15) =>
     `<svg viewBox="0 0 20 20" width="${size}" height="${size}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICON[name]}</svg>`;
@@ -612,7 +620,12 @@
         body.textContent = m.text;
         codeError(err);
       }
-      if (m.bits) line.append(el("span", "oc-bits", `${m.bits} bits`), " ");
+      if (m.bits) {
+        const b = el("span", "oc-bits");
+        b.innerHTML = icon("gem", 13);
+        b.append(el("b", "", Number(m.bits).toLocaleString()), " bits");
+        line.append(b, " ");
+      }
       // Twitch only tells the channel owner which reward it was.
       if (m.reward) line.append(el("span", "oc-reward", "Redeemed"), " ");
       const raid = !line.dataset.staff && m.login !== me.login && raidOf(m.login, m.history);
@@ -751,6 +764,54 @@
     // same from the other channels in a shared chat ("shared_chat_" in front).
     const SUB_NOTICES = ["sub", "resub", "sub_gift", "community_sub_gift", "gift_paid_upgrade", "prime_paid_upgrade", "pay_it_forward"];
     const ANNOUNCE_COLORS = { BLUE: "#00b5f0", GREEN: "#00db84", ORANGE: "#ff9a1f", PURPLE: "#a970ff" };
+    const tierName = (t, prime) => (prime ? "Prime" : t === "3000" ? "Tier 3" : t === "2000" ? "Tier 2" : "Tier 1");
+    const plural = (n, one, many) => `${Number(n).toLocaleString()} ${Number(n) === 1 ? one : many}`;
+    // How a notice is drawn: { icon, tone, value (big), what, who (the smaller line) }.
+    function eventLook(kind, e) {
+      const name = e.chatter_is_anonymous ? "Anonymous" : e.chatter_user_name || "Someone";
+      const sys = e.system_message || "";
+      if (kind === "watch_streak") {
+        const n = Number(e.watch_streak?.streak) || Number(sys.match(/(\d[\d,]*)\s+consecutive/i)?.[1]?.replace(/,/g, "")) || 0;
+        return { icon: "flame", tone: "streak", value: n ? Number(n).toLocaleString() : "", what: "stream watch streak", who: `${name} watched ${n ? plural(n, "stream", "streams") : "streams"} in a row` };
+      }
+      if (kind === "sub") {
+        const s2 = e.sub || {};
+        const months = s2.duration_months > 1 ? ` for ${s2.duration_months} months` : "";
+        return { icon: s2.is_prime ? "crown" : "star", tone: "sub", value: "", what: `New ${tierName(s2.sub_tier, s2.is_prime)} sub`, who: `${name} subscribed${months}` };
+      }
+      if (kind === "resub") {
+        const r = e.resub || {};
+        const months = r.cumulative_months || Number(sys.match(/(\d+) months/)?.[1]) || 0;
+        const streak = r.streak_months > 1 ? ` · ${r.streak_months}-month streak` : "";
+        return { icon: r.is_prime ? "crown" : "star", tone: "sub", value: months ? String(months) : "", what: months ? `${months === 1 ? "month" : "months"} subscribed` : "Resubscribed", who: `${name} · ${tierName(r.sub_tier, r.is_prime)}${streak}` };
+      }
+      if (kind === "sub_gift") {
+        const g = e.sub_gift || {};
+        const total = g.cumulative_total ? ` · ${plural(g.cumulative_total, "gift", "gifts")} in this channel` : "";
+        return { icon: "giftfill", tone: "gift", value: "", what: `Gifted a ${tierName(g.sub_tier)} sub to ${g.recipient_user_name || "someone"}`, who: `${name}${total}` };
+      }
+      if (kind === "community_sub_gift") {
+        const g = e.community_sub_gift || {};
+        const total = g.cumulative_total ? ` · ${plural(g.cumulative_total, "gift", "gifts")} in this channel` : "";
+        return { icon: "giftfill", tone: "gift", value: String(g.total || ""), what: `${tierName(g.sub_tier)} gift ${g.total === 1 ? "sub" : "subs"}`, who: `${name} is gifting to the community${total}` };
+      }
+      if (kind === "gift_paid_upgrade" || kind === "prime_paid_upgrade") {
+        return { icon: "star", tone: "sub", value: "", what: "Kept their sub going", who: sys || `${name} upgraded their sub` };
+      }
+      if (kind === "pay_it_forward") return { icon: "giftfill", tone: "gift", value: "", what: "Paid it forward", who: sys || name };
+      if (kind === "bits_badge_tier") {
+        const tier = e.bits_badge_tier?.tier || Number(sys.match(/(\d[\d,]*) bits/i)?.[1]?.replace(/,/g, "")) || 0;
+        return { icon: "gem", tone: "bits", value: tier ? Number(tier).toLocaleString() : "", what: "bits badge unlocked", who: name };
+      }
+      if (kind === "charity_donation") {
+        const c = e.charity_donation || {};
+        const a = c.amount;
+        const money = a ? (a.value / 10 ** (a.decimal_places ?? a.decimal_place ?? 2)).toLocaleString(undefined, { style: "currency", currency: a.currency || "USD" }) : "";
+        return { icon: "heartfill", tone: "charity", value: money, what: "donated", who: `${name}${c.charity_name ? ` to ${c.charity_name}` : ""}` };
+      }
+      return null;
+    }
+
     function noticeLine(e) {
       const kind = String(e.notice_type || "").replace(/^shared_chat_/, "");
       const what = SUB_NOTICES.includes(kind) ? "sub" : kind === "bits_badge_tier" || kind === "charity_donation" ? "gold" : kind;
@@ -794,6 +855,27 @@
       if (kind === "sub_gift" && e.sub_gift?.community_gift_id) {
         giftLanded(e.sub_gift.community_gift_id, e.sub_gift.recipient_user_name);
         return null;
+      }
+      // Watch streaks, subs, gifts, bits badges and charity: an icon on the left and the
+      // number that matters big and bold, then who and the rest, like Twitch's.
+      const ev = eventLook(kind, e);
+      if (ev) {
+        line.classList.add("oc-event", `oc-event--${ev.tone}`);
+        const art = el("span", "oc-event__icon");
+        art.innerHTML = icon(ev.icon, 20);
+        const words = el("div", "oc-event__words");
+        if (fromChannel) words.append(el("span", "oc-shared", fromChannel));
+        const big = el("div", "oc-event__big");
+        if (ev.value) big.append(el("span", "oc-event__value", ev.value), " ");
+        big.append(el("span", "oc-event__what", ev.what));
+        words.append(big, el("div", "oc-event__who", ev.who));
+        if (e.message?.text) {
+          const body = el("div", "oc-body oc-event__msg");
+          drawMessage(body, e.message.fragments, e.message.text);
+          words.append(body);
+        }
+        line.append(art, words);
+        return line;
       }
       if (kind === "announcement") {
         const c = ANNOUNCE_COLORS[String(e.announcement?.color || "").toUpperCase()];
@@ -1027,8 +1109,13 @@
       tops.delete(key);
       topEl.hidden = !tops.size;
     }
-    function topHead(c, key, label, until, onClose) {
+    function topHead(c, key, label, until, onClose, iconName) {
       const head = el("div", "oc-topcard__head");
+      if (iconName) {
+        const art = el("span", "oc-topcard__pin");
+        art.innerHTML = icon(iconName, 14);
+        head.append(art);
+      }
       head.append(el("span", "oc-topcard__label", label));
       if (until) {
         const t = el("span", "oc-topcard__time");
@@ -1071,9 +1158,14 @@
         return;
       }
       const c = topCard("pin", "pin");
-      topHead(c, "pin", `📌 Pinned by ${p.pinned_by_user_name || "a moderator"}`, p.ends_at, () => (pinHidden = p.message_id));
-      const body = el("div", "oc-topcard__body");
-      body.append(el("b", "", p.sender_user_name), ": ");
+      topHead(c, "pin", `Pinned by ${p.pinned_by_user_name || "a moderator"}`, p.ends_at, () => (pinHidden = p.message_id), "pin");
+      const body = el("div", "oc-topcard__body oc-topcard__pinned");
+      const sender = el("b", "oc-topcard__sender", p.sender_user_name);
+      // Their chat colour, from a line of theirs if there is one.
+      const theirs = [...list.querySelectorAll(".oc-line[data-uid]")].reverse().find((l) => l.dataset.uid === p.sender_user_id);
+      const color = safeColor(theirs?.dataset.color);
+      if (color) sender.style.color = color;
+      body.append(sender, ": ");
       const words = el("span");
       drawMessage(words, p.message?.fragments, p.message?.text || "");
       body.append(words);
@@ -1102,7 +1194,7 @@
       const g = gifts.get(id);
       const key = `gift-${id}`;
       const c = topCard(key, "gift", 45 * 1000);
-      topHead(c, key, `🎁 ${g.from} is gifting ${g.total} ${g.total === 1 ? "sub" : "subs"}!`);
+      topHead(c, key, `${g.from} is gifting ${g.total} ${g.total === 1 ? "sub" : "subs"}!`, null, null, "giftfill");
       meter(c, g.total ? g.landed / g.total : 0);
       const last = g.names.slice(-3).join(", ");
       c.append(el("div", "oc-topcard__note", `${Math.min(g.landed, g.total)} of ${g.total} given${last ? ` · ${last}` : ""}`));
@@ -1112,12 +1204,12 @@
     function hypeCard(stage, e) {
       if (stage === "end") {
         const c = topCard("hype", "hype", 30 * 1000);
-        topHead(c, "hype", `🚂 Hype Train over: level ${e.level}`);
+        topHead(c, "hype", `Hype Train over: level ${e.level}`, null, null, "flame");
         c.append(el("div", "oc-topcard__note", `Thanks to everyone who helped${e.total ? ` (${Number(e.total).toLocaleString()} points)` : ""}!`));
         return;
       }
       const c = topCard("hype", "hype");
-      topHead(c, "hype", `🚂 Hype Train · Level ${e.level || 1}`, e.expires_at);
+      topHead(c, "hype", `Hype Train · Level ${e.level || 1}`, e.expires_at, null, "flame");
       meter(c, e.goal ? (e.progress || 0) / e.goal : 0);
       const top = (e.top_contributions || []).slice(0, 3).map((t) => t.user_name).filter(Boolean);
       c.append(el("div", "oc-topcard__note", `${Number(e.progress || 0).toLocaleString()} of ${Number(e.goal || 0).toLocaleString()} to level ${(e.level || 1) + 1}${top.length ? ` · top: ${top.join(", ")}` : ""}`));
@@ -1129,7 +1221,7 @@
       if (stage === "end" && e.status === "archived") return dropTop(key);
       const done = stage === "end";
       const c = topCard(key, "poll", done ? 30 * 1000 : 0);
-      topHead(c, key, `📊 ${done ? "Poll ended" : "Poll"}: ${e.title}`, done ? null : e.ends_at);
+      topHead(c, key, `${done ? "Poll ended" : "Poll"}: ${e.title}`, done ? null : e.ends_at, null, "chart");
       const choices = e.choices || [];
       const total = choices.reduce((n, ch) => n + (ch.votes || 0), 0);
       const best = Math.max(...choices.map((ch) => ch.votes || 0));
@@ -1148,13 +1240,13 @@
       const key = `pred-${e.id}`;
       if (stage === "end" && e.status === "canceled") {
         const c = topCard(key, "pred", 15 * 1000);
-        topHead(c, key, `🔮 Prediction canceled: ${e.title}`);
+        topHead(c, key, `Prediction canceled: ${e.title}`, null, null, "star");
         return;
       }
       const done = stage === "end";
       const c = topCard(key, "pred", done ? 45 * 1000 : 0);
       const status = done ? "Prediction over" : stage === "lock" ? "Prediction locked" : "Prediction";
-      topHead(c, key, `🔮 ${status}: ${e.title}`, !done && stage !== "lock" ? e.locks_at : null);
+      topHead(c, key, `${status}: ${e.title}`, !done && stage !== "lock" ? e.locks_at : null, null, "star");
       const outcomes = e.outcomes || [];
       const total = outcomes.reduce((n, o) => n + (o.channel_points || 0), 0);
       for (const o of outcomes) {

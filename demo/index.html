@@ -73,6 +73,8 @@
       <button id="tGift" type="button">gifted subs</button>
       <button id="tRedeem" type="button">channel points</button>
       <button id="tCheer" type="button">a cheer</button>
+      <button id="tStreak" type="button">watch streak</button>
+      <button id="tBadge" type="button">bits badge</button>
       <button id="tHighlight" type="button">highlighted message</button>
       <button id="tAnnounce" type="button">announcement</button>
       <button id="tPin" type="button">pinned message</button>
@@ -249,6 +251,14 @@
   on("tRedeem", () => {
     const { who, title } = pretendTwitch.redeem();
     said(`${who} redeemed ${title}`);
+  });
+  on("tStreak", () => {
+    const { who, n } = pretendTwitch.streak();
+    said(`${who} shared a ${n}-stream watch streak`);
+  });
+  on("tBadge", () => {
+    const { who, tier } = pretendTwitch.bitsBadge();
+    said(`${who} unlocked the ${tier.toLocaleString()} bits badge`);
   });
   on("tPin", () => (pretendTwitch.pin(), said("mod2 pinned a message: it shows at the top of the streamer's chat within 10 seconds")));
   on("tHype", () => (pretendTwitch.hype(), said("A hype train started: see the top of the streamer's chat")));
