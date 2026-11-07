@@ -490,17 +490,30 @@ const twitch = (() => {
       game: name === "Lump" ? "Just Chatting" : GAMES[(h >> 3) % GAMES.length],
     };
   }
-  // Badge pictures, drawn here (Twitch's own are its artwork): a coloured tile each.
-  const tile = (bg, mark) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36"><rect width="36" height="36" rx="7" fill="${bg}"/><text x="18" y="25" font-family="Arial" font-weight="bold" font-size="17" fill="#fff" text-anchor="middle">${mark}</text></svg>`)}`;
-  const badge = (set_id, id, title, bg, mark) => ({ set_id, versions: [{ id, title, image_url_1x: tile(bg, mark), image_url_2x: tile(bg, mark) }] });
+  // Badge pictures, drawn here (Twitch's own are its artwork): a shaded tile in the badge's
+  // colour with a clean line icon (Lucide, ISC licence) on it.
+  const MARKS = {
+    star: ['<path fill="#fff" d="M12 2.5l2.94 5.96 6.56.95-4.75 4.63 1.12 6.54L12 17.5l-5.87 3.08 1.12-6.54L2.5 9.41l6.56-.95z"/>'],
+    sword: ['<path d="M14.5 17.5 3 6V3h3l11.5 11.5"/>', '<path d="m13 19 6-6"/>', '<path d="m16 16 4 4"/>', '<path d="m19 21 2-2"/>'],
+    gem: ['<path d="M6 3h12l4 6-10 13L2 9Z"/>', '<path d="M11 3 8 9l4 13 4-13-3-6"/>', '<path d="M2 9h20"/>'],
+    crown: ['<path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/>', '<path d="M5 21h14"/>'],
+    gift: ['<rect x="3" y="8" width="18" height="4" rx="1"/>', '<path d="M12 8v13"/>', '<path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/>', '<path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/>'],
+    train: ['<path d="M8 3.1V7a4 4 0 0 0 8 0V3.1"/>', '<path d="m9 15-1-1"/>', '<path d="m15 15 1-1"/>', '<path d="M9 19c-2.8 0-5-2.2-5-5v-4a8 8 0 0 1 16 0v4c0 2.8-2.2 5-5 5Z"/>', '<path d="m8 19-2 3"/>', '<path d="m16 19 2 3"/>'],
+    check: ['<path d="M20 6 9 17l-5-5"/>'],
+  };
+  const tile = (bg, mark) => {
+    const id = `g${bg.slice(1)}`;
+    return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="${bg}" stop-opacity="1"/><stop offset="1" stop-color="${bg}"/></linearGradient><linearGradient id="${id}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".3"/></linearGradient></defs><rect width="36" height="36" rx="6" fill="url(#${id})"/><rect width="36" height="36" rx="6" fill="url(#${id}s)"/><rect x=".75" y=".75" width="34.5" height="34.5" rx="5.4" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="1.5"/><g transform="translate(7.2 7.2) scale(.9)" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${MARKS[mark].join("")}</g></svg>`)}`;
+  };
+  const badge = (set_id, id, title, bg, mark) => ({ set_id, versions: [{ id, title, image_url_1x: tile(bg, mark), image_url_2x: tile(bg, mark), image_url_4x: tile(bg, mark) }] });
   const BADGES = [
-    { set_id: "subscriber", versions: [["0", "Subscriber", "#9147ff"], ["2000", "Tier 2 Subscriber", "#5c16c5"], ["3000", "Tier 3 Subscriber", "#e91916"]].map(([id, title, bg]) => ({ id, title, image_url_1x: tile(bg, "★"), image_url_2x: tile(bg, "★") })) },
-    badge("moderator", "1", "Moderator", "#00ad03", "⚔"),
-    badge("bits", "1000", "cheer 1000", "#a970ff", "◆"),
-    badge("premium", "1", "Prime Gaming", "#0e9dd8", "♛"),
-    badge("sub-gifter", "10", "10 Gift Subs", "#d2a000", "🎁"),
-    badge("hype-train", "1", "Hype Train conductor", "#ff6a00", "🚂"),
-    badge("glhf-pledge", "1", "GLHF Pledge", "#2d9c68", "✓"),
+    { set_id: "subscriber", versions: [["0", "Subscriber", "#8a4dff"], ["2000", "Tier 2 Subscriber", "#5c16c5"], ["3000", "Tier 3 Subscriber", "#d4282a"]].map(([id, title, bg]) => ({ id, title, image_url_1x: tile(bg, "star"), image_url_2x: tile(bg, "star"), image_url_4x: tile(bg, "star") })) },
+    badge("moderator", "1", "Moderator", "#1f9d3a", "sword"),
+    badge("bits", "1000", "cheer 1000", "#7b52e0", "gem"),
+    badge("premium", "1", "Prime Gaming", "#1188c4", "crown"),
+    badge("sub-gifter", "10", "10 Gift Subs", "#c99418", "gift"),
+    badge("hype-train", "1", "Hype Train conductor", "#e5631a", "train"),
+    badge("glhf-pledge", "1", "GLHF Pledge", "#2a8f62", "check"),
   ];
   const EXTRA_BADGES = ["bits/1000", "premium/1", "sub-gifter/10", "hype-train/1", "glhf-pledge/1"];
   // Some regulars are subscribed (the badge says which tier and how many months) and wear
