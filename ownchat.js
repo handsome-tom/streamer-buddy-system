@@ -737,7 +737,7 @@
           listChatters();
           timers.push(setInterval(listChatters, CHATTERS_EVERY_MS));
         } else if (host.onSignIn) {
-          addSystem("Sign in once more to let custom chat use Twitch's list of who's here, so it marks raiders more accurately.", { label: "Sign in", run: () => host.onSignIn() });
+          addSystem("Sign in once more to turn on the rest of custom chat: warn, whispers, follow dates, spotting raiders, and (on your own channel) channel points, hype trains, polls and predictions.", { label: "Sign in", run: () => host.onSignIn() });
         }
       } catch {}
     })();
