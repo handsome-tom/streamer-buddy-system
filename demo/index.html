@@ -491,12 +491,14 @@
 
 <script>
   // The way in: the retro page shows for a moment, glitches, and the real site is underneath.
-  // Once per visit (a reload in the same tab skips it); never for reduced motion; a click skips.
+  // On the first load, then again every third reload after that (loads 1, 4, 7...); never for
+  // reduced motion or a link straight to a section; a click skips it.
   (() => {
     const r = document.getElementById("retro");
-    let seen = false;
-    try { seen = sessionStorage.getItem("retroSeen") === "1"; sessionStorage.setItem("retroSeen", "1"); } catch {}
-    if (seen || matchMedia("(prefers-reduced-motion: reduce)").matches || location.hash) return;
+    let loads = 1;
+    try { loads = Number(localStorage.getItem("retroLoads") || 0) + 1; localStorage.setItem("retroLoads", String(loads)); } catch {}
+    const due = (loads - 1) % 3 === 0;
+    if (!due || matchMedia("(prefers-reduced-motion: reduce)").matches || location.hash) return;
     r.hidden = false;
     let done = false;
     const glitch = () => {
