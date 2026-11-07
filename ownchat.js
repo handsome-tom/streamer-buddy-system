@@ -385,7 +385,7 @@
       for (const path of ["/chat/badges/global", `/chat/badges?broadcaster_id=${broadcasterId}`]) {
         try {
           const j = await (await api(path)).json();
-          for (const set of j.data || []) for (const v of set.versions || []) badges.set(`${set.set_id}/${v.id}`, { url: v.image_url_1x, big: v.image_url_2x, title: v.title || set.set_id });
+          for (const set of j.data || []) for (const v of set.versions || []) badges.set(`${set.set_id}/${v.id}`, { url: v.image_url_1x, big: v.image_url_2x, huge: v.image_url_4x, title: v.title || set.set_id });
         } catch {}
       }
     }
@@ -397,7 +397,11 @@
       const add = (name, url) => name && otherEmotes.set(name, url);
       const seven = (set) => (set?.emotes || []).forEach((e) => add(e.name, `https://cdn.7tv.app/emote/${encodeURIComponent(e.id)}/1x.webp`));
       const bttv = (list) => (list || []).forEach((e) => add(e.code, `https://cdn.betterttv.net/emote/${encodeURIComponent(e.id)}/1x`));
-      const ffz = (sets) => Object.values(sets || {}).forEach((s) => (s.emoticons || []).forEach((e) => add(e.name, `https://cdn.frankerfacez.com/emote/${encodeURIComponent(e.id)}/1`)));
+      // FFZ: the biggest copy each emote has (not all have bigger ones), shrunk to fit.
+      const ffz = (sets) => Object.values(sets || {}).forEach((s) => (s.emoticons || []).forEach((e) => {
+        const size = ["4", "2"].find((k) => e.urls?.[k]) || "1";
+        add(e.name, `https://cdn.frankerfacez.com/emote/${encodeURIComponent(e.id)}/${size}`);
+      }));
       const load = (url, use) => fetch(url).then((r) => (r.ok ? r.json() : null)).then((j) => j && use(j)).catch(() => {});
       await Promise.all([
         load(`https://7tv.io/v3/emote-sets/global`, seven),
@@ -426,9 +430,24 @@
       } catch {}
     }
 
+    // Every emote service has bigger copies: the screen picks the sharpest it needs (a Mac's
+    // screen shows twice the pixels), and giant emotes take the biggest.
+    function sharper(url) {
+      const u = String(url);
+      const swap = (re, sizes) => (re.test(u) ? sizes.map(([to, x]) => `${u.replace(re, to)} ${x}x`) : []);
+      const list = [
+        ...swap(/\/1\.0$/, [["/2.0", 2], ["/3.0", 3]]), // Twitch
+        ...swap(/\/1x\.webp$/, [["/2x.webp", 2], ["/4x.webp", 4]]), // 7TV
+        ...swap(/(betterttv\.net\/emote\/[^/]+)\/1x$/, [["$1/2x", 2], ["$1/3x", 3]]), // BTTV
+      ];
+      return { srcset: list.join(", "), biggest: list.length ? list[list.length - 1].replace(/ \d+x$/, "") : u };
+    }
     function picture(url, name) {
       const img = el("img", "oc-emote");
       img.src = url;
+      const sharp = sharper(url);
+      if (sharp.srcset) img.srcset = `${url} 1x, ${sharp.srcset}`;
+      img.dataset.biggest = sharp.biggest;
       img.alt = name;
       img.title = name;
       img.loading = "lazy";
@@ -604,7 +623,9 @@
         if (!badge) continue;
         const img = el("img", "oc-badge");
         img.src = badge.url;
+        if (badge.big) img.srcset = `${badge.url} 1x, ${badge.big} 2x${badge.huge ? `, ${badge.huge} 4x` : ""}`;
         if (badge.big) img.dataset.big = badge.big; // sharper, for the name card
+        if (badge.huge) img.dataset.huge = badge.huge;
         img.alt = badge.title;
         img.title = badge.title;
         line.append(img);
@@ -619,6 +640,13 @@
       const body = el("span", "oc-body");
       try {
         drawMessage(body, m.fragments, m.text);
+        // A gigantified emote is shown three times the size: use the biggest copy.
+        if (m.kind === "power_ups_gigantified_emote") {
+          body.querySelectorAll("img.oc-emote").forEach((img) => {
+            img.srcset = "";
+            img.src = img.dataset.biggest || img.src;
+          });
+        }
       } catch (err) {
         body.textContent = m.text;
         codeError(err);
@@ -1441,7 +1469,10 @@
         worn.forEach((b) => {
           const big = b.cloneNode();
           big.className = "oc-card__badge";
-          if (b.dataset.big) big.src = b.dataset.big;
+          if (b.dataset.big) {
+            big.src = b.dataset.big;
+            big.srcset = `${b.dataset.big} 1x${b.dataset.huge ? `, ${b.dataset.huge} 2x` : ""}`;
+          }
           row.append(big);
         });
         card.append(row);
