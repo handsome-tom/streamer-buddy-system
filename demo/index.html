@@ -297,6 +297,19 @@
   @keyframes sparkle { 50% { transform: scale(0.6) rotate(45deg); opacity: 0.4; } }
   .junk--email { left: -150px; bottom: 40px; padding: 6px 8px; font: bold 11px Arial, sans-serif; color: #fff; background: linear-gradient(#5a5af0, #22229a); border: 2px outset #8a8aff; animation: bob 2s ease-in-out infinite; }
   @keyframes bob { 50% { transform: translateY(-6px); } }
+
+  /* Keep the junk in the margins: pinned a little in from the screen's own edges, small enough
+     to fit, and only on screens wide enough to have margins. */
+  .junk { --edge: calc((100% - 100vw) / 2 + 16px); }
+  .band > .junk--top8, .band > .junk--glitter, .band > .junk--counter { left: var(--edge); }
+  .band > .junk--construction, .band > .junk--netscape, .band > .junk--cursor { right: var(--edge); }
+  .junk--top8, .junk--construction, .junk--netscape { width: 112px; }
+  .junk--glitter { width: 120px; font-size: 14px; }
+  .junk--construction { font-size: 10px; }
+  .junk--glitter { top: 300px; }
+  .junk--netscape { top: 230px; }
+  .junk--cursor { top: 40px; }
+  @media (max-width: 1360px) { .junk { display: none; } }
 </style>
 </head>
 <body>
