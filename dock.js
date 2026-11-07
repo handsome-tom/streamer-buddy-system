@@ -525,7 +525,7 @@
   // Profile pictures and chat colours for the dots, once per load (people change them).
   let picsFor = "";
   async function loadPics() {
-    const logins = [...new Set([...trusted(), ...requests])];
+    const logins = [...new Set([me?.login, ...trusted(), ...requests].filter(Boolean))]; // you too: your colour tints your bookmarks
     if (DEV || DEMO || !logins.length || picsFor === logins.join()) return;
     picsFor = logins.join();
     try {

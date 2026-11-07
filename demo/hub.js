@@ -644,7 +644,7 @@ const twitch = (() => {
 // with a pretend sign-in; Streamer View starts open.
 function seed(login) {
   const base = { svOpen: "true" };
-  if (login === "streamer") Object.assign(base, { chatToken: JSON.stringify("mock"), ownChat: "true" });
+  if (login === "streamer") Object.assign(base, { chatToken: JSON.stringify("mock"), ownChat: "true", colors: JSON.stringify({ streamer: "#ff7f50" }) }); // the streamer's chat colour
   return base;
 }
 
