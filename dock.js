@@ -1674,7 +1674,11 @@
       // The chat dock: only people who are or have been in the chat this stream (or
       // have something waiting). Bright while they're there, faded once they leave.
       const light = LIVECHAT && mutual ? liveLight(login) : null;
-      if (LIVECHAT && !(asks + answers + said) && !(light && liveWasHere(login))) return null;
+      // Never been in the chat this stream: no picture. Been and gone: grey. Gone for 30
+      // minutes: no picture again (unless something from them is waiting).
+      if (light && !light.away) liveSeenNow(login);
+      const longGone = light?.away && Date.now() - liveSeenAt(login) > LIVE_GONE_MINUTES * LIGHT_MINUTE;
+      if (LIVECHAT && !(asks + answers + said) && (!(light && liveWasHere(login)) || longGone)) return null;
       const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}${online && !LIVECHAT ? " dot--online" : ""}${idle ? " dot--idle" : ""}${light?.ring ? ` dot--${light.ring}` : ""}${light?.away ? " dot--away" : light && !light.ring ? " dot--here" : ""}`);
       dot.type = "button";
       // The streamer's dock: a mod set to Idle, or not on Streamer Buddy right now (or set to
@@ -3312,7 +3316,18 @@
     return { ring, away: false, says: chatted ? `in chat, ${chatted}` : "in chat, lurking" };
   }
 
-  // Are they, or have they been, in the chat this stream? Once seen, they stay.
+  // When they were last in the chat (saved with the stream's list, for restarts). After
+  // LIVE_GONE_MINUTES away, their picture leaves the bar.
+  const LIVE_GONE_MINUTES = 30;
+  function liveSeenNow(login) {
+    liveBeen.seen ||= {};
+    const before = liveBeen.seen[login] || 0;
+    liveBeen.seen[login] = Date.now();
+    if (Date.now() - before > 60 * 1000) put(`chatBeen-${liveChannel}`, liveBeen); // not on every redraw
+  }
+  const liveSeenAt = (login) => Math.max(liveBeen.seen?.[login] || 0, liveSaid[login] || 0);
+
+  // Are they, or have they been, in the chat this stream?
   function liveWasHere(login) {
     if (liveChatters.has(login) && !liveBeen.logins.includes(login)) {
       liveBeen.logins.push(login);
