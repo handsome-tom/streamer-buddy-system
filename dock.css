@@ -3198,14 +3198,14 @@ body.no-modicons .oc-modicons { display: none; }
 
 /* ===== One colour per kind of notice, on one calm dark card =====
    Every card sits on the same mid-dark grey; the kind's colour is on its icon, its big number
-   and its label, so that's what catches the eye. Big numbers are PT Serif, labels PT Sans,
+   and its label, so that's what catches the eye. Big numbers are Outfit, labels PT Sans,
    with a little extra letter spacing (fonts/, SIL Open Font Licence). */
 @font-face { font-family: "PT Sans"; font-weight: 400; font-display: swap; src: url("fonts/pt-sans-400.woff2") format("woff2"); }
 @font-face { font-family: "PT Sans"; font-weight: 700; font-display: swap; src: url("fonts/pt-sans-700.woff2") format("woff2"); }
-@font-face { font-family: "PT Serif"; font-weight: 700; font-display: swap; src: url("fonts/pt-serif-700.woff2") format("woff2"); }
+@font-face { font-family: "Outfit"; font-weight: 500 700; font-display: swap; src: url("fonts/outfit.woff2") format("woff2"); }
 :root {
   --card: #25252b;
-  --serif: "PT Serif", Georgia, serif;
+  --serif: "Outfit", Inter, sans-serif;
   --label: "PT Sans", Inter, sans-serif;
   --k-sub: #a970ff;
   --k-gift: #ff5fa2;
@@ -3237,7 +3237,7 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-event__icon, .oc-event--streak .oc-event__icon { width: 34px; height: 34px; color: #151518; background: var(--ev); border-radius: 50%; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7); }
 .oc-event--bomb .oc-event__icon { width: 44px; height: 44px; }
 
-/* The big number in PT Serif, then the label in PT Sans. */
+/* The big number in Outfit, then the label in PT Sans. */
 .oc-event__big { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; line-height: 1.2; }
 .oc-event__value, .oc-event--streak .oc-event__value { font-family: var(--serif); font-size: 22px; font-weight: 700; line-height: 1.05; letter-spacing: 0.02em; color: var(--ev); }
 .oc-event--bomb .oc-event__value { font-size: 28px; }
@@ -3284,3 +3284,32 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-topcard__label, .oc-topcard--pin .oc-topcard__label { font-family: var(--label); font-size: 13px; font-weight: 700; letter-spacing: 0.03em; text-transform: none; color: var(--tc); }
 .oc-topcard__time, .oc-topcard--pin .oc-topcard__time { font-family: var(--serif); font-size: 13px; font-weight: 700; padding: 0; color: var(--text); background: none; }
 .oc-topcard__num { font-family: var(--label); letter-spacing: 0.02em; }
+
+/* Icons: a deeper tone of the kind's colour, lit from the top, with a soft shadow, in a
+   rounded square, so they read as polished rather than as flat bright dots. */
+.oc-event__icon, .oc-event--streak .oc-event__icon, .oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin {
+  color: #fff;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--ev, var(--tc)) 90%, #fff) 0%, color-mix(in srgb, var(--ev, var(--tc)) 58%, #000) 100%);
+  border: 1px solid color-mix(in srgb, var(--ev, var(--tc)) 40%, #000);
+  border-radius: 9px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 4px 10px rgba(0, 0, 0, 0.55), 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.oc-event__icon svg, .oc-topcard__pin svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45)); }
+.oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin { border-radius: 7px; }
+.oc-topcard .oc-topcard__pin { --ev: var(--tc); }
+/* Calmer, deeper colours for the kinds. */
+:root {
+  --k-sub: #9d6bf0;
+  --k-gift: #e2568f;
+  --k-streak: #ee7a2f;
+  --k-bits: #2bbfa4;
+  --k-charity: #e25555;
+  --k-first: #3fc98e;
+  --k-points: #3aa9db;
+  --k-announce: #e0a53a;
+  --k-hype: #a9cf45;
+  --k-poll: #5a8de8;
+  --k-pred: #c788e8;
+  --k-pin: #b8b8c2;
+}
+.oc-event__value, .oc-event--streak .oc-event__value { font-weight: 700; letter-spacing: 0.01em; }
