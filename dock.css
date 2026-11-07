@@ -3408,3 +3408,6 @@ body.no-modicons .oc-modicons { display: none; }
   border: 1px solid var(--edge);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.5);
 }
+
+/* The connection glow: a small soft spot tucked into the top-left corner. */
+.bar__status::before { bottom: auto; width: 34px; height: 22px; opacity: 0.5; background: radial-gradient(ellipse at top left, var(--glow), transparent 70%); }
