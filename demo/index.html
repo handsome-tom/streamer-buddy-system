@@ -318,6 +318,31 @@
   .demo { border-top: 0; }
   /* Room to scroll between the hero and the demo, for the Mods | Streamers moment. */
   .splitzone { height: 85vh; }
+
+  /* ===== Feature icons: shades of the brand blue, see-through glass tiles ===== */
+  .ft:nth-child(5n+1) { --k: #7db0ef !important; }
+  .ft:nth-child(5n+2) { --k: #5a95e6 !important; }
+  .ft:nth-child(5n+3) { --k: #3f7dd8 !important; }
+  .ft:nth-child(5n+4) { --k: #4f8de6 !important; }
+  .ft:nth-child(5n+5) { --k: #2f66c0 !important; }
+  .ft__icon {
+    color: #e6f0ff;
+    background: linear-gradient(150deg, color-mix(in srgb, var(--k) 55%, transparent), color-mix(in srgb, var(--k) 18%, transparent));
+    border: 1px solid color-mix(in srgb, var(--k) 55%, transparent);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 6px 16px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+  }
+
+  /* ===== The space backdrop moves, slowly: the stars drift, the glows breathe, the planet floats ===== */
+  #space::before { animation: drift 160s linear infinite; }
+  #space::after { animation: drift2 240s linear infinite, twinkle 4s ease-in-out infinite alternate; }
+  @keyframes drift { to { background-position: -320px 160px; } }
+  @keyframes drift2 { to { background-position: 560px -280px; } }
+  #space { animation: breathe 18s ease-in-out infinite alternate; }
+  @keyframes breathe { from { filter: hue-rotate(0deg) brightness(1); } to { filter: hue-rotate(-12deg) brightness(1.12); } }
+  #space .planet { animation: orbit 40s ease-in-out infinite alternate; }
+  @keyframes orbit { from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-30px, 24px) rotate(-8deg); } }
+  @media (prefers-reduced-motion: reduce) { #space, #space::before, #space::after, #space .planet { animation: none !important; } }
 </style>
 </head>
 <body>
