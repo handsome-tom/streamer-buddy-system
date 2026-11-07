@@ -3369,3 +3369,7 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-giftee { background: color-mix(in srgb, var(--k-gift) 10%, #1b1b1f); border: 1px solid color-mix(in srgb, var(--k-gift) 22%, transparent); border-radius: 8px; box-shadow: none; }
 .oc-topbar { height: 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.07); }
 .oc-topbar__fill { border-radius: 6px; background: linear-gradient(90deg, color-mix(in srgb, var(--tc) 70%, #000), var(--tc)); }
+
+/* Icon symbols: thicker strokes, in near-black on the coloured tiles. */
+.oc-event__icon, .oc-event--streak .oc-event__icon, .oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin { color: #0b0b0d; }
+.oc-event__icon svg, .oc-topcard__pin svg { stroke-width: 2.75; filter: none; }
