@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">
+<!-- The Twitch Space mark (from Alex's logo): the speech bubble and the people, on the icon's deep blue tile. -->
+<defs>
+  <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a5bb0"/><stop offset=".55" stop-color="#1c3f97"/><stop offset="1" stop-color="#2a358e"/></linearGradient>
+  <linearGradient id="bubble" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a95e6"/><stop offset="1" stop-color="#3f7dd8"/></linearGradient>
+  <linearGradient id="people" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a9cdf6"/><stop offset="1" stop-color="#7db0ef"/></linearGradient>
+  <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".18"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
+</defs>
+<rect width="800" height="800" rx="170" fill="url(#tile)"/>
+<rect width="800" height="800" rx="170" fill="url(#shine)"/>
+<g transform="translate(400 400) scale(.76) translate(-372 -392)">
+<path fill="url(#bubble)" d="M125,50l-50,125v475h150v100h100l100-100h125l175-175V50H125ZM650,450l-100,100h-150l-100,100v-100h-125V125h475v325Z"/>
+<path fill="url(#people)" d="M429.87,215.86c0-28.14,23-50.96,51.36-50.96s51.36,22.81,51.36,50.96-23,50.97-51.36,50.97-51.36-22.82-51.36-50.97ZM481.22,279.02c-18.07,0-34.54,6.62-47.21,17.5-7.41-20.96-27.47-36.01-51.13-36.01-14.51,0-27.66,5.69-37.38,14.9-4.9-15.1-19.16-26.04-36.02-26.04-20.89,0-37.83,16.8-37.83,37.54h-.12v65.06h56.98v55.55h80.24v67.42h144.73v-124.23c0-39.59-32.35-71.69-72.25-71.69ZM382.89,251.36c21.29,0,38.54-17.12,38.54-38.25s-17.25-38.24-38.54-38.24-38.53,17.12-38.53,38.24c0,21.13,17.26,38.25,38.53,38.25ZM309.49,242.98c14.85,0,26.9-11.94,26.9-26.69s-12.04-26.69-26.9-26.69-26.89,11.94-26.89,26.69c0,14.74,12.04,26.69,26.89,26.69Z"/>
+</g>
+</svg>

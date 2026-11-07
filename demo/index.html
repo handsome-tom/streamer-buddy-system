@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="brand/mark.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0b1a3a">
 <title>Twitch Space · Streamer Buddy System demo</title>
 <meta name="description" content="Click around Streamer Buddy System: a mod's side panel and the streamer's OBS dock, side by side, with pretend people. Nothing here is real.">
 <!--
@@ -19,7 +21,7 @@
 <style>
   /* ===== Twitch Space: the public site, with the live demo in the middle ===== */
   @font-face { font-family: "Plus Jakarta Sans"; font-weight: 400 800; font-display: swap; src: url("../fonts/plus-jakarta-sans.woff2") format("woff2"); }
-  :root { color-scheme: dark; --purple: #9147ff; --lilac: #bf94ff; --muted: #a3a3ad; --line: #24242a; --card: #141416; --card-top: #19191c; --edge: #2a2a30; }
+  :root { color-scheme: dark; --brand: #3f7dd8; --brand-light: #7db0ef; --brand-deep: #1f3f95; --brand-ink: #034d9b; --purple: var(--brand); --lilac: var(--brand-light); --muted: #a3a3ad; --line: #24242a; --card: #141416; --card-top: #19191c; --edge: #2a2a30; }
   html { scroll-behavior: smooth; }
   html, body { margin: 0; background: #08080a; color: #efeff1; font: 14px/1.5 "Plus Jakarta Sans", Inter, "Helvetica Neue", Arial, sans-serif; }
   a { color: inherit; }
@@ -119,6 +121,35 @@
   .foot { padding: 26px 0 40px; border-top: 1px solid var(--line); font-size: 12px; color: #6f6f78; }
   .foot .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
   .foot img { height: 20px; opacity: 0.7; }
+
+  /* ===== Brand: Twitch Space blue (the speech bubble, the people, the deep blue behind) ===== */
+  ::selection { color: #fff; background: color-mix(in srgb, var(--brand) 60%, transparent); }
+  body { background: radial-gradient(1400px 700px at 85% -10%, rgba(63, 125, 216, 0.10), transparent 60%), #07080c; }
+  .top { background: rgba(7, 8, 12, 0.82); }
+  .top nav a.cta, .btn--main { color: #fff; background: linear-gradient(160deg, #4f8de6, var(--brand) 45%, var(--brand-deep)); border-color: #6aa0ec; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 8px 24px rgba(63, 125, 216, 0.35); }
+  .top nav a.cta:hover, .btn--main:hover { filter: brightness(1.1); background: linear-gradient(160deg, #4f8de6, var(--brand) 45%, var(--brand-deep)); }
+  .hero { position: relative; overflow: hidden; padding: 84px 0 56px; background:
+    radial-gradient(700px 420px at 78% 40%, rgba(63, 125, 216, 0.28), transparent 65%),
+    radial-gradient(900px 500px at 10% 0%, rgba(3, 77, 155, 0.30), transparent 65%); }
+  .hero .wrap { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr); align-items: center; gap: 30px; }
+  @media (max-width: 860px) { .hero .wrap { grid-template-columns: 1fr; } .hero__art { display: none; } }
+  .hero h1 span { background: linear-gradient(100deg, #a8cdf7, var(--brand-light) 40%, var(--brand)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero__art { position: relative; justify-self: center; width: min(300px, 100%); aspect-ratio: 1; }
+  .hero__art::before { content: ""; position: absolute; inset: 8%; border-radius: 22%; background: radial-gradient(circle, rgba(125, 176, 239, 0.45), transparent 70%); filter: blur(30px); }
+  .hero__art img { position: relative; display: block; width: 100%; height: auto; border-radius: 22%; transform: rotate(-6deg); box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(125, 176, 239, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2); animation: float 7s ease-in-out infinite; image-rendering: auto; }
+  @keyframes float { 0%, 100% { transform: rotate(-6deg) translateY(0); } 50% { transform: rotate(-4deg) translateY(-10px); } }
+  @media (prefers-reduced-motion: reduce) { .hero__art img { animation: none; } }
+  .eyebrow, .band__eyebrow { color: var(--brand-light); }
+  .hero__points li::before { color: var(--brand-light); }
+  .tab[aria-selected="true"] { background: linear-gradient(180deg, #27406e, #1d2f55); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 3px rgba(0, 0, 0, 0.6); }
+  .chip.on { color: #fff; background: #1d3566; border-color: #3f7dd8; }
+  .console { border-color: #263150; }
+  .console__said::before { background: var(--brand-light); box-shadow: 0 0 6px var(--brand-light); }
+  iframe { border-color: #263150; }
+  .band { position: relative; }
+  .band__title span { color: var(--brand-light); }
+  .foot .tom { display: inline-flex; align-items: center; gap: 8px; color: #6f6f78; }
+  .foot .tom img { width: 26px; height: 26px; border-radius: 3px; opacity: 0.85; filter: saturate(0.6); }
 </style>
 </head>
 <body>
@@ -136,8 +167,9 @@
 
   <section class="hero">
     <div class="wrap">
-      <p class="eyebrow">Streamer Buddy System</p>
-      <h1>Look out for your streamer, without getting in the way.</h1>
+      <div>
+      <p class="eyebrow">Twitch Space · Streamer Buddy System</p>
+      <h1>Look out for your streamer, <span>without getting in the way.</span></h1>
       <p class="hero__lead">Twitch Space is a set of small upgrades for Twitch. At its heart is <b>Streamer Buddy System</b>: mods quietly ask the streamer things and keep an eye out for them from a side panel in Chrome, while the streamer sees it all in one calm OBS dock that's also their chat.</p>
       <div class="hero__ctas">
         <a class="btn btn--main" href="#demo">Try the live demo</a>
@@ -148,6 +180,8 @@
         <li>Real Twitch chat, events and mod tools</li>
         <li>Kept between you and the people you connect with</li>
       </ul>
+      </div>
+      <div class="hero__art" aria-hidden="true"><img src="brand/mark.svg" alt="" width="300" height="300"></div>
     </div>
   </section>
 
@@ -280,7 +314,7 @@
 
   <footer class="foot">
     <div class="wrap">
-      <img src="brand/twitch-space.svg" alt="Twitch Space">
+      <span class="tom"><img src="brand/tom.png" alt="" width="26" height="26"> <img src="brand/twitch-space.svg" alt="Twitch Space" style="width:auto;height:20px"></span>
       <span>Questions, answers and flagged lines go only to the people you've connected with. In this demo everyone is pretend and nothing is sent anywhere.</span>
     </div>
   </footer>
