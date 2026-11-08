@@ -1354,7 +1354,7 @@
     parts.push(sw("edgeGlow", "Glow round the edge", true));
     if (LIVECHAT) {
       parts.push(sw("showQuick", "Quick questions row", true, () => render()));
-      if (get("ownChat", false) && window.OwnChat) {
+      if (get("ownChat", true) && window.OwnChat) {
         const twitch = get("ownChatPicked", "") === "twitch";
         parts.push(choice("Chat", [["own", "Custom"], ["twitch", "Twitch's"]], twitch ? "twitch" : "own", (v) => {
           if (v === "twitch" && !twitch) chooseTwitchChat();
@@ -3578,7 +3578,7 @@
     try {
       if (params.get("ownchat") === "off") put("ownChat", false);
       else if (params.has("ownchat")) put("ownChat", true);
-      if (!get("ownChat", false)) return showTwitchChat();
+      if (!get("ownChat", true)) return showTwitchChat();
       if (!window.OwnChat) return showTwitchChat({ text: "Custom chat didn't load, so this is Twitch's chat.", label: "Reload", run: () => location.reload() });
       if (get("ownChatPicked", "") === "twitch") return showTwitchChat({ text: "Using Twitch's chat.", label: "Use custom chat", run: backToOwnChat });
       const failed = get("ownChatFailed", null);
@@ -3637,7 +3637,7 @@
     liveChannel = wanted;
     document.getElementById("live").hidden = false;
     chatLayers();
-    if (!MOCK && get("ownChat", false)) twitchFrame(); // ready in the background, with history
+    if (!MOCK && get("ownChat", true)) twitchFrame(); // ready in the background, with history
     chatBegin();
     liveSaid = get(`chatSaid-${wanted}`, {});
     liveBeen = get(`chatBeen-${wanted}`, liveBeen);

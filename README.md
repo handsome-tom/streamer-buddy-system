@@ -113,12 +113,12 @@ to their mutual connections only. It disappears when the dock closes, and while 
 streamer is set to Offline. Every mutual connection sees everything waiting, including
 other people's questions.
 
-### Custom chat (optional)
+### Custom chat (on by default)
 
-Add `&ownchat` to the address (`...?livechat&ownchat`) to have this page draw the chat
-itself instead of embedding Twitch's. It's what lets the chat do things of its own. It
-asks for one extra Twitch sign-in, kept separate from the ordinary one and never sent to
-the relay. `&ownchat=off` switches it off again.
+The chat dock (`?livechat`) draws the chat itself instead of embedding Twitch's. It's
+what lets the chat do things of its own. It asks for one extra Twitch sign-in, kept
+separate from the ordinary one and never sent to the relay. Settings → Chat switches
+between Custom and Twitch's; `&ownchat=off` in the address turns custom chat off.
 
 Before each viewer's name, Twitch-style mod icons: ban (a second click within 3 seconds),
 time out for 10 minutes, and delete, while you're a mod there (Settings can hide them).
