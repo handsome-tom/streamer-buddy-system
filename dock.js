@@ -73,7 +73,10 @@
 // in as anyone against the local test relay.
 
 (() => {
-  const SCOPES = ""; // signing in only says who you are
+  // Signing in says who you are, and lets Twitch tell this page who your channel's mods are
+  // and which channels you mod (for the Your mods / Channels I mod groups). Nothing else.
+  const MOD_SCOPES = ["moderation:read", "user:read:moderated_channels"];
+  const SCOPES = MOD_SCOPES.join(" ");
   // What sharing stream stats needs from Twitch (a streamer grants it once).
   const STATS_SCOPES = ["channel:read:subscriptions", "bits:read", "channel:read:ads", "channel:read:hype_train", "moderator:read:followers"];
   const SAMPLE_MS = 60 * 1000;
@@ -329,6 +332,36 @@
     return input;
   }
 
+  function bounceTom(space) {
+    const tom = el("img", "space__tom");
+    tom.src = "icons/tom.png";
+    tom.alt = "";
+    space.append(tom);
+    const SIZE = 54;
+    const SPEED = 22; // pixels a second
+    let x = Math.random() * Math.max(0, innerWidth - SIZE);
+    let y = Math.random() * Math.max(0, innerHeight - SIZE);
+    let dx = Math.random() < 0.5 ? -1 : 1;
+    let dy = Math.random() < 0.5 ? -1 : 1;
+    const place = () => (tom.style.transform = `translate(${x}px, ${y}px) rotate(180deg)`);
+    place();
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let last = 0;
+    const step = (now) => {
+      const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
+      last = now;
+      const maxX = Math.max(0, innerWidth - SIZE);
+      const maxY = Math.max(0, innerHeight - SIZE);
+      x += dx * SPEED * dt;
+      y += dy * SPEED * dt;
+      if (x <= 0 || x >= maxX) { dx = x <= 0 ? 1 : -1; x = Math.min(Math.max(x, 0), maxX); }
+      if (y <= 0 || y >= maxY) { dy = y <= 0 ? 1 : -1; y = Math.min(Math.max(y, 0), maxY); }
+      place();
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
   // ===== Signing in ========================================================================
   // Twitch's implicit sign-in: off to Twitch, back here with the token after "#".
   // In the side panel, Twitch's sign-in page can't open inside the iframe, so
@@ -343,7 +376,7 @@
       response_type: "token",
       client_id: TWITCH_CLIENT_ID,
       redirect_uri: location.origin + location.pathname,
-      scope: get("statsWanted", false) ? STATS_SCOPES.join(" ") : SCOPES,
+      scope: get("statsWanted", false) ? [...STATS_SCOPES, ...MOD_SCOPES].join(" ") : SCOPES,
       state,
     });
     localStorage.setItem(RETURN_KEY, location.search);
@@ -372,7 +405,7 @@
   const form = (o) => ({ method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(o) });
 
   async function codeSignIn() {
-    const scopes = get("statsWanted", false) ? STATS_SCOPES.join(" ") : SCOPES;
+    const scopes = get("statsWanted", false) ? [...STATS_SCOPES, ...MOD_SCOPES].join(" ") : SCOPES;
     let d;
     try {
       d = await (await fetch("https://id.twitch.tv/oauth2/device", form({ client_id: TWITCH_CLIENT_ID, scopes }))).json();
@@ -513,6 +546,77 @@
     location.reload();
   }
 
+  // ===== Mod groups from Twitch ==========================================================
+  // Twitch Space is for streamers and mods alike, so two groups fill themselves in:
+  //   "Your mods":       your channel's moderators (when you stream);
+  //   "Channels I mod":  the streamers you moderate for (when you mod).
+  // They're ordinary groups (tags) underneath, so Message group works as usual; this keeps
+  // them matching Twitch for everyone you're connected with. Mods you aren't connected with
+  // yet are listed on the group too, with an Add button. Refreshed every 10 minutes.
+  const AUTO_GROUPS = { mods: "Your mods", modFor: "Channels I mod" };
+  const MOD_LISTS_EVERY_MS = 10 * 60 * 1000;
+  let modLists = null; // { mods: [logins], modFor: [logins] } once Twitch has said
+  let modListsAt = 0;
+  const hasModScopes = () => !!me && MOD_SCOPES.every((sc) => me.scopes?.includes(sc));
+  const isAutoGroup = (tag) => Object.values(AUTO_GROUPS).includes(tag);
+
+  async function helixAll(path, pick) {
+    const out = [];
+    let after = "";
+    for (let page = 0; page < 10; page++) {
+      const r = await helix(`${path}&first=100${after ? `&after=${encodeURIComponent(after)}` : ""}`);
+      if (!r.ok) throw new Error(`Twitch said ${r.status}`);
+      const j = await r.json();
+      out.push(...(j.data || []).map(pick).filter(Boolean));
+      after = j.pagination?.cursor || "";
+      if (!after) break;
+    }
+    return out.map((l) => l.toLowerCase());
+  }
+
+  async function loadModLists(force = false) {
+    if (!me || (!force && Date.now() - modListsAt < MOD_LISTS_EVERY_MS)) return;
+    modListsAt = Date.now();
+    // On this Mac and in the demo: pretend lists from the address (?mods=a,b&modfor=c).
+    if (TESTING) {
+      modLists = { mods: (params.get("mods") || "").split(",").filter(Boolean), modFor: (params.get("modfor") || "").split(",").filter(Boolean) };
+    } else {
+      if (!me.id || !hasModScopes()) return;
+      try {
+        const [mods, modFor] = await Promise.all([
+          helixAll(`/moderation/moderators?broadcaster_id=${me.id}`, (d) => d.user_login),
+          helixAll(`/moderation/channels?user_id=${me.id}`, (d) => d.broadcaster_login),
+        ]);
+        modLists = { mods, modFor };
+      } catch {
+        modListsAt = 0; // try again next time
+        return;
+      }
+    }
+    syncModGroups();
+    render();
+  }
+
+  // Keep the two groups matching Twitch, for the people you're connected with.
+  const tagSent = new Set(); // "tag|login|on" already asked for, so nothing's sent twice
+  function syncModGroups() {
+    if (!modLists || !ready) return;
+    const known = new Set([...connections.map((c) => c.login)]);
+    for (const [key, tag] of Object.entries(AUTO_GROUPS)) {
+      const want = new Set(modLists[key].filter((l) => known.has(l)));
+      const have = new Set(tags[tag] || []);
+      for (const login of want) if (!have.has(login)) sendTag(tag, login, true);
+      for (const login of have) if (!want.has(login) && !modLists[key].includes(login)) sendTag(tag, login, false);
+    }
+  }
+  function sendTag(tag, login, on) {
+    const k = `${tag}|${login}|${on}`;
+    if (tagSent.has(k)) return;
+    tagSent.add(k);
+    setTimeout(() => tagSent.delete(k), 60 * 1000);
+    relay({ t: "tag", login, tag, on });
+  }
+
   // ===== Twitch API (pictures, colors, checking a name) ===================================
 
   async function helix(path) {
@@ -630,6 +734,7 @@
     connections = m.connections || [];
     requests = m.requests || [];
     tags = m.tags || {};
+    setTimeout(() => (modLists ? syncModGroups() : loadModLists()), 0);
     rooms = m.rooms || [];
     chat = m.chat || {};
     stats = m.stats || {};
@@ -1386,6 +1491,12 @@
       shareView();
     }));
     parts.push(el("p", "set__note", "Your connections see it at the top of their Chrome side panel."));
+    const brand = el("div", "set__brand");
+    const mark = el("img", "set__brandmark");
+    mark.src = "icons/ts-mark.svg";
+    mark.alt = "";
+    brand.append(mark, el("span", null, "StreamerSpace"), el("span", "set__brandbuild", `Build ${window.DOCK_VERSION || "?"}`));
+    parts.push(brand);
     settingsEl.replaceChildren(...parts);
   }
 
@@ -2313,6 +2424,12 @@
   }
 
   let pickerOpen = false; // the Ask box's who-to drop-down
+  let modeMenuOpen = false; // the Send box's Ask / Quick info / !vanish pull-down
+  document.addEventListener("click", () => {
+    if (!modeMenuOpen) return;
+    modeMenuOpen = false;
+    render();
+  });
 
   // Quick questions: saved on this device; in a one-row bar they're one tap
   // to everyone.
@@ -2368,32 +2485,36 @@
   // it's a question (answered with heart, check or X, or a typed reply), a quick note, or
   // a !vanish note.
   function composer(fixedTo, alwaysOpen = false) {
-    const box = el("section", "ask");
+    const box = el("section", "ask send");
     const able = connections.filter((c) => c.mutual).map((c) => c.login);
     const open = alwaysOpen || get("askOpen", true);
-    const head = el("button", "ask__head");
-    head.type = "button";
-    head.append(el("span", "ask__title", fixedTo ? `To ${fixedTo}` : "Send"));
-    if (!alwaysOpen) head.append(el("span", `ask__chev${open ? " ask__chev--open" : ""}`));
-    head.addEventListener("click", () => {
-      if (alwaysOpen) return;
+    const fold = () => {
       put("askOpen", !open);
       render();
-    });
-    box.append(head);
-    if (!open) return box;
+    };
+    if (!open) {
+      const head = el("button", "ask__head send__fold");
+      head.type = "button";
+      head.append(el("span", "ask__title", fixedTo ? `To ${fixedTo}` : "Send"), el("span", "ask__chev"));
+      head.addEventListener("click", fold);
+      box.append(head);
+      return box;
+    }
     if (!fixedTo && !able.length) {
-      box.append(el("p", "ask__hint", "Add someone under Connections first. You can ask each other once you've both added each other."));
+      box.append(el("div", "ask__title", "Send"), el("p", "ask__hint", "Add someone under Connections first. You can ask each other once you've both added each other."));
       return box;
     }
 
-    // Who to ask: the chosen person, with a caret that drops down the rest.
-    if (!fixedTo) {
+    // The top line: "Send to" and who (a chip that drops down the rest), and the fold.
+    const top = el("div", "send__top");
+    top.append(el("span", "send__label", "Send to"));
+    if (fixedTo) top.append(personChip(fixedTo, "ask__person ask__person--on send__who"));
+    else {
       if (!targets().includes(askDraft.to)) askDraft.to = defaultTo();
-      const who = el("div", "ask__who");
-      const pick = personChip(askDraft.to, "ask__person ask__person--on");
+      const who = el("div", "ask__who send__whowrap");
+      const pick = personChip(askDraft.to, "ask__person ask__person--on send__who");
       pick.append(el("span", `ask__caret${pickerOpen ? " ask__caret--open" : ""}`));
-      pick.title = "Ask someone else";
+      pick.title = "Send to someone else";
       pick.addEventListener("click", () => {
         pickerOpen = !pickerOpen;
         render();
@@ -2413,41 +2534,74 @@
         if (able.length === 1) list.append(el("div", "ask__menuhint", "Add more people under Connections."));
         who.append(list);
       }
-      box.append(who);
+      top.append(who);
     }
+    if (!alwaysOpen) {
+      const chev = el("button", "send__chev");
+      chev.type = "button";
+      chev.title = "Fold away";
+      chev.setAttribute("aria-label", "Fold away");
+      chev.append(el("span", "ask__chev ask__chev--open"));
+      chev.addEventListener("click", fold);
+      top.append(chev);
+    }
+    box.append(top);
     const to = () => fixedTo || askDraft.to;
 
-    const form = el("form", "ask__form");
-    const mode = askDraft.mode;
+    // What you're sending, as tabs: a question, a quick note, or a !vanish note.
+    // A streamer only asks.
+    const mode = STREAMER ? "ask" : askDraft.mode;
     const input = textBox(mode === "love" ? "Say something quick (it won't stick around)" : mode === "info" ? "What do they need to know?" : "What do you want to ask?", askDraft.text);
     input.dataset.key = fixedTo ? `ask-${fixedTo}` : "ask";
-    input.className = "ask__input";
+    input.className = "ask__input send__input";
     input.maxLength = mode === "love" ? 80 : MAX_LEN;
     input.addEventListener("input", () => (askDraft.text = input.value));
-    const send = el("button", "ask__send");
+
+    const form = el("form", `send__bar send__bar--${mode}`);
+    const send = el("button", "send__go");
     send.type = "submit";
     send.title = "Send";
     send.setAttribute("aria-label", "Send");
-    send.innerHTML = `<svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 16V4M5 9l5-5 5 5"/></svg>`;
-    // What you're sending, picked right in the typing bar: a question, a quick note, or
-    // a !vanish note. A streamer only asks.
-    const field = el("div", `ask__field ask__field--${mode}`);
+    send.innerHTML = `<svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 16V4M5 9l5-5 5 5"/></svg>`;
+    // Inside the bar, at its left: what you're sending, as a small pull-down.
     if (!STREAMER) {
-      const pickMode = el("select", "ask__modepick");
+      const MODES = [["ask", "Ask"], ["info", "Quick info"], ["love", "!vanish"]];
+      const wrap = el("div", "send__modewrap");
+      const pickMode = el("button", "send__modepick");
+      pickMode.type = "button";
       pickMode.title = "What you're sending";
-      pickMode.setAttribute("aria-label", "What you're sending");
-      for (const [value, label] of [["ask", "Ask"], ["info", "Quick info"], ["love", "!vanish"]]) pickMode.append(new Option(label, value));
-      pickMode.value = mode;
-      pickMode.addEventListener("change", () => {
-        askDraft.mode = pickMode.value;
-        askDraft.note = "";
+      pickMode.setAttribute("aria-haspopup", "listbox");
+      pickMode.setAttribute("aria-expanded", String(modeMenuOpen));
+      pickMode.append(el("span", null, MODES.find(([v]) => v === mode)[1]), el("span", "send__modecaret"));
+      pickMode.addEventListener("click", (e) => {
+        e.stopPropagation();
+        modeMenuOpen = !modeMenuOpen;
         render();
-        document.querySelector(`[data-key="${input.dataset.key}"]`)?.focus();
       });
-      field.append(pickMode);
+      wrap.append(pickMode);
+      if (modeMenuOpen) {
+        const menu = el("div", "send__modemenu");
+        menu.setAttribute("role", "listbox");
+        for (const [value, label] of MODES) {
+          const item = el("button", `send__modeitem${value === mode ? " send__modeitem--on" : ""}`, label);
+          item.type = "button";
+          item.setAttribute("role", "option");
+          item.setAttribute("aria-selected", String(value === mode));
+          item.addEventListener("click", (e) => {
+            e.stopPropagation();
+            modeMenuOpen = false;
+            askDraft.mode = value;
+            askDraft.note = "";
+            render();
+            document.querySelector(`[data-key="${input.dataset.key}"]`)?.focus();
+          });
+          menu.append(item);
+        }
+        wrap.append(menu);
+      }
+      form.append(wrap);
     }
-    field.append(input);
-    form.append(field, send);
+    form.append(input, send);
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const question = clean(input.value);
@@ -2687,40 +2841,34 @@
   // Connections: who you can ask and who can ask you, once both have added
   // each other; requests from people who've added you.
   let tagOpen = ""; // Connections: whose + (add a tag) box is open
+  let newGroup = null; // Connections: the New group form ({ name, picked }) while it's open
+  // Connections: one screen, top to bottom —
+  //   the Twitch Space header; add someone, and anyone asking to connect;
+  //   Groups: each of your tags is a group, pinned here with its people and a Message
+  //     button (sending to the tag goes to everyone in it), plus its room;
+  //   who's online: online first, then idle, then offline, then those who haven't added
+  //     you back. Each person keeps their tags; + pins them into a group (new or old).
   function peoplePanel() {
-    const panel = el("div", "panel");
-    panel.append(
-      el("div", "panel__head", "Connections"),
-      el("p", "panel__sub", "You can ask each other once you've both added each other. Click someone for a private chat only the two of you see. Tag people (Mods, Lead mods, Tech…) to ask a whole group at once; only you see your tags."),
-    );
-    // Group rooms (a streamer's room for one of their tags): one button each, plus opening
-    // your own if you have tags.
-    const groups = rooms.filter((r) => !r.direct);
-    if (groups.length || (Object.keys(tags).length && !groups.some((r) => r.owner === me.login))) {
-      const roomsRow = el("div", "people__rooms");
-      roomsRow.append(el("span", "people__roomslabel", "Rooms"));
-      for (const r of groups) {
-        const n = unread(r.owner);
-        const b = el("button", "pill", r.owner === me.login ? `Your room · ${r.tag}` : `${r.owner}'s room · ${r.tag}`);
-        b.type = "button";
-        if (n) b.append(el("span", "pill__count", String(n)));
-        b.addEventListener("click", () => show("chat", r.owner));
-        roomsRow.append(b);
-      }
-      if (!groups.some((r) => r.owner === me.login) && Object.keys(tags).length) {
-        const open = el("button", "pill", "+ Open a room");
-        open.type = "button";
-        open.title = "Open a room for one of your tags, so everyone in it can talk";
-        open.addEventListener("click", () => show("chat", me.login));
-        roomsRow.append(open);
-      }
-      panel.append(roomsRow);
-    }
-    const form = el("form", "panel__form");
-    const input = textBox("Their Twitch name");
-    const add = el("button", null, "Add");
+    const panel = el("div", "panel cx");
+
+    // ----- Header: the brand
+    const head = el("div", "cx__head");
+    const mark = el("img", "cx__mark");
+    mark.src = "icons/ts-mark.svg";
+    mark.alt = "";
+    const titles = el("div", "cx__titles");
+    titles.append(el("div", "cx__title", "Connections"), el("div", "cx__by", "StreamerSpace · Streamer Buddy System"));
+    head.append(mark, titles);
+    panel.append(head);
+
+    // ----- Add someone, and requests
+    const addCard = el("section", "cx__card cx__add");
+    const form = el("form", "cx__addbar");
+    const input = textBox("Add someone by Twitch name");
+    input.className = "cx__addinput";
+    const add = el("button", "cx__addgo", "Add");
     add.type = "submit";
-    const note = el("p", "panel__note");
+    const note = el("p", "cx__note");
     form.append(input, add);
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -2736,100 +2884,187 @@
       input.blur();
       relay({ t: "connect", login: user.login });
     });
-    panel.append(form, note);
-
-    const list = el("div", "people__list");
-    for (const login of requests) {
-      const row = el("div", "people__row");
-      const back = el("button", "pill pill--on", "Add back");
-      back.type = "button";
-      back.addEventListener("click", () => relay({ t: "connect", login }));
-      row.append(el("span", "people__name", login), el("span", "people__state", "wants to connect"), back);
-      list.append(row);
+    addCard.append(form, note);
+    if (requests.length) {
+      addCard.append(el("div", "cx__label", `New connections · ${requests.length}`));
+      for (const login of requests) {
+        const row = el("div", "cx__request");
+        const back = el("button", "cx__btn cx__btn--blue", "Add back");
+        back.type = "button";
+        back.addEventListener("click", () => relay({ t: "connect", login }));
+        row.append(personPic(login), el("span", "cx__reqname", login), el("span", "cx__reqsays", "wants to connect"), back);
+        addCard.append(row);
+      }
     }
-    // Tag suggestions: your own tags, plus a few common ones.
+    addCard.append(el("p", "cx__hint", "You can reach each other once you've both added each other."));
+    panel.append(addCard);
+
+    // ----- Groups (your tags)
+    const able = connections.filter((c) => c.mutual).map((c) => c.login);
+    // Your own groups, after the two Twitch fills in (when Twitch lists anyone for them).
+    const autoNames = Object.entries(AUTO_GROUPS).filter(([key, tag]) => tags[tag] || modLists?.[key]?.length).map(([, tag]) => tag);
+    const groupNames = [...autoNames, ...Object.keys(tags).filter((t) => !isAutoGroup(t)).sort()];
+    const groupsEl = el("section", "cx__section");
+    const gHead = el("div", "cx__sechead");
+    gHead.append(el("span", "cx__label", groupNames.length ? `Groups · ${groupNames.length}` : "Groups"));
+    if (connections.length) {
+      const newBtn = el("button", "cx__btn", newGroup ? "Cancel" : "+ New group");
+      newBtn.type = "button";
+      newBtn.addEventListener("click", () => {
+        newGroup = newGroup ? null : { name: "", picked: [] };
+        render();
+        if (newGroup) document.querySelector('[data-key="new-group"]')?.focus();
+      });
+      gHead.append(newBtn);
+    }
+    groupsEl.append(gHead);
+    // New group: a name, then tick who's in it.
+    if (newGroup) {
+      const card = el("form", "cx__group cx__newgroup");
+      const name = textBox("Group name (Mods, Lead mods, Tech…)", newGroup.name);
+      name.dataset.key = "new-group";
+      name.maxLength = 20;
+      name.className = "cx__newname";
+      name.addEventListener("input", () => (newGroup.name = name.value));
+      const pickList = el("div", "cx__picklist");
+      for (const { login } of connections) {
+        const on = newGroup.picked.includes(login);
+        const b = el("button", `cx__pick${on ? " cx__pick--on" : ""}`);
+        b.type = "button";
+        b.setAttribute("aria-pressed", String(on));
+        b.append(personPic(login), el("span", null, login), el("span", "cx__tick", on ? "✓" : ""));
+        b.addEventListener("click", () => {
+          newGroup.picked = on ? newGroup.picked.filter((l) => l !== login) : [...newGroup.picked, login];
+          render();
+        });
+        pickList.append(b);
+      }
+      const make = el("button", "cx__btn cx__btn--blue", "Make group");
+      make.type = "submit";
+      const words = el("p", "cx__note");
+      card.append(name, el("div", "cx__label cx__picklabel", "Who's in it"), pickList, make, words);
+      card.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const tag = clean(name.value).slice(0, 20);
+        if (!tag) return void (words.textContent = "Give the group a name.");
+        if (!newGroup.picked.length) return void (words.textContent = "Pick at least one person.");
+        for (const login of newGroup.picked) relay({ t: "tag", login, tag, on: true });
+        newGroup = null;
+        render();
+      });
+      groupsEl.append(card);
+    }
+    // Not allowed to see Twitch's mod lists yet (signed in before this asked): one button.
+    if (!TESTING && me && !hasModScopes()) {
+      const ask = el("div", "cx__group cx__allow");
+      const go = el("button", "cx__btn cx__btn--blue", "Allow on Twitch");
+      go.type = "button";
+      go.addEventListener("click", signIn);
+      ask.append(el("div", "cx__allowtext", "Fill in Your mods and Channels I mod from Twitch, so your mods are already here."), go);
+      groupsEl.append(ask);
+    }
+    if (!groupNames.length && !newGroup) {
+      groupsEl.append(el("p", "cx__hint", "Make a group (Mods, Lead mods, Tech…) with + New group, or pin someone in with the + next to their name below. Then message the whole group at once. Only you see your groups."));
+    }
+    for (const g of groupNames) {
+      const autoKey = Object.keys(AUTO_GROUPS).find((k) => AUTO_GROUPS[k] === g);
+      const members = tags[g] || [];
+      const known = new Set(connections.map((c) => c.login));
+      const notYet = autoKey && modLists ? modLists[autoKey].filter((l) => !known.has(l) && l !== me.login && !requests.includes(l)) : [];
+      const card = el("div", "cx__group");
+      const top = el("div", "cx__grouptop");
+      const label = el("div", "cx__grouplabel");
+      label.append(el("span", "cx__groupname", g), el("span", "cx__groupcount", `${members.length + notYet.length}`));
+      if (autoKey) label.append(el("span", "cx__from", "from Twitch"));
+      top.append(label);
+      const reach = members.filter((l) => able.includes(l));
+      const msg = el("button", "cx__btn cx__btn--blue", "Message group");
+      msg.type = "button";
+      msg.disabled = !reach.length;
+      msg.title = reach.length ? `Send to everyone in ${g}` : "Nobody in this group has added you back yet";
+      msg.addEventListener("click", () => show("ask", `#${g}`));
+      const room = rooms.find((r) => !r.direct && r.owner === me.login && r.tag === g);
+      const roomBtn = el("button", "cx__btn", room ? "Room" : "Open room");
+      roomBtn.type = "button";
+      roomBtn.title = room ? `The ${g} room: everyone in it can talk to each other` : `Open a room for ${g}, so everyone in it can talk`;
+      if (room && unread(room.owner)) roomBtn.append(el("span", "pill__count", String(unread(room.owner))));
+      roomBtn.addEventListener("click", () => show("chat", me.login));
+      const acts = el("div", "cx__groupacts");
+      acts.append(roomBtn, msg);
+      top.append(acts);
+      card.append(top);
+      const faces = el("div", "cx__faces");
+      for (const login of members) {
+        const c = conn(login) || {};
+        const face = el("span", `cx__face${c.online ? " cx__face--on" : ""}${c.idle ? " cx__face--idle" : ""}`);
+        face.title = `${login}${c.idle ? " (idle)" : c.online ? " (online)" : ""}`;
+        face.append(personPic(login), el("span", "cx__facename", login));
+        if (!autoKey) {
+          const x = el("button", "cx__facex", "×");
+          x.type = "button";
+          x.title = `Take ${login} out of ${g}`;
+          x.addEventListener("click", () => relay({ t: "tag", login, tag: g, on: false }));
+          face.append(x);
+        }
+        faces.append(face);
+      }
+      // From Twitch, but not connected here yet: Add sends them a request.
+      for (const login of notYet) {
+        const face = el("span", "cx__face cx__face--new");
+        face.title = `${login} isn't connected with you yet`;
+        const addBtn = el("button", "cx__faceadd", "Add");
+        addBtn.type = "button";
+        addBtn.title = `Ask ${login} to connect`;
+        addBtn.addEventListener("click", async () => {
+          addBtn.disabled = true;
+          const user = TESTING ? { login } : await lookUp(login).catch(() => null);
+          if (user) relay({ t: "connect", login: user.login });
+        });
+        face.append(personPic(login), el("span", "cx__facename", login), addBtn);
+        faces.append(face);
+      }
+      card.append(faces);
+      groupsEl.append(card);
+    }
+    // Rooms other people opened for a group you're in.
+    const theirRooms = rooms.filter((r) => !r.direct && r.owner !== me.login);
+    if (theirRooms.length) {
+      const row = el("div", "cx__rooms");
+      for (const r of theirRooms) {
+        const b = el("button", "cx__btn", `${r.owner}'s room · ${r.tag}`);
+        b.type = "button";
+        if (unread(r.owner)) b.append(el("span", "pill__count", String(unread(r.owner))));
+        b.addEventListener("click", () => show("chat", r.owner));
+        row.append(b);
+      }
+      groupsEl.append(row);
+    }
+    panel.append(groupsEl);
+
+    // ----- Who's online
     const names = el("datalist");
     names.id = "tag-names";
-    for (const t of [...new Set([...Object.keys(tags).sort(), "Mods", "Lead mods", "Tech"])]) names.append(new Option(t));
+    for (const t of [...new Set([...groupNames, "Mods", "Lead mods", "Tech"])]) names.append(new Option(t));
     panel.append(names);
-    for (const { login, mutual, online } of connections) {
-      const row = el("div", "people__row");
-      // Who: their picture, name and how they are, all one button that opens your private
-      // chat (there's one for everyone you've both added each other with).
-      const direct = directWith(login);
-      const who = el(direct ? "button" : "div", `people__who${direct ? " people__who--chat" : ""}`);
-      if (direct) {
-        who.type = "button";
-        who.title = `Private chat with ${login}`;
-        who.addEventListener("click", () => show("chat", direct.owner));
-      }
-      const pic = el("span", "people__pic");
-      if (pics[login]) {
-        const img = el("img");
-        img.src = pics[login];
-        img.alt = "";
-        pic.append(img);
-      } else pic.append(el("span", "dot__letter", login[0].toUpperCase()));
-      const name = el("span", "people__name", login);
-      if (colorOf(login)) name.style.color = colorOf(login);
-      const words = el("span", "people__words");
-      words.append(name, el("span", `people__state${online ? " people__state--on" : ""}`, !mutual ? "hasn't added you yet" : online ? "online" : "offline"));
-      who.append(pic, words);
-      const n = direct ? unread(direct.owner) : 0;
-      if (n) who.append(el("span", "people__unread", String(n)));
-      row.append(who);
-      // Their tags on the right, each with ×, then + to add one (it opens a small box).
-      const tagsEl = el("div", "people__tags");
-      for (const t of Object.keys(tags).sort().filter((t) => tags[t].includes(login))) {
-        const chip = el("span", "tagchip", t);
-        const x = el("button", "tagchip__x", "×");
-        x.type = "button";
-        x.title = `Take ${login} out of ${t}`;
-        x.addEventListener("click", () => relay({ t: "tag", login, tag: t, on: false }));
-        chip.append(x);
-        tagsEl.append(chip);
-      }
-      const plus = el("button", `people__plus${tagOpen === login ? " people__plus--on" : ""}`, "+");
-      plus.type = "button";
-      plus.title = `Tag ${login}`;
-      plus.setAttribute("aria-expanded", String(tagOpen === login));
-      plus.addEventListener("click", () => {
-        tagOpen = tagOpen === login ? "" : login;
-        render();
-        if (tagOpen) document.querySelector(`[data-key="tag-${login}"]`)?.focus();
-      });
-      tagsEl.append(plus);
-      row.append(tagsEl, closeButton(() => relay({ t: "disconnect", login }), `Remove ${login}`));
-      list.append(row);
-      if (tagOpen === login) {
-        const addTag = el("form", "tagadd");
-        const box = textBox("+ Tag");
-        box.dataset.key = `tag-${login}`;
-        box.maxLength = 20;
-        box.setAttribute("list", "tag-names");
-        box.addEventListener("keydown", (e) => {
-          if (e.key !== "Escape") return;
-          tagOpen = "";
-          render();
-        });
-        const save = el("button", "pill", "Add tag");
-        save.type = "submit";
-        addTag.append(box, save);
-        addTag.addEventListener("submit", (e) => {
-          e.preventDefault();
-          const tag = clean(box.value).slice(0, 20);
-          if (tag) relay({ t: "tag", login, tag, on: true });
-          box.value = "";
-          tagOpen = "";
-          render();
-        });
-        list.append(addTag);
-      }
+    const order = (c) => (!c.mutual ? 3 : c.idle ? 1 : c.online ? 0 : 2);
+    const sorted = [...connections].sort((x, y) => order(x) - order(y) || x.login.localeCompare(y.login));
+    const SECTIONS = [["Online", 0], ["Idle", 1], ["Offline", 2], ["Waiting for them to add you", 3]];
+    for (const [label, k] of SECTIONS) {
+      const people = sorted.filter((c) => order(c) === k);
+      if (!people.length) continue;
+      const sec = el("section", "cx__section");
+      const h = el("div", "cx__sechead");
+      h.append(el("span", `cx__label cx__label--${k === 0 ? "on" : k === 1 ? "idle" : "off"}`, `${label} · ${people.length}`));
+      sec.append(h);
+      const list = el("div", "cx__list");
+      for (const c of people) personRow(list, c);
+      sec.append(list);
+      panel.append(sec);
     }
-    if (!connections.length && !requests.length) list.append(el("p", "panel__sub", "Nobody yet."));
-    panel.append(list);
+    if (!connections.length && !requests.length) panel.append(el("p", "cx__hint cx__empty", "Nobody yet. Add someone above."));
 
-    // Sound, off unless wanted.
+    // ----- Bottom: sound, sign out, build
+    const foot = el("div", "cx__foot");
     const sound = el("label", "panel__check");
     const box = el("input");
     box.type = "checkbox";
@@ -2839,13 +3074,96 @@
       if (box.checked) chime();
     });
     sound.append(box, document.createTextNode(" Sound when something arrives"));
-    panel.append(sound, el("p", "panel__sub", "In OBS: if it captures your desktop audio, viewers may hear it too."));
-
     const out = el("button", "panel__signout", `Sign out of ${me.login}`);
     out.type = "button";
     out.addEventListener("click", signOut);
-    panel.append(out, el("p", "panel__sub", `Build ${window.DOCK_VERSION || "?"}`));
+    foot.append(sound, out, el("p", "cx__build", `Build ${window.DOCK_VERSION || "?"}`));
+    panel.append(foot);
     return panel;
+  }
+
+  // A picture (or first letter) for someone.
+  function personPic(login) {
+    const pic = el("span", "people__pic");
+    if (pics[login]) {
+      const img = el("img");
+      img.src = pics[login];
+      img.alt = "";
+      pic.append(img);
+    } else pic.append(el("span", "dot__letter", login[0].toUpperCase()));
+    return pic;
+  }
+
+  // One person in the list: picture, name and how they are (a button for your private
+  // chat), their groups, + to pin them into one, and × to remove them.
+  function personRow(list, { login, mutual, online, idle }) {
+    const row = el("div", "people__row cx__row");
+    const direct = directWith(login);
+    const who = el(direct ? "button" : "div", `people__who${direct ? " people__who--chat" : ""}`);
+    if (direct) {
+      who.type = "button";
+      who.title = `Private chat with ${login}`;
+      who.addEventListener("click", () => show("chat", direct.owner));
+    }
+    const pic = personPic(login);
+    pic.classList.add(`cx__pic${!mutual ? "" : idle ? "--idle" : online ? "--on" : "--off"}`);
+    const name = el("span", "people__name", login);
+    if (colorOf(login)) name.style.color = colorOf(login);
+    const words = el("span", "people__words");
+    words.append(name, el("span", `people__state${online && !idle ? " people__state--on" : ""}`, !mutual ? "hasn't added you yet" : idle ? "idle" : online ? "online" : "offline"));
+    who.append(pic, words);
+    const n = direct ? unread(direct.owner) : 0;
+    if (n) who.append(el("span", "people__unread", String(n)));
+    row.append(who);
+    const tagsEl = el("div", "people__tags");
+    for (const t of Object.keys(tags).sort().filter((t) => tags[t].includes(login))) {
+      const chip = el("span", `tagchip${isAutoGroup(t) ? " tagchip--auto" : ""}`, t);
+      // The Twitch groups follow Twitch, so there's nothing to take out by hand.
+      if (!isAutoGroup(t)) {
+        const x = el("button", "tagchip__x", "×");
+        x.type = "button";
+        x.title = `Take ${login} out of ${t}`;
+        x.addEventListener("click", () => relay({ t: "tag", login, tag: t, on: false }));
+        chip.append(x);
+      }
+      tagsEl.append(chip);
+    }
+    const plus = el("button", `people__plus${tagOpen === login ? " people__plus--on" : ""}`, "+");
+    plus.type = "button";
+    plus.title = `Pin ${login} into a group`;
+    plus.setAttribute("aria-expanded", String(tagOpen === login));
+    plus.addEventListener("click", () => {
+      tagOpen = tagOpen === login ? "" : login;
+      render();
+      if (tagOpen) document.querySelector(`[data-key="tag-${login}"]`)?.focus();
+    });
+    tagsEl.append(plus);
+    row.append(tagsEl, closeButton(() => relay({ t: "disconnect", login }), `Remove ${login}`));
+    list.append(row);
+    if (tagOpen === login) {
+      const addTag = el("form", "tagadd");
+      const box = textBox("Group name (new or existing)");
+      box.dataset.key = `tag-${login}`;
+      box.maxLength = 20;
+      box.setAttribute("list", "tag-names");
+      box.addEventListener("keydown", (e) => {
+        if (e.key !== "Escape") return;
+        tagOpen = "";
+        render();
+      });
+      const save = el("button", "cx__btn cx__btn--blue", "Pin");
+      save.type = "submit";
+      addTag.append(box, save);
+      addTag.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const tag = clean(box.value).slice(0, 20);
+        if (tag) relay({ t: "tag", login, tag, on: true });
+        box.value = "";
+        tagOpen = "";
+        render();
+      });
+      list.append(addTag);
+    }
   }
 
   function showSignedOut(message) {
@@ -2860,7 +3178,10 @@
     peekEl.replaceChildren(again);
     setStatus("");
     const box = el("div", "signin");
-    box.append(el("div", "signin__head", "Streamer Buddy System"), el("p", "signin__sub", "Quick questions between you and the people you've connected with."));
+    const mark = el("img", "signin__mark");
+    mark.src = "icons/ts-mark.svg";
+    mark.alt = "";
+    box.append(mark, el("div", "signin__head", "Streamer Buddy System"), el("p", "signin__sub", "Quick questions between you and the people you've connected with."), el("p", "signin__by", "Part of StreamerSpace"));
     if (message) box.append(el("p", "signin__error", message));
     const b = el("button", "signin__btn", "Sign in with Twitch");
     b.type = "button";
@@ -3856,9 +4177,28 @@
       setInterval(() => !updateWaiting && checkForUpdate(), UPDATE_CHECK_MS);
     }
     if (DECK) document.body.classList.add("deck");
+    // The space backdrop (as on the demo site), behind everything but the OBS chat dock.
+    if (!LIVECHAT && !document.getElementById("space")) {
+      const space = el("div", "space");
+      space.id = "space";
+      space.setAttribute("aria-hidden", "true");
+      space.append(el("div", "space__planet"), el("div", "space__mark"));
+      // The mod side panel: Tom's head, upside down, drifting edge to edge like an old DVD
+      // logo, so faint it's barely there.
+      if (EMBED) bounceTom(space);
+      document.body.prepend(space);
+      document.body.classList.add("has-space");
+    }
     if (POPOUT) document.body.classList.add("popout");
     if (EMBED) document.body.classList.add("embed");
     if (LIVECHAT) document.body.classList.add("livechat");
+    // The OBS chat dock: a dim planet, half out of the bar.
+    if (LIVECHAT && !document.querySelector(".bar__space")) {
+      const deco = el("div", "bar__space");
+      deco.setAttribute("aria-hidden", "true");
+      deco.append(el("div", "bar__planet"));
+      document.querySelector(".bar").prepend(deco);
+    }
     if (DEMO) {
       askBtn.hidden = peopleBtn.hidden = false;
       startDemo();

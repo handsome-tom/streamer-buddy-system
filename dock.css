@@ -3504,3 +3504,654 @@ body.livechat .dot--resting:not(:hover):not(.dot--answer):not(.dot--ask) { box-s
 .oc-event__icon, .oc-event--streak .oc-event__icon, .oc-event--bomb .oc-event__icon,
 .oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin, .dot__count, .dot--answer .dot__count { border-radius: 3px; }
 .oc-event__icon::before, .oc-event__icon::after { border-radius: 3px; }
+
+/* ===== The space backdrop (as on the demo site): side panel, pop-outs, phone deck ===== */
+/* Not in the OBS chat dock, where the chat needs a plain background. */
+html:has(body.has-space) { background: #04050b; }
+body.has-space { background: transparent; }
+.space {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 40% at 15% 8%, rgba(63, 125, 216, 0.24), transparent 70%),
+    radial-gradient(60% 40% at 92% 30%, rgba(63, 125, 216, 0.14), transparent 70%),
+    radial-gradient(60% 40% at 55% 92%, rgba(31, 63, 149, 0.16), transparent 70%),
+    radial-gradient(45% 30% at 25% 62%, rgba(31, 63, 149, 0.22), transparent 70%),
+    linear-gradient(180deg, #050713, #04050b 60%, #05070f);
+  animation: space-breathe 18s ease-in-out infinite alternate;
+}
+.space::before, .space::after { content: ""; position: absolute; inset: 0; }
+html .space::before { background-image: radial-gradient(1.2px 1.2px at 165px 77px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 24px 37px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 187px 298px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 259px 109px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 44px 222px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 35px 123px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 282px 217px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 289px 63px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 298px 31px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 25px 113px, rgba(255,255,255,.85), transparent), radial-gradient(1px 1px at 285px 68px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 214px 73px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 292px 157px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 52px 297px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 190px 49px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 288px 30px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 254px 272px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 160px 238px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 185px 153px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 92px 124px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 294px 153px, rgba(255,255,255,.85), transparent), radial-gradient(1px 1px at 175px 229px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 311px 37px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 262px 214px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 175px 77px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 215px 20px, rgba(255,255,255,.85), transparent), radial-gradient(1px 1px at 285px 293px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 174px 179px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 296px 233px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 47px 138px, rgba(255,255,255,.85), transparent), radial-gradient(1px 1px at 33px 31px, rgba(255,255,255,.85), transparent), radial-gradient(1px 1px at 295px 228px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 197px 177px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 236px 181px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 312px 59px, rgba(255,255,255,.85), transparent), radial-gradient(1px 1px at 30px 111px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 66px 126px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 200px 254px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 85px 229px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 281px 142px, rgba(255,255,255,.85), transparent); background-size: 320px 320px; opacity: 0.5; }
+html .space::after { background-image: radial-gradient(2px 2px at 440px 285px, rgba(180,210,255,.95), transparent), radial-gradient(2px 2px at 425px 367px, rgba(180,210,255,.95), transparent), radial-gradient(1.2px 1.2px at 389px 236px, rgba(180,210,255,.95), transparent), radial-gradient(1.2px 1.2px at 84px 180px, rgba(180,210,255,.95), transparent), radial-gradient(1.2px 1.2px at 237px 238px, rgba(180,210,255,.95), transparent), radial-gradient(1.5px 1.5px at 496px 186px, rgba(180,210,255,.95), transparent), radial-gradient(1.2px 1.2px at 288px 4px, rgba(180,210,255,.95), transparent), radial-gradient(1.5px 1.5px at 429px 547px, rgba(180,210,255,.95), transparent), radial-gradient(2px 2px at 326px 128px, rgba(180,210,255,.95), transparent), radial-gradient(1.5px 1.5px at 527px 55px, rgba(180,210,255,.95), transparent), radial-gradient(1.5px 1.5px at 401px 407px, rgba(180,210,255,.95), transparent), radial-gradient(1.5px 1.5px at 403px 106px, rgba(180,210,255,.95), transparent), radial-gradient(1.2px 1.2px at 410px 63px, rgba(180,210,255,.95), transparent), radial-gradient(1.5px 1.5px at 68px 213px, rgba(180,210,255,.95), transparent); background-size: 560px 560px; opacity: 0.7; animation: twinkle 4s ease-in-out infinite alternate; }
+.space::before { animation: space-drift 160s linear infinite; }
+.space::after { animation: space-drift2 240s linear infinite, space-twinkle 4s ease-in-out infinite alternate; }
+.space__planet {
+  position: absolute;
+  right: -40px;
+  top: 38%;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #5a8de8, #1f3f95 55%, #0b1530 75%);
+  box-shadow: inset -18px -14px 30px rgba(0, 0, 0, 0.7), 0 0 50px rgba(63, 125, 216, 0.25);
+  opacity: 0.3;
+  animation: space-orbit 40s ease-in-out infinite alternate;
+}
+.space__planet::after {
+  content: "";
+  position: absolute;
+  left: -40%;
+  top: 44%;
+  width: 180%;
+  height: 14%;
+  border-radius: 50%;
+  border: 2px solid rgba(125, 176, 239, 0.35);
+  transform: rotate(-14deg);
+}
+@keyframes space-twinkle { from { opacity: 0.35; } to { opacity: 0.85; } }
+@keyframes space-drift { to { background-position: -320px 160px; } }
+@keyframes space-drift2 { to { background-position: 560px -280px; } }
+@keyframes space-breathe { from { filter: hue-rotate(0deg) brightness(1); } to { filter: hue-rotate(-12deg) brightness(1.12); } }
+@keyframes space-orbit { from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-20px, 18px) rotate(-8deg); } }
+@media (prefers-reduced-motion: reduce) { .space, .space::before, .space::after, .space__planet { animation: none !important; } }
+
+/* Over space, the bar and cards are glass: dark, a little see-through, softly blurred. */
+body.has-space .bar { background: rgba(6, 9, 18, 0.6); backdrop-filter: blur(10px); border-bottom-color: rgba(125, 176, 239, 0.12); }
+body.has-space .sv,
+body.has-space .card,
+body.has-space .log__row,
+body.has-space .panel > .person__head {
+  background: rgba(12, 15, 26, 0.7);
+  backdrop-filter: blur(8px);
+}
+
+/* ===== The Send box: brand blue, flat, calm ===== */
+.ask.send {
+  --sb-blue: #3f7dd8;
+  --sb-blue-hi: #5a95e6;
+  position: relative;
+  padding: 12px;
+  border: 1px solid rgba(125, 176, 239, 0.16);
+  border-radius: 14px;
+  background: rgba(12, 15, 26, 0.82);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+.send__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.send__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8b93ad;
+}
+.ask.send .send__whowrap { position: relative; margin: 0; }
+.ask.send .send__who {
+  height: 28px;
+  padding: 0 10px 0 3px;
+  border: 1px solid rgba(125, 176, 239, 0.35);
+  border-radius: 14px;
+  background: rgba(63, 125, 216, 0.12);
+  color: #fff;
+  cursor: pointer;
+}
+.ask.send .send__who:hover { background: rgba(63, 125, 216, 0.2); }
+.send__chev {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+}
+.send__chev:hover { background: rgba(255, 255, 255, 0.07); }
+.send__fold { cursor: pointer; }
+
+.send__modewrap { position: relative; flex: none; margin-left: -10px; }
+.send__modepick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px 0 12px;
+  border: 0;
+  border-radius: 14px;
+  background: #7db0ef;
+  color: #0b1a33;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.send__modepick:hover { background: #93bff3; }
+.send__modecaret {
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+.send__modemenu {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  z-index: 20;
+  min-width: 130px;
+  padding: 4px;
+  border: 1px solid rgba(125, 176, 239, 0.2);
+  border-radius: 10px;
+  background: #0d1220;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+.send__modeitem {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: #c9d3e8;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.send__modeitem:hover { background: rgba(125, 176, 239, 0.12); color: #fff; }
+.send__modeitem--on { color: #7db0ef; }
+
+.send__bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  margin-top: 12px;
+  padding: 4px 4px 4px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 22px;
+  background: rgba(4, 6, 14, 0.7);
+  transition: border-color 0.15s;
+}
+.send__bar:focus-within { border-color: rgba(90, 149, 230, 0.6); }
+.send__bar--info:focus-within { border-color: rgba(224, 160, 48, 0.6); }
+.send__bar--love:focus-within { border-color: rgba(217, 85, 143, 0.6); }
+.ask.send .send__input,
+.ask.send .send__input:focus {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  outline: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+.send__input::placeholder { color: #6c7390; }
+.send__go {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--sb-blue);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.send__go:hover { background: var(--sb-blue-hi); }
+.send__go:active { transform: scale(0.94); }
+.send__bar--info .send__go { background: #e0a030; color: #1a1205; }
+.send__bar--love .send__go { background: #d9558f; }
+.ask.send .ask__hint {
+  margin: 8px 4px 0;
+  font-size: 11.5px;
+  color: #8389a3;
+}
+/* Over space, a switched-on bar button is brand blue too (Twitch purple stays in OBS). */
+body.has-space .pill--on { background: #3f7dd8; border-color: #3f7dd8; color: #fff; }
+body.has-space .pill--on:hover { background: #5a95e6; }
+
+/* ===== The streamer's OBS chat dock: the brand's space, done in blacks and grays =====
+   Round the edges only (the bar up top and the frame), never behind the chat itself. */
+body.livechat {
+  background:
+    radial-gradient(120% 50% at 0% 0%, #1d1d24, transparent 60%),
+    radial-gradient(120% 50% at 100% 100%, #18181e, transparent 60%),
+    #070709;
+}
+body.livechat .bar {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 120% at 8% 0%, #26262e 0%, transparent 70%),
+    radial-gradient(55% 110% at 100% 100%, #1e1e25 0%, transparent 70%),
+    radial-gradient(45% 90% at 55% 35%, #050506 0%, transparent 75%),
+    linear-gradient(180deg, #131317, #09090b);
+  border-bottom: 1px solid #2a2a31;
+}
+body.livechat .bar::before,
+body.livechat .bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+body.livechat .bar::before {
+  background-image:
+    radial-gradient(1px 1px at 23px 17px, #fff, transparent),
+    radial-gradient(0.8px 0.8px at 71px 52px, #fff, transparent),
+    radial-gradient(1px 1px at 128px 9px, #fff, transparent),
+    radial-gradient(0.8px 0.8px at 167px 71px, #fff, transparent),
+    radial-gradient(0.9px 0.9px at 211px 33px, #fff, transparent),
+    radial-gradient(0.7px 0.7px at 254px 88px, #fff, transparent),
+    radial-gradient(1px 1px at 47px 96px, #fff, transparent),
+    radial-gradient(0.8px 0.8px at 103px 118px, #fff, transparent),
+    radial-gradient(0.9px 0.9px at 236px 129px, #fff, transparent),
+    radial-gradient(0.7px 0.7px at 143px 44px, #fff, transparent),
+    radial-gradient(0.8px 0.8px at 192px 104px, #fff, transparent),
+    radial-gradient(0.7px 0.7px at 12px 62px, #fff, transparent);
+  background-size: 280px 140px;
+  opacity: 0.38;
+  animation: space-drift-bar 200s linear infinite;
+}
+body.livechat .bar::after {
+  background-image:
+    radial-gradient(1.6px 1.6px at 60px 30px, #fff, transparent),
+    radial-gradient(1.4px 1.4px at 300px 95px, #fff, transparent),
+    radial-gradient(1.6px 1.6px at 190px 140px, #fff, transparent),
+    radial-gradient(1.3px 1.3px at 420px 20px, #fff, transparent);
+  background-size: 480px 180px;
+  animation: space-drift-bar2 300s linear infinite, space-twinkle-bar 5s ease-in-out infinite alternate;
+}
+@keyframes space-drift-bar { to { background-position: -280px 70px; } }
+@keyframes space-drift-bar2 { to { background-position: 480px -90px; } }
+@keyframes space-twinkle-bar { from { opacity: 0.2; } to { opacity: 0.6; } }
+.bar__space { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.bar__planet {
+  position: absolute;
+  left: 38%;
+  bottom: -46px;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4a4a55, #24242b 55%, #0c0c0f 78%);
+  box-shadow: inset -14px -10px 24px rgba(0, 0, 0, 0.75), 0 0 30px rgba(255, 255, 255, 0.04);
+  opacity: 0.55;
+  animation: bar-planet 50s ease-in-out infinite alternate;
+}
+.bar__planet::after {
+  content: "";
+  position: absolute;
+  left: -40%;
+  top: 42%;
+  width: 180%;
+  height: 16%;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  transform: rotate(-12deg);
+}
+@keyframes bar-planet { from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-24px, -4px) rotate(-6deg); } }
+/* The StreamerSpace name, faint, in the middle of custom chat's thin status line. */
+body.livechat .oc-bar {
+  position: relative;
+  background: linear-gradient(180deg, #0d0d10, #0a0a0c);
+}
+body.livechat .oc-bar::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 70px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  background: url("icons/ts-wordmark.svg") center / contain no-repeat;
+  filter: grayscale(1);
+  opacity: 0.22;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  body.livechat .bar::before, body.livechat .bar::after, .bar__planet { animation: none; }
+}
+
+
+/* ===== Twitch Space branding, quiet, everywhere ===== */
+/* A thin line of the brand's blue along the very top, fading out at both ends. */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  z-index: 60;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(63, 125, 216, 0.55) 30%, rgba(125, 176, 239, 0.6) 50%, rgba(63, 125, 216, 0.55) 70%, transparent);
+}
+/* In the OBS chat dock, the line is gray, like the rest of its edges. */
+body.livechat::before {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28) 35%, rgba(255, 255, 255, 0.4) 50%, rgba(255, 255, 255, 0.28) 65%, transparent);
+}
+/* The mark, faint, in the bottom corner of the space backdrop. */
+.space__mark {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: 56px;
+  height: 56px;
+  background: url("icons/ts-mark-mono.svg") center / contain no-repeat;
+  opacity: 0.04;
+}
+/* The bottom of Settings: the mark, "Twitch Space" and the build. */
+.set__brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+  font-weight: 600;
+  color: #6f7385;
+}
+.set__brandmark { width: 14px; height: 14px; border-radius: 3px; opacity: 0.8; }
+.set__brandbuild { margin-left: auto; font-weight: 400; color: #55586a; }
+/* The sign-in screen. */
+.signin__mark { display: block; width: 40px; height: 40px; margin: 0 auto 10px; border-radius: 10px; opacity: 0.9; }
+.signin__by { margin: 14px 0 0; font-size: 11px; color: #6f7385; }
+
+/* The mod side panel: Tom's head, upside down, bouncing edge to edge (dock.js, bounceTom). */
+.space__tom {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  opacity: 0.05;
+  filter: grayscale(0.3);
+  will-change: transform;
+}
+
+/* ===== Connections (peoplePanel): header, add, groups, who's online ===== */
+.cx { display: flex; flex-direction: column; gap: 10px; }
+.cx__head { display: flex; align-items: center; gap: 10px; padding: 2px 2px 4px; }
+.cx__mark { width: 34px; height: 34px; border-radius: 9px; flex: none; }
+.cx__title { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; color: #fff; }
+.cx__by { font-size: 11px; color: #7db0ef; opacity: 0.85; }
+.cx__card,
+.cx__group {
+  padding: 12px;
+  border: 1px solid rgba(125, 176, 239, 0.16);
+  border-radius: 14px;
+  background: rgba(12, 15, 26, 0.82);
+  backdrop-filter: blur(10px);
+}
+.cx__addbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 4px 4px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 22px;
+  background: rgba(4, 6, 14, 0.7);
+}
+.cx__addbar:focus-within { border-color: rgba(90, 149, 230, 0.6); }
+.cx .cx__addinput,
+.cx .cx__addinput:focus {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  outline: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+}
+.cx__addinput::placeholder { color: #6c7390; }
+.cx__addgo {
+  flex: none;
+  height: 32px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 16px;
+  background: #3f7dd8;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cx__addgo:hover:not(:disabled) { background: #5a95e6; }
+.cx__note:empty { display: none; }
+.cx__note { margin: 6px 4px 0; font-size: 12px; color: var(--bad); }
+.cx__hint { margin: 8px 4px 0; font-size: 11.5px; line-height: 1.45; color: #8389a3; }
+.cx__empty { text-align: center; margin: 12px 0; }
+.cx__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8b93ad;
+}
+.cx__card .cx__label { display: block; margin: 12px 2px 6px; }
+.cx__label--on::before,
+.cx__label--idle::before,
+.cx__label--off::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: 1px;
+  background: #4a4e60;
+}
+.cx__label--on::before { background: var(--good); box-shadow: 0 0 6px rgba(0, 194, 122, 0.6); }
+.cx__label--idle::before { background: var(--amber); }
+.cx__request { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-radius: 10px; }
+.cx__request:hover { background: rgba(125, 176, 239, 0.06); }
+.cx__reqname { font-weight: 700; }
+.cx__reqsays { flex: 1; font-size: 12px; color: #8b93ad; }
+.cx__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid rgba(125, 176, 239, 0.25);
+  border-radius: 14px;
+  background: rgba(125, 176, 239, 0.08);
+  color: #cfe0f7;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.cx__btn:hover:not(:disabled) { background: rgba(125, 176, 239, 0.16); color: #fff; }
+.cx__btn--blue { border-color: #3f7dd8; background: #3f7dd8; color: #fff; }
+.cx__btn--blue:hover:not(:disabled) { background: #5a95e6; border-color: #5a95e6; }
+.cx__btn:disabled { opacity: 0.45; cursor: default; }
+.cx__btn .pill__count:not(:empty) { position: static; margin-left: 2px; }
+.cx__section { display: flex; flex-direction: column; gap: 8px; }
+.cx__sechead { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 0; }
+.cx__group { padding: 10px 12px; }
+.cx__grouptop { display: flex; align-items: center; gap: 6px; }
+.cx__groupname { font-size: 14px; font-weight: 800; color: #fff; }
+.cx__groupcount {
+  margin-right: auto;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: rgba(125, 176, 239, 0.14);
+  color: #7db0ef;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+.cx__faces { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.cx__face {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px 0 3px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 12px;
+  font-weight: 600;
+  color: #9ea4bb;
+}
+.cx__face .people__pic { width: 22px; height: 22px; opacity: 0.55; filter: grayscale(0.7); }
+.cx__face--on { color: #e8ecf6; }
+.cx__face--on .people__pic { opacity: 1; filter: none; box-shadow: 0 0 0 2px var(--good); }
+.cx__face--idle .people__pic { opacity: 0.8; filter: none; box-shadow: 0 0 0 2px var(--amber); }
+.cx__facex {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: #6c7390;
+  font-size: 13px;
+  line-height: 16px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.cx__face:hover .cx__facex { opacity: 1; }
+.cx__facex:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+.cx__rooms { display: flex; flex-wrap: wrap; gap: 6px; }
+.cx__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid rgba(125, 176, 239, 0.1);
+  border-radius: 14px;
+  background: rgba(12, 15, 26, 0.7);
+  backdrop-filter: blur(8px);
+}
+.cx .cx__row { margin: 0; padding: 4px 6px; border-radius: 10px; border: 0; }
+.cx .cx__row:hover { background: rgba(125, 176, 239, 0.06); }
+.cx__pic--on { box-shadow: 0 0 0 2px var(--good); }
+.cx__pic--idle { box-shadow: 0 0 0 2px var(--amber); }
+.cx__pic--off { opacity: 0.6; filter: grayscale(0.6); }
+.cx .people__plus { border-color: rgba(125, 176, 239, 0.3); color: #7db0ef; }
+.cx .tagchip { background: rgba(125, 176, 239, 0.12); border-color: rgba(125, 176, 239, 0.25); color: #cfe0f7; }
+.cx .tagadd { display: flex; gap: 6px; padding: 4px 6px 8px 44px; }
+.cx .tagadd input { flex: 1; min-width: 0; }
+.cx__foot { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 8px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.cx__build { margin: 0; font-size: 11px; color: #55586a; }
+
+/* Groups, calmer: squarer buttons, and members as picture-and-name with no box round them. */
+.cx__btn { height: 26px; padding: 0 10px; border-radius: 7px; }
+.cx__groupcount { min-width: 0; height: auto; padding: 0; background: none; color: #7d8299; font-size: 12px; font-weight: 600; line-height: inherit; }
+.cx__faces { gap: 4px 14px; margin-top: 10px; }
+.cx__face { height: auto; gap: 6px; padding: 0; border: 0; border-radius: 0; background: none; }
+.cx__facex { margin-left: -2px; }
+.cx__newgroup { display: flex; flex-direction: column; gap: 8px; }
+.cx .cx__newname {
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(4, 6, 14, 0.7);
+  color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+}
+.cx .cx__newname:focus { border-color: rgba(90, 149, 230, 0.6); outline: none; }
+.cx__picklabel { margin: 4px 2px 0; }
+.cx__picklist { display: flex; flex-direction: column; gap: 2px; }
+.cx__pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px 5px 5px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: #c9d3e8;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.cx__pick:hover { background: rgba(125, 176, 239, 0.08); }
+.cx__pick .people__pic { width: 24px; height: 24px; }
+.cx__tick {
+  margin-left: auto;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid rgba(125, 176, 239, 0.35);
+  border-radius: 5px;
+  color: #fff;
+  font-size: 12px;
+  line-height: 15px;
+  text-align: center;
+}
+.cx__pick--on { color: #fff; }
+.cx__pick--on .cx__tick { border-color: #3f7dd8; background: #3f7dd8; }
+.cx__newgroup .cx__btn--blue { align-self: flex-end; }
+.cx__newgroup .cx__note:empty { display: none; }
+/* The two groups Twitch fills in. */
+.cx__from { font-size: 10.5px; font-weight: 600; color: #7db0ef; opacity: 0.8; }
+.cx__face--new { color: #7d8299; }
+.cx__face--new .people__pic { opacity: 0.45; filter: grayscale(1); }
+.cx__faceadd {
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid rgba(125, 176, 239, 0.35);
+  border-radius: 5px;
+  background: none;
+  color: #7db0ef;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cx__faceadd:hover:not(:disabled) { background: #3f7dd8; border-color: #3f7dd8; color: #fff; }
+.cx__faceadd:disabled { opacity: 0.4; cursor: default; }
+.cx__allow { display: flex; align-items: center; gap: 10px; }
+.cx__allowtext { flex: 1; font-size: 12px; line-height: 1.4; color: #b9c2d8; }
+.cx .tagchip--auto { padding-right: 8px; }
+.cx__grouptop { flex-wrap: wrap; row-gap: 8px; }
+.cx__grouplabel { display: flex; align-items: baseline; gap: 6px; margin-right: auto; white-space: nowrap; }
+.cx__grouplabel .cx__groupcount { margin-right: 0; }
+.cx__groupacts { display: flex; gap: 6px; margin-left: auto; }
+
+/* The streamer's bar: each ring color (how recently they chatted) with a soft glow of its own. */
+body.livechat .dot--light5:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px var(--good), 0 0 10px 1px color-mix(in srgb, var(--good) 55%, transparent); }
+body.livechat .dot--light10:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px var(--orange), 0 0 10px 1px color-mix(in srgb, var(--orange) 50%, transparent); }
+body.livechat .dot--light20:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px var(--yellow), 0 0 10px 1px color-mix(in srgb, var(--yellow) 45%, transparent); }
+body.livechat .dot--light30:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px #fff, 0 0 10px 1px rgba(255, 255, 255, 0.35); }

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="brand/mark.svg" type="image/svg+xml">
 <meta name="theme-color" content="#0b1a3a">
-<title>Twitch Space · Streamer Buddy System demo</title>
+<title>StreamerSpace · Streamer Buddy System demo</title>
 <meta name="description" content="Click around Streamer Buddy System: a mod's side panel and the streamer's OBS dock, side by side, with pretend people. Nothing here is real.">
 <!--
   The public demo: both sides of Streamer Buddy System on one screen, the mod's Chrome
@@ -19,6 +19,8 @@
   streamer, and Auto-play. "mod2" answers whatever you send them a few seconds later.
 -->
 <style>
+  .demo__frame { display: block; width: 100%; height: 1400px; border: 0; background: transparent; }
+  .demo--framed { padding-left: 0; padding-right: 0; }
   /* ===== Twitch Space: the public site, with the live demo in the middle ===== */
   @font-face { font-family: "Plus Jakarta Sans"; font-weight: 400 800; font-display: swap; src: url("../fonts/plus-jakarta-sans.woff2") format("woff2"); }
   :root { color-scheme: dark; --brand: #3f7dd8; --brand-light: #7db0ef; --brand-deep: #1f3f95; --brand-ink: #034d9b; --purple: var(--brand); --lilac: var(--brand-light); --muted: #a3a3ad; --line: #24242a; --card: #141416; --card-top: #19191c; --edge: #2a2a30; }
@@ -350,7 +352,7 @@
   <div id="split" aria-hidden="true"><div class="split__half split__half--mods"><span>Mods</span></div><div class="split__line"></div><div class="split__half split__half--streamers"><span>Streamers</span></div></div>
   <div id="retro" aria-hidden="true" hidden>
     <div class="r-wrap">
-      <div class="r-top"><div class="r-top__in"><div class="r-logo">twitchspace<small>a place for streamers</small></div>
+      <div class="r-top"><div class="r-top__in"><div class="r-logo">streamerspace<small>a place for streamers</small></div>
         <div class="r-search">Search: <span></span> <b>Search</b></div></div></div>
       <div class="r-nav"><div class="r-nav__in"><a>Home</a> | <a>Browse</a> | <a>Streams</a> | <a>Mods</a> | <a>Chat</a> | <a>Clips</a> | <a>Raids</a> | <a>Emotes</a> | <a>Bits</a> | <a>Help</a></div></div>
       <div class="r-page">
@@ -386,7 +388,7 @@
   </div>
   <header class="top">
     <div class="wrap">
-      <a href="#" aria-label="Twitch Space"><img src="brand/twitch-space.svg" alt="Twitch Space" width="160" height="32"></a>
+      <a href="#" aria-label="StreamerSpace"><img src="brand/streamerspace.svg" alt="StreamerSpace" width="187" height="32"></a>
       <nav aria-label="Sections">
         <a href="#streamer">Streamers</a>
         <a href="#mods">Mods</a>
@@ -399,9 +401,9 @@
   <section class="hero">
     <div class="wrap">
       <div>
-      <p class="eyebrow">Twitch Space · Streamer Buddy System</p>
+      <p class="eyebrow">StreamerSpace · Streamer Buddy System</p>
       <h1>Look out for your streamer, <span>without getting in the way.</span></h1>
-      <p class="hero__lead">Twitch Space is a set of small upgrades for Twitch. At its heart is <b>Streamer Buddy System</b>: mods quietly ask the streamer things and keep an eye out for them from a side panel in Chrome, while the streamer sees it all in one calm OBS dock that's also their chat.</p>
+      <p class="hero__lead">StreamerSpace is a set of small upgrades for Twitch. At its heart is <b>Streamer Buddy System</b>: mods quietly ask the streamer things and keep an eye out for them from a side panel in Chrome, while the streamer sees it all in one calm OBS dock that's also their chat.</p>
       <div class="hero__ctas">
         <a class="btn btn--main" href="#demo">Try the live demo</a>
         <a class="btn" href="#streamer">See what it does</a>
@@ -417,122 +419,20 @@
   </section>
 
   <div class="splitzone" aria-hidden="true"></div>
-  <section class="demo" id="demo">
-    <div class="wrap">
-      <div class="demo__head">
-        <div>
-          <p class="eyebrow">Live demo</p>
-          <h2>Try it: you're both sides at once.</h2>
-          <p>On the left, a mod's side panel in Chrome. On the right, the streamer's OBS dock with chat. Everyone here is pretend, and nothing is sent anywhere.</p>
-        </div>
-        <ol class="steps">
-          <li>Pick something from either menu</li>
-          <li>Watch both sides react</li>
-          <li>Answer, bookmark, click around</li>
-        </ol>
-      </div>
-
-      <div class="tour" id="tour" aria-live="polite">
-        <div class="tour__count" id="tourCount"></div>
-        <div class="tour__body">
-          <h3 id="tourTitle"></h3>
-          <p id="tourText"></p>
-        </div>
-        <div class="tour__actions">
-          <button type="button" class="btn" id="tourBack">Back</button>
-          <button type="button" class="btn btn--main" id="tourDo"></button>
-          <button type="button" class="tour__skip" id="tourSkip">Skip the tour</button>
-        </div>
-      </div>
-      <div class="demo__bar">
-        <div class="console__said" id="said" aria-live="polite"></div>
-        <div class="demo__run">
-          <button id="auto" type="button" class="chip" data-tip="mod1 and the streamer talk on their own, every few seconds, so you can just watch.">Auto-play: off</button>
-          <button id="reload" type="button" class="chip" data-tip="Resets everything and starts the demo fresh.">Start over</button>
-        </div>
-      </div>
-      <div class="stage">
-        <div class="screen">
-          <div class="screen__label">Mod's side panel <small>you're mod1, watching the streamer</small>
-            <span class="info" tabindex="0" data-tip="What a mod sees in Chrome, next to Twitch: Streamer View at the top shows what's on the streamer's screen right now, then the box to ask, send quick info or a !vanish note.">?</span></div>
-          <div class="menu" aria-label="Try as mod1">
-            <span class="menu__head">Try as mod1</span>
-            <button type="button" class="chip" data-click="modAsk" data-tip="→ mod1 asks the streamer a yes-or-no question. It waits on the streamer's dock with ♥ ✓ ✗ ?">Ask<span class="go" aria-hidden="true">→</span></button>
-            <button type="button" class="chip" data-click="modNote" data-tip="→ A heads-up on the streamer's bar, with a lightning bolt. It goes after 2 minutes.">Quick info<span class="go" aria-hidden="true">→</span></button>
-            <button type="button" class="chip" data-click="modVanish" data-tip="→ A short kind note on the streamer's bar, with a little devil. Gone in 30 seconds.">!vanish<span class="go" aria-hidden="true">→</span></button>
-            <button type="button" class="chip" data-click="modNudge" data-tip="→ Bumps mod1's waiting question up a color on the streamer's dock: orange, yellow, white.">Nudge<span class="go" aria-hidden="true">→</span></button>
-            <button type="button" class="chip" data-click="modWarn" data-tip="→ For something that can't wait: the question turns red on the streamer's dock, with a louder beep.">Warn<span class="go" aria-hidden="true">→</span></button>
-            <button type="button" class="chip" data-click="modFlag" data-tip="→ mod1 flags a viewer's message. It glows in the streamer's chat.">Flag a line<span class="go" aria-hidden="true">→</span></button>
-          </div>
-          <iframe id="mod" title="Mod side panel"></iframe>
-        </div>
-        <div class="screen">
-          <div class="screen__label">Streamer's OBS dock <small>you're the streamer</small>
-            <span class="info" tabindex="0" data-tip="What the streamer sees in OBS: mods' pictures and the message area at the top, then their chat, with Twitch's events and mod tools built in. Hover a chat line to bookmark, pin or reply.">?</span></div>
-          <div class="menu" aria-label="Try on the streamer's side">
-            <span class="menu__head">On the streamer's side <a class="menu__more" href="#allControls" data-tip="Every other Twitch event and chat control, below the screens.">More…</a></span>
-            <button type="button" class="chip" data-click="streamerAsk" data-tip="← The streamer asks mod1 something. It shows up in the mod's panel.">Ask mod1<span class="go" aria-hidden="true">←</span></button>
-            <button type="button" class="chip" data-click="tRaid" data-k style="--k:#8fd14f" data-tip="Lump raids with a crowd. Raiders get a RAID tag with Lump's picture.">Raid</button>
-            <button type="button" class="chip" data-click="tGift" data-k style="--k:#e2568f" data-tip="20 gifted subs: a progress card on top, and a card listing everyone who got one.">Gift bomb</button>
-            <button type="button" class="chip" data-click="tFirst" data-k style="--k:#3fc98e" data-tip="Someone chats in the channel for the very first time.">First-timer</button>
-            <button type="button" class="chip" data-click="tStreak" data-k style="--k:#ee7a2f" data-tip="A viewer shares their watch streak.">Streak</button>
-            <button type="button" class="chip" data-click="tPoll" data-k style="--k:#5a8de8" data-tip="A poll, with live votes at the top of chat.">Poll</button>
-          </div>
-          <iframe id="obs" title="Streamer's OBS dock"></iframe>
-        </div>
-      </div>
-      <details class="all" id="allControls">
-        <summary>Every demo control <small>chat, every Twitch event, and the rest</small></summary>
-      <div class="console">
-        <div class="console__bar">
-          <div class="tabs" role="tablist" aria-label="What to try">
-            <button class="tab" role="tab" type="button" aria-selected="true" aria-controls="paneMods" id="tabMods">Mods and streamer</button>
-            <button class="tab" role="tab" type="button" aria-selected="false" aria-controls="paneChat" id="tabChat">Chat</button>
-            <button class="tab" role="tab" type="button" aria-selected="false" aria-controls="paneTwitch" id="tabTwitch">Twitch events</button>
-          </div>
-        </div>
-        <div class="pane" role="tabpanel" id="paneMods" aria-labelledby="tabMods">
-        <button id="modAsk" type="button" class="chip" data-tip="mod1 asks the streamer a yes-or-no question. It waits under the streamer's bar with ♥ ✓ ✗ ? buttons.">Ask a question</button>
-        <button id="modSay" type="button" class="chip" data-tip="A message that doesn't need an answer, just a Seen.">Send a message</button>
-        <button id="modNote" type="button" class="chip" data-tip="A heads-up on the streamer's bar with a lightning bolt. It goes after 2 minutes.">Quick info</button>
-        <button id="modVanish" type="button" class="chip" data-tip="A short kind note with a little devil. It goes after 30 seconds.">!vanish</button>
-        <span class="pane__sep"></span>
-        <button id="modNudge" type="button" class="chip" data-tip="Moves mod1's oldest unanswered question up a color: orange, then yellow, then white.">Nudge</button>
-        <button id="modWarn" type="button" class="chip" data-tip="What tapping Nudge six times sends: the question turns red, with a louder beep.">Warn</button>
-        <button id="modFlag" type="button" class="chip" data-tip="mod1 flags a viewer's recent line. It glows in the streamer's chat.">Flag a chat line</button>
-        <span class="pane__sep"></span>
-        <button id="streamerAsk" type="button" class="chip" data-tip="The streamer asks mod1 something. Watch it arrive in the mod's panel on the left.">Streamer asks mod1</button>
-        </div>
-        <div class="pane" role="tabpanel" id="paneChat" aria-labelledby="tabChat" hidden>
-        <select id="chatter" data-tip="Who joins, talks or leaves."><option>mod1</option><option>mod2</option></select>
-        <button id="cJoin" type="button" class="chip" data-tip="They come into chat, and their picture shows in the streamer's bar.">Joins</button>
-        <button id="cSay" type="button" class="chip" data-tip="They say something, and their picture gets a fresh green ring.">Talks</button>
-        <button id="cPart" type="button" class="chip" data-tip="They leave chat. Their picture grays out, and goes 30 minutes later (3 in the demo).">Leaves</button>
-        <span class="pane__sep"></span>
-        <button id="tCmd" type="button" class="chip" data-tip="A viewer types a bot command and StreamElements answers. You can type !command in the streamer's chat too.">!command</button>
-        <button id="feed" type="button" class="chip" data-tip="Turns the pretend chatter on or off, to keep things calm while you look around.">Chat feed: off</button>
-        </div>
-        <div class="pane" role="tabpanel" id="paneTwitch" aria-labelledby="tabTwitch" hidden>
-        <button id="tRaid" type="button" class="chip" data-k style="--k:#8fd14f" data-tip="Lump raids with a crowd. Raiders get a RAID tag with Lump's picture.">Raid</button>
-        <button id="tFirst" type="button" class="chip" data-k style="--k:#3fc98e" data-tip="Someone chats in the channel for the very first time.">First-time chatter</button>
-        <button id="tGift" type="button" class="chip" data-k style="--k:#e2568f" data-tip="20 gifted subs: a progress card on top, and a card listing everyone who got one.">Gift bomb</button>
-        <button id="tStreak" type="button" class="chip" data-k style="--k:#ee7a2f" data-tip="A viewer shares their watch streak.">Watch streak</button>
-        <button id="tSub" type="button" class="chip" data-k style="--k:#9d6bf0" data-tip="A resub, with their months and message.">Sub</button>
-        <button id="tCheer" type="button" class="chip" data-k style="--k:#2bbfa4" data-tip="A viewer cheers bits.">Cheer</button>
-        <button id="tBadge" type="button" class="chip" data-k style="--k:#2bbfa4" data-tip="A viewer unlocks a new bits badge.">Bits badge</button>
-        <button id="tRedeem" type="button" class="chip" data-k style="--k:#3aa9db" data-tip="A channel points reward is redeemed.">Redemption</button>
-        <button id="tHighlight" type="button" class="chip" data-k style="--k:#3aa9db" data-tip="A message highlighted with channel points.">Highlighted message</button>
-        <button id="tAnnounce" type="button" class="chip" data-k style="--k:#e0a53a" data-tip="mod2 makes an announcement.">Announcement</button>
-        <button id="tPin" type="button" class="chip" data-k style="--k:#b8b8c2" data-tip="mod2 pins a message to the top of chat.">Pin</button>
-        <button id="tHype" type="button" class="chip" data-k style="--k:#a9cf45" data-tip="A hype train starts at the top of chat.">Hype train</button>
-        <button id="tPoll" type="button" class="chip" data-k style="--k:#5a8de8" data-tip="A poll, with live votes at the top of chat.">Poll</button>
-        <button id="tPred" type="button" class="chip" data-k style="--k:#c788e8" data-tip="A prediction: it locks after 20 seconds, then a side wins.">Prediction</button>
-        </div>
-      </div>
-
-      </details>
-    </div>
+  <section class="demo demo--framed" id="demo">
+    <!-- The demo itself is its own page (play.html), so it can be worked on, and started
+         over, without the intro and the hero. It says how tall it is; the frame follows. -->
+    <iframe id="demoFrame" class="demo__frame" src="play.html?embed" title="Streamer Buddy System live demo" loading="eager"></iframe>
   </section>
+<script>
+  (() => {
+    const frame = document.getElementById("demoFrame");
+    addEventListener("message", (e) => {
+      if (e.source !== frame.contentWindow || e.origin !== location.origin || e.data?.t !== "demo-height") return;
+      frame.style.height = `${Math.ceil(e.data.h)}px`;
+    });
+  })();
+</script>
 
   <main class="wrap">
       <section class="band" id="streamer"><span>view all of Tom's friends</span></div>
@@ -565,7 +465,7 @@
       <section class="band" id="qol">
         <p class="band__eyebrow">Quality of life</p>
         <h3 class="band__title">Twitch, just a bit nicer to use.</h3>
-        <p class="band__lead">The rest of Twitch Space: small fixes and extras for anyone who watches a lot of Twitch.</p>
+        <p class="band__lead">The rest of StreamerSpace: small fixes and extras for anyone who watches a lot of Twitch.</p>
         <ul class="ft-grid">
           <li class="ft" style="--k:#3aa9db"><span class="ft__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg></span><div><h4>A better player</h4><p>Click anywhere to pause, even over overlays like Tangia, a 1% volume button, and easier-to-grab controls.</p></div></li>
           <li class="ft" style="--k:#a970ff"><span class="ft__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg></span><div><h4>Emotes and quick phrases</h4><p>Pin favorite emotes, keep a row of channels you use, and save phrases you type a lot.</p></div></li>
@@ -581,7 +481,7 @@
 
   <footer class="foot">
     <div class="wrap">
-      <span class="tom"><img src="brand/tom.png" alt="" width="26" height="26"> <img src="brand/twitch-space.svg" alt="Twitch Space" style="width:auto;height:20px"></span>
+      <span class="tom"><img src="brand/tom.png" alt="" width="26" height="26"> <img src="brand/streamerspace.svg" alt="StreamerSpace" style="width:auto;height:20px"></span>
       <span>Questions, answers and flagged lines go only to the people you've connected with. In this demo everyone is pretend and nothing is sent anywhere.</span>
       <p class="credits">Created by <a href="https://www.twitch.tv/myspacetomofficial" target="_blank" rel="noopener">MyspaceTomOfficial</a>.
         <span class="credits__thanks">Credits: <a href="https://www.twitch.tv/tallglassofbees" target="_blank" rel="noopener">TallGlassOfBees</a>, <span class="credits__name">TallGlassOfWasps</span> and <span class="credits__name">Roman</span>.</span></p>
@@ -624,7 +524,7 @@
     function draw() {
       queued = false;
       const demo = document.getElementById("demo");
-      const stage = document.querySelector(".stage");
+      const stage = document.getElementById("demoFrame");
       if (!demo || !stage) return;
       const vh = innerHeight;
       const d = demo.getBoundingClientRect();
@@ -644,269 +544,6 @@
     addEventListener("resize", queue);
     addEventListener("load", queue);
     queue();
-  })();
-</script>
-<script type="module">
-  import { Socket, pretendTwitch } from "./hub.js?v=114"; // the number: bump it when hub.js changes, so browsers fetch the new one
-
-  const said = (text) => (document.getElementById("said").textContent = text);
-  const pick = (list) => list[Math.floor(Math.random() * list.length)];
-  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-
-  // ===== The pretend people: mod1, the streamer and mod2, each a connection of its own =====
-  // They share the logins of the two panels, so what a button does shows there as if it
-  // was done on that panel.
-  const puppets = {};
-  function puppet(login, onMessage) {
-    const ws = new Socket("wss://sandbox.invalid/ws");
-    ws.onopen = () => ws.send(JSON.stringify({ t: "auth", token: `dev:${login}` }));
-    ws.onmessage = (e) => {
-      if (e.data === "pong") return;
-      try {
-        onMessage?.(JSON.parse(e.data));
-      } catch {}
-    };
-    return { send: (m) => ws.readyState === 1 && ws.send(JSON.stringify(m)) };
-  }
-  const send = (login, m) => puppets[login]?.send(m);
-
-  // Questions waiting, so the buttons and auto-play can act on them: id -> question.
-  const open = {};
-  function track(m) {
-    if (m.t === "state") for (const q of m.questions || []) open[q.id] = q;
-    if (m.t === "q") open[m.q.id] = m.q;
-  }
-
-  // mod2: answers anything sent to them, a few seconds later, and replies in a private chat.
-  const MOD2_REPLIES = ["Sure, on it", "Give me a sec", "Yep, done", "Not right now, sorry", "I'll check"];
-  function mod2(m) {
-    track(m);
-    if (m.t === "q" && m.q.to === "mod2" && !m.q.answer && !m.q.dismissed && !m.q.withdrawn) {
-      const q = m.q;
-      setTimeout(() => {
-        if (q.note) send("mod2", { t: "answer", id: q.id, code: "c", text: pick(MOD2_REPLIES) });
-        else send("mod2", { t: "answer", id: q.id, code: (q.options || ["y"]).find((o) => !o.startsWith("+")) || "y" });
-      }, 3000 + Math.random() * 3000);
-    }
-    if (m.t === "msg" && m.m.from !== "mod2" && m.m.owner.startsWith("@") && m.m.owner.includes("mod2")) {
-      setTimeout(() => send("mod2", { t: "say", owner: m.m.owner, text: pick(MOD2_REPLIES) }), 2500 + Math.random() * 2500);
-    }
-  }
-
-  const MOD_ASKS = ["Can I run the poll now?", "Should I start the giveaway?", "Timeout the spammer?", "Raid them after this game?", "Want me to clip that?"];
-  const MOD_SAYS = ["Mic is a little quiet", "Chat's asking about your settings", "Poll is ready when you are", "Someone new followed, say hi"];
-  const MOD_NOTES = ["Raid incoming in 1 min", "Ad break in 2 min", "Big donation just came in"];
-  const STREAMER_ASKS = ["Can you post the Discord link?", "Can you pin the schedule?", "Who just raided?", "Can you start the poll?"];
-  const modAsk = () => send("mod1", { t: "ask", to: "streamer", text: pick(MOD_ASKS), options: ["t", "y", "n"] });
-  const modSay = () => send("mod1", { t: "ask", to: "streamer", text: pick(MOD_SAYS), note: true });
-  const modNote = () => send("mod1", { t: "flash", kind: "info", to: "streamer", text: pick(MOD_NOTES) });
-  const MOD_VANISH = ["You've got this", "Looking good today", "That was hilarious", "Drink some water"];
-  const modVanish = () => send("mod1", { t: "flash", kind: "love", to: "streamer", text: pick(MOD_VANISH) });
-  const streamerAsk = () => send("streamer", { t: "ask", to: "mod1", text: pick(STREAMER_ASKS), options: ["y", "n", "s", "o", "m", "t"] });
-  const waitingOnStreamer = () => Object.values(open).filter((q) => q.from === "mod1" && q.to === "streamer" && !q.note && !q.answer && !q.dismissed && !q.withdrawn).sort((a, b) => a.at - b.at);
-  // Nudge mod1's oldest unanswered question (it moves up a color on the streamer's side).
-  const modNudge = () => {
-    const q = waitingOnStreamer().find((q) => (q.nudges || 0) < 3);
-    if (!q) return said("mod1 has nothing unanswered to nudge: try \"mod1 asks\" first");
-    send("mod1", { t: "nudge", id: q.id });
-    said(`mod1 nudged: ${q.text}`);
-  };
-  document.getElementById("modNudge").addEventListener("click", modNudge);
-  // A warning: what tapping Nudge six times quickly sends (red on the streamer's side).
-  document.getElementById("modWarn").addEventListener("click", () => {
-    const q = waitingOnStreamer()[0];
-    if (!q) return said("mod1 has nothing unanswered to warn about: try \"mod1 asks\" first");
-    send("mod1", { t: "nudge", id: q.id, warn: true });
-    said(`mod1 sent the streamer a warning: ${q.text}`);
-  });
-  for (const [id, go, what] of [["modAsk", modAsk, "mod1 asked the streamer"], ["modSay", modSay, "mod1 messaged the streamer"], ["modNote", modNote, "mod1 sent quick info: it shows on the streamer's bar for 2 minutes"], ["modVanish", modVanish, "mod1 sent a !vanish note: it shows for 30 seconds"], ["streamerAsk", streamerAsk, "the streamer asked mod1"]]) {
-    document.getElementById(id).addEventListener("click", () => {
-      go();
-      said(what);
-    });
-  }
-
-  // A mod flags a line in chat: it glows in the streamer's custom chat, and its pin sits at
-  // the top for a few seconds.
-  document.getElementById("modFlag").addEventListener("click", () => {
-    const line = pretendTwitch.recentLine();
-    if (!line) return said("Nothing in chat to flag yet: turn the chat feed on, or have someone talk");
-    send("mod1", { t: "flash", kind: "chat", to: "streamer", channel: "streamer", chatter: line.who.toLowerCase(), chatterName: line.who, chatterColor: line.color, text: line.text, color: "#3fb2ff" });
-    said(`mod1 flagged ${line.who}'s line: it glows in the streamer's chat`);
-  });
-
-  // ===== Auto-play: mod1 and the streamer talk on their own ================================
-  let auto = 0;
-  const answered = new Set();
-  function answerLater(login, q, ms) {
-    setTimeout(() => {
-      const now = open[q.id];
-      if (!now || now.answer || now.dismissed || now.withdrawn || (now.note && now.seenAt)) return; // done by hand
-      if (now.note) send(login, { t: "seen", id: q.id });
-      else send(login, { t: "answer", id: q.id, code: pick((now.options || ["y"]).filter((o) => !o.startsWith("+"))) });
-    }, ms);
-  }
-  function autoTurn() {
-    const turn = pick(["modAsk", "modAsk", "modNudge", "modNudge", "modSay", "modNote", "streamerAsk"]);
-    if (turn === "modNudge") modNudge();
-    else {
-      ({ modAsk, modSay, modNote, streamerAsk })[turn]();
-      said(`Auto-play: ${{ modAsk: "mod1 asked", modSay: "mod1 messaged", modNote: "mod1 sent a note", streamerAsk: "the streamer asked mod1" }[turn]}`);
-    }
-    auto = setTimeout(autoTurn, 12000 + Math.random() * 12000);
-  }
-  function onAutoQuestion(m) {
-    track(m);
-    if (!auto || m.t !== "q" || m.q.answer || m.q.dismissed || m.q.seenAt || answered.has(m.q.id)) return;
-    const q = m.q;
-    if (q.from === "mod1" && q.to === "streamer") {
-      answered.add(q.id);
-      answerLater("streamer", q, 25000 + Math.random() * 30000); // slow, so there's time to nudge
-    } else if (q.from === "streamer" && q.to === "mod1") {
-      answered.add(q.id);
-      answerLater("mod1", q, 3000 + Math.random() * 4000);
-    }
-  }
-  document.getElementById("auto").addEventListener("click", (e) => {
-    if (auto) {
-      clearTimeout(auto);
-      auto = 0;
-    } else auto = setTimeout(autoTurn, 500);
-    e.target.textContent = `Auto-play: ${auto ? "on" : "off"}`;
-    e.target.classList.toggle("on", !!auto);
-  });
-
-  // ===== The pretend chat ===================================================================
-  let feeding = false; // quiet until the tour (or the switch) starts it
-  document.getElementById("feed").addEventListener("click", (e) => {
-    feeding = !feeding;
-    feeding ? pretendTwitch.feed() : pretendTwitch.feedoff();
-    e.target.textContent = `Chat feed: ${feeding ? "on" : "off"}`;
-    e.target.classList.toggle("on", feeding);
-  });
-  const LINES = ["hey chat", "that was clean", "lol", "o7", "nice one", "W"];
-  const chatter = () => document.getElementById("chatter").value;
-  document.getElementById("cJoin").addEventListener("click", () => (pretendTwitch.join(chatter()), said(`${chatter()} joined the chat`)));
-  document.getElementById("cSay").addEventListener("click", () => (pretendTwitch.say(chatter(), pick(LINES)), said(`${chatter()} chatted`)));
-  document.getElementById("cPart").addEventListener("click", () => (pretendTwitch.part(chatter()), said(`${chatter()} left the chat`)));
-  // Twitch's own events, shown in the streamer's custom chat on the right.
-  const on = (id, run) => document.getElementById(id).addEventListener("click", run);
-  on("tRaid", () => {
-    const { from, count } = pretendTwitch.raid();
-    said(`${from} raided with ${count} viewers: watch the streamer's chat on the right`);
-  });
-  on("tFirst", () => said(`${pretendTwitch.first()} chatted for the first time`));
-  on("tCmd", () => {
-    const { who, cmd } = pretendTwitch.command();
-    said(`${who} typed ${cmd}: StreamElements answers (you can type one in the streamer's chat too)`);
-  });
-  on("tSub", () => said(`${pretendTwitch.sub()} subscribed`));
-  on("tGift", () => {
-    const { who, total } = pretendTwitch.gift();
-    said(`${who} gifted ${total} subs`);
-  });
-  on("tCheer", () => said(`${pretendTwitch.cheer()} cheered bits`));
-  on("tHighlight", () => said(`${pretendTwitch.highlight()} highlighted a message with channel points`));
-  on("tRedeem", () => {
-    const { who, title } = pretendTwitch.redeem();
-    said(`${who} redeemed ${title}`);
-  });
-  on("tStreak", () => {
-    const { who, n } = pretendTwitch.streak();
-    said(`${who} shared a ${n}-stream watch streak`);
-  });
-  on("tBadge", () => {
-    const { who, tier } = pretendTwitch.bitsBadge();
-    said(`${who} unlocked the ${tier.toLocaleString()} bits badge`);
-  });
-  on("tPin", () => (pretendTwitch.pin(), said("mod2 pinned a message: it shows at the top of the streamer's chat within 10 seconds")));
-  on("tHype", () => (pretendTwitch.hype(), said("A hype train started: see the top of the streamer's chat")));
-  on("tPoll", () => (pretendTwitch.poll(), said("A poll started: watch the votes at the top of the streamer's chat")));
-  on("tPred", () => (pretendTwitch.prediction(), said("A prediction started: it locks after 20 seconds, then a side wins")));
-  on("tAnnounce", () => (pretendTwitch.announce(), said("mod2 made an announcement")));
-  document.getElementById("reload").addEventListener("click", () => location.reload());
-
-  // The short menus above the screens press the same buttons as the full menu below.
-  for (const b of document.querySelectorAll("[data-click]")) b.addEventListener("click", () => document.getElementById(b.dataset.click).click());
-  document.querySelector(".menu__more")?.addEventListener("click", () => (document.getElementById("allControls").open = true));
-
-  // The console's tabs: one row of actions at a time.
-  const tabs = [...document.querySelectorAll(".tab")];
-  for (const tab of tabs) {
-    tab.addEventListener("click", () => {
-      for (const t of tabs) {
-        const on = t === tab;
-        t.setAttribute("aria-selected", String(on));
-        document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
-      }
-    });
-  }
-
-
-  // ===== The guided tour: one thing at a time, nothing until it's pressed ==================
-  // Each step says what to press and where to look; its button does it, then Next.
-  const STEPS = [
-    { title: "Start the stream", text: "Nothing's happening yet. Start the pretend chat, and watch it fill the streamer's OBS dock on the right. mod1 and mod2 come into chat, so their pictures appear in the dock's top bar.", button: "Start the chat", look: "obs",
-      run: () => { if (!feeding) document.getElementById("feed").click(); pretendTwitch.say("mod1", "hey chat"); pretendTwitch.join("mod2"); said("Chat is live: hover a line in the streamer's chat to bookmark, pin or reply"); } },
-    { title: "A mod asks the streamer something", text: "mod1 has a question. It shows up quietly under the streamer's bar, never on stream. Answer it on the right with ♥ ✓ ✗ or ?, or type a reply.", button: "mod1 asks a question", look: "obs", click: "modAsk" },
-    { title: "Nudge it", text: "No answer yet? A mod can nudge. The question moves up from green to orange, with one soft beep, and Streamer View on the left shows it too.", button: "mod1 nudges", look: "obs", click: "modNudge" },
-    { title: "Quick info", text: "Not everything needs an answer. Quick info is a heads-up on the streamer's bar, with a lightning bolt, and it clears itself after 2 minutes.", button: "Send quick info", look: "obs", click: "modNote" },
-    { title: "Flag a chat line", text: "A mod spots something in chat and flags it. The line glows in the streamer's chat, in the mod's color, so it's easy to find.", button: "mod1 flags a line", look: "obs", click: "modFlag" },
-    { title: "The streamer asks back", text: "It works both ways. The streamer asks mod1 something, and it lands in the mod's side panel on the left, ready for a one-tap answer.", button: "Streamer asks mod1", look: "mod", click: "streamerAsk" },
-    { title: "Twitch, built in: a raid", text: "Custom chat shows Twitch's own events as clean cards. Here comes a raid: a card for the raiding streamer, and a RAID tag on everyone who came with them.", button: "Start a raid", look: "obs", click: "tRaid" },
-    { title: "A gift bomb", text: "Twenty gifted subs: a progress card at the top of chat, and a card that lists every person who got one.", button: "Drop a gift bomb", look: "obs", click: "tGift" },
-    { title: "Do Not Disturb", text: "Need focus? On the right, click the hand in the streamer's top bar and pick 15 minutes. Then send quick info: it waits quietly until Do Not Disturb ends.", button: "Send quick info", look: "obs", click: "modNote" },
-    { title: "Your turn", text: "That's the tour. Use the menus above each screen to try anything again, open Every demo control below for the rest, or turn on Auto-play and just watch.", button: "Done", look: "", done: true },
-  ];
-  const tour = {
-    at: 0,
-    show(i) {
-      this.at = Math.max(0, Math.min(STEPS.length - 1, i));
-      const st = STEPS[this.at];
-      document.getElementById("tour").hidden = false;
-      document.getElementById("tourCount").textContent = `${this.at + 1} / ${STEPS.length}`;
-      document.getElementById("tour").style.setProperty("--tour-progress", ((this.at + 1) / STEPS.length).toFixed(3));
-      document.getElementById("tourTitle").textContent = st.title;
-      document.getElementById("tourText").textContent = st.text;
-      document.getElementById("tourDo").textContent = st.button;
-      document.getElementById("tourBack").hidden = this.at === 0;
-      document.getElementById("tourSkip").hidden = !!st.done;
-      for (const id of ["mod", "obs"]) document.getElementById(id).closest(".screen").classList.toggle("spot", st.look === id);
-    },
-    end() {
-      document.getElementById("tour").hidden = true;
-      for (const id of ["mod", "obs"]) document.getElementById(id).closest(".screen").classList.remove("spot");
-      if (!feeding) document.getElementById("feed").click(); // the tour skipped: chat starts anyway
-      said("Try anything from the menus above each screen");
-    },
-  };
-  document.getElementById("tourDo").addEventListener("click", () => {
-    const st = STEPS[tour.at];
-    if (st.done) return tour.end();
-    if (st.run) st.run();
-    if (st.click) document.getElementById(st.click).click();
-    tour.show(tour.at + 1);
-  });
-  document.getElementById("tourBack").addEventListener("click", () => tour.show(tour.at - 1));
-  document.getElementById("tourSkip").addEventListener("click", () => tour.end());
-
-  // ===== Start: everyone added to each other, then the two panels ==========================
-  (async () => {
-    puppets.streamer = puppet("streamer", onAutoQuestion);
-    puppets.mod1 = puppet("mod1", onAutoQuestion);
-    puppets.mod2 = puppet("mod2", mod2);
-    await wait(300);
-    send("streamer", { t: "connect", login: "mod1" });
-    send("streamer", { t: "connect", login: "mod2" });
-    send("mod1", { t: "connect", login: "streamer" });
-    send("mod1", { t: "connect", login: "mod2" });
-    send("mod2", { t: "connect", login: "streamer" });
-    send("mod2", { t: "connect", login: "mod1" });
-    await wait(300);
-    document.getElementById("mod").src = "../?dev=mod1&embed=ext&watch=streamer&sandbox";
-    document.getElementById("obs").src = "../?dev=streamer&livechat&ownchat&mock&lightms=6000&sandbox";
-    // Nothing happens until someone presses something: the tour walks them through it.
-    tour.show(0);
   })();
 </script>
 </body>

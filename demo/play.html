@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="brand/mark.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0b1a3a">
+<title>Streamer Buddy System · live demo</title>
+<meta name="description" content="Both sides of Streamer Buddy System, side by side, with pretend people. Nothing here is real.">
+<!--
+  The live demo on a page of its own: the mod's side panel and the streamer's OBS dock, the
+  tour and every control, with the pretend relay and Twitch (hub.js) running here. Open it
+  straight (demo/play.html) to work on it without the front page's intro and hero; the front
+  page (demo/index.html) shows it in a frame (?embed), and "Start over" reloads only this.
+-->
+<script>if (new URLSearchParams(location.search).has("embed")) document.documentElement.classList.add("embedded");</script>
+<style>
+  /* ===== Twitch Space: the public site, with the live demo in the middle ===== */
+  @font-face { font-family: "Plus Jakarta Sans"; font-weight: 400 800; font-display: swap; src: url("../fonts/plus-jakarta-sans.woff2") format("woff2"); }
+  :root { color-scheme: dark; --brand: #3f7dd8; --brand-light: #7db0ef; --brand-deep: #1f3f95; --brand-ink: #034d9b; --purple: var(--brand); --lilac: var(--brand-light); --muted: #a3a3ad; --line: #24242a; --card: #141416; --card-top: #19191c; --edge: #2a2a30; }
+  html { scroll-behavior: smooth; }
+  html, body { margin: 0; background: #08080a; color: #efeff1; font: 14px/1.5 "Plus Jakarta Sans", Inter, "Helvetica Neue", Arial, sans-serif; }
+  a { color: inherit; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 22px; }
+  section[id] { scroll-margin-top: 70px; }
+
+  /* Top bar */
+  .top { position: sticky; top: 0; z-index: 50; background: rgba(8, 8, 10, 0.82); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .top .wrap { display: flex; align-items: center; gap: 18px; height: 58px; }
+  .top img { display: block; height: 28px; width: auto; }
+  .top nav { display: flex; gap: 4px; margin-left: auto; }
+  .top nav a { padding: 7px 11px; font-size: 13px; font-weight: 600; color: #c4c4cc; text-decoration: none; border-radius: 3px; }
+  .top nav a:hover { color: #fff; background: #17171b; }
+  .top nav a.cta { color: #fff; background: var(--purple); }
+  .top nav a.cta:hover { background: #a36bff; }
+  @media (max-width: 640px) { .top nav a:not(.cta) { display: none; } }
+
+  /* Intro */
+  .hero { padding: 76px 0 40px; background: radial-gradient(900px 420px at 15% 0%, rgba(145, 71, 255, 0.16), transparent 65%); }
+  .eyebrow { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lilac); }
+  .hero h1 { max-width: 820px; margin: 10px 0 16px; font-size: clamp(32px, 5vw, 54px); line-height: 1.05; letter-spacing: -0.025em; font-weight: 800; }
+  .hero__lead { max-width: 680px; margin: 0; font-size: 17px; line-height: 1.6; color: #b9b9c3; }
+  .hero__lead b { color: #efeff1; }
+  .hero__ctas { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; font: inherit; font-size: 14px; font-weight: 700; color: #efeff1; text-decoration: none; background: #18181c; border: 1px solid #30303a; border-radius: 4px; cursor: pointer; }
+  .btn:hover { background: #222228; }
+  .btn--main { color: #fff; background: var(--purple); border-color: #a36bff; box-shadow: 0 8px 24px rgba(145, 71, 255, 0.3); }
+  .btn--main:hover { background: #a36bff; }
+  .hero__points { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 26px 0 0; padding: 0; list-style: none; color: #8d8d97; font-size: 13px; }
+  .hero__points li::before { content: "✓"; margin-right: 7px; color: #3fc98e; font-weight: 800; }
+
+  /* The demo */
+  .demo { padding: 34px 0 40px; border-top: 1px solid var(--line); }
+  .demo__head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 10px 24px; margin-bottom: 16px; }
+  .demo__head h2 { margin: 6px 0 4px; font-size: clamp(22px, 2.6vw, 30px); letter-spacing: -0.015em; font-weight: 800; }
+  .demo__head p { margin: 0; max-width: 620px; color: var(--muted); }
+  .steps { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; counter-reset: step; font-size: 12.5px; color: #9a9aa5; }
+  .steps li { counter-increment: step; }
+  .steps li::before { content: counter(step); display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 6px; font-size: 10.5px; font-weight: 800; color: #fff; background: #2a2a31; border-radius: 3px; }
+
+  /* The console: tabs, then the actions for that tab */
+  .console { background: linear-gradient(180deg, var(--card-top), var(--card)); border: 1px solid var(--edge); border-radius: 4px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55); }
+  .console__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px; border-bottom: 1px solid var(--line); }
+  .tabs { display: flex; gap: 2px; padding: 3px; background: #0d0d10; border: 1px solid var(--line); border-radius: 4px; }
+  .tab { padding: 7px 13px; font: inherit; font-size: 13px; font-weight: 700; color: #9a9aa5; background: none; border: 0; border-radius: 3px; cursor: pointer; }
+  .tab:hover { color: #efeff1; }
+  .tab[aria-selected="true"] { color: #fff; background: #26262d; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
+  .console__run { display: flex; gap: 6px; margin-left: auto; }
+  .pane { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px; }
+  .pane[hidden] { display: none; }
+  .pane__sep { width: 1px; height: 22px; margin: 0 4px; background: var(--line); }
+  .chip, .console select { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; font: inherit; font-size: 13px; font-weight: 600; color: #e4e4ea; background: #1f1f24; border: 1px solid #2f2f37; border-radius: 4px; cursor: pointer; }
+  .chip:hover { background: #29292f; border-color: #3d3d46; }
+  .chip:active { transform: translateY(1px); }
+  .chip[data-k]::before { content: ""; width: 8px; height: 8px; flex: none; border-radius: 2px; background: var(--k); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5); }
+  .chip.on { color: #fff; background: #3b2470; border-color: #7a4dd8; }
+  .console__said { display: flex; align-items: center; gap: 8px; min-height: 20px; padding: 9px 14px; font-size: 12.5px; color: #a3a3ad; border-top: 1px solid var(--line); }
+  .console__said::before { content: ""; width: 6px; height: 6px; flex: none; border-radius: 50%; background: #3fc98e; box-shadow: 0 0 6px #3fc98e; }
+  .console__said:empty::after { content: "Hover any button to see what it does, then click it."; color: #6f6f78; }
+
+  /* Tooltips: hover or focus anything with data-tip */
+  [data-tip] { position: relative; }
+  [data-tip]::after {
+    content: attr(data-tip); position: absolute; z-index: 40; left: 50%; top: calc(100% + 9px); width: max-content; max-width: 250px;
+    padding: 8px 10px; font-size: 12px; font-weight: 500; line-height: 1.45; text-align: left; white-space: normal; color: #e9e9ee;
+    background: #1c1c21; border: 1px solid #33333b; border-radius: 4px; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.7);
+    opacity: 0; transform: translate(-50%, -3px); pointer-events: none; transition: opacity 0.14s, transform 0.14s; transition-delay: 0s;
+  }
+  [data-tip]:hover::after, [data-tip]:focus-visible::after { opacity: 1; transform: translate(-50%, 0); transition-delay: 0.25s; }
+  .chip[data-k]::before { position: static; }
+
+  /* The two screens */
+  .stage { display: flex; flex-wrap: wrap; justify-content: center; gap: 28px; margin-top: 22px; }
+  .screen { display: flex; flex-direction: column; gap: 8px; }
+  .screen__label { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #c4c4cc; }
+  .screen__label small { font-weight: 500; color: #7d7d87; }
+  .screen__label .info { display: inline-grid; place-items: center; width: 17px; height: 17px; font-size: 10.5px; font-weight: 800; color: #b9b9c3; background: #222228; border: 1px solid #33333b; border-radius: 50%; cursor: help; }
+  .screen__label .info::after { left: 0; transform: translate(0, -3px); }
+  .screen__label .info:hover::after, .screen__label .info:focus-visible::after { transform: none; }
+  iframe { height: min(760px, calc(100vh - 110px)); min-height: 540px; border: 1px solid var(--edge); border-radius: 4px; background: #0e0e10; box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6); }
+  #mod { width: min(400px, 92vw); }
+  #obs { width: min(420px, 92vw); }
+
+  /* Features */
+  .band { padding: 56px 0 50px; border-top: 1px solid var(--line); }
+  .band__title { margin: 8px 0 10px; font-size: clamp(24px, 3vw, 32px); line-height: 1.15; letter-spacing: -0.015em; font-weight: 800; }
+  .band__lead { margin: 0 0 26px; max-width: 660px; font-size: 15.5px; line-height: 1.6; color: var(--muted); }
+  .band__eyebrow { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lilac); }
+  .ft-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+  .ft { display: flex; gap: 14px; align-items: flex-start; padding: 16px; background: linear-gradient(180deg, var(--card-top), var(--card)); border: 1px solid var(--edge); border-radius: 3px; box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45); }
+  .ft__icon { display: grid; place-items: center; width: 36px; height: 36px; flex: none; color: #0b0b0d; border-radius: 3px; background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.28) 100%), linear-gradient(150deg, color-mix(in srgb, var(--k) 80%, #fff), var(--k) 55%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.55), 0 6px 14px rgba(0, 0, 0, 0.8); }
+  .ft__icon svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+  .ft h4 { margin: 1px 0 4px; font-size: 14.5px; font-weight: 700; }
+  .ft p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
+
+  /* Footer */
+  .foot { padding: 26px 0 40px; border-top: 1px solid var(--line); font-size: 12px; color: #6f6f78; }
+  .foot .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .foot img { height: 20px; opacity: 0.7; }
+
+  /* ===== Brand: Twitch Space blue (the speech bubble, the people, the deep blue behind) ===== */
+  ::selection { color: #fff; background: color-mix(in srgb, var(--brand) 60%, transparent); }
+  body { background: radial-gradient(1400px 700px at 85% -10%, rgba(63, 125, 216, 0.10), transparent 60%), #07080c; }
+  .top { background: rgba(7, 8, 12, 0.82); }
+  .top nav a.cta, .btn--main { color: #fff; background: linear-gradient(160deg, #4f8de6, var(--brand) 45%, var(--brand-deep)); border-color: #6aa0ec; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 8px 24px rgba(63, 125, 216, 0.35); }
+  .top nav a.cta:hover, .btn--main:hover { filter: brightness(1.1); background: linear-gradient(160deg, #4f8de6, var(--brand) 45%, var(--brand-deep)); }
+  .hero { position: relative; overflow: hidden; padding: 84px 0 56px; background:
+    radial-gradient(700px 420px at 78% 40%, rgba(63, 125, 216, 0.28), transparent 65%),
+    radial-gradient(900px 500px at 10% 0%, rgba(3, 77, 155, 0.30), transparent 65%); }
+  .hero .wrap { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr); align-items: center; gap: 30px; }
+  @media (max-width: 860px) { .hero .wrap { grid-template-columns: 1fr; } .hero__art { display: none; } }
+  .hero h1 span { background: linear-gradient(100deg, #a8cdf7, var(--brand-light) 40%, var(--brand)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero__art { position: relative; justify-self: center; width: min(300px, 100%); aspect-ratio: 1; }
+  .hero__art::before { content: ""; position: absolute; inset: 8%; border-radius: 22%; background: radial-gradient(circle, rgba(125, 176, 239, 0.45), transparent 70%); filter: blur(30px); }
+  .hero__art img { position: relative; display: block; width: 100%; height: auto; border-radius: 22%; transform: rotate(-6deg); box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(125, 176, 239, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2); animation: float 7s ease-in-out infinite; image-rendering: auto; }
+  @keyframes float { 0%, 100% { transform: rotate(-6deg) translateY(0); } 50% { transform: rotate(-4deg) translateY(-10px); } }
+  @media (prefers-reduced-motion: reduce) { .hero__art img { animation: none; } }
+  .eyebrow, .band__eyebrow { color: var(--brand-light); }
+  .hero__points li::before { color: var(--brand-light); }
+  .tab[aria-selected="true"] { background: linear-gradient(180deg, #27406e, #1d2f55); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 3px rgba(0, 0, 0, 0.6); }
+  .chip.on { color: #fff; background: #1d3566; border-color: #3f7dd8; }
+  .console { border-color: #263150; }
+  .console__said::before { background: var(--brand-light); box-shadow: 0 0 6px var(--brand-light); }
+  iframe { border-color: #263150; }
+  .band { position: relative; }
+  .band__title span { color: var(--brand-light); }
+  .foot .tom { display: inline-flex; align-items: center; gap: 8px; color: #6f6f78; }
+  .foot .tom img { width: 26px; height: 26px; border-radius: 3px; opacity: 0.85; filter: saturate(0.6); }
+
+  /* ===== The demo, condensed: a short menu above each screen, everything else folded away ===== */
+  .demo__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 6px 6px 6px 0; border-bottom: 1px solid var(--line); }
+  .demo__bar .console__said { flex: 1; border: 0; padding: 6px 0; }
+  .demo__run { display: flex; gap: 6px; }
+  .menu { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 9px; background: linear-gradient(180deg, var(--card-top), var(--card)); border: 1px solid #263150; border-radius: 4px; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5); }
+  .menu__head { width: 100%; margin-bottom: 1px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--brand-light); }
+  .menu .chip { padding: 6px 10px; font-size: 12.5px; }
+  .chip .go { margin-left: 2px; font-weight: 800; color: var(--brand-light); }
+  .menu__more { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--brand-light); text-decoration: none; }
+  .menu__more:hover { text-decoration: underline; }
+  .screen { width: min(420px, 92vw); }
+  .screen iframe { width: 100%; }
+  .all { margin-top: 24px; background: linear-gradient(180deg, var(--card-top), var(--card)); border: 1px solid #263150; border-radius: 4px; }
+  .all summary { display: flex; align-items: baseline; gap: 10px; padding: 12px 14px; font-weight: 800; cursor: pointer; list-style: none; }
+  .all summary::-webkit-details-marker { display: none; }
+  .all summary::before { content: "▸"; color: var(--brand-light); transition: transform 0.15s; }
+  .all[open] summary::before { transform: rotate(90deg); }
+  .all summary small { font-weight: 500; color: #7d7d87; }
+  .all .console { margin: 0 10px 10px; box-shadow: none; }
+
+  /* ===== The way in: a page like a 2006 social profile for a moment, then it glitches into this one ===== */
+  #retro { position: fixed; inset: 0; z-index: 1000; overflow: hidden; background: #e5e5e5; color: #000; font: 11px/1.35 Verdana, Arial, sans-serif; cursor: pointer; }
+  #retro .r-top { background: #039; color: #fff; }
+  #retro .r-top__in { display: flex; align-items: center; gap: 14px; width: 800px; max-width: 96vw; margin: 0 auto; padding: 10px 0 6px; }
+  #retro .r-logo { font: bold 30px/1 Arial, sans-serif; letter-spacing: -1px; }
+  #retro .r-logo small { display: block; margin-top: 2px; font: 10px Verdana, sans-serif; letter-spacing: 0; color: #cdf; }
+  #retro .r-search { margin-left: auto; display: flex; gap: 4px; align-items: center; font-size: 10px; }
+  #retro .r-search span { display: inline-block; width: 150px; height: 15px; background: #fff; border: 1px solid #7f9db9; }
+  #retro .r-search b { padding: 1px 6px; color: #000; background: #ddd; border: 1px solid #888; font-weight: normal; }
+  #retro .r-nav { background: #6698cb; border-top: 1px solid #99c; }
+  #retro .r-nav__in { width: 800px; max-width: 96vw; margin: 0 auto; padding: 3px 0; color: #fff; font-size: 10px; font-weight: bold; }
+  #retro .r-nav__in a { color: #fff; text-decoration: none; }
+  #retro .r-page { display: grid; grid-template-columns: 300px 1fr; gap: 12px; width: 800px; max-width: 96vw; margin: 10px auto; padding: 10px; background: #fff; }
+  #retro h2 { margin: 0 0 6px; font: bold 18px Arial, sans-serif; }
+  #retro .r-pic { display: flex; gap: 8px; }
+  #retro .r-pic img { width: 120px; height: 120px; border: 1px solid #999; image-rendering: pixelated; }
+  #retro .r-pic p { margin: 0 0 4px; }
+  #retro .r-online { color: #3a3; font-weight: bold; animation: rblink 0.7s steps(1) infinite; }
+  @keyframes rblink { 50% { opacity: 0; } }
+  #retro .r-box { margin-top: 10px; border: 1px solid #6698cb; }
+  #retro .r-box h3 { margin: 0; padding: 3px 5px; font: bold 11px Verdana, sans-serif; color: #fff; background: #6698cb; }
+  #retro .r-box--orange { border-color: #f90; }
+  #retro .r-box--orange h3 { color: #f60; background: #fc9; }
+  #retro .r-box ul { margin: 0; padding: 5px 5px 5px 22px; }
+  #retro .r-box a, #retro .r-link { color: #039; }
+  #retro .r-box table { width: 100%; border-collapse: collapse; }
+  #retro .r-box td { padding: 3px 5px; border-top: 1px solid #fff; background: #bfd3eb; }
+  #retro .r-box td:first-child { width: 90px; color: #369; font-weight: bold; background: #dbe8f5; }
+  #retro .r-network { padding: 12px; font: bold 18px Arial, sans-serif; text-align: center; border: 1px solid #ccc; }
+  #retro .r-blog { padding: 6px; }
+  #retro .r-friends { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 8px; text-align: center; }
+  #retro .r-friend b { display: block; margin-bottom: 3px; color: #039; text-decoration: underline; font-size: 10px; }
+  #retro .r-friend i { display: block; width: 62px; height: 62px; margin: 0 auto; background: var(--f); border: 1px solid #999; }
+  #retro .r-player { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 5px; color: #fff; background: linear-gradient(#444, #111); border: 1px solid #000; font-size: 10px; }
+  #retro .r-player span:first-child { display: inline-block; width: 0; height: 0; border-left: 8px solid #6f6; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+  #retro .r-marquee { overflow: hidden; white-space: nowrap; }
+  #retro .r-marquee span { display: inline-block; padding-left: 100%; animation: rscroll 6s linear infinite; }
+  @keyframes rscroll { to { transform: translateX(-100%); } }
+  #retro .r-count { display: inline-block; padding: 1px 4px; font: bold 12px "Courier New", monospace; color: #0f0; background: #000; letter-spacing: 2px; }
+  #retro .r-skip { position: absolute; right: 12px; bottom: 10px; font-size: 10px; color: #666; }
+  /* The glitch: slices jump sideways, colors split, scanlines, then it's gone */
+  #retro::before, #retro::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; }
+  #retro::before { background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.25) 0 1px, transparent 1px 3px); mix-blend-mode: multiply; }
+  #retro::after { background: linear-gradient(90deg, rgba(255, 0, 80, 0.35), rgba(0, 200, 255, 0.35)); mix-blend-mode: screen; }
+  #retro.glitch { animation: rglitch 0.65s steps(2, end) forwards; }
+  #retro.glitch::before { opacity: 1; }
+  #retro.glitch::after { animation: rsplit 0.65s steps(3, end) forwards; }
+  #retro.glitch .r-wrap { animation: rshift 0.65s steps(2, end) forwards; }
+  @keyframes rglitch {
+    0% { clip-path: inset(0 0 0 0); filter: none; }
+    15% { clip-path: inset(12% 0 58% 0); transform: translateX(-14px); filter: hue-rotate(90deg) saturate(2); }
+    30% { clip-path: inset(48% 0 20% 0); transform: translateX(18px); filter: invert(1); }
+    45% { clip-path: inset(0 0 72% 0); transform: translateX(-8px) skewX(-6deg); filter: hue-rotate(200deg) contrast(2); }
+    60% { clip-path: inset(70% 0 4% 0); transform: translateX(24px); filter: invert(1) hue-rotate(40deg); }
+    75% { clip-path: inset(30% 0 40% 0); transform: translateX(-20px); opacity: 0.8; }
+    90% { clip-path: inset(0 0 92% 0); transform: none; opacity: 0.4; }
+    100% { clip-path: inset(50% 0 50% 0); opacity: 0; }
+  }
+  @keyframes rsplit { 0% { opacity: 0; } 30% { opacity: 1; transform: translateX(10px); } 60% { opacity: 0.6; transform: translateX(-12px); } 100% { opacity: 0; } }
+  @keyframes rshift { 0% { text-shadow: none; } 40% { text-shadow: 3px 0 #f05, -3px 0 #0cf; } 100% { text-shadow: -6px 0 #f05, 6px 0 #0cf; } }
+  .site-in { animation: sitein 0.5s ease-out; }
+  @keyframes sitein { 0% { filter: brightness(1.8) contrast(1.4) hue-rotate(-30deg); transform: translateX(6px); } 30% { transform: translateX(-4px); } 100% { filter: none; transform: none; } }
+  @media (max-width: 720px) { #retro .r-page { grid-template-columns: 1fr; } #retro .r-search { display: none; } }
+
+  /* ===== The guided tour ===== */
+  .tour { position: relative; overflow: hidden; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px 24px; min-height: 12.5vh; margin-bottom: 14px; padding: 20px 26px 24px; background: radial-gradient(120% 140% at 0% 0%, rgba(79, 141, 230, 0.28), transparent 55%), linear-gradient(135deg, rgba(63, 125, 216, 0.16), rgba(31, 63, 149, 0.08)), linear-gradient(180deg, var(--card-top), var(--card)); border: 1px solid #3d5f9e; border-radius: 4px; box-shadow: 0 0 0 1px rgba(125, 176, 239, 0.08), 0 18px 44px rgba(0, 0, 0, 0.55), 0 0 50px rgba(63, 125, 216, 0.14); }
+  .tour::after { content: ""; position: absolute; left: 0; bottom: 0; height: 4px; width: calc(var(--tour-progress, 0) * 100%); background: linear-gradient(90deg, #4f8de6, var(--brand-light)); box-shadow: 0 0 14px rgba(125, 176, 239, 0.6); transition: width 0.45s ease; }
+  .tour[hidden] { display: none; }
+  .tour__count { display: grid; place-items: center; width: 68px; height: 68px; font-weight: 800; font-size: 17px; color: #fff; background: linear-gradient(160deg, #4f8de6, var(--brand) 45%, var(--brand-deep)); border-radius: 4px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 6px 16px rgba(0, 0, 0, 0.6); }
+  .tour h3 { margin: 0 0 6px; font-size: clamp(19px, 1.7vw, 24px); font-weight: 800; letter-spacing: -0.015em; line-height: 1.15; }
+  .tour p { margin: 0; max-width: 720px; font-size: 15px; line-height: 1.55; color: #c6c6d0; }
+  .tour__actions .btn { padding: 12px 20px; font-size: 15px; }
+  .tour__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+  .tour__actions .btn[hidden] { display: none; }
+  .tour__skip { padding: 6px 4px; font: inherit; font-size: 12px; color: #7d7d87; background: none; border: 0; cursor: pointer; text-decoration: underline; }
+  .tour__skip[hidden] { display: none; }
+  @media (max-width: 760px) { .tour { grid-template-columns: auto 1fr; gap: 14px; padding: 18px 16px 22px; } .tour__count { width: 52px; height: 52px; font-size: 14px; } .tour__actions { grid-column: 1 / -1; justify-content: flex-start; } }
+  .screen.spot iframe { border-color: var(--brand-light); box-shadow: 0 0 0 3px rgba(125, 176, 239, 0.25), 0 18px 44px rgba(0, 0, 0, 0.6); }
+
+  /* ===== The backdrop: a vague space scene that stays put while the page scrolls over it ===== */
+  html, body { background: transparent; }
+  html { background: #04050b; }
+  body { background: none; }
+  #space { position: fixed; inset: 0; z-index: -1; pointer-events: none; background:
+    radial-gradient(60% 45% at 18% 12%, rgba(63, 125, 216, 0.22), transparent 70%),
+    radial-gradient(50% 40% at 88% 28%, rgba(122, 70, 210, 0.18), transparent 70%),
+    radial-gradient(55% 45% at 60% 88%, rgba(226, 86, 143, 0.09), transparent 70%),
+    radial-gradient(40% 30% at 30% 65%, rgba(31, 63, 149, 0.20), transparent 70%),
+    linear-gradient(180deg, #050713, #04050b 60%, #070512); }
+  #space::before, #space::after { content: ""; position: absolute; inset: 0; }
+  #space::before { background-image: radial-gradient(1.2px 1.2px at 165px 77px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 24px 37px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 187px 298px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 259px 109px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 44px 222px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 35px 123px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 282px 217px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 289px 63px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 298px 31px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 25px 113px, rgba(255,255,255,.85), transparent), radial-gradient(1px 1px at 285px 68px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 214px 73px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 292px 157px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 52px 297px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 190px 49px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 288px 30px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 254px 272px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 160px 238px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 185px 153px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 92px 124px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 294px 153px, rgba(255,255,255,.85), transparent), radial-gradient(1px 1px at 175px 229px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 311px 37px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 262px 214px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 175px 77px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 215px 20px, rgba(255,255,255,.85), transparent), radial-gradient(1px 1px at 285px 293px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 174px 179px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 296px 233px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 47px 138px, rgba(255,255,255,.85), transparent), radial-gradient(1px 1px at 33px 31px, rgba(255,255,255,.85), transparent), radial-gradient(1px 1px at 295px 228px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 197px 177px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 236px 181px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 312px 59px, rgba(255,255,255,.85), transparent), radial-gradient(1px 1px at 30px 111px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 66px 126px, rgba(255,255,255,.85), transparent), radial-gradient(0.6px 0.6px at 200px 254px, rgba(255,255,255,.85), transparent), radial-gradient(1.2px 1.2px at 85px 229px, rgba(255,255,255,.85), transparent), radial-gradient(0.8px 0.8px at 281px 142px, rgba(255,255,255,.85), transparent); background-size: 320px 320px; opacity: 0.55; }
+  #space::after { background-image: radial-gradient(2px 2px at 440px 285px, rgba(180,210,255,.95), transparent), radial-gradient(2px 2px at 425px 367px, rgba(180,210,255,.95), transparent), radial-gradient(1.2px 1.2px at 389px 236px, rgba(180,210,255,.95), transparent), radial-gradient(1.2px 1.2px at 84px 180px, rgba(180,210,255,.95), transparent), radial-gradient(1.2px 1.2px at 237px 238px, rgba(180,210,255,.95), transparent), radial-gradient(1.5px 1.5px at 496px 186px, rgba(180,210,255,.95), transparent), radial-gradient(1.2px 1.2px at 288px 4px, rgba(180,210,255,.95), transparent), radial-gradient(1.5px 1.5px at 429px 547px, rgba(180,210,255,.95), transparent), radial-gradient(2px 2px at 326px 128px, rgba(180,210,255,.95), transparent), radial-gradient(1.5px 1.5px at 527px 55px, rgba(180,210,255,.95), transparent), radial-gradient(1.5px 1.5px at 401px 407px, rgba(180,210,255,.95), transparent), radial-gradient(1.5px 1.5px at 403px 106px, rgba(180,210,255,.95), transparent), radial-gradient(1.2px 1.2px at 410px 63px, rgba(180,210,255,.95), transparent), radial-gradient(1.5px 1.5px at 68px 213px, rgba(180,210,255,.95), transparent); background-size: 560px 560px; opacity: 0.7; animation: twinkle 4s ease-in-out infinite alternate; }
+  @keyframes twinkle { from { opacity: 0.35; } to { opacity: 0.85; } }
+  #space .planet { position: absolute; right: 7%; top: 18%; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #5a8de8, #1f3f95 55%, #0b1530 75%); box-shadow: inset -24px -18px 40px rgba(0, 0, 0, 0.7), 0 0 60px rgba(63, 125, 216, 0.25); opacity: 0.35; filter: blur(0.3px); }
+  #space .planet::after { content: ""; position: absolute; left: -40%; top: 44%; width: 180%; height: 14%; border-radius: 50%; border: 2px solid rgba(125, 176, 239, 0.35); transform: rotate(-14deg); }
+  .top { background: rgba(4, 5, 11, 0.78); }
+  .hero { background: radial-gradient(700px 420px at 78% 40%, rgba(63, 125, 216, 0.20), transparent 65%); }
+  .hero, .demo, .band, .foot { position: relative; }
+  .hero > .wrap, .demo > .wrap, .band > *, .foot > .wrap { position: relative; z-index: 1; }
+  .foot { background: rgba(4, 5, 11, 0.6); }
+  @media (prefers-reduced-motion: reduce) { #space::after { animation: none !important; } }
+
+
+  /* Credits, at the very bottom */
+  .credits { width: 100%; margin: 6px 0 0; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12.5px; color: #8d8d97; }
+  .credits a, .credits__name { font-weight: 700; color: var(--brand-light); }
+  .credits a { text-decoration: none; border-bottom: 1px solid rgba(125, 176, 239, 0.35); }
+  .credits a:hover { color: #fff; border-bottom-color: #fff; }
+  .credits__name { color: #c4c4cc; }
+  .credits__thanks { margin-left: 14px; }
+
+  /* ===== Squared up: two equal columns, same-height labels, same-shape menus, screens level ===== */
+  .stage { display: grid; grid-template-columns: repeat(2, minmax(0, 420px)); justify-content: center; align-items: start; gap: 28px; }
+  @media (max-width: 920px) { .stage { grid-template-columns: minmax(0, 420px); } }
+  .screen { width: auto; min-width: 0; }
+  .screen iframe, #mod, #obs { width: 100%; }
+  .screen__label { position: relative; height: 24px; }
+  .menu { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 10px; border-radius: 3px; }
+  .menu__head { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; min-height: 16px; margin: 0 0 2px; }
+  .menu__more { margin: 0; font-size: 11px; letter-spacing: 0; text-transform: none; }
+  .menu .chip { justify-content: center; width: 100%; min-width: 0; height: 34px; padding: 0 8px; white-space: nowrap; border-radius: 3px; }
+  .chip, .console select, .btn, .tab, .tabs, .console, .all, .tour, .tour__count, iframe { border-radius: 3px; }
+
+  /* ===== Scrolling toward the demo: Mods on the left, Streamers on the right, a line between.
+     The sides warm up (green for mods, honey for streamers) as the demo comes in, and the
+     words step aside once the two screens are in view. Driven by --split-text and --split-color. */
+  :root { --mod-green: #3fc98e; --honey: #f0a330; }
+  #split { position: fixed; inset: 0; z-index: 0; display: grid; grid-template-columns: 1fr 1px 1fr; pointer-events: none; opacity: var(--split-color, 0); }
+  .split__half { display: grid; place-items: center; }
+  .split__half--mods { background: linear-gradient(90deg, rgba(63, 201, 142, 0.16), rgba(63, 201, 142, 0.05) 70%, transparent); }
+  .split__half--streamers { background: linear-gradient(270deg, rgba(240, 163, 48, 0.16), rgba(240, 163, 48, 0.05) 70%, transparent); }
+  .split__line { background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.5) 20%, rgba(255, 255, 255, 0.5) 80%, transparent); box-shadow: 0 0 18px rgba(255, 255, 255, 0.25); }
+  .split__half span { font-size: clamp(48px, 9vw, 150px); font-weight: 800; letter-spacing: -0.03em; opacity: var(--split-text, 0); transform: translateY(calc((1 - var(--split-text, 0)) * 30px)) scale(calc(0.94 + var(--split-text, 0) * 0.06)); }
+  .split__half--mods span { color: var(--mod-green); text-shadow: 0 0 40px rgba(63, 201, 142, 0.4); }
+  .split__half--streamers span { color: var(--honey); text-shadow: 0 0 40px rgba(240, 163, 48, 0.4); }
+  .top { z-index: 50; }
+  /* The two sides of the demo pick up the same colors. */
+  .screen:first-child .menu__head { color: var(--mod-green); }
+  .screen:last-child .menu__head { color: var(--honey); }
+  .screen:first-child .menu { border-color: rgba(63, 201, 142, 0.35); }
+  .screen:last-child .menu { border-color: rgba(240, 163, 48, 0.35); }
+  .screen:first-child iframe { border-color: rgba(63, 201, 142, 0.4); }
+  .screen:last-child iframe { border-color: rgba(240, 163, 48, 0.4); }
+  .screen:last-child .menu__more { color: var(--honey); }
+  .demo { border-top: 0; }
+  /* Room to scroll between the hero and the demo, for the Mods | Streamers moment. */
+  .splitzone { height: 55vh; }
+
+  /* ===== Feature icons: shades of the brand blue, see-through glass tiles ===== */
+  .ft:nth-child(5n+1) { --k: #7db0ef !important; }
+  .ft:nth-child(5n+2) { --k: #5a95e6 !important; }
+  .ft:nth-child(5n+3) { --k: #3f7dd8 !important; }
+  .ft:nth-child(5n+4) { --k: #4f8de6 !important; }
+  .ft:nth-child(5n+5) { --k: #2f66c0 !important; }
+  .ft__icon {
+    color: #e6f0ff;
+    background: linear-gradient(150deg, color-mix(in srgb, var(--k) 55%, transparent), color-mix(in srgb, var(--k) 18%, transparent));
+    border: 1px solid color-mix(in srgb, var(--k) 55%, transparent);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 6px 16px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+  }
+
+  /* ===== The space backdrop moves, slowly: the stars drift, the glows breathe, the planet floats ===== */
+  #space::before { animation: drift 160s linear infinite; }
+  #space::after { animation: drift2 240s linear infinite, twinkle 4s ease-in-out infinite alternate; }
+  @keyframes drift { to { background-position: -320px 160px; } }
+  @keyframes drift2 { to { background-position: 560px -280px; } }
+  #space { animation: breathe 18s ease-in-out infinite alternate; }
+  @keyframes breathe { from { filter: hue-rotate(0deg) brightness(1); } to { filter: hue-rotate(-12deg) brightness(1.12); } }
+  #space .planet { animation: orbit 40s ease-in-out infinite alternate; }
+  @keyframes orbit { from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-30px, 24px) rotate(-8deg); } }
+  @media (prefers-reduced-motion: reduce) { #space, #space::before, #space::after, #space .planet { animation: none !important; } }
+</style>
+<style>
+  /* Inside the front page's frame: no backdrop or page padding of its own (the front page's
+     space shows through), and the height follows the content (sent to the front page). */
+  html.embedded, html.embedded body { background: transparent; }
+  html.embedded #space { display: none; }
+  html.embedded .demo { padding-top: 0; padding-bottom: 0; }
+  html.embedded body { overflow: hidden; }
+</style>
+</head>
+<body>
+  <div id="space" aria-hidden="true"><div class="planet"></div></div>
+  <section class="demo" id="demo">
+    <div class="wrap">
+      <div class="demo__head">
+        <div>
+          <p class="eyebrow">Live demo</p>
+          <h2>Try it: you're both sides at once.</h2>
+          <p>On the left, a mod's side panel in Chrome. On the right, the streamer's OBS dock with chat. Everyone here is pretend, and nothing is sent anywhere.</p>
+        </div>
+        <ol class="steps">
+          <li>Pick something from either menu</li>
+          <li>Watch both sides react</li>
+          <li>Answer, bookmark, click around</li>
+        </ol>
+      </div>
+
+      <div class="tour" id="tour" aria-live="polite">
+        <div class="tour__count" id="tourCount"></div>
+        <div class="tour__body">
+          <h3 id="tourTitle"></h3>
+          <p id="tourText"></p>
+        </div>
+        <div class="tour__actions">
+          <button type="button" class="btn" id="tourBack">Back</button>
+          <button type="button" class="btn btn--main" id="tourDo"></button>
+          <button type="button" class="tour__skip" id="tourSkip">Skip the tour</button>
+        </div>
+      </div>
+      <div class="demo__bar">
+        <div class="console__said" id="said" aria-live="polite"></div>
+        <div class="demo__run">
+          <button id="auto" type="button" class="chip" data-tip="mod1 and the streamer talk on their own, every few seconds, so you can just watch.">Auto-play: off</button>
+          <button id="reload" type="button" class="chip" data-tip="Resets everything and starts the demo fresh.">Start over</button>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="screen">
+          <div class="screen__label">Mod's side panel <small>you're mod1, watching the streamer</small>
+            <span class="info" tabindex="0" data-tip="What a mod sees in Chrome, next to Twitch: Streamer View at the top shows what's on the streamer's screen right now, then the box to ask, send quick info or a !vanish note.">?</span></div>
+          <div class="menu" aria-label="Try as mod1">
+            <span class="menu__head">Try as mod1</span>
+            <button type="button" class="chip" data-click="modAsk" data-tip="→ mod1 asks the streamer a yes-or-no question. It waits on the streamer's dock with ♥ ✓ ✗ ?">Ask<span class="go" aria-hidden="true">→</span></button>
+            <button type="button" class="chip" data-click="modNote" data-tip="→ A heads-up on the streamer's bar, with a lightning bolt. It goes after 2 minutes.">Quick info<span class="go" aria-hidden="true">→</span></button>
+            <button type="button" class="chip" data-click="modVanish" data-tip="→ A short kind note on the streamer's bar, with a little devil. Gone in 30 seconds.">!vanish<span class="go" aria-hidden="true">→</span></button>
+            <button type="button" class="chip" data-click="modNudge" data-tip="→ Bumps mod1's waiting question up a color on the streamer's dock: orange, yellow, white.">Nudge<span class="go" aria-hidden="true">→</span></button>
+            <button type="button" class="chip" data-click="modWarn" data-tip="→ For something that can't wait: the question turns red on the streamer's dock, with a louder beep.">Warn<span class="go" aria-hidden="true">→</span></button>
+            <button type="button" class="chip" data-click="modFlag" data-tip="→ mod1 flags a viewer's message. It glows in the streamer's chat.">Flag a line<span class="go" aria-hidden="true">→</span></button>
+          </div>
+          <iframe id="mod" title="Mod side panel"></iframe>
+        </div>
+        <div class="screen">
+          <div class="screen__label">Streamer's OBS dock <small>you're the streamer</small>
+            <span class="info" tabindex="0" data-tip="What the streamer sees in OBS: mods' pictures and the message area at the top, then their chat, with Twitch's events and mod tools built in. Hover a chat line to bookmark, pin or reply.">?</span></div>
+          <div class="menu" aria-label="Try on the streamer's side">
+            <span class="menu__head">On the streamer's side <a class="menu__more" href="#allControls" data-tip="Every other Twitch event and chat control, below the screens.">More…</a></span>
+            <button type="button" class="chip" data-click="streamerAsk" data-tip="← The streamer asks mod1 something. It shows up in the mod's panel.">Ask mod1<span class="go" aria-hidden="true">←</span></button>
+            <button type="button" class="chip" data-click="tRaid" data-k style="--k:#8fd14f" data-tip="Lump raids with a crowd. Raiders get a RAID tag with Lump's picture.">Raid</button>
+            <button type="button" class="chip" data-click="tGift" data-k style="--k:#e2568f" data-tip="20 gifted subs: a progress card on top, and a card listing everyone who got one.">Gift bomb</button>
+            <button type="button" class="chip" data-click="tFirst" data-k style="--k:#3fc98e" data-tip="Someone chats in the channel for the very first time.">First-timer</button>
+            <button type="button" class="chip" data-click="tStreak" data-k style="--k:#ee7a2f" data-tip="A viewer shares their watch streak.">Streak</button>
+            <button type="button" class="chip" data-click="tPoll" data-k style="--k:#5a8de8" data-tip="A poll, with live votes at the top of chat.">Poll</button>
+          </div>
+          <iframe id="obs" title="Streamer's OBS dock"></iframe>
+        </div>
+      </div>
+      <details class="all" id="allControls">
+        <summary>Every demo control <small>chat, every Twitch event, and the rest</small></summary>
+      <div class="console">
+        <div class="console__bar">
+          <div class="tabs" role="tablist" aria-label="What to try">
+            <button class="tab" role="tab" type="button" aria-selected="true" aria-controls="paneMods" id="tabMods">Mods and streamer</button>
+            <button class="tab" role="tab" type="button" aria-selected="false" aria-controls="paneChat" id="tabChat">Chat</button>
+            <button class="tab" role="tab" type="button" aria-selected="false" aria-controls="paneTwitch" id="tabTwitch">Twitch events</button>
+          </div>
+        </div>
+        <div class="pane" role="tabpanel" id="paneMods" aria-labelledby="tabMods">
+        <button id="modAsk" type="button" class="chip" data-tip="mod1 asks the streamer a yes-or-no question. It waits under the streamer's bar with ♥ ✓ ✗ ? buttons.">Ask a question</button>
+        <button id="modSay" type="button" class="chip" data-tip="A message that doesn't need an answer, just a Seen.">Send a message</button>
+        <button id="modNote" type="button" class="chip" data-tip="A heads-up on the streamer's bar with a lightning bolt. It goes after 2 minutes.">Quick info</button>
+        <button id="modVanish" type="button" class="chip" data-tip="A short kind note with a little devil. It goes after 30 seconds.">!vanish</button>
+        <span class="pane__sep"></span>
+        <button id="modNudge" type="button" class="chip" data-tip="Moves mod1's oldest unanswered question up a color: orange, then yellow, then white.">Nudge</button>
+        <button id="modWarn" type="button" class="chip" data-tip="What tapping Nudge six times sends: the question turns red, with a louder beep.">Warn</button>
+        <button id="modFlag" type="button" class="chip" data-tip="mod1 flags a viewer's recent line. It glows in the streamer's chat.">Flag a chat line</button>
+        <span class="pane__sep"></span>
+        <button id="streamerAsk" type="button" class="chip" data-tip="The streamer asks mod1 something. Watch it arrive in the mod's panel on the left.">Streamer asks mod1</button>
+        </div>
+        <div class="pane" role="tabpanel" id="paneChat" aria-labelledby="tabChat" hidden>
+        <select id="chatter" data-tip="Who joins, talks or leaves."><option>mod1</option><option>mod2</option></select>
+        <button id="cJoin" type="button" class="chip" data-tip="They come into chat, and their picture shows in the streamer's bar.">Joins</button>
+        <button id="cSay" type="button" class="chip" data-tip="They say something, and their picture gets a fresh green ring.">Talks</button>
+        <button id="cPart" type="button" class="chip" data-tip="They leave chat. Their picture grays out, and goes 30 minutes later (3 in the demo).">Leaves</button>
+        <span class="pane__sep"></span>
+        <button id="tCmd" type="button" class="chip" data-tip="A viewer types a bot command and StreamElements answers. You can type !command in the streamer's chat too.">!command</button>
+        <button id="feed" type="button" class="chip" data-tip="Turns the pretend chatter on or off, to keep things calm while you look around.">Chat feed: off</button>
+        </div>
+        <div class="pane" role="tabpanel" id="paneTwitch" aria-labelledby="tabTwitch" hidden>
+        <button id="tRaid" type="button" class="chip" data-k style="--k:#8fd14f" data-tip="Lump raids with a crowd. Raiders get a RAID tag with Lump's picture.">Raid</button>
+        <button id="tFirst" type="button" class="chip" data-k style="--k:#3fc98e" data-tip="Someone chats in the channel for the very first time.">First-time chatter</button>
+        <button id="tGift" type="button" class="chip" data-k style="--k:#e2568f" data-tip="20 gifted subs: a progress card on top, and a card listing everyone who got one.">Gift bomb</button>
+        <button id="tStreak" type="button" class="chip" data-k style="--k:#ee7a2f" data-tip="A viewer shares their watch streak.">Watch streak</button>
+        <button id="tSub" type="button" class="chip" data-k style="--k:#9d6bf0" data-tip="A resub, with their months and message.">Sub</button>
+        <button id="tCheer" type="button" class="chip" data-k style="--k:#2bbfa4" data-tip="A viewer cheers bits.">Cheer</button>
+        <button id="tBadge" type="button" class="chip" data-k style="--k:#2bbfa4" data-tip="A viewer unlocks a new bits badge.">Bits badge</button>
+        <button id="tRedeem" type="button" class="chip" data-k style="--k:#3aa9db" data-tip="A channel points reward is redeemed.">Redemption</button>
+        <button id="tHighlight" type="button" class="chip" data-k style="--k:#3aa9db" data-tip="A message highlighted with channel points.">Highlighted message</button>
+        <button id="tAnnounce" type="button" class="chip" data-k style="--k:#e0a53a" data-tip="mod2 makes an announcement.">Announcement</button>
+        <button id="tPin" type="button" class="chip" data-k style="--k:#b8b8c2" data-tip="mod2 pins a message to the top of chat.">Pin</button>
+        <button id="tHype" type="button" class="chip" data-k style="--k:#a9cf45" data-tip="A hype train starts at the top of chat.">Hype train</button>
+        <button id="tPoll" type="button" class="chip" data-k style="--k:#5a8de8" data-tip="A poll, with live votes at the top of chat.">Poll</button>
+        <button id="tPred" type="button" class="chip" data-k style="--k:#c788e8" data-tip="A prediction: it locks after 20 seconds, then a side wins.">Prediction</button>
+        </div>
+      </div>
+
+      </details>
+    </div>
+  </section>
+<script type="module">
+  import { Socket, pretendTwitch } from "./hub.js?v=114"; // the number: bump it when hub.js changes, so browsers fetch the new one
+
+  const said = (text) => (document.getElementById("said").textContent = text);
+  const pick = (list) => list[Math.floor(Math.random() * list.length)];
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // ===== The pretend people: mod1, the streamer and mod2, each a connection of its own =====
+  // They share the logins of the two panels, so what a button does shows there as if it
+  // was done on that panel.
+  const puppets = {};
+  // Which mod the left panel is: the streamer's "send to" list switches it (mod1 or mod2).
+  let me = "mod1";
+  const other = () => (me === "mod1" ? "mod2" : "mod1");
+  function puppet(login, onMessage) {
+    const ws = new Socket("wss://sandbox.invalid/ws");
+    ws.onopen = () => ws.send(JSON.stringify({ t: "auth", token: `dev:${login}` }));
+    ws.onmessage = (e) => {
+      if (e.data === "pong") return;
+      try {
+        onMessage?.(JSON.parse(e.data));
+      } catch {}
+    };
+    return { send: (m) => ws.readyState === 1 && ws.send(JSON.stringify(m)) };
+  }
+  const send = (login, m) => puppets[login]?.send(m);
+
+  // Questions waiting, so the buttons and auto-play can act on them: id -> question.
+  const open = {};
+  function track(m) {
+    if (m.t === "state") for (const q of m.questions || []) open[q.id] = q;
+    if (m.t === "q") open[m.q.id] = m.q;
+  }
+
+  // The mod who isn't the left panel (mod2 at first) answers anything sent to them, a few
+  // seconds later, and replies in a private chat. The panel's mod is left to whoever's
+  // trying the demo (and to auto-play).
+  const MOD_REPLIES = ["Sure, on it", "Give me a sec", "Yep, done", "Not right now, sorry", "I'll check"];
+  const pretendMod = (login) => (m) => {
+    track(m);
+    onAutoQuestion(m);
+    if (login === me) return;
+    if (m.t === "q" && m.q.to === login && !m.q.answer && !m.q.dismissed && !m.q.withdrawn) {
+      const q = m.q;
+      setTimeout(() => {
+        if (login === me) return; // switched to this mod meanwhile: theirs to answer now
+        if (q.note) send(login, { t: "answer", id: q.id, code: "c", text: pick(MOD_REPLIES) });
+        else send(login, { t: "answer", id: q.id, code: (q.options || ["y"]).find((o) => !o.startsWith("+")) || "y" });
+      }, 3000 + Math.random() * 3000);
+    }
+    if (m.t === "msg" && m.m.from !== login && m.m.owner.startsWith("@") && m.m.owner.includes(login)) {
+      setTimeout(() => login !== me && send(login, { t: "say", owner: m.m.owner, text: pick(MOD_REPLIES) }), 2500 + Math.random() * 2500);
+    }
+  };
+
+  const MOD_ASKS = ["Can I run the poll now?", "Should I start the giveaway?", "Timeout the spammer?", "Raid them after this game?", "Want me to clip that?"];
+  const MOD_SAYS = ["Mic is a little quiet", "Chat's asking about your settings", "Poll is ready when you are", "Someone new followed, say hi"];
+  const MOD_NOTES = ["Raid incoming in 1 min", "Ad break in 2 min", "Big donation just came in"];
+  const STREAMER_ASKS = ["Can you post the Discord link?", "Can you pin the schedule?", "Who just raided?", "Can you start the poll?"];
+  const modAsk = () => send(me, { t: "ask", to: "streamer", text: pick(MOD_ASKS), options: ["t", "y", "n"] });
+  const modSay = () => send(me, { t: "ask", to: "streamer", text: pick(MOD_SAYS), note: true });
+  const modNote = () => send(me, { t: "flash", kind: "info", to: "streamer", text: pick(MOD_NOTES) });
+  const MOD_VANISH = ["You've got this", "Looking good today", "That was hilarious", "Drink some water"];
+  const modVanish = () => send(me, { t: "flash", kind: "love", to: "streamer", text: pick(MOD_VANISH) });
+  const streamerAsk = () => send("streamer", { t: "ask", to: me, text: pick(STREAMER_ASKS), options: ["y", "n", "s", "o", "m", "t"] });
+  const waitingOnStreamer = () => Object.values(open).filter((q) => q.from === me && q.to === "streamer" && !q.note && !q.answer && !q.dismissed && !q.withdrawn).sort((a, b) => a.at - b.at);
+  // Nudge mod1's oldest unanswered question (it moves up a color on the streamer's side).
+  const modNudge = () => {
+    const q = waitingOnStreamer().find((q) => (q.nudges || 0) < 3);
+    if (!q) return said(`${me} has nothing unanswered to nudge: try "${me} asks" first`);
+    send(me, { t: "nudge", id: q.id });
+    said(`${me} nudged: ${q.text}`);
+  };
+  document.getElementById("modNudge").addEventListener("click", modNudge);
+  // A warning: what tapping Nudge six times quickly sends (red on the streamer's side).
+  document.getElementById("modWarn").addEventListener("click", () => {
+    const q = waitingOnStreamer()[0];
+    if (!q) return said(`${me} has nothing unanswered to warn about: try "${me} asks" first`);
+    send(me, { t: "nudge", id: q.id, warn: true });
+    said(`${me} sent the streamer a warning: ${q.text}`);
+  });
+  for (const [id, go, what] of [["modAsk", modAsk, () => `${me} asked the streamer`], ["modSay", modSay, () => `${me} messaged the streamer`], ["modNote", modNote, () => `${me} sent quick info: it shows on the streamer's bar for 2 minutes`], ["modVanish", modVanish, () => `${me} sent a !vanish note: it shows for 30 seconds`], ["streamerAsk", streamerAsk, () => `the streamer asked ${me}`]]) {
+    document.getElementById(id).addEventListener("click", () => {
+      go();
+      said(what());
+    });
+  }
+
+  // A mod flags a line in chat: it glows in the streamer's custom chat, and its pin sits at
+  // the top for a few seconds.
+  document.getElementById("modFlag").addEventListener("click", () => {
+    const line = pretendTwitch.recentLine();
+    if (!line) return said("Nothing in chat to flag yet: turn the chat feed on, or have someone talk");
+    send(me, { t: "flash", kind: "chat", to: "streamer", channel: "streamer", chatter: line.who.toLowerCase(), chatterName: line.who, chatterColor: line.color, text: line.text, color: "#3fb2ff" });
+    said(`${me} flagged ${line.who}'s line: it glows in the streamer's chat`);
+  });
+
+  // ===== Auto-play: mod1 and the streamer talk on their own ================================
+  let auto = 0;
+  const answered = new Set();
+  function answerLater(login, q, ms) {
+    setTimeout(() => {
+      const now = open[q.id];
+      if (!now || now.answer || now.dismissed || now.withdrawn || (now.note && now.seenAt)) return; // done by hand
+      if (now.note) send(login, { t: "seen", id: q.id });
+      else send(login, { t: "answer", id: q.id, code: pick((now.options || ["y"]).filter((o) => !o.startsWith("+"))) });
+    }, ms);
+  }
+  function autoTurn() {
+    const turn = pick(["modAsk", "modAsk", "modNudge", "modNudge", "modSay", "modNote", "streamerAsk"]);
+    if (turn === "modNudge") modNudge();
+    else {
+      ({ modAsk, modSay, modNote, streamerAsk })[turn]();
+      said(`Auto-play: ${{ modAsk: `${me} asked`, modSay: `${me} messaged`, modNote: `${me} sent a note`, streamerAsk: `the streamer asked ${me}` }[turn]}`);
+    }
+    auto = setTimeout(autoTurn, 12000 + Math.random() * 12000);
+  }
+  function onAutoQuestion(m) {
+    track(m);
+    if (!auto || m.t !== "q" || m.q.answer || m.q.dismissed || m.q.seenAt || answered.has(m.q.id)) return;
+    const q = m.q;
+    if (q.from === me && q.to === "streamer") {
+      answered.add(q.id);
+      answerLater("streamer", q, 25000 + Math.random() * 30000); // slow, so there's time to nudge
+    } else if (q.from === "streamer" && q.to === me) {
+      answered.add(q.id);
+      answerLater(me, q, 3000 + Math.random() * 4000);
+    }
+  }
+  document.getElementById("auto").addEventListener("click", (e) => {
+    if (auto) {
+      clearTimeout(auto);
+      auto = 0;
+    } else auto = setTimeout(autoTurn, 500);
+    e.target.textContent = `Auto-play: ${auto ? "on" : "off"}`;
+    e.target.classList.toggle("on", !!auto);
+  });
+
+  // ===== The pretend chat ===================================================================
+  let feeding = false; // quiet until the tour (or the switch) starts it
+  document.getElementById("feed").addEventListener("click", (e) => {
+    feeding = !feeding;
+    feeding ? pretendTwitch.feed() : pretendTwitch.feedoff();
+    e.target.textContent = `Chat feed: ${feeding ? "on" : "off"}`;
+    e.target.classList.toggle("on", feeding);
+  });
+  const LINES = ["hey chat", "that was clean", "lol", "o7", "nice one", "W"];
+  const chatter = () => document.getElementById("chatter").value;
+  document.getElementById("cJoin").addEventListener("click", () => (pretendTwitch.join(chatter()), said(`${chatter()} joined the chat`)));
+  document.getElementById("cSay").addEventListener("click", () => (pretendTwitch.say(chatter(), pick(LINES)), said(`${chatter()} chatted`)));
+  document.getElementById("cPart").addEventListener("click", () => (pretendTwitch.part(chatter()), said(`${chatter()} left the chat`)));
+  // Twitch's own events, shown in the streamer's custom chat on the right.
+  const on = (id, run) => document.getElementById(id).addEventListener("click", run);
+  on("tRaid", () => {
+    const { from, count } = pretendTwitch.raid();
+    said(`${from} raided with ${count} viewers: watch the streamer's chat on the right`);
+  });
+  on("tFirst", () => said(`${pretendTwitch.first()} chatted for the first time`));
+  on("tCmd", () => {
+    const { who, cmd } = pretendTwitch.command();
+    said(`${who} typed ${cmd}: StreamElements answers (you can type one in the streamer's chat too)`);
+  });
+  on("tSub", () => said(`${pretendTwitch.sub()} subscribed`));
+  on("tGift", () => {
+    const { who, total } = pretendTwitch.gift();
+    said(`${who} gifted ${total} subs`);
+  });
+  on("tCheer", () => said(`${pretendTwitch.cheer()} cheered bits`));
+  on("tHighlight", () => said(`${pretendTwitch.highlight()} highlighted a message with channel points`));
+  on("tRedeem", () => {
+    const { who, title } = pretendTwitch.redeem();
+    said(`${who} redeemed ${title}`);
+  });
+  on("tStreak", () => {
+    const { who, n } = pretendTwitch.streak();
+    said(`${who} shared a ${n}-stream watch streak`);
+  });
+  on("tBadge", () => {
+    const { who, tier } = pretendTwitch.bitsBadge();
+    said(`${who} unlocked the ${tier.toLocaleString()} bits badge`);
+  });
+  on("tPin", () => (pretendTwitch.pin(), said("mod2 pinned a message: it shows at the top of the streamer's chat within 10 seconds")));
+  on("tHype", () => (pretendTwitch.hype(), said("A hype train started: see the top of the streamer's chat")));
+  on("tPoll", () => (pretendTwitch.poll(), said("A poll started: watch the votes at the top of the streamer's chat")));
+  on("tPred", () => (pretendTwitch.prediction(), said("A prediction started: it locks after 20 seconds, then a side wins")));
+  on("tAnnounce", () => (pretendTwitch.announce(), said("mod2 made an announcement")));
+  document.getElementById("reload").addEventListener("click", () => location.reload());
+
+  // The short menus above the screens press the same buttons as the full menu below.
+  for (const b of document.querySelectorAll("[data-click]")) b.addEventListener("click", () => document.getElementById(b.dataset.click).click());
+  document.querySelector(".menu__more")?.addEventListener("click", () => (document.getElementById("allControls").open = true));
+
+  // The console's tabs: one row of actions at a time.
+  const tabs = [...document.querySelectorAll(".tab")];
+  for (const tab of tabs) {
+    tab.addEventListener("click", () => {
+      for (const t of tabs) {
+        const on = t === tab;
+        t.setAttribute("aria-selected", String(on));
+        document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+      }
+    });
+  }
+
+
+  // ===== Which mod you are: picked in the streamer's "send to" list =======================
+  // Words written for mod1, with mod1 and mod2 traded when you're mod2.
+  const asMe = (text) => (me === "mod1" ? text : text.replace(/mod[12]/g, (n) => (n === "mod1" ? "mod2" : "mod1")));
+  // The labels and menus about the left panel (not the chat or Twitch tabs, which name
+  // mod2 on purpose: mod2 is the one who pins and announces there).
+  function relabel() {
+    const swap = (t) => t.replace(/mod[12]/g, (n) => (n === "mod1" ? "mod2" : "mod1"));
+    for (const box of document.querySelectorAll(".stage .screen__label, .stage .menu, #paneMods, #auto")) {
+      for (const el of [box, ...box.querySelectorAll("*")]) {
+        for (const a of ["data-tip", "aria-label"]) if (el.hasAttribute(a)) el.setAttribute(a, swap(el.getAttribute(a)));
+      }
+      const walk = document.createTreeWalker(box, NodeFilter.SHOW_TEXT);
+      while (walk.nextNode()) walk.currentNode.nodeValue = swap(walk.currentNode.nodeValue);
+    }
+  }
+  function becomeMod(login) {
+    if (!["mod1", "mod2"].includes(login) || login === me) return; // "Everyone": nothing changes
+    me = login;
+    relabel();
+    document.getElementById("mod").src = `../?dev=${me}&embed=ext&watch=streamer&sandbox`;
+    if (!document.getElementById("tour").hidden) tour.show(tour.at);
+    said(`You're ${me} now: the panel on the left is ${me}'s`);
+  }
+  document.getElementById("obs").addEventListener("load", (e) => {
+    e.target.contentDocument?.addEventListener("change", (ev) => ev.target.id === "quickTo" && becomeMod(ev.target.value));
+  });
+
+  // ===== The guided tour: one thing at a time, nothing until it's pressed ==================
+  // Each step says what to press and where to look; its button does it, then Next.
+  const STEPS = [
+    { title: "Start the stream", text: "Nothing's happening yet. Start the pretend chat, and watch it fill the streamer's OBS dock on the right. mod1 and mod2 come into chat, so their pictures appear in the dock's top bar.", button: "Start the chat", look: "obs",
+      run: () => { if (!feeding) document.getElementById("feed").click(); pretendTwitch.say(me, "hey chat"); pretendTwitch.join(other()); said("Chat is live: hover a line in the streamer's chat to bookmark, pin or reply"); } },
+    { title: "A mod asks the streamer something", text: "mod1 has a question. It shows up quietly under the streamer's bar, never on stream. Answer it on the right with ♥ ✓ ✗ or ?, or type a reply.", button: "mod1 asks a question", look: "obs", click: "modAsk" },
+    { title: "Nudge it", text: "No answer yet? A mod can nudge. The question moves up from green to orange, with one soft beep, and Streamer View on the left shows it too.", button: "mod1 nudges", look: "obs", click: "modNudge" },
+    { title: "Quick info", text: "Not everything needs an answer. Quick info is a heads-up on the streamer's bar, with a lightning bolt, and it clears itself after 2 minutes.", button: "Send quick info", look: "obs", click: "modNote" },
+    { title: "Flag a chat line", text: "A mod spots something in chat and flags it. The line glows in the streamer's chat, in the mod's color, so it's easy to find.", button: "mod1 flags a line", look: "obs", click: "modFlag" },
+    { title: "The streamer asks back", text: "It works both ways. The streamer asks mod1 something, and it lands in the mod's side panel on the left, ready for a one-tap answer.", button: "Streamer asks mod1", look: "mod", click: "streamerAsk" },
+    { title: "Twitch, built in: a raid", text: "Custom chat shows Twitch's own events as clean cards. Here comes a raid: a card for the raiding streamer, and a RAID tag on everyone who came with them.", button: "Start a raid", look: "obs", click: "tRaid" },
+    { title: "A gift bomb", text: "Twenty gifted subs: a progress card at the top of chat, and a card that lists every person who got one.", button: "Drop a gift bomb", look: "obs", click: "tGift" },
+    { title: "Do Not Disturb", text: "Need focus? On the right, click the hand in the streamer's top bar and pick 15 minutes. Then send quick info: it waits quietly until Do Not Disturb ends.", button: "Send quick info", look: "obs", click: "modNote" },
+    { title: "Your turn", text: "That's the tour. Use the menus above each screen to try anything again, open Every demo control below for the rest, or turn on Auto-play and just watch.", button: "Done", look: "", done: true },
+  ];
+  const tour = {
+    at: 0,
+    show(i) {
+      this.at = Math.max(0, Math.min(STEPS.length - 1, i));
+      const st = STEPS[this.at];
+      document.getElementById("tour").hidden = false;
+      document.getElementById("tourCount").textContent = `${this.at + 1} / ${STEPS.length}`;
+      document.getElementById("tour").style.setProperty("--tour-progress", ((this.at + 1) / STEPS.length).toFixed(3));
+      document.getElementById("tourTitle").textContent = asMe(st.title);
+      document.getElementById("tourText").textContent = asMe(st.text);
+      document.getElementById("tourDo").textContent = asMe(st.button);
+      document.getElementById("tourBack").hidden = this.at === 0;
+      document.getElementById("tourSkip").hidden = !!st.done;
+      for (const id of ["mod", "obs"]) document.getElementById(id).closest(".screen").classList.toggle("spot", st.look === id);
+    },
+    end() {
+      document.getElementById("tour").hidden = true;
+      for (const id of ["mod", "obs"]) document.getElementById(id).closest(".screen").classList.remove("spot");
+      if (!feeding) document.getElementById("feed").click(); // the tour skipped: chat starts anyway
+      said("Try anything from the menus above each screen");
+    },
+  };
+  document.getElementById("tourDo").addEventListener("click", () => {
+    const st = STEPS[tour.at];
+    if (st.done) return tour.end();
+    if (st.run) st.run();
+    if (st.click) document.getElementById(st.click).click();
+    tour.show(tour.at + 1);
+  });
+  document.getElementById("tourBack").addEventListener("click", () => tour.show(tour.at - 1));
+  document.getElementById("tourSkip").addEventListener("click", () => tour.end());
+
+  // ===== Start: everyone added to each other, then the two panels ==========================
+  (async () => {
+    puppets.streamer = puppet("streamer", onAutoQuestion);
+    puppets.mod1 = puppet("mod1", pretendMod("mod1"));
+    puppets.mod2 = puppet("mod2", pretendMod("mod2"));
+    await wait(300);
+    send("streamer", { t: "connect", login: "mod1" });
+    send("streamer", { t: "connect", login: "mod2" });
+    send("mod1", { t: "connect", login: "streamer" });
+    send("mod1", { t: "connect", login: "mod2" });
+    send("mod2", { t: "connect", login: "streamer" });
+    send("mod2", { t: "connect", login: "mod1" });
+    await wait(300);
+    document.getElementById("mod").src = "../?dev=mod1&embed=ext&watch=streamer&sandbox";
+    document.getElementById("obs").src = "../?dev=streamer&livechat&ownchat&mock&lightms=6000&sandbox";
+    // Nothing happens until someone presses something: the tour walks them through it.
+    tour.show(0);
+  })();
+</script>
+<script>
+  // In the front page's frame: tell it how tall this is, whenever that changes.
+  if (document.documentElement.classList.contains("embedded") && window.parent !== window) {
+    const tell = () => parent.postMessage({ t: "demo-height", h: document.documentElement.scrollHeight }, location.origin);
+    new ResizeObserver(tell).observe(document.body);
+    addEventListener("load", tell);
+    tell();
+  }
+</script>
+</body>
+</html>
