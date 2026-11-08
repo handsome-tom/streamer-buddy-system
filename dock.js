@@ -66,7 +66,7 @@
 //   "ids", "pics", "colors"  Twitch user ids, profile pictures, chat colors
 //   "sound"    whether to make a sound when something arrives (on by default in OBS)
 //   "pings"    what's been pinged, so a reload doesn't ping again
-//   "lastTo"   who you last sent to, where sending starts from next time (OBS)
+//   "lastTo"   who you last sent to, where sending starts from next time
 //   "chatBeen-<channel>"  { stream, logins } who's been in the chat this stream
 //
 // Open with ?demo to try it without signing in. On this Mac, ?dev=<name> signs
@@ -259,23 +259,38 @@
     if (t.startsWith("#")) return `${t.slice(1)} (${tags[t.slice(1)].filter((l) => able.includes(l)).length})`;
     return t;
   }
-  // Who sending starts with. In OBS: the last person you talked to (sent to or
-  // answered), never a group, so a message doesn't go to everyone by accident; else
-  // the first person. In the side panel: the streamer whose channel you're watching
-  // (the extension says which), else the first choice.
-  const KEEP_LAST_TO = !EMBED && !DECK;
+  // Who sending starts with, everywhere (OBS, side panel, pop-outs, phone deck):
+  //   1. whoever's stream you're in, if they're a connection (you're most likely their mod);
+  //   2. else the last person you talked to (sent to or answered);
+  //   3. else the first person.
+  // Never a group or Everyone by default, so nothing goes to everyone by accident.
   const isPerson = (t) => t && t !== "*" && !t.startsWith("#");
+  // The stream you're in: the channel open beside the side panel, or the chat dock's
+  // channel when it's someone else's (in your own stream, it's the last person instead).
+  function streamHere() {
+    if (EMBED) return watching;
+    if (LIVECHAT && me && liveChannel && liveChannel !== me.login) return liveChannel;
+    return "";
+  }
   function defaultTo() {
     const choices = targets();
-    if (EMBED && choices.includes(watching)) return watching;
-    if (!KEEP_LAST_TO) return choices[0];
+    const here = streamHere();
+    if (isPerson(here) && choices.includes(here)) return here;
     const last = get("lastTo", "");
     return choices.includes(last) && isPerson(last) ? last : choices.find(isPerson) || choices[0];
   }
   function rememberTo(to) {
-    if (!KEEP_LAST_TO || !isPerson(to)) return;
+    if (!isPerson(to)) return;
     put("lastTo", to);
     if ([...quickTo.options].some((o) => o.value === to)) quickTo.value = to;
+  }
+  // Walked into someone's stream: sending follows (until you pick someone else).
+  function followStream() {
+    const here = streamHere();
+    if (!me || !isPerson(here) || !targets().includes(here)) return;
+    askDraft.to = here;
+    deckState.to = here;
+    if ([...quickTo.options].some((o) => o.value === here)) quickTo.value = here;
   }
   // What the bar sends: something that reads as a question gets the answer
   // buttons; anything else is a plain message.
@@ -436,7 +451,7 @@
     if (e.data?.t === "hub-channel") {
       watching = typeof e.data.channel === "string" ? e.data.channel.toLowerCase() : "";
       // The Ask box follows the stream you're in (until you pick someone else).
-      if (me && targets().includes(watching)) askDraft.to = watching;
+      followStream();
       render();
     }
   });
@@ -2876,13 +2891,15 @@
   ];
   const DECK_KINDS = { ask: "Question", info: "Quick info", love: "!vanish note" };
   const deckTiles = () => get("deckTiles", DECK_TILES);
-  const deckState = { editing: false, sent: -1, kind: "info", text: "" };
+  const deckState = { editing: false, sent: -1, kind: "info", text: "", to: "" }; // to: picked here, this visit
 
   function sendTile(tile, i, to) {
     const sentOk = tile.kind === "ask"
       ? relay({ t: "ask", to, text: tile.text, options: STANDARD })
       : relay({ t: "flash", kind: tile.kind, to, text: tile.text });
     if (!sentOk) return;
+    rememberTo(to);
+    deckState.to = to;
     navigator.vibrate?.(30);
     deckState.sent = i;
     render();
@@ -2901,13 +2918,12 @@
     }
 
     // Who gets it.
-    const want = get("deckTo", "");
-    const to = choices.includes(want) ? want : choices[0];
+    const to = choices.includes(deckState.to) ? deckState.to : defaultTo();
     const who = el("label", "deckp__who");
     who.append(el("span", null, "To"));
     const pick = el("select");
     for (const t of choices) pick.append(new Option(targetLabel(t), t, false, t === to));
-    pick.addEventListener("change", () => put("deckTo", pick.value));
+    pick.addEventListener("change", () => (deckState.to = pick.value));
     const edit = el("button", `pill${deckState.editing ? " pill--on" : ""}`, deckState.editing ? "Done" : "Edit");
     edit.type = "button";
     edit.addEventListener("click", () => {
@@ -3651,6 +3667,7 @@
     const wanted = (params.get("channel") || me.login).toLowerCase();
     if (!/^[a-z0-9_]+$/.test(wanted)) return;
     liveChannel = wanted;
+    followStream();
     document.getElementById("live").hidden = false;
     chatLayers();
     if (!MOCK && get("ownChat", true)) twitchFrame(); // ready in the background, with history

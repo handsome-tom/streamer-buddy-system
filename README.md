@@ -32,8 +32,7 @@ with Twitch Space; only the whisper format is shared.
 To have Twitch chat in the same panel, use this address instead and close OBS's
 own chat dock: `https://handsome-tom.github.io/streamer-buddy-system/?livechat`.
 A slim bar stays at the top, made for being live: it shows questions, quick
-info and !vanish notes as they come in. Sending starts from whoever you last sent
-to. What reads as a question goes with the answer buttons; anything else goes as a
+info and !vanish notes as they come in. Sending starts with whoever's stream you're in (if they're a connection), else whoever you last messaged; never Everyone by default. The same goes for the Chrome side panel and the phone deck. What reads as a question goes with the answer buttons; anything else goes as a
 plain message they can mark seen, and you get a notice in the bar when someone marks
 your message or answer seen. A connection's picture shows once they've been in the
 chat this stream. While they're in the chat, its ring is how recently they chatted:
