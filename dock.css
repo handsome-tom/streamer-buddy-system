@@ -1836,24 +1836,6 @@ a.stats__value {
   color: #fff;
   text-decoration: none;
 }
-.signin__alt {
-  display: block;
-  margin: 12px auto 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: #adadb8;
-  font: inherit;
-  font-size: 12px;
-  text-decoration: underline;
-  cursor: pointer;
-}
-.signin__alt:hover { color: #fff; }
-.signin__build {
-  margin: 14px 0 0;
-  color: #6b6b75;
-  font-size: 11px;
-}
 
 /* The chat dock (?livechat): the top section takes what it needs, within
    reason, and Twitch's embedded chat fills the rest. */
