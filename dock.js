@@ -3503,7 +3503,22 @@
   }
 
   // The slim line above Twitch's chat, when there's something to say about custom chat.
-  function chatStrip({ text, unsent, label, run }) {
+  function chatStrip({ text, unsent, label, run, big, head, other }) {
+    // Custom chat not OK'd yet: a card that can't be missed, not the slim line.
+    if (big) {
+      const card = el("div", "live__card");
+      const go = el("button", "live__cardBtn", label);
+      go.type = "button";
+      go.addEventListener("click", run);
+      card.append(el("div", "live__cardHead", head), el("p", "live__cardText", text), go);
+      if (other) {
+        const no = el("button", "live__stripBtn live__cardOther", other.label);
+        no.type = "button";
+        no.addEventListener("click", other.run);
+        card.append(no);
+      }
+      return card;
+    }
     const strip = el("div", "live__strip");
     const words = el("span", "live__stripText", text);
     words.title = text;
@@ -3590,7 +3605,8 @@
       if (turn !== chatTurn) return;
       if (problem) {
         clearTimeout(ownChatStartTimer);
-        return showTwitchChat({ text: "Custom chat needs your OK on Twitch first.", label: "Sign in", run: ownChatSignIn });
+        return showTwitchChat({ big: true, head: "Turn on custom chat", text: "This is Twitch's plain chat. Custom chat needs your OK on Twitch once.", label: "Sign in with Twitch", run: ownChatSignIn,
+          other: { label: "Keep Twitch's chat", run: chooseTwitchChat } });
       }
       chatLayers();
       ownLayer.replaceChildren();
