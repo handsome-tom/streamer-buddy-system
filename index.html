@@ -86,7 +86,7 @@
     (async () => {
       let v = "0";
       try {
-        v = (await (await fetch("version.txt", { cache: "no-store" })).text()).trim();
+        v = (await (await fetch(`version.txt?t=${Date.now()}`, { cache: "no-store" })).text()).trim();
       } catch {}
       window.DOCK_VERSION = v;
       const css = document.createElement("link");

@@ -2829,7 +2829,7 @@
     const out = el("button", "panel__signout", `Sign out of ${me.login}`);
     out.type = "button";
     out.addEventListener("click", signOut);
-    panel.append(out);
+    panel.append(out, el("p", "panel__sub", `Build ${window.DOCK_VERSION || "?"}`));
     return panel;
   }
 
@@ -3662,13 +3662,21 @@
   // ===== Updates ===========================================================================
   // A newer version on GitHub: reload, unless something's being typed.
 
+  // The ?t= gets past GitHub's 10-minute copy. Only a half-typed message holds the
+  // reload back (in OBS the chat box keeps focus all stream, so focus alone can't),
+  // and then it tries again every few seconds until the box is empty.
+  let updateWaiting = false;
   async function checkForUpdate() {
     if (DEMO || !window.DOCK_VERSION) return;
     try {
-      const v = (await (await fetch("version.txt", { cache: "no-store" })).text()).trim();
-      if (!v || v === window.DOCK_VERSION) return;
-      const typing = [...document.querySelectorAll("input[type=text]")].some((i) => i.value.trim() || i === document.activeElement);
-      if (!typing) location.reload();
+      if (!updateWaiting) {
+        const v = (await (await fetch(`version.txt?t=${Date.now()}`, { cache: "no-store" })).text()).trim();
+        if (!v || v === window.DOCK_VERSION) return;
+        updateWaiting = true;
+      }
+      const typing = [...document.querySelectorAll("input[type=text], textarea")].some((i) => i.value.trim());
+      if (!typing) return location.reload();
+      setTimeout(checkForUpdate, 5000);
     } catch {}
   }
 
@@ -3807,7 +3815,13 @@
   });
 
   let started = false;
+  let updatesOn = false;
   async function start() {
+    // Updates are checked from the start, signed in or not.
+    if (!updatesOn) {
+      updatesOn = true;
+      setInterval(() => !updateWaiting && checkForUpdate(), UPDATE_CHECK_MS);
+    }
     if (DECK) document.body.classList.add("deck");
     if (POPOUT) document.body.classList.add("popout");
     if (EMBED) document.body.classList.add("embed");
@@ -3850,7 +3864,6 @@
       me.expiresAt = now.expiresAt;
       render();
     }, 60 * 60 * 1000);
-    setInterval(checkForUpdate, UPDATE_CHECK_MS);
     if (PINGS_HERE) setInterval(() => pingCheck() && render(), 1000);
   }
 
