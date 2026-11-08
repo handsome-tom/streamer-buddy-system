@@ -318,6 +318,9 @@
         const secs = Math.round((Date.now() - lostAt) / 1000);
         addSystem(`Reconnected. Messages from the last ${Math.max(1, secs)} seconds may be missing.`);
       }
+      // First connect: say so in the chat, as Twitch's own chat does, so a quiet chat
+      // doesn't look like it's still loading.
+      if (!everConnected) addSystem(`Welcome to ${channel}'s chat room!`);
       lostAt = 0;
       everConnected = true;
       ready = true;
