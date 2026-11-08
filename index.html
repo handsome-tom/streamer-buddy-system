@@ -79,44 +79,11 @@
   <!-- ?livechat: Twitch's own chat, below everything above (dock.js adds it). -->
   <section class="live" id="live" hidden></section>
 
-  <!-- Old OBS check. OBS docks run on the copy of Chrome built into OBS, and older OBS
-       has an old one: OBS 28-30 have Chrome 103, OBS 31-32 Chrome 127, OBS 33 Chrome 150.
-       Below Chrome 85 the page's code can't run at all (it would sit blank); below 111
-       the colors and some layout break. Instead of failing quietly, say so plainly.
-       Written in old JavaScript on purpose, so it runs on anything. -->
-  <style>
-    .too-old { margin: 8px; padding: 10px 12px; border-radius: 8px; background: #3a1d1d; color: #ffd9d9;
-               border: 1px solid #a33; font: 13px/1.45 system-ui, sans-serif; }
-    .too-old b { color: #fff; }
-  </style>
-  <script>
-    (function () {
-      var m = navigator.userAgent.match(/Chrom(?:e|ium)\/(\d+)/);
-      var chrome = m ? parseInt(m[1], 10) : 0;
-      var canRun = true;
-      try { new Function("var a; a ||= 1; return a?.b;"); } catch (e) { canRun = false; }
-      var looksRight = !!(window.CSS && CSS.supports && CSS.supports("color", "color-mix(in srgb, red, blue)"));
-      if (canRun && looksRight) return;
-      var inObs = !!window.obsstudio || /OBS/i.test(navigator.userAgent);
-      var where = inObs ? "This OBS" : "This browser";
-      var fix = inObs
-        ? "Update OBS to <b>version 31 or newer</b>: in OBS, <b>Help → Check for Updates</b>, or download it from obsproject.com. Then reopen OBS."
-        : "Update the browser, or open this in a current Chrome.";
-      var box = document.createElement("div");
-      box.className = "too-old";
-      box.innerHTML = "<b>" + where + " is too old for Streamer Buddy System" +
-        (chrome ? " (its built-in browser is Chrome " + chrome + ")" : "") + ".</b> " +
-        (canRun ? "Parts of the panel may look or work wrong. " : "The panel can't start. ") + fix;
-      document.body.insertBefore(box, document.body.firstChild);
-      if (!canRun) window.SBS_TOO_OLD = true;
-    })();
-  </script>
-
   <!-- OBS keeps old copies of pages for a while, so the files are loaded under
        the current version.txt; a new version is picked up on the next load.
        Bump version.txt with every change. -->
   <script>
-    window.SBS_TOO_OLD || (async () => {
+    (async () => {
       let v = "0";
       try {
         v = (await (await fetch(`version.txt?t=${Date.now()}`, { cache: "no-store" })).text()).trim();
