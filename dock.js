@@ -368,10 +368,19 @@
     link.href = d.verification_uri;
     link.target = "_blank";
     link.rel = "noopener";
-    box.append(el("div", "signin__head", "Enter this code on Twitch"), el("div", "signin__code", d.user_code), link, el("p", "signin__sub", "Then come back here. This page signs in by itself."));
+    box.append(el("div", "signin__head", "Enter this code on Twitch"), el("div", "signin__code", d.user_code), link,
+      el("p", "signin__sub", DECK ? "Then come back here. This page signs in by itself."
+        : "On your phone or computer, go to twitch.tv/activate and type the code. This panel signs in by itself."));
+    if (!DECK) {
+      const back = el("button", "signin__alt", "Back");
+      back.type = "button";
+      back.addEventListener("click", () => { stopAt = 0; showSignedOut(); });
+      box.append(back);
+    }
     main.replaceChildren(box);
-    const stopAt = Date.now() + d.expires_in * 1000;
+    let stopAt = Date.now() + d.expires_in * 1000;
     const poll = async () => {
+      if (!stopAt) return; // went back
       if (Date.now() > stopAt) return showSignedOut("That code ran out. Try again.");
       try {
         const j = await (await fetch(TWITCH_TOKEN, form({ client_id: TWITCH_CLIENT_ID, scopes, device_code: d.device_code, grant_type: "urn:ietf:params:oauth:grant-type:device_code" }))).json();
@@ -2851,6 +2860,16 @@
     b.type = "button";
     b.addEventListener("click", signIn);
     box.append(b);
+    // Twitch's sign-in page can fail inside OBS (it's an old built-in browser, and Twitch's
+    // login checks don't always pass there). A code typed at twitch.tv/activate, on a phone
+    // or any browser, skips that page, and it renews itself after.
+    if (!DECK && !EMBED) {
+      const alt = el("button", "signin__alt", "Trouble signing in? Sign in with a code");
+      alt.type = "button";
+      alt.addEventListener("click", codeSignIn);
+      box.append(alt);
+    }
+    box.append(el("p", "signin__build", `Build ${window.DOCK_VERSION || "?"}`));
     main.replaceChildren(box);
   }
 
