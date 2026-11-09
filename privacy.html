@@ -26,7 +26,7 @@
   <p class="date">For the StreamerSpace Chrome extension and Streamer Buddy System. Last updated November 8, 2026.</p>
 
   <div class="card">
-    <p><b>Short version:</b> StreamerSpace keeps what you save inside your own browser. It doesn't sell anything, show ads, or track you. The only things that leave your browser are the Streamer Buddy System messages you choose to send to people you've connected with.</p>
+    <p><b>Short version:</b> StreamerSpace keeps what you save inside your own browser. It doesn't sell anything, show ads, or track you. The only things that leave your browser are for Streamer Buddy System, if you sign in to it: your connections and the messages you choose to send to them.</p>
   </div>
 
   <h2>What stays in your browser</h2>
@@ -40,6 +40,7 @@
   <ul>
     <li><b>Twitch.</b> The extension works on twitch.tv and talks to Twitch the same way the Twitch website does, as you.</li>
     <li><b>Streamer Buddy System</b> (optional). If you sign in with Twitch in the side panel, your Twitch username and a sign-in token go to the Streamer Buddy System relay (a small server on Cloudflare run by the developer). The relay keeps the list of people you've connected with, and passes your questions, answers, notes and flagged chat lines to them. Messages are deleted after a week at most. If a streamer turns on stream stats sharing, daily viewer numbers are kept for 40 days and monthly totals for 13 months. Sign-in asks Twitch for your channel's mods and the channels you mod, to fill the "Your mods" and "Channels I mod" lists. Nothing else is requested.</li>
+    <li><b>Who can see your messages.</b> Messages are encrypted on their way to and from the relay, but they aren't end-to-end encrypted. While they're kept on the relay, the developer who runs it (and Cloudflare, which hosts it) could technically see them. They aren't read, used or shared for anything except passing them on, unless the law requires it (see below).</li>
     <li><b>The side panel</b> loads its page from handsome-tom.github.io, where Streamer Buddy System is hosted.</li>
   </ul>
 
@@ -49,14 +50,22 @@
     <li>Nothing is sold or shared with anyone other than the people you message through Streamer Buddy System.</li>
   </ul>
 
+  <h2>Legal requests</h2>
+  <p>If a valid legal order requires it, what the relay holds at that moment may have to be handed over. Because messages are deleted after a week, there usually isn't much to give.</p>
+
+  <h2>Age</h2>
+  <p>StreamerSpace and Streamer Buddy System are for people 13 and older, the same as Twitch. Don't use them if you're younger. If you think someone under 13 has signed in to Streamer Buddy System, email the address below and their data will be removed.</p>
+
   <h2>Removing your data</h2>
   <ul>
     <li>Removing the extension deletes what it saved in Chrome. Clearing twitch.tv's site data in Chrome removes the copy kept there.</li>
-    <li>To have your Streamer Buddy System connections and messages removed from the relay, open an issue at the link below.</li>
+    <li>To have your Streamer Buddy System connections and messages removed from the relay, email the address below. You don't have to give a reason, and the request stays private.</li>
   </ul>
 
   <h2>Contact</h2>
-  <p>Questions or requests: <a href="https://github.com/handsome-tom/MytwitchTom-Tester/issues">open an issue on GitHub</a>.</p>
+  <p>Private requests (removing your data, anything personal): <a href="mailto:steamerspacetom@gmail.com">steamerspacetom@gmail.com</a>.</p>
+  <p>General questions and bug reports: <a href="https://github.com/handsome-tom/MytwitchTom-Tester/issues">open an issue on GitHub</a> (this is public).</p>
+  <p>See also the <a href="terms.html">terms of use</a>.</p>
 </main>
 </body>
 </html>
