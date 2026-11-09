@@ -1713,9 +1713,26 @@
 
   // Quick questions beside the bar's Ask field: one tap asks whoever the
   // field's picker is set to. × (on hover) forgets one; + adds one.
+  // The questions stay on one line that scrolls sideways (the mouse wheel scrolls it too),
+  // so adding one never makes the bar taller.
+  quickEl.addEventListener("wheel", (e) => {
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX) || quickEl.scrollWidth <= quickEl.clientWidth) return;
+    e.preventDefault();
+    quickEl.scrollLeft += e.deltaY;
+  }, { passive: false });
   let addingQuick = false;
+  // Adding one: the box takes the row's place (the questions come back after), and the row
+  // keeps the height it had, so the bar and the chat under it don't jump.
+  let quickHeld = 0;
+  function startAddingQuick() {
+    quickHeld = quickEl.offsetHeight;
+    addingQuick = true;
+    render();
+  }
   function drawQuick() {
-    const parts = presets().map((text) => {
+    quickEl.classList.toggle("quick--adding", addingQuick);
+    quickEl.style.minHeight = addingQuick && quickHeld ? `${quickHeld}px` : "";
+    const parts = addingQuick ? [] : presets().map((text) => {
       const sentNow = quickSent === text;
       const b = el("button", `pill pill--quick${sentNow ? " pill--sent" : ""}`);
       b.type = "button";
@@ -1749,13 +1766,23 @@
           render();
         }
       }, 150));
-      form.append(box);
+      const save = el("button", "quick__save", "Save");
+      save.type = "submit";
+      const cancel = el("button", "quick__cancel", "Cancel");
+      cancel.type = "button";
+      cancel.addEventListener("mousedown", (e) => e.preventDefault()); // keep the box's focus
+      cancel.addEventListener("click", () => {
+        addingQuick = false;
+        render();
+      });
+      form.append(box, save, cancel);
       form.addEventListener("submit", (e) => {
         e.preventDefault();
         const text = clean(box.value);
         if (text && !presets().includes(text)) put("presets", [...presets(), text].slice(-MAX_PRESETS));
         addingQuick = false;
         render();
+        quickEl.scrollLeft = quickEl.scrollWidth;
       });
       parts.push(form);
       setTimeout(() => box.focus());
@@ -1763,10 +1790,7 @@
       const add = el("button", "pill pill--icon pill--add", "+");
       add.type = "button";
       add.title = "Add a quick question";
-      add.addEventListener("click", () => {
-        addingQuick = true;
-        render();
-      });
+      add.addEventListener("click", startAddingQuick);
       parts.push(add);
     }
     quickEl.replaceChildren(...parts);

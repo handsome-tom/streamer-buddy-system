@@ -4472,3 +4472,28 @@ body.has-space.has-space .oc-line--marked {
 .oc-line--marked::before { width: 17px; height: 17px; margin-right: 6px; vertical-align: -4px; }
 .oc-marks { gap: 5px; padding: 3px 10px 3px 8px; font-size: 12.5px; font-weight: 800; }
 .oc-marks svg { width: 16px; height: 16px; }
+
+/* Adding a quick question: the box fills the row (in place of the questions), with Save and
+   Cancel beside it; the row holds its height (dock.js), so nothing below moves. */
+.quick--adding { align-items: center; }
+.quick--adding .quick__add { display: flex; flex: 1 1 100%; align-items: center; gap: 6px; min-width: 0; }
+.quick--adding .quick__add input { flex: 1; width: auto; min-width: 0; }
+.quick__save, .quick__cancel { flex: none; height: 28px; padding: 0 12px; font: inherit; font-size: 12px; font-weight: 700; border: 0; border-radius: 14px; cursor: pointer; }
+.quick__save { color: #fff; background: #3f7dd8; }
+.quick__save:hover { background: #5a95e6; }
+.quick__cancel { color: var(--muted); background: none; }
+.quick__cancel:hover { color: var(--text); }
+body.has-space .quick--adding .quick__add input { background: rgba(12, 15, 26, 0.8); border-color: #3f7dd8; }
+body.livechat .quick,
+body.livechat .bar:has(.flashes:not(:empty)) .quick {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+}
+body.livechat .quick::-webkit-scrollbar { display: none; }
+body.livechat .quick > * { flex: none; }
+body.livechat .quick.quick--adding { -webkit-mask-image: none; mask-image: none; }
+body.livechat .quick.quick--adding > .quick__add { flex: 1 1 100%; }
