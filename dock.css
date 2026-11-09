@@ -4775,3 +4775,37 @@ body.livechat .bar__planet {
   animation: none;
 }
 body.livechat.has-space .space__planet { display: none; }
+
+/* The planet, take two: low on the right of the bar, half off the edge and cut by the
+   bar's bottom, behind the message box's far end, drifting slowly. */
+body.livechat .bar__planet {
+  left: auto;
+  right: -38px;
+  top: 44px;
+  bottom: auto;
+  width: 104px;
+  height: 104px;
+  opacity: 0.32;
+  animation: bar-planet 60s ease-in-out infinite alternate;
+}
+body.livechat .bar__planet {
+  right: -34px;
+  top: -14px;
+  width: 92px;
+  height: 92px;
+  opacity: 0.55;
+}
+body.livechat.has-space .bar__planet {
+  background: radial-gradient(circle at 30% 32%, #6c9cf0, #2a4fb0 48%, #0d1a3c 74%);
+  box-shadow: inset -14px -10px 22px rgba(0, 0, 0, 0.65), 0 0 26px rgba(63, 125, 216, 0.3);
+}
+body.livechat.has-space .bar__planet::after { border-color: rgba(150, 190, 245, 0.45); border-width: 1.5px; }
+body.livechat.has-space .bar__planet {
+  left: auto;
+  right: -46px;
+  top: 18px;
+  bottom: auto;
+  width: 100px;
+  height: 100px;
+  opacity: 0.7;
+}
