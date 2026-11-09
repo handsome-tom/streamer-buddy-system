@@ -1156,7 +1156,7 @@
       .slice(0, MAX_VIEW_ITEMS)
       .map((id) => ({ id, to: sent[id].to, text: sent[id].text, said: said(sent[id].answer), code: sent[id].answer.code, at: sent[id].answer.at }));
     const notes = [...onScreen.values()].slice(-MAX_VIEW_ITEMS);
-    return { glow: dndOn() ? 0 : glowNow, waiting, answers, notes, chat: LIVECHAT ? "livechat" : "dock", dnd: dndOn() ? get("dndUntil", 0) : 0 };
+    return { glow: dndOn() ? 0 : glowNow, waiting, answers, notes, chat: LIVECHAT ? "livechat" : "dock", dnd: dndOn() ? get("dndUntil", 0) : 0, leads: get("leads", []) };
   }
 
   // The streamer's side: send it when it changes (gathered for a moment, as a burst of
@@ -1177,10 +1177,27 @@
     if (v) views[owner] = v;
     else delete views[owner];
     drawStreamerView();
-    if (EMBED && modBtn.classList.contains("mod-btn--live") !== modRinged()) render(); // the sword's ring
+    // The sword's ring, or sword ↔ hammer (they're the streamer's lead mod), changed.
+    if (EMBED && (modBtn.classList.contains("mod-btn--live") !== modRinged() || (modBtn.dataset.icon === "hammer") !== isLeadFor(modOwner()))) render();
   }
 
   // Whose view the panel shows.
+  // Lead moderators: Twitch doesn't say who they are anywhere but their chat badge, so the
+  // streamer's own chat dock remembers whoever chats with "lead_moderator" in their own
+  // channel ("leads", kept here) and shares the list with Streamer View. A lead mod's side
+  // panel then shows the hammer in place of the sword. (Twitch lets a lead mod show the
+  // plain mod badge instead; then they stay a sword until they chat with the lead one.)
+  function noteLead(login, ranks) {
+    if (!me || liveChannel !== me.login || !login) return;
+    const leads = get("leads", []);
+    if (!ranks.includes("lead_moderator") || leads.includes(login)) return;
+    put("leads", [...leads, login].slice(-12));
+    shareView();
+  }
+  const SWORD_ICON = `<svg viewBox="-0.5 -0.5 21 21" width="16" height="16" aria-hidden="true">${'<path fill="#fff" fill-rule="evenodd" d="M19.4 0.6 L13.8 1.6 L5.4 12.8 L7.2 14.6 L18.4 6.2 Z M15.4 4.6 L6.75 12.85 L7.15 13.25 Z"/><g stroke="#fff" stroke-linecap="round" fill="none"><path d="M3.5 12.3 L7.7 16.5" stroke-width="1.8"/><path d="M5.6 14.4 L2.4 17.6" stroke-width="1.5"/></g><circle cx="1.5" cy="18.5" r="1.3" fill="#fff"/>'}</svg>`;
+  const HAMMER_ICON = `<svg viewBox="-0.5 -0.5 21 21" width="16" height="16" aria-hidden="true">${'<path fill="#fff" stroke="#fff" stroke-width="0.5" stroke-linejoin="round" d="M10.32 1.48 L12.79 3.95 L12.87 5.15 L14.85 7.13 L16.05 7.21 L18.52 9.68 L14.28 13.92 L11.81 11.45 L11.73 10.25 L9.75 8.27 L8.55 8.19 L6.08 5.72 Z"/><path d="M10.18 9.82 L2.68 17.32" stroke="#fff" stroke-width="1.8" stroke-linecap="round" fill="none"/><path d="M14.42 5.58 L15.34 4.66" stroke="#fff" stroke-width="1.7" stroke-linecap="round" fill="none"/>'}</svg>`;
+  const isLeadFor = (owner) => !!(me && views[owner]?.leads?.includes(me.login));
+
   // Whose stream Mod is about: the channel you're watching when they're a connection, else
   // the one picked by hand, else a channel you mod, else whoever shares a view. Your thread
   // with each streamer is the same one wherever you are; flipping streams flips to theirs.
@@ -1670,8 +1687,13 @@
     askBtn.textContent = DECK ? "Deck" : view === "ask" ? "Cancel" : "Ask";
     modBtn.hidden = !EMBED || !me;
     const modLive = modRinged();
+    const lead = isLeadFor(modOwner());
+    if (modBtn.dataset.icon !== (lead ? "hammer" : "sword")) {
+      modBtn.dataset.icon = lead ? "hammer" : "sword";
+      modBtn.innerHTML = lead ? HAMMER_ICON : SWORD_ICON;
+    }
     modBtn.classList.toggle("mod-btn--live", modLive);
-    modBtn.title = modBtn.ariaLabel = modOwner() ? `Mod · ${modOwner()}${modLive ? " is live, and sees you're online" : ""}` : "Mod";
+    modBtn.title = modBtn.ariaLabel = modOwner() ? `${lead ? "Lead mod" : "Mod"} · ${modOwner()}${modLive ? " is live, and sees you're online" : ""}` : "Mod";
     drawQuickAsk();
     drawPresence();
     statsBtn.hidden = STREAMER || (!connections.length && !statsOn);
@@ -1733,7 +1755,7 @@
   const isGroup = (t) => t.startsWith("#") || t === ONLINE_MODS;
   const modsOnline = () => inList(MODS_TAG).filter((l) => conn(l).online).length;
   const barLabel = (t) => (t === ONLINE_MODS ? "Online mods" : t === MODS_TAG ? "All mods" : t.startsWith("#") ? t.slice(1) : t);
-  const MOD_BADGE = '<svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><polygon points="16,4 15.3,7.1 8.6,13.8 6.2,11.4 12.9,4.7" fill="#fff"/><path d="M5.2 10.4l4.4 4.4M7.4 12.6l-2.6 2.6" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="4.3" cy="15.7" r="1.3" fill="#fff"/></svg>';
+  const MOD_BADGE = '<svg viewBox="-0.5 -0.5 21 21" width="12" height="12" aria-hidden="true"><path fill="#fff" fill-rule="evenodd" d="M19.4 0.6 L13.8 1.6 L5.4 12.8 L7.2 14.6 L18.4 6.2 Z M15.4 4.6 L6.75 12.85 L7.15 13.25 Z"/><g stroke="#fff" stroke-linecap="round" fill="none"><path d="M3.5 12.3 L7.7 16.5" stroke-width="1.8"/><path d="M5.6 14.4 L2.4 17.6" stroke-width="1.5"/></g><circle cx="1.5" cy="18.5" r="1.3" fill="#fff"/></svg>';
   // The little picture: a person's photo, the mod sword for Mods, a tag for a list.
   function barMark(t) {
     if (!isGroup(t)) {
@@ -4243,6 +4265,7 @@
         onFail: (reason) => turn === chatTurn && chatFallback(reason),
         onChoose: chooseTwitchChat,
         onSignIn: ownChatSignIn, // to add a permission it would like (EXTRA_SCOPES)
+        onBadges: noteLead,
         pretend: SANDBOX, // the public demo: links to Twitch say what they'd do instead
       });
       if (location.hostname === "localhost") window.__ownChat = ownChat;
@@ -4487,6 +4510,22 @@
       deco.setAttribute("aria-hidden", "true");
       deco.append(el("div", "bar__planet"));
       document.querySelector(".bar").prepend(deco);
+    }
+    // The chat dock keeps one size: everything that comes in (the newest question or
+    // answer, quick info, !vanish notes, flagged lines) shows in one fixed-height slot under
+    // the bar, scrolling if there's more than fits, and pages opened from the bar
+    // (Connections, Stats, the full list) lie over the chat. The chat never moves.
+    if (LIVECHAT && !document.getElementById("slot")) {
+      const slot = el("section", "slot");
+      slot.id = "slot";
+      slot.setAttribute("aria-label", "What's come in");
+      slot.append(el("div", "slot__empty", "Nothing waiting"), peekEl, flashesEl, pinsEl);
+      document.querySelector(".bar").after(slot);
+      // Pages from the bar sit just under the slot, over the chat (dock.css, --under).
+      const under = () => document.body.style.setProperty("--under", `${Math.round(slot.getBoundingClientRect().bottom)}px`);
+      under();
+      new ResizeObserver(under).observe(document.querySelector(".bar"));
+      addEventListener("resize", under);
     }
     if (DEMO) {
       askBtn.hidden = peopleBtn.hidden = false;

@@ -611,7 +611,8 @@
         line.dataset.tier = v >= 3000 ? "3" : v >= 2000 ? "2" : "1";
       }
       if (m.color) line.dataset.color = m.color;
-      if (ranks.includes("broadcaster") || ranks.includes("moderator")) line.dataset.staff = "1";
+      if (ranks.includes("broadcaster") || ranks.includes("moderator") || ranks.includes("lead_moderator")) line.dataset.staff = "1";
+      host.onBadges?.(m.login, ranks); // the dock notes lead moderators (the hammer in their panel)
       if (host.isConnection(m.login)) line.classList.add("oc-line--connection");
       if (m.history) line.classList.add("oc-line--old");
       // How Twitch dressed the message up: a channel-points highlight, a gigantified emote.

@@ -11,7 +11,7 @@
 // window.SANDBOX is what the two panels use (demo/sandbox.js): Socket, fetch and seed.
 // The demo page's own buttons use the same sockets, as the pretend people.
 
-import { Hub } from "../relay/src/index.js?v=184"; // the number: bump it when the relay changes, so browsers fetch the new one (and bump hub.js?v= in play.html)
+import { Hub } from "../relay/src/index.js?v=187"; // the number: bump it when the relay changes, so browsers fetch the new one (and bump hub.js?v= in play.html)
 
 // ===== Sockets ================================================================================
 // One object per connection, on the page's side, shaped like a browser WebSocket (on*
@@ -468,7 +468,9 @@ const twitch = (() => {
     say(who, text) {
       if (!here.has(who)) controls.join(who);
       ircLine(`${ircUser(who)} PRIVMSG #streamer :${text}`);
-      chat(text, who);
+      // In the demo, mod1 is the streamer's lead moderator (Twitch's hammer badge), mod2 a mod.
+      const rank = who === "mod1" ? "lead_moderator" : who === "mod2" ? "moderator" : "";
+      chat(text, who, rank ? { badges: [{ set_id: rank, id: "1" }] } : undefined);
     },
   };
 
@@ -509,6 +511,7 @@ const twitch = (() => {
     gift: ['<rect x="3" y="8" width="18" height="4" rx="1"/>', '<path d="M12 8v13"/>', '<path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/>', '<path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/>'],
     train: ['<path d="M8 3.1V7a4 4 0 0 0 8 0V3.1"/>', '<path d="m9 15-1-1"/>', '<path d="m15 15 1-1"/>', '<path d="M9 19c-2.8 0-5-2.2-5-5v-4a8 8 0 0 1 16 0v4c0 2.8-2.2 5-5 5Z"/>', '<path d="m8 19-2 3"/>', '<path d="m16 19 2 3"/>'],
     check: ['<path d="M20 6 9 17l-5-5"/>'],
+    hammer: ['<path d="m15 12-8.4 8.4a2 2 0 0 1-2.8-2.8L12.2 9.2"/>', '<path d="m9.6 6.4 8 8"/>', '<path d="M14 3.5 20.5 10l-3 3L11 6.5z"/>'],
   };
   const tile = (bg, mark) => {
     const id = `g${bg.slice(1)}`;
@@ -518,6 +521,7 @@ const twitch = (() => {
   const BADGES = [
     { set_id: "subscriber", versions: [["0", "Subscriber", "#8a4dff"], ["2000", "Tier 2 Subscriber", "#5c16c5"], ["3000", "Tier 3 Subscriber", "#d4282a"]].map(([id, title, bg]) => ({ id, title, image_url_1x: tile(bg, "star"), image_url_2x: tile(bg, "star"), image_url_4x: tile(bg, "star") })) },
     badge("moderator", "1", "Moderator", "#1f9d3a", "sword"),
+    badge("lead_moderator", "1", "Lead Moderator", "#1f9d3a", "hammer"),
     badge("bits", "1000", "cheer 1000", "#7b52e0", "gem"),
     badge("premium", "1", "Prime Gaming", "#1188c4", "crown"),
     badge("sub-gifter", "10", "10 Gift Subs", "#c99418", "gift"),

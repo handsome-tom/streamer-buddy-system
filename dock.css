@@ -4584,3 +4584,65 @@ body.livechat .quick.quick--adding > .quick__add { flex: 1 1 100%; }
 /* Online mods: the sword with a small green "live" dot. */
 .qa__pic--live { position: relative; }
 .qa__pic--live::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 8px; height: 8px; border-radius: 50%; background: #3fd23f; box-shadow: 0 0 0 2px #0a0d18; }
+
+/* ===== The chat dock keeps one size =====
+   One fixed-height slot under the bar holds whatever's come in; it scrolls when there's
+   more. Pages opened from the bar lie over the chat (dock.js moves <main> into .live). */
+body.livechat .slot {
+  --slot-h: 84px;
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  height: var(--slot-h);
+  padding: 4px 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  border-bottom: 1px solid var(--line);
+  box-sizing: border-box;
+}
+body.livechat.has-space .slot { background: rgba(6, 9, 18, 0.55); border-bottom-color: rgba(125, 176, 239, 0.12); }
+body.livechat .slot > .peek,
+body.livechat .slot > .flashes,
+body.livechat .slot > .pins { flex: none; order: 0; margin: 0; max-height: none; overflow: visible; }
+body.livechat .slot > .peek:empty,
+body.livechat .slot > .flashes:empty,
+body.livechat .slot > .pins:empty { display: none; }
+body.livechat .slot > .peek--on { margin: 0; }
+/* Empty: a quiet line in the middle, so the space reads as "this is where things show". */
+body.livechat .slot__empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(185, 200, 230, 0.28);
+  pointer-events: none;
+}
+body.livechat .slot:has(> .peek:not(:empty)) > .slot__empty,
+body.livechat .slot:has(> .flashes:not(:empty)) > .slot__empty,
+body.livechat .slot:has(> .pins:not(:empty)) > .slot__empty { display: none; }
+
+/* Pages from the bar: over the chat, not above it, just under the slot. */
+body.livechat > main {
+  position: fixed;
+  top: var(--under, 120px);
+  left: 2px;
+  right: 2px;
+  z-index: 30;
+  max-height: calc(100vh - var(--under, 120px) - 6px);
+  overflow-y: auto;
+  border-bottom: 1px solid rgba(125, 176, 239, 0.16);
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.6);
+}
+body.livechat.has-space > main { background: rgba(8, 11, 21, 0.97); backdrop-filter: blur(10px); }
+body.livechat > main:has(> .cards:empty),
+body.livechat > main:empty { display: none; }
+/* The pictures row: one steady height, lit or not (a count on a picture made it 2px taller). */
+body.livechat .bar > .dots { height: 30px; align-items: center; }

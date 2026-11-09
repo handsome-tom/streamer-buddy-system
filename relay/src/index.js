@@ -782,6 +782,7 @@ function cleanView(raw) {
     glow: stage(raw.glow),
     chat: raw.chat === "livechat" ? "livechat" : "dock",
     dnd: num(raw.dnd), // Do Not Disturb until then (0: off)
+    leads: list(raw.leads).map(login).filter(Boolean), // who chats with Twitch's lead moderator badge
     waiting: list(raw.waiting).map((q) => ({
       id: str(q.id, 60), from: login(q.from), text: str(q.text), at: num(q.at), note: !!q.note, stage: stage(q.stage), nudges: stage(q.nudges),
       options: list(q.options).map((o) => str(o, MAX_OPTION_LEN)),
