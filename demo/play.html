@@ -760,7 +760,7 @@
     send("mod2", { t: "connect", login: "mod1" });
     await wait(300);
     document.getElementById("mod").src = "../?dev=mod1&embed=ext&watch=streamer&sandbox";
-    document.getElementById("obs").src = "../?dev=streamer&livechat&ownchat&mock&lightms=6000&sandbox";
+    document.getElementById("obs").src = "../?dev=streamer&livechat&ownchat&mock&lightms=6000&mods=mod1,mod2&sandbox";
     // Nothing happens until someone presses something: the tour walks them through it.
     tour.show(0);
   })();

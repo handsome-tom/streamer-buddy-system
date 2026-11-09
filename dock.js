@@ -1701,15 +1701,111 @@
     askFull.hidden = !inBar || LIVECHAT;
     askBtn.hidden = inBar || !me || EMBED; // the side panel has Mod (the sword) instead
     if (!inBar) return;
-    const choices = targets();
+    const choices = barTargets();
     const want = choices.includes(quickTo.value) ? quickTo.value : defaultTo();
     const labels = choices.map(targetLabel);
     if ([...quickTo.options].map((o) => o.text).join() !== labels.join()) {
       quickTo.replaceChildren(...choices.map((l, k) => new Option(labels[k], l)));
     }
     quickTo.value = want;
+    drawQaPick();
     drawQuick();
   }
+
+  // The bar's "send to" picker: each person (picture, online dot), then Mods (your mods
+  // on Twitch, the "Your mods" group), then any lists you've made. No Everyone here.
+  // It's a drop-down of our own (a plain <select> can't show pictures); the <select>
+  // stays underneath, hidden, holding the choice.
+  const MODS_TAG = `#${AUTO_GROUPS.mods}`;
+  function barTargets() {
+    const able = connections.filter((c) => c.mutual).map((c) => c.login);
+    const lists = Object.keys(tags).filter((t) => t !== AUTO_GROUPS.modFor && tags[t].some((l) => able.includes(l)));
+    const mods = lists.includes(AUTO_GROUPS.mods) ? [MODS_TAG] : [];
+    const custom = lists.filter((t) => t !== AUTO_GROUPS.mods).sort().map((t) => `#${t}`);
+    return [...able, ...mods, ...custom];
+  }
+  const inList = (tag) => tags[tag.slice(1)].filter((l) => conn(l)?.mutual);
+  const barLabel = (t) => (t === MODS_TAG ? "Mods" : t.startsWith("#") ? t.slice(1) : t);
+  const MOD_BADGE = '<svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><polygon points="16,4 15.3,7.1 8.6,13.8 6.2,11.4 12.9,4.7" fill="#fff"/><path d="M5.2 10.4l4.4 4.4M7.4 12.6l-2.6 2.6" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="4.3" cy="15.7" r="1.3" fill="#fff"/></svg>';
+  // The little picture: a person's photo, the mod sword for Mods, a tag for a list.
+  function barMark(t) {
+    if (!t.startsWith("#")) {
+      if (pics[t]) {
+        const img = el("img", "qa__pic");
+        img.src = pics[t];
+        img.alt = "";
+        return img;
+      }
+      return el("span", "qa__pic qa__pic--blank", t.slice(0, 1).toUpperCase());
+    }
+    const mark = el("span", `qa__pic ${t === MODS_TAG ? "qa__pic--mods" : "qa__pic--list"}`);
+    mark.innerHTML = t === MODS_TAG ? MOD_BADGE : TAG_ICON;
+    return mark;
+  }
+  const qaPick = el("button", "qa__pick");
+  qaPick.type = "button";
+  qaPick.title = "Who to send to";
+  qaPick.setAttribute("aria-haspopup", "listbox");
+  quickTo.before(qaPick);
+  quickAsk.classList.add("qa--picker");
+  // On the page itself (the chat dock's bar clips what hangs below it), under the button.
+  const qaMenu = el("div", "qa__menu float-menu");
+  qaMenu.setAttribute("role", "listbox");
+  qaMenu.hidden = true;
+  document.body.append(qaMenu);
+  function drawQaPick() {
+    const t = quickTo.value;
+    qaPick.replaceChildren(barMark(t), el("span", "qa__who", barLabel(t)), el("span", "ask__caret"));
+    if (!t.startsWith("#") && conn(t)?.online) qaPick.firstChild.classList.add("qa__pic--on");
+    if (!qaMenu.hidden) drawQaMenu();
+  }
+  function drawQaMenu() {
+    const items = barTargets().map((t) => {
+      const item = el("button", `qa__item${t === quickTo.value ? " qa__item--on" : ""}`);
+      item.type = "button";
+      item.setAttribute("role", "option");
+      item.setAttribute("aria-selected", String(t === quickTo.value));
+      const words = el("span", "qa__words");
+      words.append(el("span", "qa__name", barLabel(t)));
+      if (t.startsWith("#")) {
+        const people = inList(t);
+        const on = people.filter((l) => conn(l).online).length;
+        words.append(el("span", "qa__sub", t === MODS_TAG ? `Your mods on Twitch · ${on} online` : `${people.length} ${people.length === 1 ? "person" : "people"} · ${on} online`));
+      }
+      item.append(barMark(t), words);
+      if (!t.startsWith("#") && conn(t)?.online) item.append(el("span", `ask__online${conn(t).idle ? " ask__online--idle" : ""}`));
+      item.addEventListener("click", (e) => {
+        e.stopPropagation();
+        quickTo.value = t;
+        rememberTo(t);
+        openQaMenu(false);
+        drawQaPick();
+        drawQuick();
+        quickText.focus();
+      });
+      return item;
+    });
+    const custom = barTargets().filter((t) => t.startsWith("#") && t !== MODS_TAG);
+    if (!custom.length) items.push(el("div", "qa__hint", "Make your own lists under Connections."));
+    qaMenu.replaceChildren(...items);
+  }
+  function openQaMenu(open) {
+    qaMenu.hidden = !open;
+    qaPick.setAttribute("aria-expanded", String(open));
+    qaPick.classList.toggle("qa__pick--open", open);
+    if (!open) return;
+    drawQaMenu();
+    const at = qaPick.getBoundingClientRect();
+    qaMenu.style.top = `${Math.round(at.bottom + 6)}px`;
+    qaMenu.style.left = `${Math.round(Math.max(6, at.left))}px`;
+  }
+  qaPick.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openQaMenu(qaMenu.hidden);
+  });
+  qaMenu.addEventListener("click", (e) => e.stopPropagation());
+  document.addEventListener("click", () => !qaMenu.hidden && openQaMenu(false));
+  document.addEventListener("keydown", (e) => e.key === "Escape" && !qaMenu.hidden && openQaMenu(false));
 
   // Quick questions beside the bar's Ask field: one tap asks whoever the
   // field's picker is set to. × (on hover) forgets one; + adds one.
