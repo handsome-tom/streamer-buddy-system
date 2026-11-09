@@ -4809,3 +4809,5 @@ body.livechat.has-space .bar__planet {
   height: 100px;
   opacity: 0.7;
 }
+/* The planet, a quarter fainter (0.7 → 0.52). */
+body.livechat.has-space .bar__planet { opacity: 0.52; }
