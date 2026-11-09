@@ -343,7 +343,10 @@
     let y = Math.random() * Math.max(0, innerHeight - SIZE);
     let dx = Math.random() < 0.5 ? -1 : 1;
     let dy = Math.random() < 0.5 ? -1 : 1;
-    const place = () => (tom.style.transform = `translate(${x}px, ${y}px) rotate(180deg)`);
+    const SPIN = 18; // degrees a second; it turns the other way after each bounce
+    let turn = 180; // starts upside down
+    let spin = Math.random() < 0.5 ? -1 : 1;
+    const place = () => (tom.style.transform = `translate(${x}px, ${y}px) rotate(${turn}deg)`);
     place();
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     let last = 0;
@@ -354,8 +357,9 @@
       const maxY = Math.max(0, innerHeight - SIZE);
       x += dx * SPEED * dt;
       y += dy * SPEED * dt;
-      if (x <= 0 || x >= maxX) { dx = x <= 0 ? 1 : -1; x = Math.min(Math.max(x, 0), maxX); }
-      if (y <= 0 || y >= maxY) { dy = y <= 0 ? 1 : -1; y = Math.min(Math.max(y, 0), maxY); }
+      turn = (turn + spin * SPIN * dt) % 360;
+      if (x <= 0 || x >= maxX) { dx = x <= 0 ? 1 : -1; x = Math.min(Math.max(x, 0), maxX); spin = -spin; }
+      if (y <= 0 || y >= maxY) { dy = y <= 0 ? 1 : -1; y = Math.min(Math.max(y, 0), maxY); spin = -spin; }
       place();
       requestAnimationFrame(step);
     };

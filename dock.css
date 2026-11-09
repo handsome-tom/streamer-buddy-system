@@ -3881,7 +3881,7 @@ body.livechat::before {
 .signin__mark { display: block; width: 40px; height: 40px; margin: 0 auto 10px; border-radius: 10px; opacity: 0.9; }
 .signin__by { margin: 14px 0 0; font-size: 11px; color: #6f7385; }
 
-/* The mod side panel: Tom's head, upside down, bouncing edge to edge (dock.js, bounceTom). */
+/* The mod side panel: Tom's head, slowly spinning, bouncing edge to edge (dock.js, bounceTom). */
 .space__tom {
   position: absolute;
   left: 0;
@@ -3889,8 +3889,8 @@ body.livechat::before {
   width: 54px;
   height: 54px;
   border-radius: 50%;
-  opacity: 0.05;
-  filter: grayscale(0.3);
+  opacity: 0.12;
+  filter: brightness(1.15);
   will-change: transform;
 }
 
