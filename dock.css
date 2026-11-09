@@ -4646,3 +4646,132 @@ body.livechat > main:has(> .cards:empty),
 body.livechat > main:empty { display: none; }
 /* The pictures row: one steady height, lit or not (a count on a picture made it 2px taller). */
 body.livechat .bar > .dots { height: 30px; align-items: center; }
+
+/* ===== The slot, tightened =====
+   64px: one question card fits exactly (the name and question on one line, the answer
+   buttons and the reply box on one row under it); notes and flagged lines are one slim
+   line each; more than fits scrolls. Empty, it's a deep black void with a soft shadow. */
+body.livechat .slot { --slot-h: 64px; gap: 3px; padding: 3px 6px; scrollbar-width: none; }
+body.livechat .slot::-webkit-scrollbar { display: none; }
+body.livechat .slot__empty {
+  inset: 0;
+  font-size: 0;
+  background:
+    radial-gradient(ellipse 70% 90% at 50% 50%, #000 0%, rgba(0, 0, 0, 0.92) 45%, rgba(0, 0, 0, 0.55) 100%);
+  box-shadow: inset 0 10px 18px -6px #000, inset 0 -10px 18px -6px #000, inset 0 0 40px 10px rgba(0, 0, 0, 0.9);
+}
+body.livechat.has-space .slot:has(> .slot__empty:only-of-type) { background: #000; }
+
+/* The question card. */
+body.livechat .slot > .peek--on {
+  gap: 4px 6px;
+  padding: 5px 8px 6px 10px;
+  border-radius: 12px;
+  animation: none;
+}
+body.livechat .slot > .peek--on .peek__line { font-size: 13.5px; line-height: 1.25; padding-right: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.livechat .slot > .peek--on .peek__who { font-size: 13px; }
+body.livechat .slot > .peek--on .peek__text { font-size: 14px; }
+body.livechat .slot > .peek--on .peek__answers { gap: 4px; }
+body.livechat .slot > .peek--on .pill--answer { height: 24px; min-width: 24px; padding: 0 7px; }
+body.livechat .slot > .peek--on .peek__own { flex: 1; min-width: 80px; height: 24px; }
+body.livechat .slot > .peek--on .peek__own input { height: 24px; font-size: 12.5px; }
+body.livechat .slot > .peek--on .peek__dismiss { top: 4px; right: 4px; }
+body.livechat .slot > .peek--on .peek__pager { margin: 0 0 0 2px; }
+
+/* Quick info, !vanish and flagged lines: one slim line. */
+body.livechat .slot > .flashes { gap: 3px; }
+body.livechat .slot .qflash,
+body.livechat .slot .qflash--info,
+body.livechat .slot .qflash--love {
+  height: 26px;
+  min-height: 0;
+  margin: 0;
+  padding: 0 4px 0 9px;
+  gap: 7px;
+  border-radius: 13px;
+  box-shadow: inset 0 0 12px color-mix(in srgb, var(--c) 12%, transparent);
+}
+body.livechat .slot .qflash__body,
+body.livechat .slot .qflash--info .qflash__body,
+body.livechat .slot .qflash--love .qflash__body { font-size: 13px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.livechat .slot .qflash__icon svg,
+body.livechat .slot .qflash--info .qflash__icon svg,
+body.livechat .slot .qflash--love .qflash__icon svg { width: 15px; height: 15px; }
+body.livechat .slot .qflash__from { font-size: 12.5px; margin-right: 4px; }
+body.livechat .slot .qflash--info .qflash__who,
+body.livechat .slot .qflash--love .qflash__who { font-size: 9.5px; margin-left: 6px; }
+body.livechat .slot .qflash--love::before { inset: -6px -10px; }
+body.livechat .slot > .pins { display: flex; flex-direction: column; gap: 3px; }
+body.livechat .slot__more {
+  position: fixed;
+  right: 10px;
+  z-index: 25;
+  height: 18px;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: #3f7dd8;
+  border: 0;
+  border-radius: 9px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
+body.livechat .slot__more[hidden] { display: none; }
+
+/* Empty slot, take two: the streamer's space shows through, with a soft fuzzy patch of
+   black shadow in the middle that fades out to nothing at its edges. */
+body.livechat.has-space .slot,
+body.livechat.has-space .slot:has(> .slot__empty:only-of-type) { background: transparent; }
+body.livechat .slot__empty {
+  inset: 8px 18px;
+  border-radius: 999px;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.6) 45%, rgba(0, 0, 0, 0) 100%);
+  box-shadow: none;
+  filter: blur(6px);
+}
+
+/* The bar runs on into the slot: no line or shadow between them, the bar's glass carries
+   straight down and fades away to the space behind by the slot's bottom. (The bar's
+   second glow moves to its top right, so nothing stops at the bar's bottom edge.) */
+body.livechat.has-space .bar {
+  background:
+    radial-gradient(70% 140% at 0% 0%, rgba(63, 125, 216, 0.22), transparent 70%),
+    radial-gradient(55% 110% at 100% 0%, rgba(31, 63, 149, 0.22), transparent 70%),
+    rgba(6, 9, 18, 0.62);
+  border-bottom: 0;
+  box-shadow: none;
+}
+body.livechat.has-space .slot,
+body.livechat.has-space .slot:has(> .slot__empty:only-of-type) {
+  background: linear-gradient(180deg, rgba(6, 9, 18, 0.62) 0%, rgba(6, 9, 18, 0.4) 45%, rgba(6, 9, 18, 0) 100%);
+  border-bottom: 0;
+}
+/* The bar's blur carries on too, fading out with the color. */
+body.livechat.has-space .slot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  backdrop-filter: blur(10px);
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent);
+  mask-image: linear-gradient(180deg, #000, transparent);
+  pointer-events: none;
+}
+body.livechat.has-space .slot { isolation: isolate; }
+
+/* The streamer's dock: one planet, tucked into the top-left corner and mostly cut off,
+   barely there. (The big one behind the chat is gone.) */
+body.livechat .bar__planet {
+  left: -38px;
+  top: -42px;
+  bottom: auto;
+  width: 96px;
+  height: 96px;
+  opacity: 0.18;
+  animation: none;
+}
+body.livechat.has-space .space__planet { display: none; }

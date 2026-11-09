@@ -4519,8 +4519,25 @@
       const slot = el("section", "slot");
       slot.id = "slot";
       slot.setAttribute("aria-label", "What's come in");
-      slot.append(el("div", "slot__empty", "Nothing waiting"), peekEl, flashesEl, pinsEl);
+      slot.append(el("div", "slot__empty"), peekEl, flashesEl, pinsEl);
       document.querySelector(".bar").after(slot);
+      // More than fits: a small "▾ 2 more" tag on the slot's bottom edge (click: scroll there).
+      const more = el("button", "slot__more");
+      more.type = "button";
+      more.hidden = true;
+      more.addEventListener("click", () => slot.scrollBy({ top: slot.clientHeight - 8, behavior: "smooth" }));
+      slot.after(more);
+      const items = () => [...slot.querySelectorAll(":scope > .peek--on, .flashes > *, .pins > *")];
+      const countMore = () => {
+        const bottom = slot.getBoundingClientRect().bottom;
+        const hidden = items().filter((i) => i.getBoundingClientRect().top > bottom - 6).length;
+        more.hidden = !hidden;
+        more.textContent = `▾ ${hidden} more`;
+        if (hidden) more.style.top = `${Math.round(bottom - 20)}px`;
+      };
+      new MutationObserver(countMore).observe(slot, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+      slot.addEventListener("scroll", countMore);
+      addEventListener("resize", countMore);
       // Pages from the bar sit just under the slot, over the chat (dock.css, --under).
       const under = () => document.body.style.setProperty("--under", `${Math.round(slot.getBoundingClientRect().bottom)}px`);
       under();
