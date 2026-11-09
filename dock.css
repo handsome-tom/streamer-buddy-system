@@ -4155,3 +4155,320 @@ body.livechat .dot--light5:not(:hover):not(.dot--answer):not(.dot--ask) { box-sh
 body.livechat .dot--light10:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px var(--orange), 0 0 10px 1px color-mix(in srgb, var(--orange) 50%, transparent); }
 body.livechat .dot--light20:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px var(--yellow), 0 0 10px 1px color-mix(in srgb, var(--yellow) 45%, transparent); }
 body.livechat .dot--light30:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px #fff, 0 0 10px 1px rgba(255, 255, 255, 0.35); }
+
+/* ===== Mod (the side panel's sword, first in the bar) ===== */
+.mod-btn,
+.mod-btn:hover:not(:disabled),
+body.has-space .mod-btn { width: 28px; height: 28px; padding: 0; border-radius: 50%; background: #00ad03; color: #fff; }
+.mod-btn:hover:not(:disabled),
+body.has-space .mod-btn:hover { background: #12c215; }
+.mod-btn svg { display: block; }
+.mod-btn.mod-btn--live,
+.mod-btn.mod-btn--live:hover:not(:disabled),
+body.has-space .mod-btn.mod-btn--live { box-shadow: 0 0 0 2px #0e0e10, 0 0 0 4px #00ad03, 0 0 10px rgba(0, 173, 3, 0.55); }
+.mod .sv { margin: 0 0 10px; }
+.mod__head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.mod__pic { flex: none; width: 28px; height: 28px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px #00ad03; }
+.mod__name { font-size: 15px; font-weight: 700; color: var(--text); }
+.mod__pick { font: inherit; font-size: 14px; font-weight: 700; color: var(--text); background: #1f1f24; border: 1px solid #2f2f37; border-radius: 6px; padding: 3px 6px; }
+.mod__where { margin-left: auto; font-size: 11px; color: var(--muted); }
+.mod__where--here { color: #3fd23f; }
+.mod__where--here::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: #00ad03; vertical-align: 1px; }
+.mod__label { margin: 4px 0 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.mod__reactions { margin-bottom: 12px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.mod__reactions .panel__sub { margin: 0; }
+.mod__rx { display: flex; align-items: center; gap: 7px; padding: 3px 0; font-size: 12.5px; }
+.mod__rxq { flex: 1; min-width: 0; overflow: hidden; color: var(--muted); white-space: nowrap; text-overflow: ellipsis; }
+.mod > .person { margin-top: 0; }
+
+/* The bar's icon buttons (right side): perfect circles, all the same size. */
+.bar .pill--icon:not(.dnd-btn--on) { flex: none; width: 28px; height: 28px; min-width: 28px; padding: 0; border-radius: 50%; aspect-ratio: 1; }
+
+/* The side panel's "Online": just words, lifted off the bar by a heavy shadow and a soft
+   black blur behind them. Still a button (click to change). */
+.presence--bar {
+  position: relative;
+  isolation: isolate;
+  height: 28px;
+  padding: 0 6px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-shadow: 0 1px 2px #000, 0 2px 8px rgba(0, 0, 0, 0.95), 0 0 14px rgba(0, 0, 0, 0.9);
+}
+.presence--bar::after {
+  content: "";
+  position: absolute;
+  inset: 3px -2px;
+  z-index: -1;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.75);
+  filter: blur(9px);
+}
+.presence--bar.presence--offline { color: var(--muted); }
+.presence--bar:hover, .presence--bar.presence--open { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+
+/* Mod's Send box: always to the streamer, so no "Send to" line. */
+.mod .send--bare { margin-bottom: 10px; }
+
+/* ===== Mod: the Send box sits open on the page (no box around it) ===== */
+.mod .ask.send.send--bare,
+body.has-space .mod .ask.send.send--bare { padding: 0; background: none; border: 0; box-shadow: none; backdrop-filter: none; margin-bottom: 14px; }
+.mod .ask.send.send--bare::before, .mod .ask.send.send--bare::after { display: none; }
+
+/* ===== Mod: their feed, as a clean list ===== */
+.mod .sv { border-radius: 12px; }
+.mod .sv__body { gap: 0; padding: 0 4px 4px; }
+.mod .sv__row {
+  align-items: center;
+  gap: 10px;
+  padding: 9px 8px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.mod .sv__row + .sv__row { border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.mod .sv__mark { flex: none; align-self: flex-start; margin: 5px 0 0; }
+.mod .sv__row .peek__ping.sv__mark { width: 8px; height: 8px; margin: 6px 3px 0; }
+.mod .sv__main { flex: 1; min-width: 0; }
+.mod .sv__meta { display: flex; align-items: baseline; gap: 5px; font-size: 11.5px; line-height: 1.3; }
+.mod .sv__verb { color: var(--muted); }
+.mod .sv__meta .sv__ago { margin-left: auto; padding-left: 8px; }
+.mod .sv__text { margin-top: 2px; font-size: 13px; line-height: 1.35; color: var(--text); }
+.mod .sv__text:empty { display: none; }
+.mod .sv__extra { margin-top: 2px; font-size: 11px; }
+.mod .sv__acts { flex: none; display: flex; align-items: center; gap: 4px; }
+.mod .sv__acts:empty { display: none; }
+/* Nudge: a small round button with its color dot; what it does is in the tooltip. */
+.mod .sv__acts .nudge { width: 26px; height: 26px; padding: 0; justify-content: center; border-radius: 50%; background: rgba(255, 255, 255, 0.06); border: 0; }
+.mod .sv__acts .nudge > span { display: none; }
+.mod .sv__acts .nudge { color: var(--good); }
+.mod .sv__acts .nudge--2 { color: var(--orange); }
+.mod .sv__acts .nudge--3 { color: var(--yellow); }
+.mod .sv__acts .nudge--4 { color: #fff; }
+.mod .sv__acts .nudge--5, .mod .sv__acts .nudge--warned { color: var(--red); }
+.mod .sv__acts .nudge:disabled { opacity: 0.45; }
+.mod .sv__acts .nudge:hover:not(:disabled) { background: rgba(255, 255, 255, 0.14); }
+.mod .sv__acts .nudge--arming { background: color-mix(in srgb, var(--red) 35%, transparent); }
+.mod .sv__row .sv__x { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: none; opacity: 0.5; }
+.mod .sv__row .sv__x:hover { opacity: 1; background: rgba(255, 255, 255, 0.1); }
+
+/* ===== The streamer's chat dock in space: the mod side's look ===== */
+/* Same backdrop, blue glass instead of gray, soft shadows, text lifted off the stars. */
+body.livechat.has-space { --line: rgba(125, 176, 239, 0.12); --field: rgba(125, 176, 239, 0.2); }
+body.livechat.has-space .space__planet { top: 55%; opacity: 0.22; }
+
+/* The bar: blue-black glass with a thin brand-blue edge. */
+body.livechat.has-space .bar {
+  background:
+    radial-gradient(70% 140% at 0% 0%, rgba(63, 125, 216, 0.22), transparent 70%),
+    radial-gradient(55% 110% at 100% 100%, rgba(31, 63, 149, 0.25), transparent 70%),
+    rgba(6, 9, 18, 0.62);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(125, 176, 239, 0.14);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+}
+body.livechat.has-space .bar__planet {
+  background: radial-gradient(circle at 35% 30%, #5a8de8, #1f3f95 55%, #0b1530 75%);
+  box-shadow: inset -14px -10px 24px rgba(0, 0, 0, 0.7), 0 0 30px rgba(63, 125, 216, 0.25);
+  opacity: 0.4;
+}
+body.livechat.has-space .bar__planet::after { border-color: rgba(125, 176, 239, 0.35); }
+
+/* Round icon buttons: glass, brand blue when on. */
+body.livechat.has-space .bar .pill--icon:not(.dnd-btn--on) {
+  background: rgba(20, 28, 48, 0.65);
+  border: 1px solid rgba(125, 176, 239, 0.14);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+body.livechat.has-space .bar .pill--icon:not(.dnd-btn--on):hover:not(:disabled) { background: rgba(63, 125, 216, 0.28); }
+body.livechat.has-space .bar .pill--icon.pill--on { background: #3f7dd8; border-color: #3f7dd8; color: #fff; }
+
+/* Sending from the bar: who and the message, as one glass field. */
+body.livechat.has-space .qa {
+  height: 32px;
+  border: 1px solid rgba(125, 176, 239, 0.18);
+  border-radius: 16px;
+  background: rgba(12, 15, 26, 0.75);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+body.livechat.has-space .qa:focus-within { border-color: #3f7dd8; box-shadow: 0 0 0 3px rgba(63, 125, 216, 0.25); }
+body.livechat.has-space .qa__to { color: #7db0ef; border-right-color: rgba(125, 176, 239, 0.18); font-weight: 700; }
+body.livechat.has-space .qa__text { font-size: 13px; }
+body.livechat.has-space .qa__text::placeholder { color: rgba(185, 200, 230, 0.5); }
+
+/* Quick questions: blue glass chips. */
+body.livechat.has-space .pill--quick {
+  background: rgba(20, 28, 48, 0.6);
+  border: 1px solid rgba(125, 176, 239, 0.16);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+body.livechat.has-space .pill--quick:hover:not(:disabled) { background: rgba(63, 125, 216, 0.24); border-color: rgba(125, 176, 239, 0.4); }
+
+/* What's waiting (under the bar): glass cards over space. */
+body.livechat.has-space main { border-bottom-color: rgba(125, 176, 239, 0.12); }
+body.livechat.has-space .peek--on { background: rgba(10, 14, 26, 0.55); backdrop-filter: blur(8px); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4); }
+body.livechat.has-space .peek__who,
+body.livechat.has-space .qflash__from { text-shadow: 0 1px 2px #000, 0 0 10px rgba(0, 0, 0, 0.8); }
+body.livechat.has-space .peek__text { text-shadow: 0 1px 2px #000, 0 2px 8px rgba(0, 0, 0, 0.9); }
+
+/* Custom chat: see-through dark glass, so space shows behind it; words get a shadow. */
+body.livechat.has-space .oc { background: linear-gradient(180deg, rgba(5, 7, 15, 0.55), rgba(4, 5, 11, 0.72)); }
+body.livechat.has-space .oc-bar {
+  background: rgba(6, 9, 18, 0.7);
+  backdrop-filter: blur(8px);
+  border-bottom-color: rgba(125, 176, 239, 0.12);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  font-size: 10px;
+}
+body.livechat.has-space .oc-bar::after { filter: none; opacity: 0.35; }
+body.livechat.has-space .oc-link { color: #7db0ef; text-transform: none; letter-spacing: 0; }
+body.livechat.has-space .oc-line { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.6); }
+body.livechat.has-space .oc-send { background: rgba(6, 9, 18, 0.7); backdrop-filter: blur(8px); border-top-color: rgba(125, 176, 239, 0.12); }
+body.livechat.has-space .oc-input { background: rgba(12, 15, 26, 0.8); border: 1px solid rgba(125, 176, 239, 0.18); border-radius: 16px; padding: 6px 12px; }
+body.livechat.has-space .oc-input:focus { outline: 0; border-color: #3f7dd8; box-shadow: 0 0 0 3px rgba(63, 125, 216, 0.25); }
+body.livechat.has-space { background: transparent; }
+
+/* ===== One look everywhere: the brand's font, glass cards, quiet labels =====
+   Plus Jakarta Sans (the site's font) for the whole page, both sides. Subs, gifts, raids,
+   announcements, points and the cards along the top are the same glass as the mod side's
+   cards: rounded, a thin blue edge, a soft shadow. Each kind keeps its own color only on
+   its icon and number; labels are the small uppercase style of "Their feed". */
+html, body, button, input, select, textarea { font-family: "Plus Jakarta Sans", Inter, "Helvetica Neue", Arial, sans-serif; }
+
+body.has-space.has-space .oc-event,
+body.has-space.has-space .oc-event--bomb,
+body.has-space.has-space .oc-redeem,
+body.has-space.has-space .oc-notice,
+body.has-space.has-space .oc-notice--announcement,
+body.has-space.has-space .oc-notice--raid,
+body.has-space.has-space .oc-notice--gold,
+body.has-space.has-space .oc-topcard {
+  margin-left: 8px;
+  margin-right: 8px;
+  padding: 10px 12px;
+  background: rgba(12, 15, 26, 0.72);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(125, 176, 239, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+}
+body.has-space.has-space .oc-topcard { margin: 0; padding: 8px 10px; }
+
+/* Labels: small, heavy, spaced, uppercase. */
+body.has-space.has-space .oc-notice__head,
+body.has-space.has-space .oc-notice--announcement .oc-notice__head,
+body.has-space.has-space .oc-redeem__head,
+body.has-space.has-space .oc-raid__title,
+body.has-space.has-space .oc-notice--raid .oc-raid__title,
+body.has-space.has-space .oc-topcard__label,
+body.has-space.has-space .oc-topcard--pin .oc-topcard__label,
+body.has-space.has-space .oc-giftees__count {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+body.has-space.has-space .oc-notice__head { color: var(--muted); }
+body.has-space.has-space .oc-notice--announcement .oc-notice__head { color: var(--k-announce); }
+body.has-space.has-space .oc-redeem__head { color: var(--muted); }
+body.has-space.has-space .oc-redeem__title { text-transform: none; letter-spacing: 0; font-size: 13px; }
+
+/* The big line: who did it and how much, heavy, lifted off the stars. */
+body.has-space.has-space .oc-event__value { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8); }
+body.has-space.has-space .oc-event__what,
+body.has-space.has-space .oc-raid__name { font-size: 14px; font-weight: 700; letter-spacing: 0; color: var(--text); }
+body.has-space.has-space .oc-event__who { font-size: 12px; letter-spacing: 0; }
+body.has-space.has-space .oc-event__msg,
+body.has-space.has-space .oc-notice .oc-body { margin-top: 5px; font-size: 13px; line-height: 1.4; }
+
+/* Icons: the kind's color, round, a soft drop shadow (no glow). */
+body.has-space.has-space .oc-event__icon { box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55); }
+body.has-space.has-space .oc-raid__pic { box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55); }
+
+/* Little tags in a line (raider, first-timer, cheers): rounded like everything else. */
+body.has-space.has-space .oc-raidtag,
+body.has-space.has-space .oc-bits { border-radius: 10px; font-weight: 800; }
+body.has-space.has-space .oc-firsttag { font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+body.has-space.has-space .oc-giftee { background: rgba(20, 28, 48, 0.7); border: 1px solid rgba(125, 176, 239, 0.14); border-radius: 10px; box-shadow: none; }
+
+/* Highlighted, first-time and raider lines: a soft wash, no hard bar down the side. */
+body.has-space.has-space .oc-line--highlight,
+body.has-space.has-space .oc-line--first,
+body.has-space.has-space .oc-line--raider { margin: 2px 6px; border-radius: 8px; box-shadow: none; }
+
+/* Event icons: round, like every other icon now (the stacked tile behind stays, round too). */
+body.has-space.has-space .oc-event__icon,
+body.has-space.has-space .oc-event__icon::before,
+body.has-space.has-space .oc-event__icon::after,
+body.has-space.has-space .oc-topcard__pin { border-radius: 50%; }
+/* A mod's line in chat: a soft blue wash, no bar down the side. */
+body.has-space.has-space .oc-line--connection { margin: 2px 6px; border-radius: 8px; box-shadow: none; background: rgba(63, 125, 216, 0.1); }
+body.has-space.has-space .oc-raid__pic { border-radius: 50%; object-fit: cover; }
+
+/* Colored chips in chat (the RAID tag, cheer bits): white words, no shadow. A shadow on a
+   bright color looks muddy, so the chip's color is deepened a touch for the white to read. */
+body.has-space.has-space .oc-raidtag,
+body.has-space.has-space .oc-line--raider .oc-raidtag {
+  color: #fff;
+  background: color-mix(in srgb, var(--raid, #ff6a00) 82%, #000);
+  text-shadow: none;
+}
+body.has-space.has-space .oc-raidtag__pic,
+body.has-space.has-space .oc-line--raider .oc-raidtag__pic { border-color: #fff; }
+body.has-space.has-space .oc-bits,
+body.has-space.has-space .oc-bits b {
+  color: #fff;
+  text-shadow: none;
+}
+body.has-space.has-space .oc-bits { background: color-mix(in srgb, var(--k-bits) 72%, #000); }
+
+/* Chat lines stay plain rows, edge to edge: no rounded boxes. First-timers and raiders are
+   marked by their label and tag; a highlighted message gets the faintest full-width tint. */
+body.has-space.has-space .oc-line--first,
+body.has-space.has-space .oc-line--raider,
+body.has-space.has-space .oc-line--raider.oc-line--first,
+body.has-space.has-space .oc-line--connection,
+body.has-space.has-space .oc-line--highlight {
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+}
+body.has-space.has-space .oc-line--highlight { background: rgba(63, 125, 216, 0.08); }
+
+/* Space behind the chat, toned down: the chat is mostly solid, the big planet barely there. */
+body.livechat.has-space .oc { background: rgba(6, 8, 15, 0.9); }
+body.livechat.has-space .space__planet { opacity: 0.08; }
+body.livechat.has-space .space::before { opacity: 0.25; }
+body.livechat.has-space .space::after { opacity: 0.3; }
+
+/* The chat dock's settings and Do Not Disturb menus: on the page, over the chat (dock.js). */
+body.livechat > .float-menu { position: fixed; z-index: 100; }
+body.livechat > .settings.float-menu { right: 8px; }
+body.livechat.has-space > .float-menu {
+  background: rgba(10, 13, 24, 0.94);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(125, 176, 239, 0.16);
+  border-radius: 12px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.6);
+}
+
+/* Bookmarks, bigger: the mark on a bookmarked line and the counter's icon. The line itself is
+   a plain full-width tint like the rest of chat (no rounded glow box). */
+body.has-space.has-space .oc-line--marked {
+  margin: 0;
+  border-radius: 0;
+  box-shadow: inset 3px 0 0 transparent;
+  background: color-mix(in srgb, var(--amber) 10%, transparent);
+}
+.oc-line--marked::before { width: 17px; height: 17px; margin-right: 6px; vertical-align: -4px; }
+.oc-marks { gap: 5px; padding: 3px 10px 3px 8px; font-size: 12.5px; font-weight: 800; }
+.oc-marks svg { width: 16px; height: 16px; }

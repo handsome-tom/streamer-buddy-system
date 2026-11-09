@@ -141,6 +141,7 @@
   const dotsEl = document.getElementById("dots");
   const peekEl = document.getElementById("peek");
   const askBtn = document.getElementById("askBtn");
+  const modBtn = document.getElementById("modBtn");
   const peopleBtn = document.getElementById("peopleBtn");
   const presenceBtn = document.getElementById("presenceBtn");
   const quickAsk = document.getElementById("quickAsk");
@@ -158,7 +159,8 @@
   const chatCount = document.getElementById("chatCount");
 
   let me = null; // { login, id }
-  const HOME_VIEW = DECK ? "deck" : "cards";
+  // The side panel opens on Mod (the sword): the stream you're on.
+  const HOME_VIEW = DECK ? "deck" : EMBED ? "mod" : "cards";
   let view = POPOUT && /^(ask|people|person|chat|stats)$/.test(params.get("view")) ? params.get("view") : HOME_VIEW; // "cards" | "deck" | "ask" | "people" | "person" | "chat" | "stats"
   const drafts = {}; // question id -> reply being typed (kept if things redraw)
   // The Ask box: who to, what's being typed, and what kind ("ask" | "info" | "love").
@@ -1175,14 +1177,21 @@
     if (v) views[owner] = v;
     else delete views[owner];
     drawStreamerView();
+    if (EMBED && modBtn.classList.contains("mod-btn--live") !== modRinged()) render(); // the sword's ring
   }
 
   // Whose view the panel shows.
-  function svOwner() {
-    const sharing = Object.keys(views).filter((l) => l !== me?.login);
-    if (watching && sharing.includes(watching)) return watching;
-    if (sharing.includes(svPicked)) return svPicked;
-    return sharing[0] || "";
+  // Whose stream Mod is about: the channel you're watching when they're a connection, else
+  // the one picked by hand, else a channel you mod, else whoever shares a view. Your thread
+  // with each streamer is the same one wherever you are; flipping streams flips to theirs.
+  function modOwner() {
+    if (!me) return "";
+    const able = connections.filter((c) => c.mutual).map((c) => c.login);
+    if (watching && able.includes(watching)) return watching;
+    if (able.includes(svPicked)) return svPicked;
+    const modFor = modLists?.modFor || [];
+    const sharing = Object.keys(views).filter((l) => l !== me.login);
+    return able.find((l) => modFor.includes(l)) || able.find((l) => sharing.includes(l)) || able[0] || "";
   }
 
   // The X on your own things in Streamer View: takes it off their dock. It's gone from the
@@ -1302,12 +1311,13 @@
   const svEl = document.getElementById("streamerView");
   function drawStreamerView() {
     if (!svEl) return;
-    const owner = EMBED && me ? svOwner() : "";
+    // Shown inside Mod only, for the streamer it's about (when their dock shares a view).
+    const modFor = EMBED && me && view === "mod" ? modOwner() : "";
+    const owner = views[modFor] ? modFor : "";
     svEl.hidden = !owner;
     if (!owner) return svEl.replaceChildren();
     const v = views[owner];
     const open = get("svOpen", true);
-    const sharing = Object.keys(views).filter((l) => l !== me.login);
     svEl.className = `sv${v.glow ? ` sv--glow sv--${v.glow}` : ""}${open ? "" : " sv--closed"}`;
 
     const head = el("div", "sv__head");
@@ -1315,7 +1325,7 @@
     toggle.type = "button";
     toggle.title = open ? "Fold Streamer View away" : "Show Streamer View";
     toggle.setAttribute("aria-expanded", String(open));
-    toggle.append(el("span", "sv__title", "Streamer View"));
+    toggle.append(el("span", "sv__title", "Their feed"));
     const count = v.waiting.length;
     const dndLeft = v.dnd > Date.now() ? Math.ceil((v.dnd - Date.now()) / 60000) : 0;
     const dnd = v.dnd === -1 ? "Do Not Disturb" : dndLeft ? `Do Not Disturb · ${dndLeft} min` : "";
@@ -1327,22 +1337,6 @@
       drawStreamerView();
     });
     head.append(toggle);
-    if (sharing.length > 1) {
-      const pick = el("select", "sv__pick");
-      pick.title = watching === owner ? "Following the channel you're watching" : "Whose view";
-      pick.replaceChildren(...sharing.map((l) => new Option(l, l)));
-      pick.value = owner;
-      pick.addEventListener("change", () => {
-        svPicked = pick.value;
-        watching = ""; // picked by hand: stop following the tab until it changes channel
-        drawStreamerView();
-      });
-      head.append(pick);
-    } else {
-      const name = el("span", "sv__owner", owner);
-      if (colorOf(owner)) name.style.color = colorOf(owner);
-      head.append(name);
-    }
     if (!open) {
       svEl.replaceChildren(head);
       return fitChat();
@@ -1354,47 +1348,63 @@
       if (colorOf(login)) b.style.color = colorOf(login);
       return b;
     };
-    for (const q of v.waiting) {
-      const row = el("div", `sv__row${q.stage ? ` sv__row--${q.stage}` : ""}`);
-      row.title = q.nudges ? `Nudged ${q.nudges} time${q.nudges === 1 ? "" : "s"}` : q.text;
-      row.append(el("span", `peek__ping peek__ping--${q.stage || 0}${q.stage ? "" : " sv__dot--quiet"}`));
-      const text = el("div", "sv__text");
-      text.append(who(q.from), document.createTextNode(` ${q.note ? "says" : "asks"}: `), el("span", null, q.text));
-      if (q.from === me.login) text.append(el("span", "sv__tag", "yours"));
-      row.append(text, el("span", "sv__ago", ago(q.at)));
-      // Your own unanswered question: nudge it from here too, or take it back.
-      if (q.from === me.login && sent[q.id] && !q.note) row.append(nudgeButton([q.id]));
-      if (q.from === me.login && sent[q.id]) row.append(takeBack(() => relay({ t: "withdraw", id: q.id }), q.note ? "message" : "question"));
+    // Each line: a mark (dot or icon), who and when on top, what was said under it, and
+    // your own actions (Nudge, take back) as small round buttons on the right.
+    const line = (cls, mark, whoLogin, verb, at, text, extra) => {
+      const row = el("div", `sv__row ${cls}`);
+      row.append(mark);
+      const main = el("div", "sv__main");
+      const meta = el("div", "sv__meta");
+      const mine = whoLogin === me.login;
+      const name = el("b", "sv__who", mine ? "You" : whoLogin || "");
+      if (!mine && colorOf(whoLogin)) name.style.color = colorOf(whoLogin);
+      meta.append(name, el("span", "sv__verb", mine ? { asks: "asked", says: "said" }[verb] || verb : verb));
+      if (at) meta.append(el("span", "sv__ago", ago(at)));
+      main.append(meta, el("div", "sv__text", text));
+      if (extra) main.append(el("div", "sv__muted sv__extra", extra));
+      row.append(main);
+      const acts = el("div", "sv__acts");
+      row.append(acts);
       body.append(row);
+      return acts;
+    };
+    for (const q of v.waiting) {
+      const dot = el("span", `peek__ping peek__ping--${q.stage || 0}${q.stage ? "" : " sv__dot--quiet"} sv__mark`);
+      const acts = line(`sv__row--${q.stage || 0}`, dot, q.from, q.note ? "says" : "asks", q.at, q.text, q.nudges ? `Nudged ${q.nudges}×` : "");
+      // Your own unanswered question: nudge it from here too, or take it back.
+      if (q.from === me.login && sent[q.id] && !q.note) {
+        const nb = nudgeButton([q.id]);
+        nb.insertAdjacentHTML("beforeend", '<svg class="sv__bell" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>');
+        nb.setAttribute("aria-label", nb.textContent.trim() || "Nudge");
+        acts.append(nb);
+      }
+      if (q.from === me.login && sent[q.id]) acts.append(takeBack(() => relay({ t: "withdraw", id: q.id }), q.note ? "message" : "question"));
     }
     for (const a of v.answers) {
-      const row = el("div", "sv__row sv__row--answer");
-      const icon = el("span", `peek__icon answer--${a.code}`);
+      const icon = el("span", `peek__icon answer--${a.code} sv__mark`);
       icon.innerHTML = svg((ANSWERS[a.code] || ANSWERS.c).icon, 13);
-      const text = el("div", "sv__text");
-      text.append(who(a.to), document.createTextNode(" answered "), el("b", null, a.said), el("span", "sv__muted", ` · ${a.text}`));
-      row.append(icon, text, el("span", "sv__ago", ago(a.at)));
-      body.append(row);
+      line("sv__row--answer", icon, a.to, `answered ${a.said}`, a.at, a.text);
     }
     for (const f of v.notes) {
-      const row = el("div", `sv__row sv__note sv__note--${f.kind}`);
-      if (f.color && f.kind !== "love" && f.kind !== "seen") row.style.setProperty("--c", f.color);
-      const icon = el("span", "sv__icon");
+      const icon = el("span", "sv__icon sv__mark");
       icon.innerHTML = svg(FLASH_ICONS[f.kind] || FLASH_ICONS.info, 13);
-      const text = el("div", "sv__text");
+      const cls = `sv__note sv__note--${f.kind}`;
+      let acts;
       if (f.kind === "chat") {
-        const name = el("b", null, f.chatter || "");
-        if (f.chatterColor) name.style.color = f.chatterColor;
-        text.append(name, `: ${f.text}`, el("span", "sv__muted", ` · flagged by ${f.from}`));
+        const chatter = el("span");
+        const n = el("b", null, f.chatter || "");
+        if (f.chatterColor) n.style.color = f.chatterColor;
+        chatter.append(n, `: ${f.text}`);
+        acts = line(cls, icon, f.from, "flagged a line", f.at, "", "");
+        acts.previousElementSibling.querySelector(".sv__text").replaceChildren(chatter);
       } else if (f.kind === "seen") {
-        text.append(el("b", null, `Seen by ${f.from}`), el("span", "sv__muted", ` · ${f.text}`));
+        acts = line(cls, icon, f.from, "saw", f.at, f.text);
       } else {
-        text.append(document.createTextNode(f.text), el("span", "sv__muted", ` · ${f.from}${f.kind === "love" ? " (!vanish)" : ""}`));
+        acts = line(cls, icon, f.from, f.kind === "love" ? "!vanish" : "quick info", f.at, f.text);
       }
-      row.append(icon, text);
+      if (f.color && f.kind !== "love" && f.kind !== "seen") acts.parentElement.style.setProperty("--c", f.color);
       // Yours: take it off their bar (a flagged line comes off for everyone who has it).
-      if (f.from === me.login && f.kind !== "seen") row.append(takeBack(() => relay({ t: "unflash", id: f.id }), f.kind === "chat" ? "flagged line" : f.kind === "love" ? "!vanish" : "note"));
-      body.append(row);
+      if (f.from === me.login && f.kind !== "seen") acts.append(takeBack(() => relay({ t: "unflash", id: f.id }), f.kind === "chat" ? "flagged line" : f.kind === "love" ? "!vanish" : "note"));
     }
     if (!body.childElementCount) body.append(el("p", "sv__empty", "Their dock is clear: nothing waiting."));
     svEl.replaceChildren(head, body);
@@ -1416,6 +1426,13 @@
   //   "modIcons"       ban / time out / delete icons before names in custom chat
   const settingsBtn = document.getElementById("settingsBtn");
   const settingsEl = document.getElementById("settings");
+  // The chat dock's bar clips what hangs below it (it's kept to its own rounded glass), so
+  // there its two menus live on the page itself, pinned just under the bar.
+  if (LIVECHAT) {
+    document.body.append(settingsEl, dndMenu);
+    settingsEl.classList.add("float-menu");
+    dndMenu.classList.add("float-menu");
+  }
 
   // What the switches change on screen, applied on load and on every change.
   function applySettings() {
@@ -1506,6 +1523,11 @@
 
   function openSettings(open) {
     settingsEl.hidden = !open;
+    if (open && LIVECHAT) {
+      const below = Math.round(document.querySelector(".bar").getBoundingClientRect().bottom + 4);
+      settingsEl.style.top = `${below}px`;
+      settingsEl.style.maxHeight = `${Math.max(160, innerHeight - below - 8)}px`;
+    }
     settingsBtn.classList.toggle("pill--on", open);
     settingsBtn.setAttribute("aria-expanded", String(open));
     if (open) drawSettings();
@@ -1624,7 +1646,7 @@
     pingCheck();
     // Keep typing where it was if things are redrawn under you.
     const typingIn = document.activeElement?.dataset?.key;
-    main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : view === "deck" ? deckPanel() : cardList());
+    main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : view === "deck" ? deckPanel() : view === "mod" ? modPanel() : cardList());
     if (LIVECHAT && (view !== "cards" || showAll) && main.firstElementChild?.childElementCount !== 0) main.prepend(inlineHead());
     drawDots();
     drawPeek();
@@ -1646,6 +1668,10 @@
     peopleBtn.title = peopleBtn.title ? `Connections and chat (${peopleBtn.title})` : "Connections and chat";
     peopleBtn.classList.toggle("pill--on", view === "people" || view === "chat");
     askBtn.textContent = DECK ? "Deck" : view === "ask" ? "Cancel" : "Ask";
+    modBtn.hidden = !EMBED || !me;
+    const modLive = modRinged();
+    modBtn.classList.toggle("mod-btn--live", modLive);
+    modBtn.title = modBtn.ariaLabel = modOwner() ? `Mod · ${modOwner()}${modLive ? " is live, and sees you're online" : ""}` : "Mod";
     drawQuickAsk();
     drawPresence();
     statsBtn.hidden = STREAMER || (!connections.length && !statsOn);
@@ -1673,7 +1699,7 @@
     const inBar = short() && able.length > 0;
     quickAsk.hidden = quickEl.hidden = !inBar;
     askFull.hidden = !inBar || LIVECHAT;
-    askBtn.hidden = inBar || !me;
+    askBtn.hidden = inBar || !me || EMBED; // the side panel has Mod (the sword) instead
     if (!inBar) return;
     const choices = targets();
     const want = choices.includes(quickTo.value) ? quickTo.value : defaultTo();
@@ -1761,7 +1787,7 @@
     presenceBtn.hidden = !EMBED;
     if (!EMBED) return;
     const now = STATUS[myStatus] || STATUS.online;
-    presenceBtn.className = `pill presence presence--${myStatus}${presenceMenu.hidden ? "" : " pill--on"}`;
+    presenceBtn.className = `presence presence--bar presence--${myStatus}${presenceMenu.hidden ? "" : " presence--open"}`;
     presenceBtn.textContent = now.label;
     presenceBtn.title = `${now.says} Click to change.`;
     presenceBtn.setAttribute("aria-haspopup", "menu");
@@ -2488,7 +2514,8 @@
   // someone's page), then type: the switch at the left of the typing bar says whether
   // it's a question (answered with heart, check or X, or a typed reply), a quick note, or
   // a !vanish note.
-  function composer(fixedTo, alwaysOpen = false) {
+  // bare: no "Send to" line (Mod, where it's always the streamer of the stream you're on).
+  function composer(fixedTo, alwaysOpen = false, bare = false) {
     const box = el("section", "ask send");
     const able = connections.filter((c) => c.mutual).map((c) => c.login);
     const open = alwaysOpen || get("askOpen", true);
@@ -2549,7 +2576,8 @@
       chev.addEventListener("click", fold);
       top.append(chev);
     }
-    box.append(top);
+    if (!bare) box.append(top);
+    else box.classList.add("send--bare");
     const to = () => fixedTo || askDraft.to;
 
     // What you're sending, as tabs: a question, a quick note, or a !vanish note.
@@ -2626,7 +2654,121 @@
 
   // One person's page: ask them something, and the log of everything between
   // you, newest first. Waiting questions to you show as full cards on top.
-  function personPanel(login) {
+  // Mod (the sword, the side panel's first button): everything about the stream you're on.
+  // Who it's for follows the Twitch tab (modOwner); the picker switches by hand. Then:
+  //   - their feed: what their OBS dock shows right now (Streamer View, drawn in here)
+  //   - their reactions: how they answered what you sent, newest first
+  //   - your thread with them: the Send box and the history, same as their own page
+  //   - anything waiting from someone else, underneath, so nothing hides
+  const MAX_REACTIONS = 8;
+
+  // The sword's ring: only while you're on the stream of someone live right now, and you
+  // show as online (so they see you're there). Live comes from Twitch, checked every 2
+  // minutes for the stream you're on; testing on this Mac (and the public demo), their
+  // chat dock being open stands in for live.
+  const LIVE_CHECK_MS = 2 * 60 * 1000;
+  const liveOf = {}; // login -> { live, at }
+  function modRinged() {
+    const owner = modOwner();
+    if (!EMBED || !owner || watching !== owner || myStatus === "offline" || !conn(owner)?.online) return false;
+    if (TESTING) return views[owner]?.chat === "livechat";
+    const known = liveOf[owner];
+    if (!known || Date.now() - known.at > LIVE_CHECK_MS) checkLive(owner);
+    return !!known?.live;
+  }
+  const liveChecking = new Set();
+  async function checkLive(login) {
+    if (liveChecking.has(login)) return;
+    liveChecking.add(login);
+    try {
+      const r = await helix(`/streams?user_login=${encodeURIComponent(login)}`);
+      const live = r.ok ? !!(await r.json()).data?.[0] : !!liveOf[login]?.live;
+      const was = liveOf[login]?.live;
+      liveOf[login] = { live, at: Date.now() };
+      if (live !== was) render();
+    } catch {
+      liveOf[login] = { live: !!liveOf[login]?.live, at: Date.now() };
+    } finally {
+      liveChecking.delete(login);
+    }
+  }
+  if (EMBED) setInterval(() => me && modOwner() && modRinged() !== modBtn.classList.contains("mod-btn--live") && render(), 30000);
+  function modPanel() {
+    const owner = modOwner();
+    const panel = el("div", "panel mod");
+    if (!owner) {
+      panel.append(el("p", "panel__sub", "Open a stream you mod for. Once you and the streamer have added each other, their feed and your messages with them show up here."));
+      panel.append(cardList());
+      return panel;
+    }
+    // On their stream you're locked to them: their photo and name, no picker. Off it (no
+    // streamer here who's a connection), pick whose.
+    const locked = watching === owner;
+    const head = el("div", "mod__head");
+    if (pics[owner]) {
+      const img = el("img", "mod__pic");
+      img.src = pics[owner];
+      img.alt = "";
+      head.append(img);
+    }
+    const able = connections.filter((c) => c.mutual).map((c) => c.login);
+    const modFor = modLists?.modFor || [];
+    const choices = [...able.filter((l) => modFor.includes(l)), ...able.filter((l) => !modFor.includes(l))];
+    if (!locked && choices.length > 1) {
+      const pick = el("select", "mod__pick");
+      pick.title = "Whose stream";
+      pick.replaceChildren(...choices.map((l) => new Option(l, l)));
+      pick.value = owner;
+      pick.addEventListener("change", () => {
+        svPicked = pick.value;
+        watching = ""; // picked by hand: stop following the tab until it changes channel
+        render();
+      });
+      head.append(pick);
+    } else {
+      const name = el("span", "mod__name", owner);
+      if (colorOf(owner)) name.style.color = colorOf(owner);
+      head.append(name);
+    }
+    const c = conn(owner);
+    head.append(el("span", `mod__where${locked ? " mod__where--here" : ""}`, locked ? "On this stream" : c?.online ? "online" : "Not the stream you're on"));
+    panel.append(head);
+
+    // Send: always to them, so no "Send to".
+    if (c?.mutual) panel.append(composer(owner, true, true));
+
+    // Their feed (Streamer View), drawn by drawStreamerView after this is on the page.
+    panel.append(svEl);
+
+    // Their reactions to what you sent.
+    const reacted = Object.entries(sent)
+      .filter(([, q]) => q.to === owner && q.answer && !q.gone)
+      .sort((a, b) => b[1].answer.at - a[1].answer.at)
+      .slice(0, MAX_REACTIONS);
+    const rx = el("div", "mod__reactions");
+    rx.append(el("div", "mod__label", "Their reactions"));
+    if (!reacted.length) rx.append(el("p", "panel__sub", "Nothing yet. When they answer you, it shows here."));
+    for (const [, q] of reacted) {
+      const row = el("div", "mod__rx");
+      const icon = el("span", `log__icon answer--${q.answer.code}`);
+      icon.innerHTML = svg((ANSWERS[q.answer.code] || ANSWERS.c).icon, 13);
+      row.append(icon, el("b", null, said(q.answer)), el("span", "mod__rxq", q.text), el("span", "sv__ago", ago(q.answer.at)));
+      rx.append(row);
+    }
+    panel.append(rx);
+
+    // The rest of your thread with them: private chat, what's waiting from them, history.
+    panel.append(personPanel(owner, true));
+
+    const others = Object.keys(inbox).filter((id) => inbox[id].from !== owner && !inbox[id].done).sort((a, b) => inbox[b].at - inbox[a].at);
+    if (others.length) {
+      panel.append(el("div", "mod__label", "Waiting from others"), inboxList(others));
+    }
+    return panel;
+  }
+
+  // inMod: just the private-chat button, what's waiting and the history (Mod has the rest).
+  function personPanel(login, inMod = false) {
     const c = conn(login) || { login, mutual: false, online: false };
     const panel = el("div", "panel person");
     const head = el("div", "person__head");
@@ -2639,8 +2781,8 @@
     const name = el("span", "person__name", login);
     if (colorOf(login)) name.style.color = colorOf(login);
     head.append(name, el("span", `person__state${c.idle ? " person__state--idle" : c.online ? " person__state--on" : ""}`, !c.mutual ? "hasn't added you yet" : c.idle ? "idle" : c.online ? "online" : "offline"));
-    panel.append(head);
-    if (c.mutual) panel.append(composer(login));
+    if (!inMod) panel.append(head);
+    if (c.mutual && !inMod) panel.append(composer(login));
     const direct = directWith(login);
     if (direct) {
       const n = unread(direct.owner);
@@ -3174,7 +3316,7 @@
     me = null;
     socket?.close();
     socket = null;
-    askBtn.hidden = peopleBtn.hidden = homeChatBtn.hidden = dndBtn.hidden = quickAsk.hidden = askFull.hidden = chatBtn.hidden = statsBtn.hidden = true;
+    askBtn.hidden = modBtn.hidden = peopleBtn.hidden = homeChatBtn.hidden = dndBtn.hidden = quickAsk.hidden = askFull.hidden = chatBtn.hidden = statsBtn.hidden = true;
     dotsEl.replaceChildren();
     const again = el("button", "pill pill--warn pill--bad", message ? "Signed out · Sign in with Twitch" : "Sign in with Twitch");
     again.type = "button";
@@ -4155,6 +4297,11 @@
   quickTo.addEventListener("change", drawQuick);
   // The dock being resized can change it between one row and full.
   addEventListener("resize", () => me && render());
+  modBtn.addEventListener("click", () => {
+    view = "mod";
+    render();
+    main.scrollTop = 0;
+  });
   askBtn.addEventListener("click", () => {
     if (DECK) {
       view = "deck";
@@ -4181,8 +4328,9 @@
       setInterval(() => !updateWaiting && checkForUpdate(), UPDATE_CHECK_MS);
     }
     if (DECK) document.body.classList.add("deck");
-    // The space backdrop (as on the demo site), behind everything but the OBS chat dock.
-    if (!LIVECHAT && !document.getElementById("space")) {
+    // The space backdrop (as on the demo site), behind everything: the streamer's chat dock
+    // too, with its chat as dark glass over it (dock.css, "The streamer's chat dock in space").
+    if (!document.getElementById("space")) {
       const space = el("div", "space");
       space.id = "space";
       space.setAttribute("aria-hidden", "true");
