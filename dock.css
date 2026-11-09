@@ -4578,3 +4578,9 @@ body.livechat .quick.quick--adding > .quick__add { flex: 1 1 100%; }
 .qa__sub { font-size: 11px; color: var(--muted); }
 .qa__item .ask__online { margin-left: auto; }
 .qa__hint { padding: 6px 8px 2px; font-size: 11px; color: var(--muted); border-top: 1px solid rgba(125, 176, 239, 0.1); margin-top: 2px; }
+.qa__sep { height: 1px; margin: 3px 6px; background: rgba(125, 176, 239, 0.12); }
+.qa__item:disabled { opacity: 0.45; cursor: default; }
+.qa__item:disabled:hover { background: none; }
+/* Online mods: the sword with a small green "live" dot. */
+.qa__pic--live { position: relative; }
+.qa__pic--live::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 8px; height: 8px; border-radius: 50%; background: #3fd23f; box-shadow: 0 0 0 2px #0a0d18; }

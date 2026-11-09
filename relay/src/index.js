@@ -58,7 +58,8 @@
 //
 // Messages from a page:
 //   auth { token }          connect { login }        disconnect { login }
-//   ask { to, text, options, note }  answer { id, code, text }  dismiss { id }
+//   ask { to, text, options, note, online }  answer { id, code, text }  dismiss { id }
+//     (online, with "*" or a "#tag": only those online right now)
 //   withdraw { id }         take back your own question or message before it's answered
 //   nudge { id, warn }      remind them of your unanswered question (up to 3; warn: past the
 //                           limits, as a warning; see nudge())
@@ -612,6 +613,12 @@ export class Hub {
       const pool = tagName !== null ? mine.tags?.[tagName] || [] : mine.list;
       targets = pool.filter((l) => mine.list.includes(l) && users[l]?.list.includes(who.login));
       if (!targets.length) return this.send(ws, { t: "error", why: tagName !== null ? `Nobody in ${tagName} can be asked yet` : "Nobody to ask yet: add people under Connections" });
+      // "online": only those online right now (shown as online or idle); nothing waits for
+      // anyone else. The streamer's "Online mods".
+      if (m.online) {
+        targets = targets.filter((l) => this.shownOnline(l, users));
+        if (!targets.length) return this.send(ws, { t: "error", why: tagName !== null ? `Nobody in ${tagName} is online right now` : "Nobody's online right now" });
+      }
     } else {
       const to = String(m.to || "").toLowerCase();
       if (!(await this.mutual(who.login, to))) return this.send(ws, { t: "error", why: `You and ${to} need to add each other first` });
