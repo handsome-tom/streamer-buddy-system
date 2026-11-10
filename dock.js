@@ -155,6 +155,10 @@
   const chatBtn = document.getElementById("chatBtn");
   const homeChatBtn = document.getElementById("homeChatBtn");
   const dndBtn = document.getElementById("dndBtn");
+  // Do Not Disturb's icon: a middle finger, in outline like the bar's other icons (also set
+  // here, for a cached older index.html).
+  const DND_HAND = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.9 14.1V9a1.45 1.45 0 0 1 2.9 0V3.7a1.55 1.55 0 0 1 3.1 0v5.9a1.25 1.25 0 0 1 2.5 0v1.1a1.6 1.6 0 0 1 3.2 0V17c0 2.4-1.9 4.3-4.3 4.3h-5.4c-1.7 0-3.2-1-3.9-2.6L3.6 12.4c-.5-1 .2-2.1 1.3-2.2.7 0 1.3.3 1.8.8z"/><path d="M11.8 9v3.6M14.9 9.6v3.7M17.4 10.7v3.2"/></svg>';
+  dndBtn?.querySelector("svg")?.replaceWith(Object.assign(document.createElement("template"), { innerHTML: DND_HAND }).content.firstChild);
   const dndLabel = document.getElementById("dndLabel");
   const chatCount = document.getElementById("chatCount");
   // Messages tab. Made here if this copy of index.html predates it (a browser can keep an

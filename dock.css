@@ -3617,17 +3617,29 @@ body.has-space .panel > .person__head {
 .send__chev:hover { background: rgba(255, 255, 255, 0.07); }
 .send__fold { cursor: pointer; }
 
-.send__modewrap { position: relative; flex: none; margin-left: -10px; }
+/* What you're sending (Ask, Quick info, !vanish): no pill, just the word and caret in the
+   brand blue, then a faded white stripe between it and where you type. */
+.send__modewrap { position: relative; flex: none; margin-left: -6px; margin-right: 6px; padding-right: 8px; }
+.send__modewrap::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  right: 0;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.4) 30%, rgba(255, 255, 255, 0.4) 70%, transparent);
+  pointer-events: none;
+}
 .send__modepick {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 28px;
-  padding: 0 10px 0 12px;
+  padding: 0 4px 0 6px;
   border: 0;
-  border-radius: 14px;
-  background: #7db0ef;
-  color: #0b1a33;
+  border-radius: 8px;
+  background: none;
+  color: #7db0ef;
   font: inherit;
   font-size: 12px;
   font-weight: 700;
@@ -3635,7 +3647,7 @@ body.has-space .panel > .person__head {
   cursor: pointer;
   transition: background 0.15s;
 }
-.send__modepick:hover { background: #93bff3; }
+.send__modepick:hover { color: #a9cbf6; background: rgba(125, 176, 239, 0.08); }
 .send__modecaret {
   width: 6px;
   height: 6px;
@@ -4422,16 +4434,16 @@ body.has-space.has-space .oc-topcard__pin { border-radius: 50%; }
 body.has-space.has-space .oc-line--connection { margin: 2px 6px; border-radius: 8px; box-shadow: none; background: rgba(63, 125, 216, 0.1); }
 body.has-space.has-space .oc-raid__pic { border-radius: 50%; object-fit: cover; }
 
-/* Colored chips in chat (the RAID tag, cheer bits): white words, no shadow. A shadow on a
-   bright color looks muddy, so the chip's color is deepened a touch for the white to read. */
+/* The RAID tag: the raiding streamer's own name color behind it, and words in white or
+   dark, whichever reads on that color (--raid-ink, worked out in ownchat.js). No shadow. */
 body.has-space.has-space .oc-raidtag,
 body.has-space.has-space .oc-line--raider .oc-raidtag {
-  color: #fff;
-  background: color-mix(in srgb, var(--raid, #ff6a00) 82%, #000);
+  color: var(--raid-ink, #fff);
+  background: var(--raid, #ff6a00);
   text-shadow: none;
 }
 body.has-space.has-space .oc-raidtag__pic,
-body.has-space.has-space .oc-line--raider .oc-raidtag__pic { border-color: #fff; }
+body.has-space.has-space .oc-line--raider .oc-raidtag__pic { border-color: var(--raid-ink, #fff); }
 body.has-space.has-space .oc-bits,
 body.has-space.has-space .oc-bits b {
   color: #fff;
@@ -4954,3 +4966,24 @@ main.main--msgs .panel__sub { color: var(--msg-muted); }
 .rank-pair { position: absolute; z-index: 3; right: -5px; bottom: -4px; display: flex; pointer-events: none; }
 .rank-pair .rank { margin: 0; border: 2px solid var(--panel, #18181b); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
 .rank-pair .rank + .rank { margin-left: -4px; }
+
+/* ===== Event banners, in the dock's newer badge style =====
+   A round disc in the kind's color (sub purple, gift pink, streak orange, bits teal,
+   charity red, points blue, announcement gold), lit softly from the top, ringed in the card
+   color, with a solid white glyph: the same family as the sword, hammer and camera. */
+.oc-event__icon, .oc-event--streak .oc-event__icon {
+  position: relative; isolation: isolate;
+  width: 34px; height: 34px; color: #fff;
+  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, var(--ev) 70%, #fff) 0%, var(--ev) 48%, color-mix(in srgb, var(--ev) 72%, #000) 100%);
+  border: 2px solid var(--card-top, #27272c);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ev) 40%, transparent), 0 4px 12px color-mix(in srgb, var(--ev) 28%, transparent), 0 2px 6px rgba(0, 0, 0, 0.55);
+}
+.oc-event__icon::before, .oc-event__icon::after { display: none; }
+.oc-event__icon svg { position: relative; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3)); }
+.oc-event--bomb .oc-event__icon { width: 42px; height: 42px; border-radius: 50%; }
+.oc-event--bomb .oc-event__icon svg { width: 22px; height: 22px; }
+/* Raids: the raider's picture wears a small badge in the raid color. */
+.oc-raid__picwrap { position: relative; flex: none; display: inline-block; }
+.oc-raid__badge { position: absolute; right: -4px; bottom: -3px; display: grid; place-items: center; width: 16px; height: 16px; color: var(--raid-ink, #fff); background: var(--raid, #ee7a2f); border: 2px solid var(--card-top, #27272c); border-radius: 50%; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
+.oc-raid__badge svg { display: block; }

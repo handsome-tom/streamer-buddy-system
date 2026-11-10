@@ -81,6 +81,26 @@
     sparkles: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/> <path d="M20 3v4"/> <path d="M22 5h-4"/>',
     pin: '<path d="M12 17v5"/> <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
   };
+  // Solid glyphs for the event banners' round badges, in the same style as the dock's sword,
+  // hammer and camera: white shapes, filled, on a disc in the kind's color.
+  const GLYPH = {
+    flame: '<path d="M12 2c1 3.6 4.6 5.6 4.6 9.6 0 .9-.2 1.7-.6 2.4.9-.5 1.6-1.3 2-2.2.9 1.2 1.4 2.6 1.4 4.1C19.4 20 16.1 22 12 22s-7.4-2-7.4-6.1c0-3 2-4.7 3.3-6.4C9.5 7.6 10.6 5.3 12 2z"/>',
+    star: '<path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z"/>',
+    crown: '<path d="M3 7.5l4.6 3.8L12 4l4.4 7.3L21 7.5l-2.1 9.5H5.1z"/><rect x="5" y="18.6" width="14" height="2.4" rx="1.2"/>',
+    giftfill: '<rect x="2.8" y="8" width="8.4" height="4" rx="1"/><rect x="12.8" y="8" width="8.4" height="4" rx="1"/><rect x="4" y="13.4" width="7.2" height="7.8" rx="1.4"/><rect x="12.8" y="13.4" width="7.2" height="7.8" rx="1.4"/><path d="M11.4 7.4C9.8 4.2 6 3.6 5.8 5.8 5.6 7.6 8.6 7.9 11.4 7.4zM12.6 7.4c1.6-3.2 5.4-3.8 5.6-1.6.2 1.8-2.8 2.1-5.6 1.6z"/>',
+    gem: '<path d="M7 3.2h10l4.8 5.6L12 21.2 2.2 8.8z"/><path d="M2.6 9h18.8" stroke="rgba(0,0,0,0.28)" stroke-width="1.2"/><path d="M8.6 3.6L12 21M15.4 3.6L12 21" stroke="rgba(0,0,0,0.18)" stroke-width="1"/>',
+    heartfill: '<path d="M12 20.6l-1.3-1.2C5.6 14.8 2.4 11.9 2.4 8.4 2.4 5.6 4.6 3.4 7.4 3.4c1.6 0 3.1.7 4.6 2.1 1.5-1.4 3-2.1 4.6-2.1 2.8 0 5 2.2 5 5 0 3.5-3.2 6.4-8.3 11z"/>',
+    sparkles: '<path d="M10.5 3l1.9 5.6L18 10.5l-5.6 1.9-1.9 5.6-1.9-5.6L3 10.5l5.6-1.9z"/><path d="M18.5 13.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9z"/>',
+    megaphone: '<path d="M3 10.2c0-1 .8-1.8 1.8-1.8H8l8.6-4.6c.7-.4 1.4.1 1.4.9v14.6c0 .8-.7 1.3-1.4.9L8 15.6H4.8c-1 0-1.8-.8-1.8-1.8z"/><path d="M8.2 16.2l1.5 4.2c.2.6-.2 1.1-.8 1.1H7.6c-.4 0-.8-.3-.9-.7l-1.3-4.6z"/><rect x="19.6" y="10" width="2.4" height="4" rx="1.2"/>',
+    raid: '<path d="M3 11.2L20.6 3.4c.6-.3 1.2.3.9.9L13.8 21c-.3.7-1.3.6-1.5-.1l-1.9-6.4-6.4-1.9c-.7-.2-.8-1.2-.1-1.5z"/>',
+  };
+  // White or dark words, whichever reads better on a color ("#rrggbb").
+  const inkFor = (hex) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#18181b" : "#fff";
+  };
+  const glyph = (name, size = 18) =>
+    `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" fill="currentColor">${GLYPH[name] || ICON[name]}</svg>`;
   const icon = (name, size = 15) =>
     `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[name]}</svg>`;
   function iconButton(className, name, onClick, title) {
@@ -671,8 +691,7 @@
         if (raid.color) {
           // In the raiding streamer's name color, with words that stay readable on it.
           line.style.setProperty("--raid", raid.color);
-          const [r, g, b] = [1, 3, 5].map((i) => parseInt(raid.color.slice(i, i + 2), 16));
-          line.style.setProperty("--raid-ink", 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#18181b" : "#fff");
+          line.style.setProperty("--raid-ink", inkFor(raid.color));
         }
         const tag = el("span", "oc-raidtag", "raid");
         tag.title = `Probably came in with ${raid.from}'s raid (they hadn't been in the chat before it)`;
@@ -728,7 +747,7 @@
     function redemptionLine(name, title, cost, words) {
       const line = el("div", "oc-line oc-redeem");
       const art = el("span", "oc-event__icon");
-      art.innerHTML = icon("sparkles", 18);
+      art.innerHTML = glyph("sparkles", 17);
       const box = el("div", "oc-event__words");
       const head = el("div", "oc-redeem__head");
       head.append(el("b", "", name), " redeemed ", el("b", "oc-redeem__title", title));
@@ -862,16 +881,26 @@
         // Who's raiding, with how many, their picture, and a quick welcome.
         const r = e.raid;
         const raidColor = safeColor(e.color);
-        if (raidColor) line.style.setProperty("--raid", raidColor);
+        if (raidColor) {
+          line.style.setProperty("--raid", raidColor);
+          line.style.setProperty("--raid-ink", inkFor(raidColor)); // white or dark, whichever reads
+        }
         const raidPic = r.profile_image_url ? r.profile_image_url.replace("%{width}", "70").replace("%{height}", "70") : "";
         if (!fromChannel) gotRaid(r.user_name || r.user_login, raidPic, raidColor);
         const head = el("div", "oc-raid");
+        // The raider's picture with a small round raid badge on its corner (same style as the
+        // dock's sword and camera badges).
+        const picWrap = el("span", "oc-raid__picwrap");
         if (r.profile_image_url) {
           const pic = el("img", "oc-raid__pic");
           pic.src = raidPic;
           pic.alt = "";
-          head.append(pic);
+          picWrap.append(pic);
         }
+        const badge = el("span", "oc-raid__badge");
+        badge.innerHTML = glyph("raid", 9);
+        picWrap.append(badge);
+        head.append(picWrap);
         const words = el("div", "oc-raid__words");
         const name = el("a", "oc-raid__name", r.user_name || r.user_login);
         name.href = `https://www.twitch.tv/${encodeURIComponent(r.user_login || "")}`;
@@ -903,7 +932,7 @@
       if (ev) {
         line.classList.add("oc-event", `oc-event--${ev.tone}`);
         const art = el("span", "oc-event__icon");
-        art.innerHTML = icon(ev.icon, 20);
+        art.innerHTML = glyph(ev.icon, 18);
         const words = el("div", "oc-event__words");
         if (fromChannel) words.append(el("span", "oc-shared", fromChannel));
         const big = el("div", "oc-event__big");
@@ -934,7 +963,7 @@
         const c = ANNOUNCE_COLORS[String(e.announcement?.color || "").toUpperCase()];
         if (c) line.style.setProperty("--twitch-color", c);
         const art = el("span", "oc-event__icon");
-        art.innerHTML = icon("megaphone", 18);
+        art.innerHTML = glyph("megaphone", 17);
         const box = el("div", "oc-event__words");
         box.append(el("div", "oc-notice__head", `${e.chatter_user_name || "A moderator"} · Announcement`));
         if (e.message?.text) {
