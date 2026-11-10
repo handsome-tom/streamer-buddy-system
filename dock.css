@@ -4864,40 +4864,21 @@ body.livechat.has-space .bar__planet { opacity: 0.52; }
 .bar:has(.dots--streaming)::before { background: linear-gradient(90deg, #1d0b38 0%, rgba(29, 11, 56, 0.95) 40%, rgba(29, 11, 56, 0.65) 70%, transparent 100%); }
 .dots--mod { align-items: center; }
 .dots__label {
-  /* Down the bar's left edge, centered top to bottom: "Streamers" in white running up,
-     with a thin mod-green rule beside it that fades at both ends. */
+  /* A faded camera, centered down the bar's left edge: these are your streamers. */
   position: absolute;
   top: 50%;
-  left: 4px;
+  left: 6px;
   transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  color: #c8b4ff;
+  opacity: 0.45;
   pointer-events: auto;
 }
-.dots__word {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  color: #fff;
-  font-size: 6px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  line-height: 1;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-.dots__label::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: -3px;
-  width: 1px;
-  background: linear-gradient(180deg, transparent, #00ad03 25%, #00ad03 75%, transparent);
-  opacity: 0.6;
-}
-.dots--mod { padding-left: 14px; }
+.dots__label svg { display: block; width: 100%; height: 100%; }
+.dots--mod { padding-left: 22px; }
 /* A streamer you mod who isn't on Streamer Buddy yet: a small broken-chain badge at the
    picture's bottom-left (the sword or hammer has the bottom-right). */
 .dot__unlinked { position: absolute; z-index: 3; left: -4px; bottom: -4px; display: grid; place-items: center; width: 14px; height: 14px; background: #53535f; border: 2px solid var(--panel, #18181b); border-radius: 50%; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); pointer-events: none; }

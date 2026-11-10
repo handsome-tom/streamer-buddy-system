@@ -2232,9 +2232,9 @@
     // A small label, so it's clear these are your streamers and not your connections.
     // The bar turns dark purple while any of them is streaming; black otherwise.
     dotsEl.classList.toggle("dots--streaming", modChannels().some(streaming));
-    // "Streamers", running up the bar's left edge.
+    // A faded camera at the bar's left edge: these are your streamers.
     const label = el("span", "dots__label");
-    label.append(el("span", "dots__word", "Streamers"));
+    label.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="1.5" y="5" width="12" height="10" rx="2.2" fill="currentColor"/><path d="M14.5 8.6 L18.5 6.3 V13.7 L14.5 11.4 Z" fill="currentColor"/></svg>';
     label.title = "The channels you mod. Click one to see it.";
     dotsEl.replaceChildren(label, ...dots);
   }
