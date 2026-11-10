@@ -10,10 +10,11 @@
 //     home-screen apps can't always come back from a sign-in page
 //   - a chat dock (?livechat, to use in place of OBS's Twitch chat dock): for a
 //     streamer who's live, so just the one-row bar on top of Twitch's own embedded
-//     chat. It receives everything but only sends messages and questions. A
-//     connection's picture shows once they've been in the chat this stream: ringed
-//     green, orange, yellow, then white by how recently they chatted, lit with no ring
-//     when they're quiet, gray once they've left. ?channel=<name> shows another channel's chat
+//     chat. It receives everything but only sends messages and questions. The top bar
+//     lists all your mods (lead mods first): glowing green while they're online, grayed
+//     with a badge while they're not, a broken chain if they're not on Streamer Buddy yet;
+//     once they're in the chat this stream, ringed green, orange, yellow, then white by
+//     how recently they chatted. ?channel=<name> shows another channel's chat
 // Everyone talks through the relay (relay/ in this repo, on Cloudflare): a
 // WebSocket that signs in with your Twitch sign-in, keeps connections and the
 // week's questions, and says who's online. Questions wait there for anyone
@@ -686,7 +687,7 @@
   // Profile pictures and chat colors for the dots, once per load (people change them).
   let picsFor = "";
   async function loadPics() {
-    const logins = [...new Set([me?.login, ...trusted(), ...requests, ...(modLists?.modFor || [])].filter(Boolean))]; // you too: your color tints your bookmarks
+    const logins = [...new Set([me?.login, ...trusted(), ...requests, ...(modLists?.modFor || []), ...(modLists?.mods || [])].filter(Boolean))]; // you too: your color tints your bookmarks
     if (DEV || DEMO || !logins.length || picsFor === logins.join()) return;
     picsFor = logins.join();
     try {
@@ -2136,11 +2137,17 @@
       // minutes: no picture again (unless something from them is waiting).
       if (light && !light.away) liveSeenNow(login);
       const longGone = light?.away && Date.now() - liveSeenAt(login) > LIVE_GONE_MINUTES * LIGHT_MINUTE;
-      if (LIVECHAT && !(asks + answers + said) && (!(light && liveWasHere(login)) || longGone)) return null;
+      // The chat dock lists all your mods (like a mod's Streamers bar lists theirs): the
+      // chat's rings while they're in the chat this stream, otherwise a green glow while
+      // they're online, grayed with a badge while they're not.
       if (LIVECHAT && !isMyMod(login)) return null;
+      const inChat = !!(light && liveWasHere(login) && !longGone);
+      const shown = LIVECHAT && !inChat ? null : light;
       const onAir = isMyMod(login) && streaming(login); // can't mod for you right now
-      const lit = !LIVECHAT && mutual && !onAir && talkedLately(login);
-      const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}${lit ? " dot--online" : ""}${idle ? " dot--idle" : ""}${light?.ring && !onAir ? ` dot--${light.ring}` : ""}${light?.away ? " dot--away" : light && (!light.ring || onAir) ? " dot--here" : ""}`);
+      const lit = mutual && !onAir && (LIVECHAT ? !inChat && online && !idle : talkedLately(login));
+      const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}${lit ? " dot--online" : ""}${idle ? " dot--idle" : ""}${shown?.ring && !onAir ? ` dot--${shown.ring}` : ""}${shown?.away ? " dot--away" : shown && (!shown.ring || onAir) ? " dot--here" : ""}`);
+      // Order for the chat dock: lead mods first, then whoever's online, then by name.
+      dot.dataset.order = `${isMyLead(login) ? 0 : 1}${online && !idle ? 0 : 1}${login}`;
       dot.type = "button";
       // The streamer's dock: a mod set to Idle, or not on Streamer Buddy right now (or set to
       // Offline), is grayed out with a white badge, so it's clear to leave them be.
@@ -2158,9 +2165,9 @@
         : asks ? `${login} ${fromThem.every((q) => q.note) ? "sent you a message" : "asked you something"}`
         : answers ? `${login} answered you`
         : said ? `${login} sent you a message`
-        : resting === "idle" ? `${login} is idle: they'd like to be left alone for now${light ? ` (${light.says})` : ""}`
-        : resting ? `${login} is offline in Streamer Buddy${whenWords(conn(login)) ? ` (${whenWords(conn(login))})` : ""}: anything you send waits for them${light ? ` (${light.says})` : ""}`
-        : light ? `${login}: ${light.says}${idle ? ", set to idle" : ""}`
+        : resting === "idle" ? `${login} is idle: they'd like to be left alone for now${shown ? ` (${shown.says})` : ""}`
+        : resting ? `${login} is offline in Streamer Buddy${whenWords(conn(login)) ? ` (${whenWords(conn(login))})` : ""}: anything you send waits for them${shown ? ` (${shown.says})` : ""}`
+        : shown ? `${login}: ${shown.says}${idle ? ", set to idle" : ""}`
         : `${login}${idle ? " (idle)" : online ? " (online)" : ""}${whenWords(conn(login)) ? ` · ${whenWords(conn(login))}` : ""}`;
       if (pics[login]) {
         const img = el("img");
@@ -2195,7 +2202,32 @@
       });
       return dot;
     });
-    dotsEl.replaceChildren(...dots.filter(Boolean));
+    // The chat dock: your mods who aren't on Streamer Buddy yet, too, dimmed with the
+    // broken chain (as on a mod's Streamers bar).
+    if (LIVECHAT && me) {
+      const known = new Set(connections.map((c) => c.login));
+      for (const login of (modLists?.mods || []).filter((l) => !known.has(l) && l !== me.login)) {
+        const dot = el("button", "dot dot--chan dot--off dot--absent");
+        dot.type = "button";
+        if (pics[login]) {
+          const img = el("img");
+          img.src = pics[login];
+          img.alt = "";
+          dot.append(img);
+        } else dot.append(el("span", "dot__letter", login[0].toUpperCase()));
+        const rank = rankBadge(login, true);
+        if (rank) dot.append(rank);
+        const x = el("span", "dot__unlinked");
+        x.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.2 5.6 L9.6 4.2 a3.3 3.3 0 0 1 4.7 4.7 L12.9 10.3"/><path d="M11.8 14.4 L10.4 15.8 a3.3 3.3 0 0 1 -4.7 -4.7 L7.1 9.7"/><path d="M3.2 3.2 L5 5 M15 15 L16.8 16.8 M2.6 7.4 H4.4 M15.6 12.6 H17.4"/></g></svg>';
+        dot.append(x);
+        dot.title = `${login} · your mod · not on Streamer Buddy yet`;
+        dot.dataset.order = `2${login}`;
+        dots.push(dot);
+      }
+    }
+    const list = dots.filter(Boolean);
+    if (LIVECHAT) list.sort((a, b) => a.dataset.order.localeCompare(b.dataset.order));
+    dotsEl.replaceChildren(...list);
   }
 
   // The side panel's Mod view: the top bar is the channels you mod instead, the ones you're
