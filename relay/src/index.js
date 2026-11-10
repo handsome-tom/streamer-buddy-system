@@ -52,7 +52,8 @@
 // has no answer buttons; the person it went to can mark it seen (the sender hears)
 // or type a reply. It doesn't count towards the unanswered-questions limit.
 //
-// Status: what your connections see you as: "online" (the default), "idle", or
+// Status: what your connections see you as: "modding" (the default: online and ready to
+// mod; connections get modding: true), "online" (online, not modding), "idle", or
 // "offline" (shown as offline even while connected; things still reach you). Kept
 // on your account, so it stays until you change it. The relay also keeps when you came
 // online and when you were last online (closing your last page, or going Offline), and
@@ -65,7 +66,7 @@
 //   withdraw { id }         take back your own question or message before it's answered
 //   nudge { id, warn }      remind them of your unanswered question (up to 3; warn: past the
 //                           limits, as a warning; see nudge())
-//   status { status }       "online", "idle" or "offline"
+//   status { status }       "online", "modding", "idle" or "offline"
 //   tag { login, tag, on }  put a connection in (or out of) one of your tags
 //   room { tag }            open your chat room to one of your tags (null closes it)
 //   say { owner, text }     post in someone's room (yours: owner is you)
@@ -251,12 +252,12 @@ export class Hub {
   }
 
   async setStatus(login, m) {
-    if (!["online", "idle", "offline"].includes(m.status)) return;
+    if (!["online", "modding", "idle", "offline"].includes(m.status)) return;
     const user = (await this.ctx.storage.get(`u:${login}`)) || { list: [] };
     // Going Offline counts as leaving; coming back from it, as coming online.
     if (m.status === "offline" && user.status !== "offline") user.lastOnline = Date.now();
     if (m.status !== "offline" && user.status === "offline") user.onlineAt = Date.now();
-    if (m.status === "online") delete user.status;
+    if (m.status === "modding") delete user.status; // Modding is the default
     else user.status = m.status;
     await this.ctx.storage.put(`u:${login}`, user);
     await this.sendState(login);
@@ -295,7 +296,8 @@ export class Hub {
       // since: when they came online (while they are); last: when they were last online.
       const since = online ? users[l]?.onlineAt || 0 : 0;
       const last = mutual && !online ? users[l]?.lastOnline || 0 : 0;
-      return { login: l, mutual, online, idle: online && users[l]?.status === "idle", since, last };
+      // modding: online and ready to mod (their sword is lit).
+      return { login: l, mutual, online, idle: online && users[l]?.status === "idle", modding: online && !users[l]?.status, since, last };
     });
     const requests = Object.entries(users).filter(([l, u]) => l !== login && u.list.includes(login) && !mine.includes(l)).map(([l]) => l);
     const questions = [];
@@ -322,7 +324,7 @@ export class Hub {
       const v = await this.ctx.storage.get(`v:${c.login}`);
       if (v) views[c.login] = v;
     }
-    this.sendTo(login, { t: "state", me: login, status: users[login]?.status || "online", since: users[login]?.onlineAt || 0, connections, requests, tags: users[login]?.tags || {}, questions, pins, rooms, chat, statsOn: !!users[login]?.statsOn, stats, views });
+    this.sendTo(login, { t: "state", me: login, status: users[login]?.status || "modding", since: users[login]?.onlineAt || 0, connections, requests, tags: users[login]?.tags || {}, questions, pins, rooms, chat, statsOn: !!users[login]?.statsOn, stats, views });
   }
 
   // A room's latest messages. Anything over a week old is deleted, even if nobody

@@ -4987,3 +4987,61 @@ main.main--msgs .panel__sub { color: var(--msg-muted); }
 .oc-raid__picwrap { position: relative; flex: none; display: inline-block; }
 .oc-raid__badge { position: absolute; right: -4px; bottom: -3px; display: grid; place-items: center; width: 16px; height: 16px; color: var(--raid-ink, #fff); background: var(--raid, #ee7a2f); border: 2px solid var(--card-top, #27272c); border-radius: 50%; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
 .oc-raid__badge svg { display: block; }
+
+/* ===== The side panel's DM screen (a chat opened in the side panel) =====
+   No pills: who you're talking to up top, soft dividers, gradient bubbles (yours in the
+   Messages orange on the right, theirs in soft white on the left), and the message box
+   resting on a gradient at the bottom. */
+.chat--dm { gap: 0; }
+.chat--dm .chat__back { align-self: flex-start; padding: 2px 0; color: var(--honey); background: none; border: 0; font-size: 12px; font-weight: 700; }
+.chat--dm .chat__back:hover { color: var(--honey-hi); text-decoration: underline; text-underline-offset: 3px; }
+.dm__head { display: flex; align-items: center; gap: 10px; padding: 10px 2px 12px; position: relative; }
+.dm__head::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12) 20%, rgba(255, 255, 255, 0.12) 80%, transparent); }
+.dm__head .people__pic { width: 36px; height: 36px; }
+.dm__who { display: flex; flex-direction: column; min-width: 0; }
+.dm__name { font-size: 15px; font-weight: 800; color: var(--msg-text); }
+.dm__state { color: var(--msg-muted); font-size: 11px; }
+.dm__state--on::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: var(--good); vertical-align: 1px; }
+
+.chat--dm .chat__log { display: flex; flex-direction: column; gap: 6px; padding: 12px 2px; border: 0; border-radius: 0; background: none; }
+.chat--dm .chat__empty { margin: auto; text-align: center; color: var(--msg-muted); }
+/* Soft day divider: faded lines either side of "Today". */
+.chat--dm .chat__day { display: flex; align-items: center; gap: 10px; margin: 6px 0; color: var(--msg-muted); font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.chat--dm .chat__day::before, .chat--dm .chat__day::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1)); }
+.chat--dm .chat__day::after { background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), transparent); }
+
+.chat--dm .chat__msg { display: flex; flex-direction: column; max-width: 82%; padding: 0; background: none; box-shadow: none; }
+.chat--dm .chat__msg--theirs { align-self: flex-start; align-items: flex-start; }
+.chat--dm .chat__msg--mine { align-self: flex-end; align-items: flex-end; }
+.chat--dm .chat__from { order: 0; margin: 0 0 2px 4px; font-size: 11px; }
+.chat--dm .chat__msg--direct .chat__from, .chat--dm .chat__msg--mine .chat__from { display: none; }
+.chat--dm .chat__text { order: 1; padding: 7px 11px; font-size: 13px; line-height: 1.4; color: var(--msg-text); border-radius: 14px; }
+.chat--dm .chat__msg--theirs .chat__text { background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04)); border: 1px solid rgba(255, 255, 255, 0.05); border-bottom-left-radius: 4px; }
+.chat--dm .chat__msg--mine .chat__text { color: #fff4e3; background: linear-gradient(160deg, rgba(240, 163, 48, 0.38), rgba(240, 163, 48, 0.16)); border: 1px solid rgba(240, 163, 48, 0.22); border-bottom-right-radius: 4px; }
+.chat--dm .chat__msg--mention .chat__text { box-shadow: 0 0 0 1px rgba(240, 163, 48, 0.5), 0 0 12px rgba(240, 163, 48, 0.2); }
+.chat--dm .chat__time { order: 2; margin: 2px 6px 0; font-size: 10px; color: var(--msg-muted); }
+
+/* The message box: resting on a gradient, a soft divider above, no pill. */
+.chat--dm .chat__form { position: relative; margin: 0 -8px -8px; padding: 12px 10px 10px; background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.55)); border: 0; }
+.chat--dm .chat__form::before { content: ""; position: absolute; left: 8px; right: 8px; top: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12) 20%, rgba(255, 255, 255, 0.12) 80%, transparent); }
+.chat--dm .chat__form .ask__input { border-radius: 12px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)); border: 1px solid rgba(255, 255, 255, 0.07); color: var(--msg-text); }
+.chat--dm .chat__form .ask__input:focus { border-color: rgba(240, 163, 48, 0.45); outline: none; }
+.chat--dm .chat__form .ask__send { color: var(--honey-ink); background: linear-gradient(160deg, var(--honey-hi), var(--honey)); border: 0; }
+
+/* The Mod button: your own picture unless you're Modding (then the green sword or hammer).
+   It keeps its ring either way: the only ring in the bar. */
+.mod-btn.mod-btn--off,
+.mod-btn.mod-btn--off:hover:not(:disabled),
+body.has-space .mod-btn.mod-btn--off { overflow: hidden; background: #2f2f35; box-shadow: 0 0 0 2px #0e0e10, 0 0 0 4px #00ad03, 0 0 10px rgba(0, 173, 3, 0.45); }
+.mod-btn__pic { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.mod-btn__letter { color: #fff; font-size: 12px; font-weight: 800; }
+/* No rings on anything else in the bar (the Messages tab included). */
+body.has-space .msg-btn.pill--on, .msg-btn.pill--on { box-shadow: none; }
+
+/* The send-to picture with a mod's badge on its corner. */
+.qa__picwrap { position: relative; flex: none; display: inline-grid; }
+.qa__picwrap .rank--corner { width: 12px; height: 12px; right: -4px; bottom: -3px; border-width: 1.5px; }
+.qa__picwrap .rank--corner svg { width: 7px; height: 7px; }
+
+/* Modding (the default): the status dot is a small green sword; plain Online is the dot. */
+.presence--modding::before { width: 12px; height: 12px; border-radius: 0; background: var(--good); -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%22-0.5%20-0.5%2021%2021%22%3E%3Cpath%20fill%3D%22%23000%22%20d%3D%22M19.4%200.6%20L13.8%201.6%20L5.4%2012.8%20L7.2%2014.6%20L18.4%206.2%20Z%22/%3E%3Cg%20stroke%3D%22%23000%22%20stroke-linecap%3D%22round%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M3.5%2012.3%20L7.7%2016.5%22%20stroke-width%3D%222.4%22/%3E%3Cpath%20d%3D%22M5.6%2014.4%20L2.4%2017.6%22%20stroke-width%3D%222.2%22/%3E%3C/g%3E%3Ccircle%20cx%3D%221.5%22%20cy%3D%2218.5%22%20r%3D%221.7%22%20fill%3D%22%23000%22/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%22-0.5%20-0.5%2021%2021%22%3E%3Cpath%20fill%3D%22%23000%22%20d%3D%22M19.4%200.6%20L13.8%201.6%20L5.4%2012.8%20L7.2%2014.6%20L18.4%206.2%20Z%22/%3E%3Cg%20stroke%3D%22%23000%22%20stroke-linecap%3D%22round%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M3.5%2012.3%20L7.7%2016.5%22%20stroke-width%3D%222.4%22/%3E%3Cpath%20d%3D%22M5.6%2014.4%20L2.4%2017.6%22%20stroke-width%3D%222.2%22/%3E%3C/g%3E%3Ccircle%20cx%3D%221.5%22%20cy%3D%2218.5%22%20r%3D%221.7%22%20fill%3D%22%23000%22/%3E%3C/svg%3E") center / contain no-repeat; box-shadow: none; }

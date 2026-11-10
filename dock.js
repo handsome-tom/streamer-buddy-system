@@ -205,7 +205,7 @@
   let connections = []; // [{ login, mutual, online }]
   let requests = []; // [login] who added you
   let tags = {}; // { tag: [logins] } your own groups of connections (Mods, Lead mods, Tech…)
-  let myStatus = "online"; // how connections see you: "online" | "idle" | "offline"
+  let myStatus = "modding"; // how connections see you: "modding" (the default) | "online" | "idle" | "offline"
   let mySince = 0; // when you came online (from the relay)
   // Chat: the rooms you're in ({ owner, tag, members: [{ login, online }] }), and a
   // private chat with each mutual connection ({ owner, direct: true, with, members }),
@@ -1216,7 +1216,7 @@
     else delete views[owner];
     drawStreamerView();
     // The sword's ring, or sword ↔ hammer (they're the streamer's lead mod), changed.
-    if (EMBED && (modBtn.classList.contains("mod-btn--live") !== modRinged() || (modBtn.dataset.icon === "hammer") !== isLeadFor(modOwner()))) render();
+    if (EMBED && (modBtn.classList.contains("mod-btn--live") !== modRinged() || modBtn.dataset.icon !== modIcon())) render();
   }
 
   // Whose view the panel shows.
@@ -1703,7 +1703,7 @@
     // Keep typing where it was if things are redrawn under you.
     const typingIn = document.activeElement?.dataset?.key;
     main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : view === "deck" ? deckPanel() : view === "mod" ? modPanel() : view === "messages" ? messagesPanel() : cardList());
-    main.classList.toggle("main--msgs", view === "messages" || (view === "chat" && chatFrom === "messages"));
+    main.classList.toggle("main--msgs", view === "messages" || (view === "chat" && EMBED)); // the dark Messages sheet
     if (LIVECHAT && (view !== "cards" || showAll) && main.firstElementChild?.childElementCount !== 0) main.prepend(inlineHead());
     drawDots();
     drawPeek();
@@ -1728,12 +1728,23 @@
     modBtn.hidden = !EMBED || !me;
     const modLive = modRinged();
     const lead = isLeadFor(modOwner());
-    if (modBtn.dataset.icon !== (lead ? "hammer" : "sword")) {
-      modBtn.dataset.icon = lead ? "hammer" : "sword";
-      modBtn.innerHTML = lead ? HAMMER_ICON : SWORD_ICON;
+    // Modding (online and ready to mod): the green sword (hammer for a lead mod). Otherwise
+    // your own picture. Either way it wears the bar's only ring.
+    const want = modIcon();
+    if (modBtn.dataset.icon !== want) {
+      modBtn.dataset.icon = want;
+      if (want === "pic") {
+        const img = el("img", "mod-btn__pic");
+        img.src = pics[me.login];
+        img.alt = "";
+        modBtn.replaceChildren(img);
+      } else if (want === "letter") {
+        modBtn.replaceChildren(el("span", "mod-btn__letter", me.login[0].toUpperCase()));
+      } else modBtn.innerHTML = want === "hammer" ? HAMMER_ICON : SWORD_ICON;
     }
     modBtn.classList.toggle("mod-btn--live", modLive);
-    modBtn.title = modBtn.ariaLabel = modOwner() ? `${lead ? "Lead mod" : "Mod"} · ${modOwner()}${modLive ? " is live, and sees you're online" : ""}` : "Mod";
+    modBtn.classList.toggle("mod-btn--off", !modLive);
+    modBtn.title = modBtn.ariaLabel = `${lead ? "Lead mod" : "Mod"}${modOwner() ? ` · ${modOwner()}` : ""}${modLive ? " · you're Modding (ready to mod)" : " · set your status to Modding to show your sword"}`;
     drawQuickAsk();
     drawPresence();
     statsBtn.hidden = true; // dropped from the bar (Mod and Connections stay); Stats still runs underneath
@@ -1806,13 +1817,19 @@
   // The little picture: a person's photo, the mod sword for Mods, a tag for a list.
   function barMark(t) {
     if (!isGroup(t)) {
+      // A person: their picture, wearing their badge (sword, hammer, or the camera while
+      // they're streaming) when they mod for you, as everywhere else.
+      let pic;
       if (pics[t]) {
-        const img = el("img", "qa__pic");
-        img.src = pics[t];
-        img.alt = "";
-        return img;
-      }
-      return el("span", "qa__pic qa__pic--blank", t.slice(0, 1).toUpperCase());
+        pic = el("img", "qa__pic");
+        pic.src = pics[t];
+        pic.alt = "";
+      } else pic = el("span", "qa__pic qa__pic--blank", t.slice(0, 1).toUpperCase());
+      const rank = rankBadge(t, true);
+      if (!rank) return pic;
+      const wrap = el("span", "qa__picwrap");
+      wrap.append(pic, rank);
+      return wrap;
     }
     const mods = t === MODS_TAG || t === ONLINE_MODS;
     const mark = el("span", `qa__pic ${mods ? "qa__pic--mods" : "qa__pic--list"}${t === ONLINE_MODS ? " qa__pic--live" : ""}`);
@@ -1833,7 +1850,7 @@
   function drawQaPick() {
     const t = quickTo.value;
     qaPick.replaceChildren(barMark(t), el("span", "qa__who", barLabel(t)), el("span", "ask__caret"));
-    if (!isGroup(t) && conn(t)?.online) qaPick.firstChild.classList.add("qa__pic--on");
+    if (!isGroup(t) && conn(t)?.online) qaPick.querySelector(".qa__pic")?.classList.add("qa__pic--on");
     if (!qaMenu.hidden) drawQaMenu();
   }
   function drawQaMenu() {
@@ -1981,7 +1998,8 @@
   // Side panel only: how your connections see you. The button opens a little menu of the
   // three to pick from.
   const STATUS = {
-    online: { label: "Online", says: "Your connections see you as online." },
+    modding: { label: "Modding", says: "Online and ready to mod (the default): your sword shows." },
+    online: { label: "Online", says: "Online, but not modding right now." },
     idle: { label: "Idle", says: "Shown as away for a bit." },
     offline: { label: "Offline", says: "Shown as offline. Things still reach you here." },
   };
@@ -1992,7 +2010,7 @@
   function drawPresence() {
     presenceBtn.hidden = !EMBED;
     if (!EMBED) return;
-    const now = STATUS[myStatus] || STATUS.online;
+    const now = STATUS[myStatus] || STATUS.modding;
     presenceBtn.className = `presence presence--bar presence--${myStatus}${presenceMenu.hidden ? "" : " presence--open"}`;
     // Just the dot (saves room in the bar); the words are in its tooltip and menu.
     if (!presenceBtn.querySelector(".presence__spin")) presenceBtn.textContent = "";
@@ -2002,11 +2020,15 @@
     presenceBtn.setAttribute("aria-expanded", String(!presenceMenu.hidden));
   }
   // Opening the panel: "online" written in a tilted ring round your dot, like a planet's, orbits for a few seconds and fades.
-  let spun = false;
+  // It plays when the panel opens, and again when you hover the dot, but not if it played
+  // (or you hovered) in the last 15 seconds.
+  const SPIN_AGAIN_MS = 15 * 1000;
+  let spunAt = 0;
   function spinPresence() {
-    if (spun || !EMBED || presenceBtn.hidden || myStatus === "offline") return;
-    spun = true;
-    const word = (STATUS[myStatus] || STATUS.online).label.toLowerCase();
+    if (!EMBED || presenceBtn.hidden || myStatus === "offline") return;
+    if (Date.now() - spunAt < SPIN_AGAIN_MS || presenceBtn.querySelector(".presence__spin")) return;
+    spunAt = Date.now();
+    const word = myStatus === "idle" ? "idle" : "online"; // Modding is online too
     const ring = el("span", "presence__spin");
     ring.setAttribute("aria-hidden", "true");
     ring.innerHTML = `<svg viewBox="0 0 40 40"><defs><path id="presenceArc" d="M20 20 m-13 0 a13 13 0 1 1 26 0 a13 13 0 1 1 -26 0"/></defs><text><textPath href="#presenceArc" textLength="80" lengthAdjust="spacing">${word} · ${word} ·</textPath></text></svg>`;
@@ -3016,13 +3038,14 @@
   // show as online (so they see you're there). Live comes from Twitch, checked every 2
   // minutes for the stream you're on; testing on this Mac (and the public demo), their
   // chat dock being open stands in for live.
+  // The Mod button's ring and green: you're set to Modding.
   function modRinged() {
-    const owner = modOwner();
-    if (!EMBED || !owner || watching !== owner || myStatus === "offline" || !conn(owner)?.online) return false;
-    if (TESTING) return views[owner]?.chat === "livechat";
-    const known = liveOf[owner];
-    if (!known || Date.now() - known.at > LIVE_CHECK_MS) checkLive(owner);
-    return !!known?.live;
+    return EMBED && myStatus === "modding";
+  }
+  // What the Mod button shows: "sword" / "hammer" while Modding, else "pic" (or "letter").
+  function modIcon() {
+    if (modRinged()) return isLeadFor(modOwner()) ? "hammer" : "sword";
+    return me && pics[me.login] ? "pic" : "letter";
   }
   async function checkLive(login) {
     if (liveChecking.has(login)) return;
@@ -3275,6 +3298,11 @@
     return panel;
   }
 
+  // "Today", "Yesterday", or the date: the soft divider between days in a chat.
+  function dayWords(t) {
+    const d = new Date(t).setHours(0, 0, 0, 0), today = new Date().setHours(0, 0, 0, 0);
+    return d === today ? "Today" : today - d === 86400000 ? "Yesterday" : new Date(t).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+  }
   function chatPanel() {
     const panel = el("div", "panel chat");
     // Chat is reached from Connections, so it leads back there.
@@ -3289,7 +3317,8 @@
 
     const listed = rooms.filter((r) => !r.direct || r.owner === owner || chat[r.owner]?.length);
     const canOpen = !mine && Object.keys(tags).length;
-    if (listed.length + (canOpen ? 1 : 0) > 1) {
+    // The side panel picks chats from Messages, so no row of room pills there.
+    if (!EMBED && listed.length + (canOpen ? 1 : 0) > 1) {
       const pick = el("div", "chat__rooms");
       if (canOpen) {
         const b = el("button", `pill${owner === me.login ? " pill--on" : ""}`, "Your room");
@@ -3326,7 +3355,29 @@
       return panel;
     }
 
+    panel.classList.toggle("chat--dm", EMBED);
+    if (EMBED) {
+      // The side panel: who you're talking to, big, with their status, then a soft divider.
+      const top = el("div", "dm__head");
+      if (room.direct) {
+        const c = conn(room.with) || {};
+        const words = el("div", "dm__who");
+        const name = withBadge(el("span", "dm__name", room.with), room.with);
+        if (colorOf(room.with)) name.style.color = colorOf(room.with);
+        words.append(name, el("span", `dm__state${c.online ? " dm__state--on" : ""}`, whenWords(c) || (c.online ? "online" : "offline")));
+        top.append(personPic(room.with), words);
+      } else {
+        const stack = el("span", "msgs__stack");
+        for (const m of room.members.filter((m) => m.login !== me.login).slice(0, 3)) stack.append(personPic(m.login));
+        const words = el("div", "dm__who");
+        words.append(el("span", "dm__name", room.owner === me.login ? `Your room · ${room.tag}` : `${room.owner}'s room · ${room.tag}`),
+          el("span", "dm__state", `${room.members.length} ${room.members.length === 1 ? "person" : "people"} · ${room.members.filter((m) => m.online).length} online`));
+        top.append(stack, words);
+      }
+      panel.append(top);
+    }
     const head = el("div", "chat__head");
+    if (EMBED) head.hidden = true;
     head.append(el("span", "chat__title", room.direct ? `Private chat · only you and ${room.with}` : room.owner === me.login ? `Your room · ${room.tag}` : `${room.owner}'s room · ${room.tag}`));
     const who = el("span", "chat__who");
     for (const m of room.members.filter((m) => !room.direct || m.login !== me.login)) {
@@ -3339,13 +3390,13 @@
 
     const log = el("div", "chat__log");
     const msgs = chat[owner] || [];
-    if (!msgs.length) log.append(el("p", "panel__sub", "No messages yet. Say hi."));
+    if (!msgs.length) log.append(el("p", "panel__sub chat__empty", room.direct ? `No messages yet. Say hi to ${room.with}.` : "No messages yet. Say hi."));
     let lastDay = "";
     for (const m of msgs) {
       const day = new Date(m.at).toDateString();
-      if (day !== lastDay && lastDay) log.append(el("div", "chat__day", new Date(m.at).toLocaleDateString()));
+      if (day !== lastDay && (lastDay || EMBED)) log.append(el("div", "chat__day", EMBED ? dayWords(m.at) : new Date(m.at).toLocaleDateString()));
       lastDay = day;
-      const line = el("div", `chat__msg${mentions(m.text) && m.from !== me.login ? " chat__msg--mention" : ""}`);
+      const line = el("div", `chat__msg${m.from === me.login ? " chat__msg--mine" : " chat__msg--theirs"}${mentions(m.text) && m.from !== me.login ? " chat__msg--mention" : ""}${room.direct ? " chat__msg--direct" : ""}`);
       const name = withBadge(el("span", "chat__from", m.from), m.from);
       if (colorOf(m.from)) name.style.color = colorOf(m.from);
       line.append(name, el("span", "chat__time", new Date(m.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })), el("div", "chat__text", m.text));
@@ -4712,6 +4763,10 @@
     setTimeout(() => (quickText.placeholder = "Message…"), 2500);
   });
   presenceBtn.addEventListener("click", () => openPresence(presenceMenu.hidden));
+  presenceBtn.addEventListener("mouseenter", () => {
+    if (Date.now() - spunAt >= SPIN_AGAIN_MS) spinPresence();
+    else spunAt = Date.now(); // hovering again within 15 seconds starts the wait over
+  });
   // Sent from a popped-out window: the bar's picker follows.
   addEventListener("storage", (e) => {
     if (e.key === "lastTo" && me) rememberTo(get("lastTo", ""));
