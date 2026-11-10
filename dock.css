@@ -4827,3 +4827,9 @@ body.livechat.has-space .bar__planet { opacity: 0.52; }
 .dot__vip { position: absolute; z-index: 3; right: -4px; bottom: -4px; display: grid; place-items: center; width: 14px; height: 14px; background: #e005b9; border: 2px solid var(--panel, #18181b); border-radius: 50%; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); pointer-events: none; }
 .dot__vip svg { display: block; width: 8px; height: 8px; }
 .dot:has(.dot__vip) .dot__rest { right: auto; left: -3px; }
+
+/* The side panel's Mod view: the channels you mod in the top bar. The one Mod shows is
+   ringed in mod green; offline ones are dimmed; a live one gets a small red glow. */
+.dot--chan.dot--off img, .dot--chan.dot--off .dot__letter { filter: grayscale(0.85) brightness(0.6); }
+.dot--chan.dot--current:not(:hover) { box-shadow: 0 0 0 2px #00ad03; }
+.dot--chan.dot--live:not(.dot--current):not(:hover) { box-shadow: 0 0 0 2px #eb0400; }

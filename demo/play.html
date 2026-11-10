@@ -691,7 +691,7 @@
     if (!["mod1", "mod2"].includes(login) || login === me) return; // "Everyone": nothing changes
     me = login;
     relabel();
-    document.getElementById("mod").src = `../?dev=${me}&embed=ext&watch=streamer&sandbox`;
+    document.getElementById("mod").src = `../?dev=${me}&embed=ext&watch=streamer&modfor=streamer,streamer2&sandbox`;
     if (!document.getElementById("tour").hidden) tour.show(tour.at);
     said(`You're ${me} now: the panel on the left is ${me}'s`);
   }
@@ -759,7 +759,7 @@
     send("mod2", { t: "connect", login: "streamer" });
     send("mod2", { t: "connect", login: "mod1" });
     await wait(300);
-    document.getElementById("mod").src = "../?dev=mod1&embed=ext&watch=streamer&sandbox";
+    document.getElementById("mod").src = "../?dev=mod1&embed=ext&watch=streamer&modfor=streamer,streamer2&sandbox";
     document.getElementById("obs").src = "../?dev=streamer&livechat&ownchat&mock&lightms=6000&mods=mod1,mod2&sandbox";
     // Nothing happens until someone presses something: the tour walks them through it.
     tour.show(0);

@@ -650,7 +650,7 @@
   // Profile pictures and chat colors for the dots, once per load (people change them).
   let picsFor = "";
   async function loadPics() {
-    const logins = [...new Set([me?.login, ...trusted(), ...requests].filter(Boolean))]; // you too: your color tints your bookmarks
+    const logins = [...new Set([me?.login, ...trusted(), ...requests, ...(modLists?.modFor || [])].filter(Boolean))]; // you too: your color tints your bookmarks
     if (DEV || DEMO || !logins.length || picsFor === logins.join()) return;
     picsFor = logins.join();
     try {
@@ -1205,8 +1205,8 @@
     if (!me) return "";
     const able = connections.filter((c) => c.mutual).map((c) => c.login);
     if (watching && able.includes(watching)) return watching;
-    if (able.includes(svPicked)) return svPicked;
     const modFor = modLists?.modFor || [];
+    if (able.includes(svPicked) || modFor.includes(svPicked)) return svPicked;
     const sharing = Object.keys(views).filter((l) => l !== me.login);
     return able.find((l) => modFor.includes(l)) || able.find((l) => sharing.includes(l)) || able[0] || "";
   }
@@ -2019,6 +2019,7 @@
   // yours, with how many. Your mods wear a sword. The streamer's chat dock shows only
   // its mods who are connections and are in the chat.
   function drawDots() {
+    if (EMBED && view === "mod" && me) return drawModDots();
     // Your own chat color, for the glow round lines you bookmarked.
     if (me && colorOf(me.login)) document.body.style.setProperty("--my-color", colorOf(me.login));
     const dots = connections.map(({ login, mutual, online, idle }) => {
@@ -2093,6 +2094,46 @@
       return dot;
     });
     dotsEl.replaceChildren(...dots.filter(Boolean));
+  }
+
+  // The side panel's Mod view: the top bar is the channels you mod instead, the ones you're
+  // lead mod for first (hammer), then the rest (sword). Offline ones still show, dimmed;
+  // the one Mod is about is ringed. Clicking one switches Mod to them.
+  function modChannels() {
+    const modFor = modLists?.modFor || [];
+    const sharing = Object.keys(views).filter((l) => l !== me.login && isLeadFor(l));
+    const all = [...new Set([...modFor, ...sharing])];
+    const up = (l) => (liveOf[l]?.live ? 2 : conn(l)?.online ? 1 : 0);
+    return all.sort((a, b) => isLeadFor(b) - isLeadFor(a) || up(b) - up(a) || a.localeCompare(b));
+  }
+  function drawModDots() {
+    const owner = modOwner();
+    const dots = modChannels().map((login) => {
+      const lead = isLeadFor(login);
+      const live = !!liveOf[login]?.live;
+      const on = live || !!conn(login)?.online;
+      const dot = el("button", `dot dot--chan${login === owner ? " dot--current" : ""}${on ? "" : " dot--off"}${live ? " dot--live" : ""}`);
+      dot.type = "button";
+      if (colorOf(login)) dot.style.setProperty("--c", colorOf(login));
+      if (pics[login]) {
+        const img = el("img");
+        img.src = pics[login];
+        img.alt = "";
+        dot.append(img);
+      } else dot.append(el("span", "dot__letter", login[0].toUpperCase()));
+      const b = el("span", `rank rank--${lead ? "lead" : "mod"} rank--corner`);
+      b.innerHTML = lead ? HAMMER_ICON : MOD_BADGE;
+      dot.append(b);
+      dot.title = `${login} · you're ${lead ? "lead mod" : "a mod"} here · ${live ? "live now" : on ? "online" : "offline"}${login === owner ? " (showing)" : ""}`;
+      dot.addEventListener("click", () => {
+        svPicked = login;
+        watching = ""; // picked by hand: stop following the tab until it changes channel
+        render();
+      });
+      if (!liveOf[login] || Date.now() - liveOf[login].at > LIVE_CHECK_MS) checkLive(login);
+      return dot;
+    });
+    dotsEl.replaceChildren(...dots);
   }
 
   function cardList() {
@@ -2917,7 +2958,9 @@
     const able = connections.filter((c) => c.mutual).map((c) => c.login);
     const modFor = modLists?.modFor || [];
     const choices = [...able.filter((l) => modFor.includes(l)), ...able.filter((l) => !modFor.includes(l))];
-    if (!locked && choices.length > 1) {
+    // The top bar picks among the channels you mod; the drop-down is only for when Twitch
+    // hasn't said of any.
+    if (!locked && choices.length > 1 && !modChannels().length) {
       const pick = el("select", "mod__pick");
       pick.title = "Whose stream";
       pick.replaceChildren(...choices.map((l) => new Option(l, l)));
