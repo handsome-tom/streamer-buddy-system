@@ -4833,3 +4833,33 @@ body.livechat.has-space .bar__planet { opacity: 0.52; }
 .dot--chan.dot--off img, .dot--chan.dot--off .dot__letter { filter: grayscale(0.85) brightness(0.6); }
 .dot--chan.dot--current:not(:hover) { box-shadow: 0 0 0 2px #00ad03; }
 .dot--chan.dot--live:not(.dot--current):not(:hover) { box-shadow: 0 0 0 2px #eb0400; }
+
+/* Mod view's top bar: your streamers, set apart from the rest of the bar. A heavy black
+   gradient behind the left side fades to clear on the right, with a thin mod-green edge
+   and a small label. */
+.bar:has(.dots--mod)::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0 auto 0 0;
+  width: 75%;
+  background: linear-gradient(90deg, #000 0%, rgba(0, 0, 0, 0.94) 35%, rgba(0, 0, 0, 0.6) 65%, transparent 100%);
+  box-shadow: inset 2px 0 0 #00ad03;
+  pointer-events: none;
+}
+.dots--mod { align-items: center; }
+.dots__label {
+  align-self: center;
+  margin-right: 2px;
+  color: #00ad03;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  max-width: 54px;
+}
+/* A streamer you mod who isn't on Streamer Buddy yet: a small broken-chain badge at the
+   picture's bottom-left (the sword or hammer has the bottom-right). */
+.dot__unlinked { position: absolute; z-index: 3; left: -4px; bottom: -4px; display: grid; place-items: center; width: 14px; height: 14px; background: #53535f; border: 2px solid var(--panel, #18181b); border-radius: 50%; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); pointer-events: none; }
+.dot__unlinked svg { display: block; width: 9px; height: 9px; }

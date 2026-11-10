@@ -599,6 +599,7 @@
         return;
       }
     }
+    loadPics(); // pictures for the channels you mod too (Mod view's top bar)
     syncModGroups();
     render();
   }
@@ -2019,7 +2020,9 @@
   // yours, with how many. Your mods wear a sword. The streamer's chat dock shows only
   // its mods who are connections and are in the chat.
   function drawDots() {
-    if (EMBED && view === "mod" && me) return drawModDots();
+    const modBar = EMBED && view === "mod" && !!me;
+    dotsEl.classList.toggle("dots--mod", modBar);
+    if (modBar) return drawModDots();
     // Your own chat color, for the glow round lines you bookmarked.
     if (me && colorOf(me.login)) document.body.style.setProperty("--my-color", colorOf(me.login));
     const dots = connections.map(({ login, mutual, online, idle }) => {
@@ -2112,7 +2115,10 @@
       const lead = isLeadFor(login);
       const live = !!liveOf[login]?.live;
       const on = live || !!conn(login)?.online;
-      const dot = el("button", `dot dot--chan${login === owner ? " dot--current" : ""}${on ? "" : " dot--off"}${live ? " dot--live" : ""}`);
+      // Not on Streamer Buddy yet (not a connection either way): their Twitch picture with
+      // a small broken-chain badge (not linked with you yet).
+      const absent = !conn(login) && !requests.includes(login);
+      const dot = el("button", `dot dot--chan${login === owner ? " dot--current" : ""}${on ? "" : " dot--off"}${live ? " dot--live" : ""}${absent ? " dot--absent" : ""}`);
       dot.type = "button";
       if (colorOf(login)) dot.style.setProperty("--c", colorOf(login));
       if (pics[login]) {
@@ -2124,7 +2130,13 @@
       const b = el("span", `rank rank--${lead ? "lead" : "mod"} rank--corner`);
       b.innerHTML = lead ? HAMMER_ICON : MOD_BADGE;
       dot.append(b);
-      dot.title = `${login} · you're ${lead ? "lead mod" : "a mod"} here · ${live ? "live now" : on ? "online" : "offline"}${login === owner ? " (showing)" : ""}`;
+      if (absent) {
+        // A small broken chain: not linked with you yet.
+        const x = el("span", "dot__unlinked");
+        x.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.2 5.6 L9.6 4.2 a3.3 3.3 0 0 1 4.7 4.7 L12.9 10.3"/><path d="M11.8 14.4 L10.4 15.8 a3.3 3.3 0 0 1 -4.7 -4.7 L7.1 9.7"/><path d="M3.2 3.2 L5 5 M15 15 L16.8 16.8 M2.6 7.4 H4.4 M15.6 12.6 H17.4"/></g></svg>';
+        dot.append(x);
+      }
+      dot.title = `${login} · you're ${lead ? "lead mod" : "a mod"} here · ${absent ? "not on Streamer Buddy yet" : live ? "live now" : on ? "online" : "offline"}${login === owner ? " (showing)" : ""}`;
       dot.addEventListener("click", () => {
         svPicked = login;
         watching = ""; // picked by hand: stop following the tab until it changes channel
@@ -2133,7 +2145,10 @@
       if (!liveOf[login] || Date.now() - liveOf[login].at > LIVE_CHECK_MS) checkLive(login);
       return dot;
     });
-    dotsEl.replaceChildren(...dots);
+    // A small label, so it's clear these are your streamers and not your connections.
+    const label = el("span", "dots__label", "Your streamers");
+    label.title = "The channels you mod. Click one to see it.";
+    dotsEl.replaceChildren(label, ...dots);
   }
 
   function cardList() {
