@@ -2981,8 +2981,8 @@ body.livechat #homeChatBtn { margin-left: auto; }
 body.livechat .settings-btn { order: 2; margin-left: 0; }
 
 /* The chat dock's back-to-chat bubble: a slight green, so it reads as "chat". */
-#homeChatBtn { color: var(--good); background: color-mix(in srgb, var(--good) 16%, var(--panel, #18181b)); }
-#homeChatBtn:hover, #homeChatBtn:focus-visible { color: #fff; background: color-mix(in srgb, var(--good) 34%, var(--panel, #18181b)); }
+#homeChatBtn { color: #a970ff; background: color-mix(in srgb, #a970ff 16%, var(--panel, #18181b)); }
+#homeChatBtn:hover, #homeChatBtn:focus-visible { color: #fff; background: color-mix(in srgb, #a970ff 34%, var(--panel, #18181b)); }
 
 /* The chat area's two layers, custom chat and Twitch's own, on top of each other. The one
    not showing stays laid out and running, just out of sight, so switching back finds it
@@ -4811,3 +4811,19 @@ body.livechat.has-space .bar__planet {
 }
 /* The planet, a quarter fainter (0.7 → 0.52). */
 body.livechat.has-space .bar__planet { opacity: 0.52; }
+
+/* Your mod's badge (rankBadge): a sword, or the hammer for a lead mod, on mod green. Next
+   to their name by default; .rank--corner tucks it on a picture's bottom-right, and an
+   Idle/offline badge on that picture moves to the bottom-left to make room. */
+.rank { display: inline-grid; place-items: center; flex: none; width: 14px; height: 14px; margin-left: 4px; vertical-align: -2px; background: #00ad03; border-radius: 50%; pointer-events: auto; }
+.rank svg { display: block; width: 8px; height: 8px; }
+.rank--corner { position: absolute; z-index: 3; right: -4px; bottom: -4px; margin: 0; border: 2px solid var(--panel, #18181b); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); pointer-events: none; }
+.dot:has(.rank--corner) .dot__rest { right: auto; left: -3px; }
+.people__pic:has(.rank--corner) { position: relative; overflow: visible; }
+.people__pic:has(.rank--corner) img { border-radius: 50%; }
+.people__pic .rank--corner { width: 12px; height: 12px; right: -3px; bottom: -3px; }
+.people__pic .rank--corner svg { width: 7px; height: 7px; }
+/* One of your VIPs (for VIP mode, later): the same badge in VIP pink, with a gem. */
+.dot__vip { position: absolute; z-index: 3; right: -4px; bottom: -4px; display: grid; place-items: center; width: 14px; height: 14px; background: #e005b9; border: 2px solid var(--panel, #18181b); border-radius: 50%; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); pointer-events: none; }
+.dot__vip svg { display: block; width: 8px; height: 8px; }
+.dot:has(.dot__vip) .dot__rest { right: auto; left: -3px; }

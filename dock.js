@@ -1756,6 +1756,9 @@
   const modsOnline = () => inList(MODS_TAG).filter((l) => conn(l).online).length;
   const barLabel = (t) => (t === ONLINE_MODS ? "Online mods" : t === MODS_TAG ? "All mods" : t.startsWith("#") ? t.slice(1) : t);
   const MOD_BADGE = '<svg viewBox="-0.5 -0.5 21 21" width="12" height="12" aria-hidden="true"><path fill="#fff" fill-rule="evenodd" d="M19.4 0.6 L13.8 1.6 L5.4 12.8 L7.2 14.6 L18.4 6.2 Z M15.4 4.6 L6.75 12.85 L7.15 13.25 Z"/><g stroke="#fff" stroke-linecap="round" fill="none"><path d="M3.5 12.3 L7.7 16.5" stroke-width="1.8"/><path d="M5.6 14.4 L2.4 17.6" stroke-width="1.5"/></g><circle cx="1.5" cy="18.5" r="1.3" fill="#fff"/></svg>';
+  // A VIP's badge, the mod sword's twin: a white gem (flat top, pointed bottom, facets), on
+  // VIP pink (#e005b9) wherever it's shown. Ready for VIP mode; nothing uses it yet.
+  const VIP_BADGE = '<svg viewBox="-0.5 -0.5 21 21" width="12" height="12" aria-hidden="true"><path fill="#fff" fill-rule="evenodd" d="M5.5 2.5 H14.5 L19.5 8 L10 19 L0.5 8 Z M7.2 8.8 L10 15.4 L12.8 8.8 Z"/><path d="M0.9 8 H19.1" stroke="#e005b9" stroke-width="1.1" fill="none"/></svg>';
   // The little picture: a person's photo, the mod sword for Mods, a tag for a list.
   function barMark(t) {
     if (!isGroup(t)) {
@@ -1976,9 +1979,45 @@
   document.addEventListener("click", (e) => !presenceMenu.hidden && !presenceMenu.contains(e.target) && e.target !== presenceBtn && openPresence(false));
   document.addEventListener("keydown", (e) => e.key === "Escape" && !presenceMenu.hidden && openPresence(false));
 
-  // The dots: one per connection; glowing green ring while online, faded until they've
-  // added you back; pulsing in their chat color for a question from them,
-  // ringed for their answer to yours, with how many.
+  // When you last talked with someone: a question or note either way, an answer either
+  // way, or a private message either way. 0 if never (that we know of).
+  const TALKED_MS = 5 * 60 * 1000;
+  function lastTalked(login) {
+    let at = 0;
+    for (const q of Object.values(inbox)) if (q.from === login) at = Math.max(at, q.at || 0, q.answered?.at || 0, q.seenAt || 0);
+    for (const q of Object.values(sent)) if (q.to === login) at = Math.max(at, q.at || 0, q.answer?.at || 0);
+    const direct = directWith(login);
+    for (const m of (direct && chat[direct.owner]) || []) at = Math.max(at, m.at || 0);
+    return at;
+  }
+  const talkedLately = (login) => Date.now() - lastTalked(login) < TALKED_MS;
+  // One of your mods (from Twitch): their dot wears a small sword.
+  const isMyMod = (login) => !!modLists?.mods?.includes(login);
+  // One of your lead mods: your chat dock remembers them ("leads"); elsewhere it's in the
+  // Streamer View your dock shares.
+  const isMyLead = (login) => isMyMod(login) && (get("leads", []).includes(login) || !!(me && views[me.login]?.leads?.includes(login)));
+  // Your mod's badge, wherever they show (pictures, names, private chat): the hammer for a
+  // lead mod, else the sword, on mod green. corner: tucked on a picture's bottom-right;
+  // otherwise it sits next to their name. null for anyone who doesn't mod for you.
+  function rankBadge(login, corner = false) {
+    if (!login || !isMyMod(login)) return null;
+    const lead = isMyLead(login);
+    const b = el("span", `rank rank--${lead ? "lead" : "mod"}${corner ? " rank--corner" : ""}`);
+    b.innerHTML = lead ? HAMMER_ICON : MOD_BADGE;
+    b.title = lead ? "Your lead mod" : "Your mod";
+    return b;
+  }
+  const withBadge = (node, login) => {
+    const b = rankBadge(login);
+    if (b) node.append(b);
+    return node;
+  };
+
+  // The dots: one per connection; glowing green ring while you've talked in the last
+  // 5 minutes (not just because they're online), faded until they've added you back;
+  // pulsing in their chat color for a question from them, ringed for their answer to
+  // yours, with how many. Your mods wear a sword. The streamer's chat dock shows only
+  // its mods who are connections and are in the chat.
   function drawDots() {
     // Your own chat color, for the glow round lines you bookmarked.
     if (me && colorOf(me.login)) document.body.style.setProperty("--my-color", colorOf(me.login));
@@ -1996,7 +2035,9 @@
       if (light && !light.away) liveSeenNow(login);
       const longGone = light?.away && Date.now() - liveSeenAt(login) > LIVE_GONE_MINUTES * LIGHT_MINUTE;
       if (LIVECHAT && !(asks + answers + said) && (!(light && liveWasHere(login)) || longGone)) return null;
-      const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}${online && !LIVECHAT ? " dot--online" : ""}${idle ? " dot--idle" : ""}${light?.ring ? ` dot--${light.ring}` : ""}${light?.away ? " dot--away" : light && !light.ring ? " dot--here" : ""}`);
+      if (LIVECHAT && !isMyMod(login)) return null;
+      const lit = !LIVECHAT && mutual && talkedLately(login);
+      const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}${lit ? " dot--online" : ""}${idle ? " dot--idle" : ""}${light?.ring ? ` dot--${light.ring}` : ""}${light?.away ? " dot--away" : light && !light.ring ? " dot--here" : ""}`);
       dot.type = "button";
       // The streamer's dock: a mod set to Idle, or not on Streamer Buddy right now (or set to
       // Offline), is grayed out with a white badge, so it's clear to leave them be.
@@ -2034,6 +2075,8 @@
           : svg(`<path d="M10 3.5v6" ${LINE} stroke-width="2.6"/><path d="M6.2 6.2a5.6 5.6 0 1 0 7.6 0" ${LINE} stroke-width="2.6"/>`, 9);
         dot.append(badge);
       }
+      const rank = rankBadge(login, true);
+      if (rank) dot.append(rank);
       if (asks + answers + said) dot.append(el("span", "dot__count", String(asks + answers + said)));
       dot.addEventListener("click", () => {
         if (asks + answers) {
@@ -2657,7 +2700,7 @@
       img.alt = "";
       chip.append(img);
     }
-    chip.append(el("span", "ask__name", login));
+    chip.append(withBadge(el("span", "ask__name", login), login));
     if (conn(login)?.online) chip.append(el("span", `ask__online${conn(login).idle ? " ask__online--idle" : ""}`));
     return chip;
   }
@@ -2851,6 +2894,7 @@
       liveChecking.delete(login);
     }
   }
+  if (!LIVECHAT) setInterval(() => ready && drawDots(), 30000); // the 5-minute glow fades with time
   if (EMBED) setInterval(() => me && modOwner() && modRinged() !== modBtn.classList.contains("mod-btn--live") && render(), 30000);
   function modPanel() {
     const owner = modOwner();
@@ -2937,7 +2981,7 @@
       img.alt = "";
       head.append(img);
     }
-    const name = el("span", "person__name", login);
+    const name = withBadge(el("span", "person__name", login), login);
     if (colorOf(login)) name.style.color = colorOf(login);
     head.append(name, el("span", `person__state${c.idle ? " person__state--idle" : c.online ? " person__state--on" : ""}`, !c.mutual ? "hasn't added you yet" : c.idle ? "idle" : c.online ? "online" : "offline"));
     if (!inMod) panel.append(head);
@@ -3070,7 +3114,7 @@
     head.append(el("span", "chat__title", room.direct ? `Private chat · only you and ${room.with}` : room.owner === me.login ? `Your room · ${room.tag}` : `${room.owner}'s room · ${room.tag}`));
     const who = el("span", "chat__who");
     for (const m of room.members.filter((m) => !room.direct || m.login !== me.login)) {
-      const dot = el("span", `chat__member${m.online ? " chat__member--on" : ""}`, m.login);
+      const dot = withBadge(el("span", `chat__member${m.online ? " chat__member--on" : ""}`, m.login), m.login);
       if (colorOf(m.login)) dot.style.color = colorOf(m.login);
       who.append(dot);
     }
@@ -3086,7 +3130,7 @@
       if (day !== lastDay && lastDay) log.append(el("div", "chat__day", new Date(m.at).toLocaleDateString()));
       lastDay = day;
       const line = el("div", `chat__msg${mentions(m.text) && m.from !== me.login ? " chat__msg--mention" : ""}`);
-      const name = el("span", "chat__from", m.from);
+      const name = withBadge(el("span", "chat__from", m.from), m.from);
       if (colorOf(m.from)) name.style.color = colorOf(m.from);
       line.append(name, el("span", "chat__time", new Date(m.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })), el("div", "chat__text", m.text));
       log.append(line);
@@ -3396,6 +3440,8 @@
       img.alt = "";
       pic.append(img);
     } else pic.append(el("span", "dot__letter", login[0].toUpperCase()));
+    const rank = rankBadge(login, true);
+    if (rank) pic.append(rank);
     return pic;
   }
 
