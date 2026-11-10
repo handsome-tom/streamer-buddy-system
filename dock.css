@@ -3881,18 +3881,27 @@ body.livechat::before {
 .signin__mark { display: block; width: 40px; height: 40px; margin: 0 auto 10px; border-radius: 10px; opacity: 0.9; }
 .signin__by { margin: 14px 0 0; font-size: 11px; color: #6f7385; }
 
-/* The mod side panel: Tom's head, slowly spinning, bouncing edge to edge (dock.js, bounceTom). */
-.space__tom {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  opacity: 0.12;
-  filter: brightness(1.15);
-  will-change: transform;
-}
+/* The mod side panel: Tom's head as a little meteor, slowly spinning, bouncing edge to edge
+   (dock.js, bounceTom): a faint lunar glow, a crater texture over the face, and a faint
+   tail trailing behind the way it's drifting. */
+.space__tom { position: absolute; left: 0; top: 0; width: 50px; height: 50px; pointer-events: none; will-change: transform; }
+.space__rock { position: absolute; inset: 0; border-radius: 50%; will-change: transform;
+  box-shadow: 0 0 10px 2px rgba(214, 224, 255, 0.07), 0 0 26px 8px rgba(190, 205, 255, 0.045); }
+.space__face { display: block; width: 100%; height: 100%; border-radius: 50%; opacity: 0.09; filter: brightness(1.15) grayscale(0.35); }
+/* Craters and a lit edge, like the moon: soft dents, light from the top-left. */
+.space__craters { position: absolute; inset: 0; border-radius: 50%; opacity: 0.1;
+  background:
+    radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.55), transparent 42%),
+    radial-gradient(circle at 64% 34%, rgba(0, 0, 0, 0.7) 0 6%, rgba(255, 255, 255, 0.35) 7% 8%, transparent 9%),
+    radial-gradient(circle at 38% 66%, rgba(0, 0, 0, 0.7) 0 8%, rgba(255, 255, 255, 0.3) 9% 10%, transparent 11%),
+    radial-gradient(circle at 72% 70%, rgba(0, 0, 0, 0.6) 0 4%, rgba(255, 255, 255, 0.3) 5% 6%, transparent 7%),
+    radial-gradient(circle at 22% 48%, rgba(0, 0, 0, 0.5) 0 3%, transparent 4%),
+    radial-gradient(circle at 70% 75%, transparent 50%, rgba(0, 0, 0, 0.6) 100%); }
+/* The tail: starts behind the head and fades out, pointing back the way it came. */
+.space__tail { position: absolute; left: 50%; top: 50%; width: 120px; height: 26px; margin-top: -13px; transform-origin: 0 50%;
+  border-radius: 0 50% 50% 0; opacity: 0.06; filter: blur(4px);
+  background: linear-gradient(90deg, rgba(214, 224, 255, 0.9), rgba(190, 205, 255, 0.35) 45%, transparent);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 35%, #000 65%, transparent); mask-image: linear-gradient(180deg, transparent, #000 35%, #000 65%, transparent); }
 
 /* ===== Connections (peoplePanel): header, add, groups, who's online ===== */
 .cx { display: flex; flex-direction: column; gap: 10px; }
@@ -4893,3 +4902,74 @@ body.livechat.has-space .bar__planet { opacity: 0.52; }
    picture's bottom-left (the sword or hammer has the bottom-right). */
 .dot__unlinked { position: absolute; z-index: 3; left: -4px; bottom: -4px; display: grid; place-items: center; width: 14px; height: 14px; background: #53535f; border: 2px solid var(--panel, #18181b); border-radius: 50%; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); pointer-events: none; }
 .dot__unlinked svg { display: block; width: 9px; height: 9px; }
+
+/* The side panel's presence: just the dot now (the word was crowding the bar). */
+.presence--bar { padding: 0 8px; }
+.presence--bar::before { width: 9px; height: 9px; }
+/* Opening the panel: the word written in a ring round the dot, like a planet's ring. The
+   ring is tilted and turns slowly as a whole (presenceTilt, the slow spin) while the word
+   travels round the dot a little quicker (presenceOrbit), then it all fades. */
+.presence__spin { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; pointer-events: none; perspective: 120px; animation: presenceTilt 2.6s ease-in-out forwards; }
+.presence__spin svg { display: block; width: 100%; height: 100%; overflow: visible; animation: presenceOrbit 1.4s linear infinite; }
+.presence__spin text { fill: #fff; font-size: 6.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: none; }
+@keyframes presenceTilt {
+  0% { opacity: 0; transform: rotateZ(-28deg) rotateX(58deg) scale(0.85); }
+  14% { opacity: 1; }
+  78% { opacity: 1; }
+  100% { opacity: 0; transform: rotateZ(22deg) rotateX(58deg) scale(1); }
+}
+@keyframes presenceOrbit { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .presence__spin, .presence__spin svg { animation: presenceFade 3s ease-out forwards; } }
+@keyframes presenceFade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Mod view with lots of streamers: one row that scrolls sideways, never pushing the
+   bar's buttons down a line (room above and below for the halos and badges). */
+.dots--mod { flex: 1 1 0; min-width: 0; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; padding-block: 7px; margin-block: -7px; padding-right: 8px; }
+.dots--mod::-webkit-scrollbar { display: none; }
+.dots--mod:not(:hover) { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 16px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 16px), transparent); }
+.dots--mod .dot { flex: none; }
+
+/* The side panel's Messages tab and page: very dark and warm (like Claude's own colors),
+   with the demo site's orange (#f0a330) for the accents. */
+:root { --msg-bg: #1f1e1c; --msg-text: #e6e1d8; --msg-muted: #9c968b; --honey: #f0a330; --honey-hi: #f6b752; --honey-ink: #1d1206; }
+body.has-space .msg-btn, .msg-btn { width: 28px; height: 28px; min-width: 28px; padding: 0; border-radius: 50%; background: var(--honey); border-color: var(--honey); color: var(--honey-ink); }
+body.has-space .msg-btn:hover, .msg-btn:hover { background: var(--honey-hi); border-color: var(--honey-hi); color: var(--honey-ink); }
+body.has-space .msg-btn.pill--on, .msg-btn.pill--on { background: var(--honey-hi); border-color: var(--honey-hi); color: var(--honey-ink); box-shadow: 0 0 0 2px #0e0e10, 0 0 0 4px var(--honey); }
+.msg-btn { position: relative; }
+/* The unread count floats on the corner, so the icon stays centered. */
+.msg-btn .pill__count { position: absolute; top: -5px; right: -6px; margin: 0; background: var(--msg-text); color: var(--honey-ink); }
+.msg-btn .pill__count:empty { display: none; }
+
+/* The page itself (and a chat opened from it): space black, nearly solid at the top and fading to 80% at the bottom, so the stars show faintly through lower down. */
+main.main--msgs { position: relative; z-index: 1; min-height: calc(100vh - 43px); background: linear-gradient(180deg, rgba(2, 3, 8, 0.98) 0%, rgba(2, 3, 8, 0.8) 100%); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); color: var(--msg-text); }
+main.main--msgs .panel__head { color: var(--msg-text); }
+main.main--msgs .panel__sub { color: var(--msg-muted); }
+
+/* Messages: groups, then one-on-one chats. */
+.msgs__label { margin: 12px 0 4px; color: var(--honey); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.msgs__row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; color: var(--msg-text); text-align: left; background: none; border: 0; border-radius: 8px; }
+.msgs__row:hover { background: rgba(255, 255, 255, 0.04); }
+.msgs__row--new { background: rgba(240, 163, 48, 0.05); }
+.msgs__words { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.msgs__name { font-weight: 700; }
+.msgs__last { overflow: hidden; color: var(--msg-muted); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.msgs__row--new .msgs__last { color: var(--msg-text); }
+.msgs__side { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex: none; }
+.msgs__ago { color: var(--msg-muted); font-size: 11px; }
+.msgs__count { min-width: 18px; padding: 1px 5px; color: var(--honey-ink); font-size: 11px; font-weight: 800; text-align: center; background: var(--honey); border-radius: 9px; }
+.msgs__stack { display: flex; flex: none; }
+.msgs__stack .people__pic { box-shadow: 0 0 0 2px #04050a; }
+.msgs__stack .people__pic + .people__pic { margin-left: -12px; }
+.msgs__open { margin-top: 8px; color: var(--msg-text); background: rgba(0, 0, 0, 0.4); border-color: rgba(240, 163, 48, 0.25); }
+.msgs__open:hover { background: rgba(0, 0, 0, 0.6); }
+/* The one-on-one section: a block of its own, dark black on the left fading out to the right, each person sectioned off. */
+.msgs__private { margin-top: 14px; padding: 4px 8px 6px; background: linear-gradient(90deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.45) 55%, rgba(0, 0, 0, 0.12) 100%); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 10px; }
+.msgs__private .msgs__label { margin-top: 8px; }
+.msgs__private .msgs__row { border-radius: 0; }
+.msgs__private .msgs__row + .msgs__row { border-top: 1px solid rgba(255, 255, 255, 0.05); }
+
+/* Streamers bar: the camera (and, for a streamer who's also your mod, their sword or
+   hammer beside it) in the picture's bottom-right corner. */
+.rank-pair { position: absolute; z-index: 3; right: -5px; bottom: -4px; display: flex; pointer-events: none; }
+.rank-pair .rank { margin: 0; border: 2px solid var(--panel, #18181b); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
+.rank-pair .rank + .rank { margin-left: -4px; }

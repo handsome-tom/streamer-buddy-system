@@ -157,6 +157,21 @@
   const dndBtn = document.getElementById("dndBtn");
   const dndLabel = document.getElementById("dndLabel");
   const chatCount = document.getElementById("chatCount");
+  // Messages tab. Made here if this copy of index.html predates it (a browser can keep an
+  // older page for a few minutes after an update, next to the newer dock.js).
+  const msgBtn = document.getElementById("msgBtn") || (() => {
+    const b = document.createElement("button");
+    b.className = "pill pill--icon msg-btn";
+    b.id = "msgBtn";
+    b.type = "button";
+    b.title = b.ariaLabel = "Messages";
+    b.hidden = true;
+    b.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="currentColor"><circle cx="12" cy="7.6" r="4.4"/><path d="M3.6 21.2c0-4.6 3.8-8 8.4-8s8.4 3.4 8.4 8z"/></svg><span class="pill__count" id="msgCount"></span>';
+    document.getElementById("peopleBtn").before(b);
+    return b;
+  })();
+  const msgCount = document.getElementById("msgCount");
+  let chatFrom = ""; // "messages" when a chat was opened from Messages (its back button goes there)
 
   let me = null; // { login, id }
   // The side panel opens on Mod (the sword): the stream you're on.
@@ -187,6 +202,7 @@
   let requests = []; // [login] who added you
   let tags = {}; // { tag: [logins] } your own groups of connections (Mods, Lead mods, Tech…)
   let myStatus = "online"; // how connections see you: "online" | "idle" | "offline"
+  let mySince = 0; // when you came online (from the relay)
   // Chat: the rooms you're in ({ owner, tag, members: [{ login, online }] }), and a
   // private chat with each mutual connection ({ owner, direct: true, with, members }),
   // and each one's recent messages ({ owner: [{ id, from, text, at }] }).
@@ -339,11 +355,18 @@
   }
 
   function bounceTom(space) {
-    const tom = el("img", "space__tom");
-    tom.src = "icons/tom.png";
-    tom.alt = "";
+    // A little meteor: the head (spinning) with a faint lunar glow and crater texture, and a
+    // faint tail trailing behind whichever way it drifts.
+    const tom = el("span", "space__tom");
+    const tail = el("span", "space__tail");
+    const rock = el("span", "space__rock");
+    const face = el("img", "space__face");
+    face.src = "icons/tom.png";
+    face.alt = "";
+    rock.append(face, el("span", "space__craters"));
+    tom.append(tail, rock);
     space.append(tom);
-    const SIZE = 54;
+    const SIZE = 50; // matches .space__tom
     const SPEED = 22; // pixels a second
     let x = Math.random() * Math.max(0, innerWidth - SIZE);
     let y = Math.random() * Math.max(0, innerHeight - SIZE);
@@ -352,7 +375,11 @@
     const SPIN = 18; // degrees a second; it turns the other way after each bounce
     let turn = 180; // starts upside down
     let spin = Math.random() < 0.5 ? -1 : 1;
-    const place = () => (tom.style.transform = `translate(${x}px, ${y}px) rotate(${turn}deg)`);
+    const place = () => {
+      tom.style.transform = `translate(${x}px, ${y}px)`;
+      rock.style.transform = `rotate(${turn}deg)`;
+      tail.style.transform = `rotate(${(Math.atan2(-dy, -dx) * 180) / Math.PI}deg)`; // points back the way it came
+    };
     place();
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     let last = 0;
@@ -742,6 +769,7 @@
 
   function gotState(m) {
     const first = !ready;
+    if (first) setTimeout(spinPresence, 400);
     connections = m.connections || [];
     requests = m.requests || [];
     tags = m.tags || {};
@@ -753,6 +781,7 @@
     lastView = ""; // a fresh connection: the relay hears this dock's view again
     statsOn = !!m.statsOn;
     myStatus = m.status || myStatus;
+    mySince = m.since || mySince;
     collect();
     gotPins(m.pins || []);
     const had = new Set(Object.keys(questions));
@@ -1647,6 +1676,7 @@
   // Ask / Connections / someone's page: here, or popped out if the dock is just the bar.
   function show(next, to = "") {
     if (next === "chat" && to) chatDraft.owner = to;
+    if (next !== "chat") chatFrom = next === "messages" ? "messages" : "";
     if (next === "stats" && to) statsDraft.who = to;
     if (next === "ask" || next === "person") {
       askDraft.to = to || askDraft.to;
@@ -1668,7 +1698,8 @@
     pingCheck();
     // Keep typing where it was if things are redrawn under you.
     const typingIn = document.activeElement?.dataset?.key;
-    main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : view === "deck" ? deckPanel() : view === "mod" ? modPanel() : cardList());
+    main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : view === "deck" ? deckPanel() : view === "mod" ? modPanel() : view === "messages" ? messagesPanel() : cardList());
+    main.classList.toggle("main--msgs", view === "messages" || (view === "chat" && chatFrom === "messages"));
     if (LIVECHAT && (view !== "cards" || showAll) && main.firstElementChild?.childElementCount !== 0) main.prepend(inlineHead());
     drawDots();
     drawPeek();
@@ -1701,12 +1732,16 @@
     modBtn.title = modBtn.ariaLabel = modOwner() ? `${lead ? "Lead mod" : "Mod"} · ${modOwner()}${modLive ? " is live, and sees you're online" : ""}` : "Mod";
     drawQuickAsk();
     drawPresence();
-    statsBtn.hidden = STREAMER || (!connections.length && !statsOn);
+    statsBtn.hidden = true; // dropped from the bar (Mod and Connections stay); Stats still runs underneath
     statsBtn.classList.toggle("pill--on", view === "stats");
     // Chat lives in Connections now (a Chat button by each person, rooms at the top), so
     // its own button stays hidden; what's unread shows as a count on Connections.
     chatBtn.hidden = true;
-    chatCount.textContent = unreadChat ? String(unreadChat) : "";
+    // The side panel's Messages tab carries the unread count; elsewhere it's on Connections.
+    msgBtn.hidden = !EMBED || !me;
+    msgBtn.classList.toggle("pill--on", view === "messages" || (view === "chat" && chatFrom === "messages"));
+    msgCount.textContent = !msgBtn.hidden && unreadChat ? String(unreadChat) : "";
+    chatCount.textContent = msgBtn.hidden && unreadChat ? String(unreadChat) : "";
     if (POPOUT) closeWhenDone();
   }
 
@@ -1955,10 +1990,24 @@
     if (!EMBED) return;
     const now = STATUS[myStatus] || STATUS.online;
     presenceBtn.className = `presence presence--bar presence--${myStatus}${presenceMenu.hidden ? "" : " presence--open"}`;
-    presenceBtn.textContent = now.label;
-    presenceBtn.title = `${now.says} Click to change.`;
+    // Just the dot (saves room in the bar); the words are in its tooltip and menu.
+    if (!presenceBtn.querySelector(".presence__spin")) presenceBtn.textContent = "";
+    presenceBtn.ariaLabel = now.label;
+    presenceBtn.title = `${now.label}${myStatus !== "offline" && mySince ? ` since ${clock(mySince)}` : ""}. ${now.says} Click to change.`;
     presenceBtn.setAttribute("aria-haspopup", "menu");
     presenceBtn.setAttribute("aria-expanded", String(!presenceMenu.hidden));
+  }
+  // Opening the panel: "online" written in a tilted ring round your dot, like a planet's, orbits for a few seconds and fades.
+  let spun = false;
+  function spinPresence() {
+    if (spun || !EMBED || presenceBtn.hidden || myStatus === "offline") return;
+    spun = true;
+    const word = (STATUS[myStatus] || STATUS.online).label.toLowerCase();
+    const ring = el("span", "presence__spin");
+    ring.setAttribute("aria-hidden", "true");
+    ring.innerHTML = `<svg viewBox="0 0 40 40"><defs><path id="presenceArc" d="M20 20 m-13 0 a13 13 0 1 1 26 0 a13 13 0 1 1 -26 0"/></defs><text><textPath href="#presenceArc" textLength="80" lengthAdjust="spacing">${word} · ${word} ·</textPath></text></svg>`;
+    presenceBtn.append(ring);
+    setTimeout(() => ring.remove(), 2700);
   }
   function openPresence(open) {
     presenceMenu.hidden = !open;
@@ -2084,9 +2133,9 @@
         : answers ? `${login} answered you`
         : said ? `${login} sent you a message`
         : resting === "idle" ? `${login} is idle: they'd like to be left alone for now${light ? ` (${light.says})` : ""}`
-        : resting ? `${login} is offline in Streamer Buddy: anything you send waits for them${light ? ` (${light.says})` : ""}`
+        : resting ? `${login} is offline in Streamer Buddy${whenWords(conn(login)) ? ` (${whenWords(conn(login))})` : ""}: anything you send waits for them${light ? ` (${light.says})` : ""}`
         : light ? `${login}: ${light.says}${idle ? ", set to idle" : ""}`
-        : `${login}${idle ? " (idle)" : online ? " (online)" : ""}`;
+        : `${login}${idle ? " (idle)" : online ? " (online)" : ""}${whenWords(conn(login)) ? ` · ${whenWords(conn(login))}` : ""}`;
       if (pics[login]) {
         const img = el("img");
         img.src = pics[login];
@@ -2151,20 +2200,28 @@
         img.alt = "";
         dot.append(img);
       } else dot.append(el("span", "dot__letter", login[0].toUpperCase()));
-      // Streaming: the purple camera. Otherwise your role there: hammer or sword.
-      let b = live ? liveBadge(true) : null;
-      if (!b) {
-        b = el("span", `rank rank--${lead ? "lead" : "mod"} rank--corner`);
-        b.innerHTML = lead ? HAMMER_ICON : MOD_BADGE;
+      // Every streamer here wears the purple camera. One who also mods for you wears their
+      // sword (hammer for your lead mod) beside it: two badges in the corner. Not while
+      // they're live, though: streaming, they can't mod for you.
+      const pair = el("span", "rank-pair");
+      const cam = liveBadge();
+      cam.title = live ? "Live streaming now" : "Streamer";
+      pair.append(cam);
+      if (isMyMod(login) && !live) {
+        const theirLead = isMyLead(login);
+        const r = el("span", `rank rank--${theirLead ? "lead" : "mod"}`);
+        r.innerHTML = theirLead ? HAMMER_ICON : MOD_BADGE;
+        r.title = theirLead ? "Also your lead mod" : "Also your mod";
+        pair.prepend(r);
       }
-      dot.append(b);
+      dot.append(pair);
       if (absent) {
         // A small broken chain: not linked with you yet.
         const x = el("span", "dot__unlinked");
         x.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.2 5.6 L9.6 4.2 a3.3 3.3 0 0 1 4.7 4.7 L12.9 10.3"/><path d="M11.8 14.4 L10.4 15.8 a3.3 3.3 0 0 1 -4.7 -4.7 L7.1 9.7"/><path d="M3.2 3.2 L5 5 M15 15 L16.8 16.8 M2.6 7.4 H4.4 M15.6 12.6 H17.4"/></g></svg>';
         dot.append(x);
       }
-      dot.title = `${login} · you're ${lead ? "lead mod" : "a mod"} here · ${absent ? "not on Streamer Buddy yet" : live ? "live now" : on ? "online" : "offline"}${login === owner ? " (showing)" : ""}`;
+      dot.title = `${login} · you're ${lead ? "lead mod" : "a mod"} here${isMyMod(login) ? ` · ${isMyLead(login) ? "your lead mod" : "your mod"} too` : ""} · ${absent ? "not on Streamer Buddy yet" : live ? "live now" : on ? "online" : "offline"}${login === owner ? " (showing)" : ""}`;
       dot.addEventListener("click", () => {
         svPicked = login;
         watching = ""; // picked by hand: stop following the tab until it changes channel
@@ -3069,7 +3126,7 @@
     }
     const name = withBadge(el("span", "person__name", login), login);
     if (colorOf(login)) name.style.color = colorOf(login);
-    head.append(name, el("span", `person__state${c.idle ? " person__state--idle" : c.online ? " person__state--on" : ""}`, !c.mutual ? "hasn't added you yet" : c.idle ? "idle" : c.online ? "online" : "offline"));
+    head.append(name, el("span", `person__state${c.idle ? " person__state--idle" : c.online ? " person__state--on" : ""}`, !c.mutual ? "hasn't added you yet" : c.idle ? `idle${c.since ? ` · online since ${clock(c.since)}` : ""}` : whenWords(c) || (c.online ? "online" : "offline")));
     if (!inMod) panel.append(head);
     if (c.mutual && !inMod) panel.append(composer(login));
     const direct = directWith(login);
@@ -3134,6 +3191,16 @@
     return row;
   }
 
+  // "online since 9:05 PM", "last online at 9:05 PM" (or "yesterday at…", "3 d ago").
+  const clock = (t) => new Date(t).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  function whenWords(c) {
+    if (c?.online && c.since) return `online since ${clock(c.since)}`;
+    if (!c?.online && c?.last) {
+      const days = Math.floor((new Date().setHours(0, 0, 0, 0) - new Date(c.last).setHours(0, 0, 0, 0)) / 86400000);
+      return days <= 0 ? `last online at ${clock(c.last)}` : days === 1 ? `last online yesterday at ${clock(c.last)}` : `last online ${ago(c.last)}`;
+    }
+    return "";
+  }
   function ago(t) {
     const m = Math.round((Date.now() - t) / 60000);
     if (m < 1) return "just now";
@@ -3146,12 +3213,71 @@
   // between any two connections (opened from their page; listed once it's been
   // used). Pick one, read and post; a room's owner picks the tag or closes it.
   // @name pings someone.
+  // Messages (the side panel's honey tab): your one-on-one chats, then group chats, newest
+  // first, each with its last line and what's unread. Opening one goes to that chat.
+  function messagesPanel() {
+    const panel = el("div", "panel msgs");
+    panel.append(el("div", "panel__head", "Messages"));
+    const lastOf = (owner) => chat[owner]?.at(-1);
+    const newest = (a, b) => (lastOf(b.owner)?.at || 0) - (lastOf(a.owner)?.at || 0) || (a.with || a.owner).localeCompare(b.with || b.owner);
+    const row = (r, pic, title) => {
+      const last = lastOf(r.owner);
+      const n = unread(r.owner);
+      const b = el("button", `msgs__row${n ? " msgs__row--new" : ""}`);
+      b.type = "button";
+      const words = el("span", "msgs__words");
+      const name = el("span", "msgs__name", title);
+      if (r.direct) withBadge(name, r.with);
+      if (r.direct && colorOf(r.with)) name.style.color = colorOf(r.with);
+      words.append(name, el("span", "msgs__last", last ? `${last.from === me.login ? "You: " : r.direct ? "" : `${last.from}: `}${last.text}` : r.direct ? "No messages yet" : "Nothing said yet"));
+      b.append(pic, words);
+      const side = el("span", "msgs__side");
+      if (last) side.append(el("span", "msgs__ago", ago(last.at)));
+      if (n) side.append(el("span", "msgs__count", String(n)));
+      b.append(side);
+      b.addEventListener("click", () => {
+        chatFrom = "messages";
+        show("chat", r.owner);
+      });
+      return b;
+    };
+
+    // Groups first, then the one-on-one chats in their own dark section, one block each.
+    const groups = rooms.filter((r) => !r.direct).sort(newest);
+    panel.append(el("div", "msgs__label", "Groups"));
+    if (!groups.length) panel.append(el("p", "panel__sub", "Group chats show up here when a streamer opens a room for one of their tags (like Mods)."));
+    for (const r of groups) {
+      const others = r.members.filter((m) => m.login !== me.login).slice(0, 3);
+      const pic = el("span", "msgs__stack");
+      for (const m of others) pic.append(personPic(m.login));
+      panel.append(row(r, pic, r.owner === me.login ? `Your room · ${r.tag}` : `${r.owner}'s room · ${r.tag}`));
+    }
+    if (!rooms.some((r) => r.owner === me.login) && Object.keys(tags).length) {
+      const open = el("button", "pill msgs__open", "Open a group room");
+      open.type = "button";
+      open.addEventListener("click", () => {
+        chatFrom = "messages";
+        show("chat", me.login);
+      });
+      panel.append(open);
+    }
+
+    const direct = rooms.filter((r) => r.direct).sort(newest);
+    const priv = el("div", "msgs__private");
+    priv.append(el("div", "msgs__label", "The DMs"));
+    if (!direct.length) priv.append(el("p", "panel__sub", "Once you and someone have added each other in Connections, your private chat with them is here."));
+    for (const r of direct) priv.append(row(r, personPic(r.with), r.with));
+    panel.append(priv);
+    return panel;
+  }
+
   function chatPanel() {
     const panel = el("div", "panel chat");
     // Chat is reached from Connections, so it leads back there.
-    const back = el("button", "chat__back", "‹ Connections");
+    const fromMessages = chatFrom === "messages";
+    const back = el("button", "chat__back", fromMessages ? "‹ Messages" : "‹ Connections");
     back.type = "button";
-    back.addEventListener("click", () => show("people"));
+    back.addEventListener("click", () => show(fromMessages ? "messages" : "people"));
     panel.append(back);
     const owner = chatRoom();
     const room = rooms.find((r) => r.owner === owner);
@@ -3607,7 +3733,7 @@
     me = null;
     socket?.close();
     socket = null;
-    askBtn.hidden = modBtn.hidden = peopleBtn.hidden = homeChatBtn.hidden = dndBtn.hidden = quickAsk.hidden = askFull.hidden = chatBtn.hidden = statsBtn.hidden = true;
+    askBtn.hidden = modBtn.hidden = msgBtn.hidden = peopleBtn.hidden = homeChatBtn.hidden = dndBtn.hidden = quickAsk.hidden = askFull.hidden = chatBtn.hidden = statsBtn.hidden = true;
     dotsEl.replaceChildren();
     const again = el("button", "pill pill--warn pill--bad", message ? "Signed out · Sign in with Twitch" : "Sign in with Twitch");
     again.type = "button";
@@ -4571,6 +4697,7 @@
   });
   chatBtn.addEventListener("click", () => show("chat", chatRoom()));
   statsBtn.addEventListener("click", () => show("stats", statsWho()));
+  msgBtn.addEventListener("click", () => show("messages"));
   quickAsk.addEventListener("submit", (e) => {
     e.preventDefault();
     const question = clean(quickText.value);

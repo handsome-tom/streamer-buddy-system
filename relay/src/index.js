@@ -54,7 +54,9 @@
 //
 // Status: what your connections see you as: "online" (the default), "idle", or
 // "offline" (shown as offline even while connected; things still reach you). Kept
-// on your account, so it stays until you change it.
+// on your account, so it stays until you change it. The relay also keeps when you came
+// online and when you were last online (closing your last page, or going Offline), and
+// your mutual connections get them as each connection's "since" and "last".
 //
 // Messages from a page:
 //   auth { token }          connect { login }        disconnect { login }
@@ -77,7 +79,7 @@
 //   view { v }              what your OBS dock shows now (null: stop sharing); see Streamer View below
 //   seen { id }
 // Messages to a page:
-//   state { me, status, connections, requests, tags, questions, rooms, chat, statsOn, stats }   (on sign-in, and whenever
+//   state { me, status, since, connections, requests, tags, questions, rooms, chat, statsOn, stats }   (on sign-in, and whenever
 //                                                       connections or who's online change)
 //   q { q }                 a question that's new or changed
 //   msg { m }               a new chat message { id, owner, from, text, at }
@@ -212,6 +214,7 @@ export class Hub {
     const user = (await this.ctx.storage.get(`u:${j.login}`)) || { list: [] };
     user.id = j.user_id;
     user.at = Date.now();
+    if (!was) user.onlineAt = Date.now(); // came online (first page open)
     await this.ctx.storage.put(`u:${j.login}`, user);
     await this.sendState(j.login);
     if (!was) await this.tellConnections(j.login);
@@ -223,7 +226,15 @@ export class Hub {
       await this.ctx.storage.delete(`v:${who.login}`);
       if (this.isOnline(who.login, ws)) await this.tellView(who.login, null);
     }
-    if (who.login && !this.isOnline(who.login, ws)) await this.tellConnections(who.login);
+    if (who.login && !this.isOnline(who.login, ws)) {
+      // Their last page closed: remember when, for "last online at".
+      const user = await this.ctx.storage.get(`u:${who.login}`);
+      if (user) {
+        if (user.status !== "offline") user.lastOnline = Date.now();
+        await this.ctx.storage.put(`u:${who.login}`, user);
+      }
+      await this.tellConnections(who.login);
+    }
   }
 
   sockets(login, except) {
@@ -242,6 +253,9 @@ export class Hub {
   async setStatus(login, m) {
     if (!["online", "idle", "offline"].includes(m.status)) return;
     const user = (await this.ctx.storage.get(`u:${login}`)) || { list: [] };
+    // Going Offline counts as leaving; coming back from it, as coming online.
+    if (m.status === "offline" && user.status !== "offline") user.lastOnline = Date.now();
+    if (m.status !== "offline" && user.status === "offline") user.onlineAt = Date.now();
     if (m.status === "online") delete user.status;
     else user.status = m.status;
     await this.ctx.storage.put(`u:${login}`, user);
@@ -278,7 +292,10 @@ export class Hub {
     const connections = mine.map((l) => {
       const mutual = !!users[l]?.list.includes(login);
       const online = mutual && this.shownOnline(l, users);
-      return { login: l, mutual, online, idle: online && users[l]?.status === "idle" };
+      // since: when they came online (while they are); last: when they were last online.
+      const since = online ? users[l]?.onlineAt || 0 : 0;
+      const last = mutual && !online ? users[l]?.lastOnline || 0 : 0;
+      return { login: l, mutual, online, idle: online && users[l]?.status === "idle", since, last };
     });
     const requests = Object.entries(users).filter(([l, u]) => l !== login && u.list.includes(login) && !mine.includes(l)).map(([l]) => l);
     const questions = [];
@@ -305,7 +322,7 @@ export class Hub {
       const v = await this.ctx.storage.get(`v:${c.login}`);
       if (v) views[c.login] = v;
     }
-    this.sendTo(login, { t: "state", me: login, status: users[login]?.status || "online", connections, requests, tags: users[login]?.tags || {}, questions, pins, rooms, chat, statsOn: !!users[login]?.statsOn, stats, views });
+    this.sendTo(login, { t: "state", me: login, status: users[login]?.status || "online", since: users[login]?.onlineAt || 0, connections, requests, tags: users[login]?.tags || {}, questions, pins, rooms, chat, statsOn: !!users[login]?.statsOn, stats, views });
   }
 
   // A room's latest messages. Anything over a week old is deleted, even if nobody
