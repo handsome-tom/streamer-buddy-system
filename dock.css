@@ -4819,6 +4819,8 @@ body.livechat.has-space .bar__planet { opacity: 0.52; }
 .rank svg { display: block; width: 8px; height: 8px; }
 .rank--corner { position: absolute; z-index: 3; right: -4px; bottom: -4px; margin: 0; border: 2px solid var(--panel, #18181b); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); pointer-events: none; }
 .dot:has(.rank--corner) .dot__rest { right: auto; left: -3px; }
+/* Live streaming: the purple camera in place of the sword or hammer. */
+.rank--live { background: #9147ff; }
 .people__pic:has(.rank--corner) { position: relative; overflow: visible; }
 .people__pic:has(.rank--corner) img { border-radius: 50%; }
 .people__pic .rank--corner { width: 12px; height: 12px; right: -3px; bottom: -3px; }
@@ -4828,15 +4830,18 @@ body.livechat.has-space .bar__planet { opacity: 0.52; }
 .dot__vip svg { display: block; width: 8px; height: 8px; }
 .dot:has(.dot__vip) .dot__rest { right: auto; left: -3px; }
 
-/* The side panel's Mod view: the channels you mod in the top bar. The one Mod shows is
-   ringed in mod green; offline ones are dimmed; a live one gets a small red glow. */
+/* The side panel's Mod view: the channels you mod in the top bar. Online (or live) ones
+   wear a glowing lavender halo; offline ones are dimmed; the one Mod shows is ringed in
+   mod green (inside the halo when they're online). */
 .dot--chan.dot--off img, .dot--chan.dot--off .dot__letter { filter: grayscale(0.85) brightness(0.6); }
 .dot--chan.dot--current:not(:hover) { box-shadow: 0 0 0 2px #00ad03; }
-.dot--chan.dot--live:not(.dot--current):not(:hover) { box-shadow: 0 0 0 2px #eb0400; }
+.dot--chan.dot--on:not(:hover) { box-shadow: 0 0 0 2px #c8b4ff, 0 0 8px 2px rgba(185, 160, 255, 0.75), 0 0 16px 4px rgba(185, 160, 255, 0.35); }
+.dot--chan.dot--live.dot--current:not(:hover) { box-shadow: 0 0 0 2px #c8b4ff, 0 0 8px 2px rgba(185, 160, 255, 0.75), 0 0 16px 4px rgba(185, 160, 255, 0.35); }
+.dot--chan.dot--on.dot--current:not(.dot--live):not(:hover) { box-shadow: 0 0 0 2px #00ad03, 0 0 0 4px #c8b4ff, 0 0 10px 3px rgba(185, 160, 255, 0.75), 0 0 18px 5px rgba(185, 160, 255, 0.35); }
 
 /* Mod view's top bar: your streamers, set apart from the rest of the bar. A heavy black
-   gradient behind the left side fades to clear on the right, with a thin mod-green edge
-   and a small label. */
+   background behind the left side (dark purple while one of them is streaming) fades to
+   clear on the right, with a thin mod-green edge and a small label. */
 .bar:has(.dots--mod)::before {
   content: "";
   position: absolute;
@@ -4847,18 +4852,43 @@ body.livechat.has-space .bar__planet { opacity: 0.52; }
   box-shadow: inset 2px 0 0 #00ad03;
   pointer-events: none;
 }
+.bar:has(.dots--streaming)::before { background: linear-gradient(90deg, #1d0b38 0%, rgba(29, 11, 56, 0.95) 40%, rgba(29, 11, 56, 0.65) 70%, transparent 100%); }
 .dots--mod { align-items: center; }
 .dots__label {
-  align-self: center;
-  margin-right: 2px;
-  color: #00ad03;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  line-height: 1.1;
-  text-transform: uppercase;
-  max-width: 54px;
+  /* Down the bar's left edge, centered top to bottom: "Streamers" in white running up,
+     with a thin mod-green rule beside it that fades at both ends. */
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  pointer-events: auto;
 }
+.dots__word {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  color: #fff;
+  font-size: 6px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.dots__label::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -3px;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, #00ad03 25%, #00ad03 75%, transparent);
+  opacity: 0.6;
+}
+.dots--mod { padding-left: 14px; }
 /* A streamer you mod who isn't on Streamer Buddy yet: a small broken-chain badge at the
    picture's bottom-left (the sword or hammer has the bottom-right). */
 .dot__unlinked { position: absolute; z-index: 3; left: -4px; bottom: -4px; display: grid; place-items: center; width: 14px; height: 14px; background: #53535f; border: 2px solid var(--panel, #18181b); border-radius: 50%; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); pointer-events: none; }

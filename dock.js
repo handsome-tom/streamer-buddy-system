@@ -191,6 +191,10 @@
   // private chat with each mutual connection ({ owner, direct: true, with, members }),
   // and each one's recent messages ({ owner: [{ id, from, text, at }] }).
   let rooms = [];
+  // Who's live on Twitch (checkLive, at most every 2 minutes each).
+  const LIVE_CHECK_MS = 2 * 60 * 1000;
+  const liveOf = {}; // login -> { live, at }
+  const liveChecking = new Set();
   let chat = {};
   // Stats: what the relay has ({ login: worked-out stats }), whether you share
   // yours, and what Twitch says publicly ({ login: { ..., at } }).
@@ -2000,8 +2004,26 @@
   // Your mod's badge, wherever they show (pictures, names, private chat): the hammer for a
   // lead mod, else the sword, on mod green. corner: tucked on a picture's bottom-right;
   // otherwise it sits next to their name. null for anyone who doesn't mod for you.
+  // Live streaming right now (asks Twitch when it's been a while). Someone streaming
+  // can't mod for you, so they lose the sword or hammer and the green ring and wear the
+  // purple camera instead.
+  function streaming(login) {
+    // Testing on this Mac (and the public demo): their chat dock being open stands in for live.
+    if (TESTING) return views[login]?.chat === "livechat";
+    const known = liveOf[login];
+    if (!known || Date.now() - known.at > LIVE_CHECK_MS) checkLive(login);
+    return !!known?.live;
+  }
+  const CAM_BADGE = '<svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><rect x="1.5" y="5" width="12" height="10" rx="2.2" fill="#fff"/><path d="M14.5 8.6 L18.5 6.3 V13.7 L14.5 11.4 Z" fill="#fff"/></svg>';
+  function liveBadge(corner = false) {
+    const b = el("span", `rank rank--live${corner ? " rank--corner" : ""}`);
+    b.innerHTML = CAM_BADGE;
+    b.title = "Live streaming now";
+    return b;
+  }
   function rankBadge(login, corner = false) {
     if (!login || !isMyMod(login)) return null;
+    if (streaming(login)) return liveBadge(corner);
     const lead = isMyLead(login);
     const b = el("span", `rank rank--${lead ? "lead" : "mod"}${corner ? " rank--corner" : ""}`);
     b.innerHTML = lead ? HAMMER_ICON : MOD_BADGE;
@@ -2022,6 +2044,7 @@
   function drawDots() {
     const modBar = EMBED && view === "mod" && !!me;
     dotsEl.classList.toggle("dots--mod", modBar);
+    if (!modBar) dotsEl.classList.remove("dots--streaming");
     if (modBar) return drawModDots();
     // Your own chat color, for the glow round lines you bookmarked.
     if (me && colorOf(me.login)) document.body.style.setProperty("--my-color", colorOf(me.login));
@@ -2040,8 +2063,9 @@
       const longGone = light?.away && Date.now() - liveSeenAt(login) > LIVE_GONE_MINUTES * LIGHT_MINUTE;
       if (LIVECHAT && !(asks + answers + said) && (!(light && liveWasHere(login)) || longGone)) return null;
       if (LIVECHAT && !isMyMod(login)) return null;
-      const lit = !LIVECHAT && mutual && talkedLately(login);
-      const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}${lit ? " dot--online" : ""}${idle ? " dot--idle" : ""}${light?.ring ? ` dot--${light.ring}` : ""}${light?.away ? " dot--away" : light && !light.ring ? " dot--here" : ""}`);
+      const onAir = isMyMod(login) && streaming(login); // can't mod for you right now
+      const lit = !LIVECHAT && mutual && !onAir && talkedLately(login);
+      const dot = el("button", `dot${asks ? " dot--ask" : answers ? " dot--answer" : ""}${mutual ? "" : " dot--waiting"}${lit ? " dot--online" : ""}${idle ? " dot--idle" : ""}${light?.ring && !onAir ? ` dot--${light.ring}` : ""}${light?.away ? " dot--away" : light && (!light.ring || onAir) ? " dot--here" : ""}`);
       dot.type = "button";
       // The streamer's dock: a mod set to Idle, or not on Streamer Buddy right now (or set to
       // Offline), is grayed out with a white badge, so it's clear to leave them be.
@@ -2100,25 +2124,25 @@
   }
 
   // The side panel's Mod view: the top bar is the channels you mod instead, the ones you're
-  // lead mod for first (hammer), then the rest (sword). Offline ones still show, dimmed;
-  // the one Mod is about is ringed. Clicking one switches Mod to them.
+  // lead mod for first (hammer), then the rest (sword). Online ones glow lavender; offline
+  // ones still show, dimmed; the one Mod is about is ringed in mod green. Clicking one switches Mod to them.
   function modChannels() {
     const modFor = modLists?.modFor || [];
     const sharing = Object.keys(views).filter((l) => l !== me.login && isLeadFor(l));
     const all = [...new Set([...modFor, ...sharing])];
-    const up = (l) => (liveOf[l]?.live ? 2 : conn(l)?.online ? 1 : 0);
+    const up = (l) => (streaming(l) ? 2 : conn(l)?.online ? 1 : 0);
     return all.sort((a, b) => isLeadFor(b) - isLeadFor(a) || up(b) - up(a) || a.localeCompare(b));
   }
   function drawModDots() {
     const owner = modOwner();
     const dots = modChannels().map((login) => {
       const lead = isLeadFor(login);
-      const live = !!liveOf[login]?.live;
+      const live = streaming(login);
       const on = live || !!conn(login)?.online;
       // Not on Streamer Buddy yet (not a connection either way): their Twitch picture with
       // a small broken-chain badge (not linked with you yet).
       const absent = !conn(login) && !requests.includes(login);
-      const dot = el("button", `dot dot--chan${login === owner ? " dot--current" : ""}${on ? "" : " dot--off"}${live ? " dot--live" : ""}${absent ? " dot--absent" : ""}`);
+      const dot = el("button", `dot dot--chan${login === owner ? " dot--current" : ""}${on ? " dot--on" : " dot--off"}${live ? " dot--live" : ""}${absent ? " dot--absent" : ""}`);
       dot.type = "button";
       if (colorOf(login)) dot.style.setProperty("--c", colorOf(login));
       if (pics[login]) {
@@ -2127,8 +2151,12 @@
         img.alt = "";
         dot.append(img);
       } else dot.append(el("span", "dot__letter", login[0].toUpperCase()));
-      const b = el("span", `rank rank--${lead ? "lead" : "mod"} rank--corner`);
-      b.innerHTML = lead ? HAMMER_ICON : MOD_BADGE;
+      // Streaming: the purple camera. Otherwise your role there: hammer or sword.
+      let b = live ? liveBadge(true) : null;
+      if (!b) {
+        b = el("span", `rank rank--${lead ? "lead" : "mod"} rank--corner`);
+        b.innerHTML = lead ? HAMMER_ICON : MOD_BADGE;
+      }
       dot.append(b);
       if (absent) {
         // A small broken chain: not linked with you yet.
@@ -2142,11 +2170,14 @@
         watching = ""; // picked by hand: stop following the tab until it changes channel
         render();
       });
-      if (!liveOf[login] || Date.now() - liveOf[login].at > LIVE_CHECK_MS) checkLive(login);
       return dot;
     });
     // A small label, so it's clear these are your streamers and not your connections.
-    const label = el("span", "dots__label", "Your streamers");
+    // The bar turns dark purple while any of them is streaming; black otherwise.
+    dotsEl.classList.toggle("dots--streaming", modChannels().some(streaming));
+    // "Streamers", running up the bar's left edge.
+    const label = el("span", "dots__label");
+    label.append(el("span", "dots__word", "Streamers"));
     label.title = "The channels you mod. Click one to see it.";
     dotsEl.replaceChildren(label, ...dots);
   }
@@ -2924,8 +2955,6 @@
   // show as online (so they see you're there). Live comes from Twitch, checked every 2
   // minutes for the stream you're on; testing on this Mac (and the public demo), their
   // chat dock being open stands in for live.
-  const LIVE_CHECK_MS = 2 * 60 * 1000;
-  const liveOf = {}; // login -> { live, at }
   function modRinged() {
     const owner = modOwner();
     if (!EMBED || !owner || watching !== owner || myStatus === "offline" || !conn(owner)?.online) return false;
@@ -2934,7 +2963,6 @@
     if (!known || Date.now() - known.at > LIVE_CHECK_MS) checkLive(owner);
     return !!known?.live;
   }
-  const liveChecking = new Set();
   async function checkLive(login) {
     if (liveChecking.has(login)) return;
     liveChecking.add(login);
