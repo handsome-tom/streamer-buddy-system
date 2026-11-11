@@ -3466,7 +3466,19 @@
     const priv = el("div", "msgs__private");
     priv.append(el("div", "msgs__label", "The DMs"));
     if (!direct.length) priv.append(el("p", "panel__sub", "Once you and someone have added each other in Connections, your private chat with them is here."));
-    for (const r of direct) priv.append(row(r, personPic(r.with), r.with));
+    // Online: a green ring round their picture and "online". Not: when they last were.
+    for (const r of direct) {
+      const c = conn(r.with);
+      const on = !!c?.online && !c.idle;
+      const pic = personPic(r.with);
+      if (on) pic.classList.add("msgs__pic--on");
+      const b = row(r, pic, r.with);
+      const name = b.querySelector(".msgs__name");
+      const line = el("span", "msgs__nameline");
+      name.replaceWith(line);
+      line.append(name, el("span", `msgs__seen${on ? " msgs__seen--on" : ""}`, on ? "online" : c?.idle ? "idle" : (c && whenWords(c)) || "offline"));
+      priv.append(b);
+    }
     panel.append(priv);
     return panel;
   }
