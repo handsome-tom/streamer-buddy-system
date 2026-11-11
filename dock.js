@@ -337,10 +337,14 @@
     return e;
   }
 
+  // The side panel shows the connection glow in its bottom-right corner instead, on
+  // every screen (dock.css, .conn-glow).
+  const connGlow = EMBED ? document.body.appendChild(el("div", "conn-glow")) : null;
   function setStatus(text, kind) {
     statusEl.textContent = text;
     statusEl.parentElement.title = text; // the glow can't be hovered, so the bar says it
     statusEl.className = `bar__status${kind ? ` bar__status--${kind}` : ""}`;
+    if (connGlow) connGlow.className = `conn-glow${text && kind ? ` bar__status--${kind}` : ""}`;
   }
 
   // A text box that password managers leave alone.
@@ -2008,13 +2012,6 @@
   presenceMenu.setAttribute("role", "menu");
   presenceMenu.hidden = true;
   presenceBtn.after(presenceMenu);
-  // The side panel keeps your status in its bottom-right corner, on every screen, with
-  // its menu opening upward (the streamer's dock has no status button).
-  if (EMBED) {
-    const corner = el("div", "presence-corner");
-    corner.append(presenceBtn, presenceMenu);
-    document.body.append(corner);
-  }
   function drawPresence() {
     presenceBtn.hidden = !EMBED;
     if (!EMBED) return;
@@ -2057,7 +2054,7 @@
   function openPresence(open) {
     presenceMenu.hidden = !open;
     if (open) {
-      if (!EMBED) presenceMenu.style.left = `${Math.max(4, Math.min(presenceBtn.offsetLeft, innerWidth - 228))}px`; // under the button
+      presenceMenu.style.left = `${Math.max(4, Math.min(presenceBtn.offsetLeft, innerWidth - 228))}px`; // under the button
       presenceMenu.replaceChildren(...Object.entries(STATUS).map(([status, { label, says }]) => {
         const item = el("button", `presence__item${status === myStatus ? " presence__item--on" : ""}`);
         item.type = "button";
