@@ -2008,6 +2008,13 @@
   presenceMenu.setAttribute("role", "menu");
   presenceMenu.hidden = true;
   presenceBtn.after(presenceMenu);
+  // The side panel keeps your status in its bottom-right corner, on every screen, with
+  // its menu opening upward (the streamer's dock has no status button).
+  if (EMBED) {
+    const corner = el("div", "presence-corner");
+    corner.append(presenceBtn, presenceMenu);
+    document.body.append(corner);
+  }
   function drawPresence() {
     presenceBtn.hidden = !EMBED;
     if (!EMBED) return;
@@ -2050,7 +2057,7 @@
   function openPresence(open) {
     presenceMenu.hidden = !open;
     if (open) {
-      presenceMenu.style.left = `${Math.max(4, Math.min(presenceBtn.offsetLeft, innerWidth - 228))}px`; // under the button
+      if (!EMBED) presenceMenu.style.left = `${Math.max(4, Math.min(presenceBtn.offsetLeft, innerWidth - 228))}px`; // under the button
       presenceMenu.replaceChildren(...Object.entries(STATUS).map(([status, { label, says }]) => {
         const item = el("button", `presence__item${status === myStatus ? " presence__item--on" : ""}`);
         item.type = "button";
@@ -3125,12 +3132,18 @@
     // streamer here who's a connection), pick whose.
     const locked = watching === owner;
     const head = el("div", "mod__head");
+    // Their picture and name are a link to their Twitch channel (a new tab).
+    const link = el("a", "mod__link");
+    link.href = `https://www.twitch.tv/${encodeURIComponent(owner)}`;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.title = `Open twitch.tv/${owner}`;
     if (pics[owner]) {
       // Green ring only while they're online or live: green means online (or a mod).
       const img = el("img", `mod__pic${streaming(owner) || conn(owner)?.online ? " mod__pic--on" : ""}`);
       img.src = pics[owner];
       img.alt = "";
-      head.append(img);
+      link.append(img);
     }
     const able = connections.filter((c) => c.mutual).map((c) => c.login);
     const modFor = modLists?.modFor || [];
@@ -3151,8 +3164,9 @@
     } else {
       const name = el("span", "mod__name", owner);
       if (colorOf(owner)) name.style.color = colorOf(owner);
-      head.append(name);
+      link.append(name);
     }
+    if (link.childNodes.length) head.prepend(link);
     const c = conn(owner);
     head.append(el("span", `mod__where${locked ? " mod__where--here" : ""}`, locked ? "On this stream" : c?.online ? "online" : "Not the stream you're on"));
     panel.append(head);
