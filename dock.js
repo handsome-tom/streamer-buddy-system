@@ -655,7 +655,18 @@
     }
     loadPics(); // pictures for the channels you mod too (Mod view's top bar)
     syncModGroups();
+    shareModFor();
     render();
+  }
+
+  // The channels you mod go to the relay, for your connections' Mod headers ("who mods
+  // this stream"). Sent when it changes, and once on each new connection.
+  let modForSent = "";
+  function shareModFor() {
+    if (!modLists || !ready) return;
+    const list = JSON.stringify([...modLists.modFor].sort());
+    if (list === modForSent) return;
+    if (relay({ t: "modfor", list: JSON.parse(list) })) modForSent = list;
   }
 
   // Keep the two groups matching Twitch, for the people you're connected with.
@@ -796,6 +807,10 @@
 
   function gotState(m) {
     const first = !ready;
+    if (first) setTimeout(() => {
+      modForSent = ""; // a fresh connection: say it again
+      shareModFor();
+    }, 0);
     if ("owner" in m) owner = m.owner || null;
     allowed = m.allowed || null;
     limit = m.limit || null;
@@ -1821,6 +1836,9 @@
     }
     modBtn.classList.toggle("mod-btn--live", modLive);
     modBtn.classList.toggle("mod-btn--off", !modLive);
+    // The bar's right side: the button for the view you're in is the bigger one.
+    modBtn.classList.toggle("bar-btn--here", view === "mod");
+    peopleBtn.classList.toggle("bar-btn--here", view === "people" || view === "chat");
     modBtn.dataset.status = myStatus; // its ring takes your status's color (dock.css)
     modBtn.title = modBtn.ariaLabel = `${lead ? "Lead mod" : "Mod"}${modOwner() ? ` · ${modOwner()}` : ""}${modLive ? " · you're an Available mod (ready to mod)" : " · click to become an Available mod"}`;
     drawQuickAsk();
@@ -2179,6 +2197,9 @@
     if (!known || Date.now() - known.at > LIVE_CHECK_MS) checkLive(login);
     return !!known?.live;
   }
+  // A small pixel sword (the one in the Available mod person), for "mods online here".
+  const PIXEL_SWORD = '<svg viewBox="0 0 8 8" width="12" height="12" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M6 0h2v1h-2zM5 1h3v1h-3zM4 2h3v1h-3zM1 3h1v1h-1zM3 3h3v1h-3zM2 4h3v1h-3zM2 5h2v1h-2zM1 6h1v1h-1zM4 6h1v1h-1zM0 7h1v1h-1z"/></svg>';
+  const viewerCount = (n) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, "")}K` : String(n));
   const CAM_BADGE = '<svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><rect x="1.5" y="5" width="12" height="10" rx="2.2" fill="#fff"/><path d="M14.5 8.6 L18.5 6.3 V13.7 L14.5 11.4 Z" fill="#fff"/></svg>';
   function liveBadge(corner = false) {
     const b = el("span", `rank rank--live${corner ? " rank--corner" : ""}`);
@@ -3181,10 +3202,12 @@
     liveChecking.add(login);
     try {
       const r = await helix(`/streams?user_login=${encodeURIComponent(login)}`);
-      const live = r.ok ? !!(await r.json()).data?.[0] : !!liveOf[login]?.live;
-      const was = liveOf[login]?.live;
-      liveOf[login] = { live, at: Date.now() };
-      if (live !== was) render();
+      const stream = r.ok ? (await r.json()).data?.[0] : undefined;
+      const live = r.ok ? !!stream : !!liveOf[login]?.live;
+      const viewers = r.ok ? stream?.viewer_count || 0 : liveOf[login]?.viewers || 0;
+      const was = liveOf[login];
+      liveOf[login] = { live, viewers, at: Date.now() };
+      if (live !== was?.live || viewers !== was?.viewers) render();
     } catch {
       liveOf[login] = { live: !!liveOf[login]?.live, at: Date.now() };
     } finally {
@@ -3249,6 +3272,35 @@
       mark.title = `${owner}: ${status === "offline" ? "offline in StreamerSpace" : STATUS[status].label}`;
       mark.setAttribute("aria-label", mark.title);
       head.append(mark);
+    }
+    // Live: their viewer count, like Twitch's.
+    if (streaming(owner)) {
+      const n = liveOf[owner]?.viewers;
+      const live = el("span", "mod__viewers");
+      live.title = n ? `Live · ${n.toLocaleString()} watching` : "Live";
+      live.append(el("span", "mod__livedot"), el("span", "", n ? viewerCount(n) : "Live"));
+      head.append(live);
+    }
+    // Your connections who mod this channel and are online now: a pixel sword, then their
+    // small pictures.
+    const theirMods = connections.filter((x) => x.mutual && x.online && x.login !== owner && (x.modFor || []).includes(owner));
+    if (theirMods.length) {
+      const mods = el("span", "mod__mods");
+      mods.title = `Online mods here: ${theirMods.map((x) => x.login).join(", ")}`;
+      const sword = el("span", "mod__sword");
+      sword.innerHTML = PIXEL_SWORD;
+      mods.append(sword);
+      for (const x of theirMods) {
+        const face = pics[x.login] ? el("img", "mod__modpic") : el("span", "mod__modpic mod__modpic--letter", x.login[0].toUpperCase());
+        if (pics[x.login]) {
+          face.src = pics[x.login];
+          face.alt = "";
+        }
+        face.title = `${x.login}${x.idle ? " (idle)" : ""}`;
+        if (x.idle) face.classList.add("mod__modpic--idle");
+        mods.append(face);
+      }
+      head.append(mods);
     }
     head.append(el("span", `mod__where${locked ? " mod__where--here" : ""}`, locked ? "On this stream" : c?.online ? "online" : "Not the stream you're on"));
     panel.append(head);

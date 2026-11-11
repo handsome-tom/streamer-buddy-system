@@ -5392,3 +5392,32 @@ body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; 
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 .dot .dot__unlinked svg { width: 14px; height: 14px; }
+/* The broken chain, quieter: just the icon over the photo, part see-through, no disc. */
+.dot .dot__unlinked,
+.dots--mod .dot__unlinked,
+.dots--mods .dot__unlinked { background: none; box-shadow: none; opacity: 0.6; }
+.dot .dot__unlinked svg { filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.9)); }
+
+/* The Mod header, after the name: live viewers (red dot and count, like Twitch's), then a
+   pixel sword and the small pictures of your connections modding here who are online. */
+.mod__viewers { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: 12px; font-weight: 700; color: #ff8a8a; font-variant-numeric: tabular-nums; }
+.mod__livedot { width: 7px; height: 7px; border-radius: 50%; background: #eb0400; box-shadow: 0 0 6px rgba(235, 4, 0, 0.7); }
+.mod__mods { display: inline-flex; align-items: center; gap: 3px; flex: none; min-width: 0; }
+.mod__sword { display: inline-flex; color: #00ad03; margin-right: 1px; }
+.mod__modpic { width: 16px; height: 16px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 1px rgba(0, 173, 3, 0.8); }
+.mod__modpic--letter { display: inline-grid; place-items: center; font-size: 9px; font-weight: 800; color: #fff; background: #2f2f35; }
+.mod__modpic--idle { opacity: 0.55; box-shadow: 0 0 0 1px color-mix(in srgb, var(--yellow) 70%, transparent); }
+
+/* The side panel bar's right side: Mod (your picture), your status and Connections. The one
+   for the view you're in is 26px; the others are 22px, icons scaled down with them. */
+#modBtn, #peopleBtn { width: 22px; height: 22px; min-width: 0; }
+#modBtn.bar-btn--here, #peopleBtn.bar-btn--here { width: 26px; height: 26px; }
+#peopleBtn svg { width: 12px; height: 12px; }
+#peopleBtn.bar-btn--here svg { width: 14px; height: 14px; }
+#modBtn .mod-btn__badge { width: 12px; height: 12px; right: -4px; bottom: -4px; }
+#modBtn .mod-btn__badge svg { width: 8px; height: 8px; }
+#modBtn.bar-btn--here .mod-btn__badge { width: 14px; height: 14px; right: -5px; bottom: -5px; }
+#modBtn.bar-btn--here .mod-btn__badge svg { width: 9px; height: 9px; }
+#presenceBtn { height: 22px; min-width: 22px; }
+#presenceBtn::before { width: 11px; height: 13px; }
+#presenceBtn.presence--modding::before { width: 19px; }

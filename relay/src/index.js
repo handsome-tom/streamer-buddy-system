@@ -97,6 +97,8 @@
 //   seen { id }
 //   allow { login, on }     the owner only: put someone on (or take them off) the allow list
 //   allow { login, limit }  the owner only: how many people they can add (8 to 100)
+//   modfor { list }         the channels you mod (from your own Twitch sign-in), so your mutual
+//                           connections' panels can show who mods a stream they're on
 // Messages to a page:
 //   state { me, status, since, connections, requests, tags, questions, rooms, chat, statsOn, stats }   (on sign-in, and whenever
 //                                                       connections or who's online change)
@@ -122,6 +124,7 @@ import { lookup } from "./lookup.js";
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const TOP_EIGHT = 8; // people anyone but the owner can add, unless the owner gives them more
 const MAX_LIMIT = 100;
+const MAX_MOD_FOR = 300; // channels someone mods, as shared with their connections
 const MAX_LEN = 200;
 const MAX_FLAGGED_LEN = 500; // a whole Twitch chat message
 const PIN_MS = 5 * 60 * 1000;
@@ -204,6 +207,7 @@ export class Hub {
       // Seen: the asker, of an answer; or the person a plain message went to.
       else if (m.t === "nudge") await this.nudge(ws, who, m.id, !!m.warn);
       else if (m.t === "allow") await this.setAllowed(who.login, m);
+      else if (m.t === "modfor") await this.setModFor(who.login, m.list);
       else if (m.t === "seen") await this.update(ws, who, m.id, (q) => !q.seenAt && ((q.from === who.login && q.answer) || (q.to === who.login && q.note && !q.answer && !q.dismissed)), (q) => (q.seenAt = Date.now()));
     } catch (e) {
       this.send(ws, { t: "error", why: "Something went wrong on the relay" });
@@ -271,6 +275,18 @@ export class Hub {
       for (const l of here) await this.linkOwner(l, true);
     }
     return a;
+  }
+
+  // The channels someone mods, as their own panel read them from Twitch. Shared only with
+  // their mutual connections (each connection's "modFor" in state).
+  async setModFor(login, list) {
+    if (!Array.isArray(list)) return;
+    const clean = [...new Set(list.map((l) => String(l || "").toLowerCase()).filter((l) => /^[a-z0-9_]{2,25}$/.test(l)))].sort().slice(0, MAX_MOD_FOR);
+    const user = (await this.ctx.storage.get(`u:${login}`)) || { list: [] };
+    if (JSON.stringify(user.modFor || []) === JSON.stringify(clean)) return;
+    user.modFor = clean;
+    await this.ctx.storage.put(`u:${login}`, user);
+    await this.tellConnections(login);
   }
 
   limitOf(login, a) {
@@ -408,7 +424,8 @@ export class Hub {
       const since = online ? users[l]?.onlineAt || 0 : 0;
       const last = mutual && !online ? users[l]?.lastOnline || 0 : 0;
       // modding: online and ready to mod (their sword is lit).
-      return { login: l, mutual, online, idle: online && users[l]?.status === "idle", modding: online && !users[l]?.status, since, last };
+      // modFor: the channels they mod (mutual connections only).
+      return { login: l, mutual, online, idle: online && users[l]?.status === "idle", modding: online && !users[l]?.status, since, last, modFor: mutual ? users[l]?.modFor || [] : [] };
     });
     const requests = Object.entries(users).filter(([l, u]) => l !== login && u.list.includes(login) && !mine.includes(l)).map(([l]) => l);
     const questions = [];
