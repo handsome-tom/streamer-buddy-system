@@ -3121,6 +3121,7 @@
   }
   if (!LIVECHAT) setInterval(() => ready && drawDots(), 30000); // the 5-minute glow fades with time
   if (EMBED) setInterval(() => me && modOwner() && modRinged() !== modBtn.classList.contains("mod-btn--live") && render(), 30000);
+  let reactionsTimer = 0; // takes a reaction away 3 minutes after it came
   function modPanel() {
     const owner = modOwner();
     const panel = el("div", "panel mod");
@@ -3178,14 +3179,20 @@
     // Their feed (Streamer View), drawn by drawStreamerView after this is on the page.
     panel.append(svEl);
 
-    // Their reactions to what you sent.
+    // Their reactions to what you sent: just the heading, unless they've reacted in the
+    // last 3 minutes; each reaction shows for 3 minutes, then goes.
+    const REACTION_MS = 3 * 60 * 1000;
     const reacted = Object.entries(sent)
-      .filter(([, q]) => q.to === owner && q.answer && !q.gone)
+      .filter(([, q]) => q.to === owner && q.answer && !q.gone && Date.now() - q.answer.at < REACTION_MS)
       .sort((a, b) => b[1].answer.at - a[1].answer.at)
       .slice(0, MAX_REACTIONS);
-    const rx = el("div", "mod__reactions");
+    clearTimeout(reactionsTimer);
+    if (reacted.length) {
+      const next = Math.min(...reacted.map(([, q]) => q.answer.at)) + REACTION_MS - Date.now();
+      reactionsTimer = setTimeout(() => view === "mod" && render(), Math.max(1000, next + 50));
+    }
+    const rx = el("div", `mod__reactions${reacted.length ? "" : " mod__reactions--none"}`);
     rx.append(el("div", "mod__label", "Their reactions"));
-    if (!reacted.length) rx.append(el("p", "panel__sub", "Nothing yet. When they answer you, it shows here."));
     for (const [, q] of reacted) {
       const row = el("div", "mod__rx");
       const icon = el("span", `log__icon answer--${q.answer.code}`);

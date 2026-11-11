@@ -5164,3 +5164,12 @@ body.embed .space__mark { right: auto; left: 14px; }
 .dots--mods .dots__label { left: 3px; }
 .dots--mod .rank-pair, .dots--mods .rank-pair { right: -3px; bottom: -3px; }
 .dots--mod .dot__unlinked, .dots--mods .dot__unlinked { left: -3px; bottom: -3px; }
+/* Mod: their reactions, no box: the heading, and under it only reactions from the last
+   3 minutes (dock.js, modPanel). */
+.mod__reactions, body.has-space .mod__reactions { padding: 0 2px; border: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.mod__reactions--none .mod__label { margin-bottom: 0; }
+/* Mod side: the streamers strip fills the bar up to its buttons again (so they sit on the
+   right), and its shade runs from behind the pictures and fades away over the gap before
+   your status. */
+.dots--mod { flex: 1 1 0; background: linear-gradient(90deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.7) 22%, rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0) 100%); border-radius: 0; }
+body.embed .bar:has(.dots--mod) .bar__status { flex: 0 0 0; min-width: 0; } /* its words live in the bar's tooltip; the strip takes the room */
