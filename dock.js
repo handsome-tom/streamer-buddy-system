@@ -1751,6 +1751,7 @@
     }
     modBtn.classList.toggle("mod-btn--live", modLive);
     modBtn.classList.toggle("mod-btn--off", !modLive);
+    modBtn.dataset.status = myStatus; // its ring takes your status's color (dock.css)
     modBtn.title = modBtn.ariaLabel = `${lead ? "Lead mod" : "Mod"}${modOwner() ? ` · ${modOwner()}` : ""}${modLive ? " · you're an Available mod (ready to mod)" : " · set your status to Available mod to show your sword"}`;
     drawQuickAsk();
     drawPresence();
@@ -4956,10 +4957,15 @@
   quickTo.addEventListener("change", drawQuick);
   // The dock being resized can change it between one row and full.
   addEventListener("resize", () => me && render());
-  modBtn.addEventListener("click", () => {
+  modBtn.addEventListener("click", (e) => {
     view = "mod";
     render();
     main.scrollTop = 0;
+    // Showing your picture (not Available mod): it also opens your status menu, to change it.
+    if (modBtn.classList.contains("mod-btn--off")) {
+      e.stopPropagation(); // or the click-elsewhere closer would shut it straight away
+      openPresence(presenceMenu.hidden);
+    }
   });
   askBtn.addEventListener("click", () => {
     if (DECK) {

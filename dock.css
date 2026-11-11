@@ -5145,3 +5145,22 @@ body.embed .space__mark { right: auto; left: 14px; }
 .msgs__nameline { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
 .msgs__seen { overflow: hidden; color: var(--msg-muted); font-size: 11px; white-space: nowrap; text-overflow: ellipsis; }
 .msgs__seen--on { color: var(--good); }
+/* The Mod button's ring around your picture follows your status, like your little person:
+   green for Available mod, orange for Online, yellow for Idle, gray for Invisible. */
+.mod-btn.mod-btn--off[data-status="online"], body.has-space .mod-btn.mod-btn--off[data-status="online"] { box-shadow: 0 0 0 2px #0e0e10, 0 0 0 4px var(--honey), 0 0 10px color-mix(in srgb, var(--honey) 45%, transparent); }
+.mod-btn.mod-btn--off[data-status="idle"], body.has-space .mod-btn.mod-btn--off[data-status="idle"] { box-shadow: 0 0 0 2px #0e0e10, 0 0 0 4px color-mix(in srgb, var(--yellow) 75%, transparent); }
+.mod-btn.mod-btn--off[data-status="offline"], body.has-space .mod-btn.mod-btn--off[data-status="offline"] { box-shadow: 0 0 0 2px #0e0e10, 0 0 0 4px var(--muted); }
+/* Mod: their feed, no box: a soft fuzzy patch of black shadow, like the empty slot on the
+   streamer's dock, that what comes in fills. */
+.mod .sv, body.has-space .mod .sv { border: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.mod .sv.sv--glow { box-shadow: none; }
+.mod .sv__body { background: radial-gradient(ellipse 52% 58% at 50% 50%, #000 0%, rgba(0, 0, 0, 0.92) 40%, rgba(0, 0, 0, 0.6) 70%, rgba(0, 0, 0, 0) 100%); }
+.mod .sv__body > .sv__empty { display: grid; place-items: center; height: 100%; padding: 0; color: var(--muted); font-size: 11.5px; }
+/* Spacing in both bars' people strip: room between pictures for the badges that stick out
+   of their corners (camera / sword / chain), room after the camera or sword label, and the
+   badges tucked a little closer in. */
+.dots--mod, .dots--mods { gap: 12px; padding-left: 25px; padding-right: 10px; }
+.dots--mod .dots__label { left: 8px; }
+.dots--mods .dots__label { left: 3px; }
+.dots--mod .rank-pair, .dots--mods .rank-pair { right: -3px; bottom: -3px; }
+.dots--mod .dot__unlinked, .dots--mods .dot__unlinked { left: -3px; bottom: -3px; }
