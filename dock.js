@@ -359,97 +359,6 @@
     return input;
   }
 
-  // Over the space backdrop, a retro pixel layer: a small canvas, drawn about 3x too small
-  // and scaled up with hard edges, so every star is a chunky pixel. Stars blink on and off
-  // in steps (8 frames a second, like an old game), and now and then a pixel shooting star
-  // crosses. Every 4.5 minutes it glitches for a moment: a few rows slip sideways and pick
-  // up a red/cyan split, then it's back. Only the backdrop; nothing you read moves.
-  function pixelSpace(space) {
-    const PX = 3; // screen pixels per canvas pixel
-    const FPS = 8;
-    const GLITCH_EVERY_MS = 4.5 * 60 * 1000;
-    const GLITCH_MS = 420;
-    const canvas = el("canvas", "space__pixels");
-    space.append(canvas);
-    const ctx = canvas.getContext("2d");
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let w = 0, h = 0, stars = [], shooter = null, glitchUntil = 0, timer = 0;
-    const COLORS = ["#ffffff", "#cfe0ff", "#9fc2ff", "#7db0ef", "#d9c8ff"];
-    function size() {
-      w = Math.max(1, Math.ceil(innerWidth / PX));
-      h = Math.max(1, Math.ceil(innerHeight / PX));
-      canvas.width = w;
-      canvas.height = h;
-      const count = Math.round((w * h) / 260); // sparse: about one star per 260 canvas pixels
-      stars = Array.from({ length: count }, () => ({
-        x: Math.floor(Math.random() * w),
-        y: Math.floor(Math.random() * h),
-        c: COLORS[Math.floor(Math.random() * COLORS.length)],
-        big: Math.random() < 0.08, // a few plus-shaped ones
-        period: 6 + Math.floor(Math.random() * 30), // frames per blink cycle
-        phase: Math.floor(Math.random() * 40),
-      }));
-    }
-    let frame = 0;
-    function draw() {
-      frame++;
-      ctx.clearRect(0, 0, w, h);
-      for (const st of stars) {
-        const t = (frame + st.phase) % st.period;
-        const a = still ? 0.55 : t < st.period * 0.15 ? 0 : t < st.period * 0.3 ? 0.35 : 0.7;
-        if (!a) continue;
-        ctx.globalAlpha = a * 0.6;
-        ctx.fillStyle = st.c;
-        ctx.fillRect(st.x, st.y, 1, 1);
-        if (st.big && a > 0.5) {
-          ctx.globalAlpha = a * 0.25;
-          ctx.fillRect(st.x - 1, st.y, 1, 1); ctx.fillRect(st.x + 1, st.y, 1, 1);
-          ctx.fillRect(st.x, st.y - 1, 1, 1); ctx.fillRect(st.x, st.y + 1, 1, 1);
-        }
-      }
-      if (still) return;
-      // A pixel shooting star, about once every 40 seconds: a short trail, stepping down-left.
-      if (!shooter && Math.random() < 1 / (40 * FPS)) shooter = { x: Math.floor(w * (0.4 + Math.random() * 0.6)), y: Math.floor(Math.random() * h * 0.4), life: 0 };
-      if (shooter) {
-        for (let i = 0; i < 6; i++) {
-          ctx.globalAlpha = 0.55 * (1 - i / 6);
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(shooter.x + i * 2, shooter.y - i, 2, 1);
-        }
-        shooter.x -= 4; shooter.y += 2; shooter.life++;
-        if (shooter.life > 30 || shooter.x < -12 || shooter.y > h) shooter = null;
-      }
-      // The glitch: a few thin bands copied sideways, with a faint red/cyan split.
-      if (Date.now() < glitchUntil) {
-        for (let i = 0; i < 4; i++) {
-          const y = Math.floor(Math.random() * h), bh = 1 + Math.floor(Math.random() * 4), dx = (Math.random() < 0.5 ? -1 : 1) * (2 + Math.floor(Math.random() * 6));
-          ctx.globalAlpha = 1;
-          ctx.drawImage(canvas, 0, y, w, bh, dx, y, w, bh);
-          ctx.globalAlpha = 0.07;
-          ctx.fillStyle = i % 2 ? "#ff3b6b" : "#3be0ff";
-          ctx.fillRect(0, y, w, bh);
-        }
-      }
-      ctx.globalAlpha = 1;
-    }
-    function glitch() {
-      if (document.hidden) return;
-      glitchUntil = Date.now() + GLITCH_MS;
-      space.classList.add("space--glitch");
-      setTimeout(() => space.classList.remove("space--glitch"), GLITCH_MS);
-    }
-    function run() {
-      clearInterval(timer);
-      if (!still && !document.hidden) timer = setInterval(draw, 1000 / FPS);
-    }
-    size();
-    draw();
-    addEventListener("resize", () => { size(); draw(); });
-    if (still) return;
-    document.addEventListener("visibilitychange", run); // rests while hidden
-    run();
-    setInterval(glitch, GLITCH_EVERY_MS);
-  }
   function bounceTom(space) {
     // A little meteor: the head (spinning) with a faint lunar glow and crater texture, and a
     // faint tail trailing behind whichever way it drifts.
@@ -865,7 +774,7 @@
 
   function gotState(m) {
     const first = !ready;
-    if (first) setTimeout(spinPresence, 400);
+    if (first) setTimeout(() => onlineNow() || spinPresence(), 400);
     connections = m.connections || [];
     requests = m.requests || [];
     tags = m.tags || {};
@@ -2105,7 +2014,7 @@
     const now = STATUS[myStatus] || STATUS.modding;
     presenceBtn.className = `presence presence--bar presence--${myStatus}${presenceMenu.hidden ? "" : " presence--open"}`;
     // Just the dot (saves room in the bar); the words are in its tooltip and menu.
-    if (!presenceBtn.querySelector(".presence__spin")) presenceBtn.textContent = "";
+    if (!presenceBtn.querySelector(".presence__spin, .presence__now")) presenceBtn.textContent = "";
     presenceBtn.ariaLabel = now.label;
     presenceBtn.title = `${now.label}${myStatus !== "offline" && mySince ? ` since ${clock(mySince)}` : ""}. ${now.says} Click to change.`;
     presenceBtn.setAttribute("aria-haspopup", "menu");
@@ -2125,6 +2034,17 @@
     setTimeout(() => ring.remove(), 2700);
   }
   setInterval(spinPresence, SPIN_AGAIN_MS);
+  // The first time you open the panel in 24 hours: "Online Now!" in pixels beside your
+  // dot instead of the spin, for 4 seconds, then it fades.
+  function onlineNow() {
+    if (!EMBED || presenceBtn.hidden || myStatus === "offline" || Date.now() - get("onlineNowAt", 0) < 24 * 3600 * 1000) return false;
+    put("onlineNowAt", Date.now());
+    const tag = el("span", "presence__now", "Online Now!");
+    tag.setAttribute("aria-hidden", "true");
+    presenceBtn.append(tag);
+    setTimeout(() => tag.remove(), 4700);
+    return true;
+  }
   function openPresence(open) {
     presenceMenu.hidden = !open;
     if (open) {
@@ -2209,7 +2129,6 @@
   function drawDots() {
     const modBar = EMBED && view === "mod" && !!me;
     dotsEl.classList.toggle("dots--mod", modBar);
-    if (!modBar) dotsEl.classList.remove("dots--streaming");
     if (modBar) return drawModDots();
     // Your own chat color, for the glow round lines you bookmarked.
     if (me && colorOf(me.login)) document.body.style.setProperty("--my-color", colorOf(me.login));
@@ -2316,6 +2235,15 @@
     }
     const list = dots.filter(Boolean);
     if (LIVECHAT) list.sort((a, b) => a.dataset.order.localeCompare(b.dataset.order));
+    // The streamer's twin of the mod side's camera: a faded green sword at the bar's left
+    // edge, so it's clear these are your mods.
+    dotsEl.classList.toggle("dots--mods", LIVECHAT && list.length > 0);
+    if (LIVECHAT && list.length) {
+      const label = el("span", "dots__label dots__label--sword");
+      label.innerHTML = SWORD_ICON.replaceAll("#fff", "currentColor");
+      label.title = "Your mods in the chat.";
+      list.unshift(label);
+    }
     dotsEl.replaceChildren(...list);
   }
 
@@ -2377,8 +2305,6 @@
       return dot;
     });
     // A small label, so it's clear these are your streamers and not your connections.
-    // The bar turns dark purple while any of them is streaming; black otherwise.
-    dotsEl.classList.toggle("dots--streaming", modChannels().some(streaming));
     // A faded camera at the bar's left edge: these are your streamers.
     const label = el("span", "dots__label");
     label.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="1.5" y="5" width="12" height="10" rx="2.2" fill="currentColor"/><path d="M14.5 8.6 L18.5 6.3 V13.7 L14.5 11.4 Z" fill="currentColor"/></svg>';
@@ -3198,7 +3124,8 @@
     const locked = watching === owner;
     const head = el("div", "mod__head");
     if (pics[owner]) {
-      const img = el("img", "mod__pic");
+      // Green ring only while they're online or live: green means online (or a mod).
+      const img = el("img", `mod__pic${streaming(owner) || conn(owner)?.online ? " mod__pic--on" : ""}`);
       img.src = pics[owner];
       img.alt = "";
       head.append(img);
@@ -4933,7 +4860,7 @@
       // The mod side panel: Tom's head, upside down, drifting edge to edge like an old DVD
       // logo, so faint it's barely there.
       if (EMBED) bounceTom(space);
-      pixelSpace(space);
+      space.append(el("div", "space__pixels")); // retro pixel stars (dock.css)
       document.body.prepend(space);
       document.body.classList.add("has-space");
     }

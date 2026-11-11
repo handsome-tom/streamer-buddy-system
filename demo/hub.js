@@ -97,8 +97,10 @@ const relay = (() => {
       if (Array.isArray(key)) return key.filter((k) => store.delete(k)).length;
       return store.delete(key);
     },
-    async list({ prefix = "" } = {}) {
-      return new Map([...store.keys()].filter((k) => k.startsWith(prefix)).sort().map((k) => [k, clone(store.get(k))]));
+    async list({ prefix = "", reverse = false, limit = Infinity } = {}) {
+      const keys = [...store.keys()].filter((k) => k.startsWith(prefix)).sort();
+      if (reverse) keys.reverse(); // as Cloudflare's: newest first, then the limit
+      return new Map(keys.slice(0, limit).map((k) => [k, clone(store.get(k))]));
     },
   };
   const open = new Set(); // the relay's side of each connection

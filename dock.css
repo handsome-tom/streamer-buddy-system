@@ -3555,7 +3555,7 @@ html .space::after { background-image: radial-gradient(2px 2px at 440px 285px, r
 @keyframes space-drift2 { to { background-position: 560px -280px; } }
 @keyframes space-breathe { from { filter: hue-rotate(0deg) brightness(1); } to { filter: hue-rotate(-12deg) brightness(1.12); } }
 @keyframes space-orbit { from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-20px, 18px) rotate(-8deg); } }
-@media (prefers-reduced-motion: reduce) { .space, .space::before, .space::after, .space__planet { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .space, .space::before, .space::after, .space__planet, .space__pixels { animation: none !important; } }
 
 /* Over space, the bar and cards are glass: dark, a little see-through, softly blurred. */
 body.has-space .bar { background: rgba(6, 9, 18, 0.6); backdrop-filter: blur(10px); border-bottom-color: rgba(125, 176, 239, 0.12); }
@@ -4189,7 +4189,8 @@ body.has-space .mod-btn:hover { background: #12c215; }
 body.has-space .mod-btn.mod-btn--live { box-shadow: 0 0 0 2px #0e0e10, 0 0 0 4px #00ad03, 0 0 10px rgba(0, 173, 3, 0.55); }
 .mod .sv { margin: 0 0 10px; }
 .mod__head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.mod__pic { flex: none; width: 28px; height: 28px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px #00ad03; }
+.mod__pic { flex: none; width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+.mod__pic--on { box-shadow: 0 0 0 2px #00ad03; } /* green only while they're online or live */
 .mod__name { font-size: 15px; font-weight: 700; color: var(--text); }
 .mod__pick { font: inherit; font-size: 14px; font-weight: 700; color: var(--text); background: #1f1f24; border: 1px solid #2f2f37; border-radius: 6px; padding: 3px 6px; }
 .mod__where { margin-left: auto; font-size: 11px; color: var(--muted); }
@@ -4857,27 +4858,27 @@ body.livechat.has-space .bar__planet { opacity: 0.52; }
 
 /* The side panel's Mod view: the channels you mod in the top bar. Online (or live) ones
    wear a glowing lavender halo; offline ones are dimmed; the one Mod shows is ringed in
-   mod green (inside the halo when they're online). */
+   mod green while they're online (inside the halo), plain light gray while they're not:
+   green only ever means online (or a mod). */
 .dot--chan.dot--off img, .dot--chan.dot--off .dot__letter { filter: grayscale(0.85) brightness(0.6); }
-.dot--chan.dot--current:not(:hover) { box-shadow: 0 0 0 2px #00ad03; }
+.dot--chan.dot--current:not(:hover) { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55); }
 .dot--chan.dot--on:not(:hover) { box-shadow: 0 0 0 2px #c8b4ff, 0 0 8px 2px rgba(185, 160, 255, 0.75), 0 0 16px 4px rgba(185, 160, 255, 0.35); }
 .dot--chan.dot--live.dot--current:not(:hover) { box-shadow: 0 0 0 2px #c8b4ff, 0 0 8px 2px rgba(185, 160, 255, 0.75), 0 0 16px 4px rgba(185, 160, 255, 0.35); }
 .dot--chan.dot--on.dot--current:not(.dot--live):not(:hover) { box-shadow: 0 0 0 2px #00ad03, 0 0 0 4px #c8b4ff, 0 0 10px 3px rgba(185, 160, 255, 0.75), 0 0 18px 5px rgba(185, 160, 255, 0.35); }
 
-/* Mod view's top bar: your streamers, set apart from the rest of the bar. A heavy black
-   background behind the left side (dark purple while one of them is streaming) fades to
-   clear on the right, with a thin mod-green edge and a small label. */
-.bar:has(.dots--mod)::before {
+/* Both sides' top bar: the people part (your streamers on the mod side, your mods on the
+   streamer's) is set apart by a soft black shade on the left that fades out by the
+   middle, with a thin mod-green edge and a small faded label (camera / sword). */
+.bar:has(.dots--mod)::before, .bar:has(.dots--mods)::before {
   content: "";
   position: absolute;
   z-index: -1;
   inset: 0 auto 0 0;
-  width: 75%;
-  background: linear-gradient(90deg, #000 0%, rgba(0, 0, 0, 0.94) 35%, rgba(0, 0, 0, 0.6) 65%, transparent 100%);
+  width: 55%;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.6) 40%, transparent 100%);
   box-shadow: inset 2px 0 0 #00ad03;
   pointer-events: none;
 }
-.bar:has(.dots--streaming)::before { background: linear-gradient(90deg, #1d0b38 0%, rgba(29, 11, 56, 0.95) 40%, rgba(29, 11, 56, 0.65) 70%, transparent 100%); }
 .dots--mod { align-items: center; }
 .dots__label {
   /* A faded camera, centered down the bar's left edge: these are your streamers. */
@@ -4894,7 +4895,9 @@ body.livechat.has-space .bar__planet { opacity: 0.52; }
   pointer-events: auto;
 }
 .dots__label svg { display: block; width: 100%; height: 100%; }
-.dots--mod { padding-left: 22px; }
+.dots--mod, .dots--mods { padding-left: 22px; }
+.dots--mods { position: relative; align-items: center; }
+.dots__label--sword { color: #3fd23f; opacity: 0.7; }
 /* A streamer you mod who isn't on Streamer Buddy yet: a small broken-chain badge at the
    picture's bottom-left (the sword or hammer has the bottom-right). */
 .dot__unlinked { position: absolute; z-index: 3; left: -4px; bottom: -4px; display: grid; place-items: center; width: 14px; height: 14px; background: #53535f; border: 2px solid var(--panel, #18181b); border-radius: 50%; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); pointer-events: none; }
@@ -5051,7 +5054,7 @@ body.has-space .msg-btn.pill--on, .msg-btn.pill--on { box-shadow: none; }
 /* Silkscreen (fonts/silkscreen.ttf, SIL Open Font License: fonts/silkscreen-OFL.txt).
    Everything else stays Plus Jakarta Sans. One weight only, so no fake bold. */
 @font-face { font-family: "Silkscreen"; font-weight: 400; font-display: swap; src: url("fonts/silkscreen.ttf") format("truetype"); }
-.sv__title, .mod__label, .log__head > span:first-child, .oc-status {
+.sv__title, .mod__label, .log__head > span:first-child, .oc-status, .msgs__label, .chat__day {
   font-family: "Silkscreen", "Plus Jakarta Sans", sans-serif;
   font-weight: 400;
   font-synthesis: none;
@@ -5065,27 +5068,22 @@ body.has-space .msg-btn.pill--on, .msg-btn.pill--on { box-shadow: none; }
    Pixelify Sans (fonts/pixelify-sans.ttf, SIL Open Font License: fonts/pixelify-sans-OFL.txt). */
 @font-face { font-family: "Pixelify Sans"; font-weight: 400 700; font-display: swap; src: url("fonts/pixelify-sans.ttf") format("truetype"); }
 .mod__name, .mod__pick { font-family: "Pixelify Sans", "Plus Jakarta Sans", sans-serif; font-weight: 600; font-size: 16px; letter-spacing: 0.01em; }
+/* Messages too: names and the headings in Pixelify Sans; what people say stays in Plus Jakarta Sans. */
+.msgs .panel__head, .msgs__name, .dm__name, .chat__from { font-family: "Pixelify Sans", "Plus Jakarta Sans", sans-serif; font-weight: 600; letter-spacing: 0.01em; }
+.msgs .panel__head, .dm__name { font-size: 16px; }
+.msgs__name { font-size: 14px; }
+.chat__from { font-size: 12px; }
 
-/* ===== Retro pixels over the space backdrop (dock.js, pixelSpace) ===== */
-/* A low-res canvas of blinking pixel stars, scaled up with hard edges, with faint
-   scanlines laid over it. Above the planet and Tom's head, still behind everything else. */
-.space__pixels {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-  image-rendering: pixelated;
-  background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px);
-}
-/* The glitch, every 4.5 minutes for under half a second: the backdrop jumps a couple of
-   pixels and its colors split slightly. Subtle on purpose. */
-.space--glitch { animation: space-glitch 0.42s steps(1) 1 !important; }
-@keyframes space-glitch {
-  0% { transform: translate(2px, 0); filter: hue-rotate(-20deg) saturate(1.4); }
-  25% { transform: translate(-3px, 1px); filter: hue-rotate(25deg) saturate(1.3); }
-  50% { transform: translate(1px, -1px); filter: none; }
-  75% { transform: translate(-1px, 0); filter: hue-rotate(-10deg); }
-  100% { transform: none; filter: none; }
-}
-@media (prefers-reduced-motion: reduce) { .space--glitch { animation: none !important; } }
+/* ===== Retro pixels over the space backdrop: CSS only, barely there ===== */
+/* Square pixel stars and scanlines at 2%, stepping along like an old game; once every
+   4.5 minutes the whole backdrop jumps a few pixels for a split second (the glitch). */
+.space__pixels { position: absolute; inset: 0; z-index: 1; opacity: 0.02; background: repeating-linear-gradient(180deg, #000 0 1px, transparent 1px 3px), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' shape-rendering='crispEdges'%3E%3Cg fill='%23fff'%3E%3Crect x='9' y='12' width='3' height='3'/%3E%3Crect x='60' y='6' width='3' height='3'/%3E%3Crect x='81' y='45' width='3' height='3'/%3E%3Crect x='30' y='69' width='3' height='3'/%3E%3Crect x='72' y='84' width='3' height='3'/%3E%3C/g%3E%3Cg fill='%237db0ef'%3E%3Crect x='42' y='33' width='3' height='3'/%3E%3Crect x='15' y='48' width='3' height='3'/%3E%3Crect x='54' y='60' width='3' height='3'/%3E%3C/g%3E%3C/svg%3E"); animation: px-drift 48s steps(96) infinite; }
+@keyframes px-drift { to { background-position: 0 0, -96px 96px; } }
+.space { animation: space-breathe 18s ease-in-out infinite alternate, space-glitch 270s steps(1) infinite; }
+@keyframes space-glitch { 0%, 99.84% { transform: none; } 99.88% { transform: translate(3px, 0); } 99.92% { transform: translate(-2px, 1px); } 99.96% { transform: translate(1px, -1px); } }
+
+/* "Online Now!" beside your dot, once a day (dock.js, onlineNow): 4 seconds, then it fades. */
+.presence__now { position: absolute; right: 100%; top: 50%; margin-right: 2px; transform: translateY(-50%); white-space: nowrap; pointer-events: none;
+  font: 400 10px/1 "Silkscreen", "Plus Jakarta Sans", sans-serif; letter-spacing: 0.06em; color: #3fd23f; -webkit-font-smoothing: none;
+  text-shadow: 0 0 6px rgba(0, 173, 3, 0.6), 0 1px 2px #000; animation: presenceNow 4.7s linear forwards; }
+@keyframes presenceNow { 0% { opacity: 0; } 4% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }

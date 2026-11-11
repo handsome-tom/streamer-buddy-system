@@ -468,7 +468,7 @@
     </div>
   </section>
 <script type="module">
-  import { Socket, pretendTwitch } from "./hub.js?v=119"; // the number: bump it when hub.js changes, so browsers fetch the new one
+  import { Socket, pretendTwitch } from "./hub.js?v=120"; // the number: bump it when hub.js changes, so browsers fetch the new one
 
   const said = (text) => (document.getElementById("said").textContent = text);
   const pick = (list) => list[Math.floor(Math.random() * list.length)];
@@ -759,6 +759,22 @@
     send("mod2", { t: "connect", login: "streamer" });
     send("mod2", { t: "connect", login: "mod1" });
     await wait(300);
+    // An example group for the Messages tab: the streamer's "Mod squad" (both mods), with
+    // its room open and a little already said in it.
+    send("streamer", { t: "tag", tag: "Mod squad", login: "mod1", on: true });
+    send("streamer", { t: "tag", tag: "Mod squad", login: "mod2", on: true });
+    await wait(150);
+    send("streamer", { t: "room", tag: "Mod squad" });
+    await wait(150);
+    for (const [login, text] of [
+      ["streamer", "Thanks for modding tonight, you two 💜"],
+      ["mod2", "Happy to! Raid plan still the same?"],
+      ["streamer", "Yep, we raid after the boss fight"],
+      ["mod2", "I'll have the !raid message ready"],
+    ]) {
+      send(login, { t: "say", owner: "streamer", text });
+      await wait(60);
+    }
     document.getElementById("mod").src = "../?dev=mod1&embed=ext&watch=streamer&modfor=streamer,streamer2&sandbox";
     document.getElementById("obs").src = "../?dev=streamer&livechat&ownchat&mock&lightms=6000&mods=mod1,mod2&sandbox";
     // Nothing happens until someone presses something: the tour walks them through it.
