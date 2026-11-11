@@ -5338,3 +5338,5 @@ body.livechat .oc-bar--finding::after { display: none; }
 .top8__discord { display: inline-flex; align-items: center; gap: 8px; margin: -4px 0 14px; padding: 6px 12px; background: rgba(63, 125, 216, 0.14); border: 1px solid rgba(125, 176, 239, 0.3); border-radius: 8px; user-select: all; }
 .top8__dlabel { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #7db0ef; }
 .top8__dname { font-size: 13px; color: #fff; }
+/* The Mod view's header: the streamer's status as the pixel person, no ring on their picture. */
+.mod__status { margin-left: -2px; }

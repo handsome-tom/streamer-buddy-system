@@ -534,6 +534,7 @@
     // The Twitch channel open in the tab beside the panel, for Streamer View.
     if (e.data?.t === "hub-channel") {
       watching = typeof e.data.channel === "string" ? e.data.channel.toLowerCase() : "";
+      tabChannel = watching;
       // The Ask box follows the stream you're in (until you pick someone else).
       followStream();
       render();
@@ -1236,6 +1237,8 @@
   // The channel in the Twitch tab beside the side panel. On this Mac, ?watch=<channel>
   // stands in for the extension saying so (testing without Chrome).
   let watching = (TESTING && params.get("watch")?.toLowerCase()) || "";
+  // The same, but never cleared by picking someone by hand: for "On this stream".
+  let tabChannel = watching;
   let svPicked = "";
 
   function viewNow() {
@@ -2325,11 +2328,12 @@
     const dots = modChannels().map((login) => {
       const lead = isLeadFor(login);
       const live = streaming(login);
-      const on = live || !!conn(login)?.online;
+      const on = !!conn(login)?.online; // on StreamerSpace: shown plain, not dimmed
+      // Lit (the lavender glow) only while they're actually streaming.
       // Not on Streamer Buddy yet (not a connection either way): their Twitch picture with
       // a small broken-chain badge (not linked with you yet).
       const absent = !conn(login) && !requests.includes(login);
-      const dot = el("button", `dot dot--chan${login === owner ? " dot--current" : ""}${on ? " dot--on" : " dot--off"}${live ? " dot--live" : ""}${absent ? " dot--absent" : ""}`);
+      const dot = el("button", `dot dot--chan${login === owner ? " dot--current" : ""}${live ? " dot--on dot--live" : on ? "" : " dot--off"}${absent ? " dot--absent" : ""}`);
       dot.type = "button";
       if (colorOf(login)) dot.style.setProperty("--c", colorOf(login));
       if (pics[login]) {
@@ -3185,7 +3189,7 @@
     }
     // On their stream you're locked to them: their photo and name, no picker. Off it (no
     // streamer here who's a connection), pick whose.
-    const locked = watching === owner;
+    const locked = !!tabChannel && tabChannel === owner;
     const head = el("div", "mod__head");
     // Their picture and name are a link to their Twitch channel (a new tab).
     const link = el("a", "mod__link");
@@ -3194,8 +3198,8 @@
     link.rel = "noopener";
     link.title = `Open twitch.tv/${owner}`;
     if (pics[owner]) {
-      // Green ring only while they're online or live: green means online (or a mod).
-      const img = el("img", `mod__pic${streaming(owner) || conn(owner)?.online ? " mod__pic--on" : ""}`);
+      // No ring: their status shows as the little pixel person beside their name.
+      const img = el("img", "mod__pic");
       img.src = pics[owner];
       img.alt = "";
       link.append(img);
@@ -3223,6 +3227,14 @@
     }
     if (link.childNodes.length) head.prepend(link);
     const c = conn(owner);
+    // Their status, as the same pixel person (with a sword for Available mod) as yours.
+    if (c?.mutual) {
+      const status = !c.online ? "offline" : c.idle ? "idle" : c.modding ? "modding" : "online";
+      const mark = el("span", `presence presence--${status} mod__status`);
+      mark.title = `${owner}: ${status === "offline" ? "offline in StreamerSpace" : STATUS[status].label}`;
+      mark.setAttribute("aria-label", mark.title);
+      head.append(mark);
+    }
     head.append(el("span", `mod__where${locked ? " mod__where--here" : ""}`, locked ? "On this stream" : c?.online ? "online" : "Not the stream you're on"));
     panel.append(head);
 
