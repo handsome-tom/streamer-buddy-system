@@ -156,9 +156,9 @@
   const chatBtn = document.getElementById("chatBtn");
   const homeChatBtn = document.getElementById("homeChatBtn");
   const dndBtn = document.getElementById("dndBtn");
-  // Do Not Disturb's icon: a middle finger, in outline like the bar's other icons (also set
+  // Do Not Disturb's icon: a middle finger, in pixels like the bar's other icons (also set
   // here, for a cached older index.html).
-  const DND_HAND = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.9 14.1V9a1.45 1.45 0 0 1 2.9 0V3.7a1.55 1.55 0 0 1 3.1 0v5.9a1.25 1.25 0 0 1 2.5 0v1.1a1.6 1.6 0 0 1 3.2 0V17c0 2.4-1.9 4.3-4.3 4.3h-5.4c-1.7 0-3.2-1-3.9-2.6L3.6 12.4c-.5-1 .2-2.1 1.3-2.2.7 0 1.3.3 1.8.8z"/><path d="M11.8 9v3.6M14.9 9.6v3.7M17.4 10.7v3.2"/></svg>';
+  const DND_HAND = '<svg class="px-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="M7 0h2v1h-2zM7 1h2v1h-2zM7 2h2v1h-2zM7 3h2v1h-2zM7 4h2v1h-2zM7 5h2v1h-2zM7 6h2v1h-2zM4 7h2v1h-2zM7 7h2v1h-2zM10 7h2v1h-2zM13 7h2v1h-2zM4 8h11v1h-11zM1 9h2v1h-2zM4 9h11v1h-11zM1 10h3v1h-3zM5 10h10v1h-10zM2 11h13v1h-13zM3 12h11v1h-11zM4 13h9v1h-9zM5 14h7v1h-7z"/></svg>';
   dndBtn?.querySelector("svg")?.replaceWith(Object.assign(document.createElement("template"), { innerHTML: DND_HAND }).content.firstChild);
   const dndLabel = document.getElementById("dndLabel");
   const chatCount = document.getElementById("chatCount");
@@ -359,6 +359,97 @@
     return input;
   }
 
+  // Over the space backdrop, a retro pixel layer: a small canvas, drawn about 3x too small
+  // and scaled up with hard edges, so every star is a chunky pixel. Stars blink on and off
+  // in steps (8 frames a second, like an old game), and now and then a pixel shooting star
+  // crosses. Every 4.5 minutes it glitches for a moment: a few rows slip sideways and pick
+  // up a red/cyan split, then it's back. Only the backdrop; nothing you read moves.
+  function pixelSpace(space) {
+    const PX = 3; // screen pixels per canvas pixel
+    const FPS = 8;
+    const GLITCH_EVERY_MS = 4.5 * 60 * 1000;
+    const GLITCH_MS = 420;
+    const canvas = el("canvas", "space__pixels");
+    space.append(canvas);
+    const ctx = canvas.getContext("2d");
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let w = 0, h = 0, stars = [], shooter = null, glitchUntil = 0, timer = 0;
+    const COLORS = ["#ffffff", "#cfe0ff", "#9fc2ff", "#7db0ef", "#d9c8ff"];
+    function size() {
+      w = Math.max(1, Math.ceil(innerWidth / PX));
+      h = Math.max(1, Math.ceil(innerHeight / PX));
+      canvas.width = w;
+      canvas.height = h;
+      const count = Math.round((w * h) / 260); // sparse: about one star per 260 canvas pixels
+      stars = Array.from({ length: count }, () => ({
+        x: Math.floor(Math.random() * w),
+        y: Math.floor(Math.random() * h),
+        c: COLORS[Math.floor(Math.random() * COLORS.length)],
+        big: Math.random() < 0.08, // a few plus-shaped ones
+        period: 6 + Math.floor(Math.random() * 30), // frames per blink cycle
+        phase: Math.floor(Math.random() * 40),
+      }));
+    }
+    let frame = 0;
+    function draw() {
+      frame++;
+      ctx.clearRect(0, 0, w, h);
+      for (const st of stars) {
+        const t = (frame + st.phase) % st.period;
+        const a = still ? 0.55 : t < st.period * 0.15 ? 0 : t < st.period * 0.3 ? 0.35 : 0.7;
+        if (!a) continue;
+        ctx.globalAlpha = a * 0.6;
+        ctx.fillStyle = st.c;
+        ctx.fillRect(st.x, st.y, 1, 1);
+        if (st.big && a > 0.5) {
+          ctx.globalAlpha = a * 0.25;
+          ctx.fillRect(st.x - 1, st.y, 1, 1); ctx.fillRect(st.x + 1, st.y, 1, 1);
+          ctx.fillRect(st.x, st.y - 1, 1, 1); ctx.fillRect(st.x, st.y + 1, 1, 1);
+        }
+      }
+      if (still) return;
+      // A pixel shooting star, about once every 40 seconds: a short trail, stepping down-left.
+      if (!shooter && Math.random() < 1 / (40 * FPS)) shooter = { x: Math.floor(w * (0.4 + Math.random() * 0.6)), y: Math.floor(Math.random() * h * 0.4), life: 0 };
+      if (shooter) {
+        for (let i = 0; i < 6; i++) {
+          ctx.globalAlpha = 0.55 * (1 - i / 6);
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(shooter.x + i * 2, shooter.y - i, 2, 1);
+        }
+        shooter.x -= 4; shooter.y += 2; shooter.life++;
+        if (shooter.life > 30 || shooter.x < -12 || shooter.y > h) shooter = null;
+      }
+      // The glitch: a few thin bands copied sideways, with a faint red/cyan split.
+      if (Date.now() < glitchUntil) {
+        for (let i = 0; i < 4; i++) {
+          const y = Math.floor(Math.random() * h), bh = 1 + Math.floor(Math.random() * 4), dx = (Math.random() < 0.5 ? -1 : 1) * (2 + Math.floor(Math.random() * 6));
+          ctx.globalAlpha = 1;
+          ctx.drawImage(canvas, 0, y, w, bh, dx, y, w, bh);
+          ctx.globalAlpha = 0.07;
+          ctx.fillStyle = i % 2 ? "#ff3b6b" : "#3be0ff";
+          ctx.fillRect(0, y, w, bh);
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+    function glitch() {
+      if (document.hidden) return;
+      glitchUntil = Date.now() + GLITCH_MS;
+      space.classList.add("space--glitch");
+      setTimeout(() => space.classList.remove("space--glitch"), GLITCH_MS);
+    }
+    function run() {
+      clearInterval(timer);
+      if (!still && !document.hidden) timer = setInterval(draw, 1000 / FPS);
+    }
+    size();
+    draw();
+    addEventListener("resize", () => { size(); draw(); });
+    if (still) return;
+    document.addEventListener("visibilitychange", run); // rests while hidden
+    run();
+    setInterval(glitch, GLITCH_EVERY_MS);
+  }
   function bounceTom(space) {
     // A little meteor: the head (spinning) with a faint lunar glow and crater texture, and a
     // faint tail trailing behind whichever way it drifts.
@@ -1999,7 +2090,7 @@
   // Side panel only: how your connections see you. The button opens a little menu of the
   // three to pick from.
   const STATUS = {
-    modding: { label: "Modding", says: "Online and ready to mod (the default): your sword shows." },
+    modding: { label: "Modding", says: "Online and ready to mod (the default): your Mod button shows the sword." },
     online: { label: "Online", says: "Online, but not modding right now." },
     idle: { label: "Idle", says: "Shown as away for a bit." },
     offline: { label: "Offline", says: "Shown as offline. Things still reach you here." },
@@ -2021,14 +2112,11 @@
     presenceBtn.setAttribute("aria-expanded", String(!presenceMenu.hidden));
   }
   // Opening the panel: "online" written in a tilted ring round your dot, like a planet's, orbits for a few seconds and fades.
-  // It plays when the panel opens, and again when you hover the dot, but not if it played
-  // (or you hovered) in the last 15 seconds.
-  const SPIN_AGAIN_MS = 15 * 1000;
-  let spunAt = 0;
+  // It plays when the panel opens, then once every 10 minutes while it stays open.
+  const SPIN_AGAIN_MS = 10 * 60 * 1000;
   function spinPresence() {
     if (!EMBED || presenceBtn.hidden || myStatus === "offline") return;
-    if (Date.now() - spunAt < SPIN_AGAIN_MS || presenceBtn.querySelector(".presence__spin")) return;
-    spunAt = Date.now();
+    if (presenceBtn.querySelector(".presence__spin")) return;
     const word = myStatus === "idle" ? "idle" : "online"; // Modding is online too
     const ring = el("span", "presence__spin");
     ring.setAttribute("aria-hidden", "true");
@@ -2036,6 +2124,7 @@
     presenceBtn.append(ring);
     setTimeout(() => ring.remove(), 2700);
   }
+  setInterval(spinPresence, SPIN_AGAIN_MS);
   function openPresence(open) {
     presenceMenu.hidden = !open;
     if (open) {
@@ -4795,10 +4884,6 @@
     setTimeout(() => (quickText.placeholder = "Message…"), 2500);
   });
   presenceBtn.addEventListener("click", () => openPresence(presenceMenu.hidden));
-  presenceBtn.addEventListener("mouseenter", () => {
-    if (Date.now() - spunAt >= SPIN_AGAIN_MS) spinPresence();
-    else spunAt = Date.now(); // hovering again within 15 seconds starts the wait over
-  });
   // Sent from a popped-out window: the bar's picker follows.
   addEventListener("storage", (e) => {
     if (e.key === "lastTo" && me) rememberTo(get("lastTo", ""));
@@ -4848,6 +4933,7 @@
       // The mod side panel: Tom's head, upside down, drifting edge to edge like an old DVD
       // logo, so faint it's barely there.
       if (EMBED) bounceTom(space);
+      pixelSpace(space);
       document.body.prepend(space);
       document.body.classList.add("has-space");
     }
