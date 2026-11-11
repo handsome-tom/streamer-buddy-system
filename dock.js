@@ -3215,6 +3215,13 @@
     }
   }
   if (!LIVECHAT) setInterval(() => ready && drawDots(), 30000); // the 5-minute glow fades with time
+  // The Mod header's viewer count: the streamer it's about is rechecked every 30 seconds
+  // while Mod is showing (Twitch's own count moves about that often), not every 2 minutes.
+  const VIEWERS_EVERY_MS = 30 * 1000;
+  if (EMBED && !TESTING) setInterval(() => {
+    const owner = me && view === "mod" && document.visibilityState === "visible" ? modOwner() : "";
+    if (owner && liveOf[owner]?.live) checkLive(owner);
+  }, VIEWERS_EVERY_MS);
   if (EMBED) setInterval(() => me && modOwner() && modRinged() !== modBtn.classList.contains("mod-btn--live") && render(), 30000);
   let reactionsTimer = 0; // takes a reaction away 3 minutes after it came
   function modPanel() {
