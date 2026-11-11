@@ -2034,13 +2034,14 @@
     setTimeout(() => ring.remove(), 2700);
   }
   setInterval(spinPresence, SPIN_AGAIN_MS);
-  // The first time you open the panel in 24 hours: "Online Now!" in pixels beside your
-  // dot instead of the spin, for 4 seconds, then it fades.
+  // The first time you open the panel in 24 hours: an orange pixel person (the Messages orange) and "Online Now!"
+  // in bold white beside your dot instead of the spin, for 4 seconds, then it fades.
   function onlineNow() {
     if (!EMBED || presenceBtn.hidden || myStatus === "offline" || Date.now() - get("onlineNowAt", 0) < 24 * 3600 * 1000) return false;
     put("onlineNowAt", Date.now());
-    const tag = el("span", "presence__now", "Online Now!");
+    const tag = el("span", "presence__now");
     tag.setAttribute("aria-hidden", "true");
+    tag.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="M6 2h4v1h-4zM5 3h6v1h-6zM5 4h6v1h-6zM5 5h6v1h-6zM5 6h6v1h-6zM6 7h4v1h-4zM3 9h10v1h-10zM2 10h12v1h-12zM2 11h12v1h-12zM2 12h12v1h-12zM2 13h12v1h-12z"/></svg><span>Online Now!</span>'; // an orange pixel person, then the words
     presenceBtn.append(tag);
     setTimeout(() => tag.remove(), 4700);
     return true;

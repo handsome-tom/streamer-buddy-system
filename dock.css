@@ -4930,8 +4930,8 @@ body.livechat.has-space .bar__planet { opacity: 0.52; }
 .dots--mod .dot { flex: none; }
 
 /* The side panel's Messages tab and page: very dark and warm (like Claude's own colors),
-   with the demo site's orange (#f0a330) for the accents. */
-:root { --msg-bg: #1f1e1c; --msg-text: #e6e1d8; --msg-muted: #9c968b; --honey: #f0a330; --honey-hi: #f6b752; --honey-ink: #1d1206; }
+   with an orange (#f29028, between the demo site's #f0a330 and Online Now!'s person) for the accents. */
+:root { --msg-bg: #1f1e1c; --msg-text: #e6e1d8; --msg-muted: #9c968b; --honey: #f29028; --honey-hi: #f6a54e; --honey-ink: #1d1206; }
 body.has-space .msg-btn, .msg-btn { width: 28px; height: 28px; min-width: 28px; padding: 0; border-radius: 50%; background: var(--honey); border-color: var(--honey); color: var(--honey-ink); }
 body.has-space .msg-btn:hover, .msg-btn:hover { background: var(--honey-hi); border-color: var(--honey-hi); color: var(--honey-ink); }
 body.has-space .msg-btn.pill--on, .msg-btn.pill--on { background: var(--honey-hi); border-color: var(--honey-hi); color: var(--honey-ink); box-shadow: 0 0 0 2px #0e0e10, 0 0 0 4px var(--honey); }
@@ -4949,7 +4949,7 @@ main.main--msgs .panel__sub { color: var(--msg-muted); }
 .msgs__label { margin: 12px 0 4px; color: var(--honey); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 .msgs__row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; color: var(--msg-text); text-align: left; background: none; border: 0; border-radius: 8px; }
 .msgs__row:hover { background: rgba(255, 255, 255, 0.04); }
-.msgs__row--new { background: rgba(240, 163, 48, 0.05); }
+.msgs__row--new { background: rgba(242, 144, 40, 0.05); }
 .msgs__words { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .msgs__name { font-weight: 700; }
 .msgs__last { overflow: hidden; color: var(--msg-muted); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
@@ -4960,7 +4960,7 @@ main.main--msgs .panel__sub { color: var(--msg-muted); }
 .msgs__stack { display: flex; flex: none; }
 .msgs__stack .people__pic { box-shadow: 0 0 0 2px #04050a; }
 .msgs__stack .people__pic + .people__pic { margin-left: -12px; }
-.msgs__open { margin-top: 8px; color: var(--msg-text); background: rgba(0, 0, 0, 0.4); border-color: rgba(240, 163, 48, 0.25); }
+.msgs__open { margin-top: 8px; color: var(--msg-text); background: rgba(0, 0, 0, 0.4); border-color: rgba(242, 144, 40, 0.25); }
 .msgs__open:hover { background: rgba(0, 0, 0, 0.6); }
 /* The one-on-one section: a block of its own, dark black on the left fading out to the right, each person sectioned off. */
 .msgs__private { margin-top: 14px; padding: 4px 8px 6px; background: linear-gradient(90deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.45) 55%, rgba(0, 0, 0, 0.12) 100%); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 10px; }
@@ -5024,15 +5024,15 @@ main.main--msgs .panel__sub { color: var(--msg-muted); }
 .chat--dm .chat__msg--direct .chat__from, .chat--dm .chat__msg--mine .chat__from { display: none; }
 .chat--dm .chat__text { order: 1; padding: 7px 11px; font-size: 13px; line-height: 1.4; color: var(--msg-text); border-radius: 14px; }
 .chat--dm .chat__msg--theirs .chat__text { background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04)); border: 1px solid rgba(255, 255, 255, 0.05); border-bottom-left-radius: 4px; }
-.chat--dm .chat__msg--mine .chat__text { color: #fff4e3; background: linear-gradient(160deg, rgba(240, 163, 48, 0.38), rgba(240, 163, 48, 0.16)); border: 1px solid rgba(240, 163, 48, 0.22); border-bottom-right-radius: 4px; }
-.chat--dm .chat__msg--mention .chat__text { box-shadow: 0 0 0 1px rgba(240, 163, 48, 0.5), 0 0 12px rgba(240, 163, 48, 0.2); }
+.chat--dm .chat__msg--mine .chat__text { color: #fff4e3; background: linear-gradient(160deg, rgba(242, 144, 40, 0.38), rgba(242, 144, 40, 0.16)); border: 1px solid rgba(242, 144, 40, 0.22); border-bottom-right-radius: 4px; }
+.chat--dm .chat__msg--mention .chat__text { box-shadow: 0 0 0 1px rgba(242, 144, 40, 0.5), 0 0 12px rgba(242, 144, 40, 0.2); }
 .chat--dm .chat__time { order: 2; margin: 2px 6px 0; font-size: 10px; color: var(--msg-muted); }
 
 /* The message box: resting on a gradient, a soft divider above, no pill. */
 .chat--dm .chat__form { position: relative; margin: 0 -8px -8px; padding: 12px 10px 10px; background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.55)); border: 0; }
 .chat--dm .chat__form::before { content: ""; position: absolute; left: 8px; right: 8px; top: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12) 20%, rgba(255, 255, 255, 0.12) 80%, transparent); }
 .chat--dm .chat__form .ask__input { border-radius: 12px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)); border: 1px solid rgba(255, 255, 255, 0.07); color: var(--msg-text); }
-.chat--dm .chat__form .ask__input:focus { border-color: rgba(240, 163, 48, 0.45); outline: none; }
+.chat--dm .chat__form .ask__input:focus { border-color: rgba(242, 144, 40, 0.45); outline: none; }
 .chat--dm .chat__form .ask__send { color: var(--honey-ink); background: linear-gradient(160deg, var(--honey-hi), var(--honey)); border: 0; }
 
 /* The Mod button: your own picture unless you're Modding (then the green sword or hammer).
@@ -5072,7 +5072,7 @@ body.has-space .msg-btn.pill--on, .msg-btn.pill--on { box-shadow: none; }
 .msgs .panel__head, .msgs__name, .dm__name, .chat__from { font-family: "Pixelify Sans", "Plus Jakarta Sans", sans-serif; font-weight: 600; letter-spacing: 0.01em; }
 .msgs .panel__head, .dm__name { font-size: 16px; }
 .msgs__name { font-size: 14px; }
-.chat__from { font-size: 12px; }
+.chat__from, .chat--dm .chat__from { font-size: 13px; font-weight: 500; } /* smaller, or bold, and a "2" reads as an "8" */
 
 /* ===== Retro pixels over the space backdrop: CSS only, barely there ===== */
 /* Square pixel stars and scanlines at 2%, stepping along like an old game; once every
@@ -5082,8 +5082,10 @@ body.has-space .msg-btn.pill--on, .msg-btn.pill--on { box-shadow: none; }
 .space { animation: space-breathe 18s ease-in-out infinite alternate, space-glitch 270s steps(1) infinite; }
 @keyframes space-glitch { 0%, 99.84% { transform: none; } 99.88% { transform: translate(3px, 0); } 99.92% { transform: translate(-2px, 1px); } 99.96% { transform: translate(1px, -1px); } }
 
-/* "Online Now!" beside your dot, once a day (dock.js, onlineNow): 4 seconds, then it fades. */
-.presence__now { position: absolute; right: 100%; top: 50%; margin-right: 2px; transform: translateY(-50%); white-space: nowrap; pointer-events: none;
-  font: 400 10px/1 "Silkscreen", "Plus Jakarta Sans", sans-serif; letter-spacing: 0.06em; color: #3fd23f; -webkit-font-smoothing: none;
-  text-shadow: 0 0 6px rgba(0, 173, 3, 0.6), 0 1px 2px #000; animation: presenceNow 4.7s linear forwards; }
+/* "Online Now!" beside your dot, once a day (dock.js, onlineNow): an orange pixel person
+   and bold white pixel-edged words, 4 seconds, then it fades. */
+.presence__now { position: absolute; right: 100%; top: 50%; margin-right: 2px; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; pointer-events: none;
+  font: 700 14px/1 "Pixelify Sans", "Plus Jakarta Sans", sans-serif; color: #fff; text-decoration: none;
+  text-shadow: 0 1px 0 #000, 0 2px 4px #000; animation: presenceNow 4.7s linear forwards; }
+.presence__now svg { flex: none; width: 16px; height: 16px; color: var(--honey); filter: drop-shadow(0 1px 0 #6b2a00); }
 @keyframes presenceNow { 0% { opacity: 0; } 4% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
