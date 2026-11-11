@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Status preview</title>
+<!--
+  Your status in the side panel's bar (dock.css, "a pixel person, not a dot"), all four
+  side by side, with the menu and the once-a-day words. Only dock.css loads, so it's
+  instant; it reloads itself whenever dock.css changes. Open it at /dev/status-preview.html.
+-->
+<script>document.write(`<link rel="stylesheet" href="../dock.css?v=${Date.now()}">`);</script>
+<style>
+  body { margin: 0; padding: 20px; background: #0e0e10; color: #efeff1; font: 13px/1.4 "Plus Jakarta Sans", sans-serif; }
+  h2 { margin: 18px 0 8px; font: 400 10px/1 "Silkscreen", sans-serif; letter-spacing: 0.06em; color: #adadb8; text-transform: uppercase; }
+  .row { display: flex; flex-wrap: wrap; gap: 14px; }
+  .cell { display: flex; flex-direction: column; gap: 6px; }
+  .cell small { color: #adadb8; font-size: 11px; }
+  .fakebar { position: relative; display: flex; align-items: center; justify-content: flex-end; gap: 8px; width: 260px; height: 40px; padding: 0 10px; background: #18181b; border: 1px solid #2a2a30; border-radius: 6px; box-sizing: border-box; }
+  .fakebtn { width: 28px; height: 28px; border-radius: 50%; background: #2f2f35; flex: none; }
+  .presence__now { animation: none !important; } /* hold the words still here */
+  .presence__menu { position: static !important; display: block; width: 260px; }
+</style>
+</head>
+<body>
+  <h2>In the bar</h2>
+  <div class="row" id="bars"></div>
+  <h2>In the bar, with the once-a-day words</h2>
+  <div class="row" id="words"></div>
+  <h2>The menu</h2>
+  <div class="presence__menu" role="menu" id="menu"></div>
+<script>
+  const STATUS = [
+    ["modding", "Available mod", "Online and ready to mod (the default): your Mod button shows the sword."],
+    ["online", "Online", "Online, but not modding right now."],
+    ["idle", "Idle", "Shown as away for a bit."],
+    ["offline", "Invisible", "Others see you as offline. Things still reach you here."],
+  ];
+  const bar = (status, words) => `<div class="cell"><div class="fakebar"><button class="pill presence presence--bar presence--${status}" type="button">${words ? `<span class="presence__now">${words}</span>` : ""}</button><span class="fakebtn"></span><span class="fakebtn"></span></div><small>${status}</small></div>`;
+  document.getElementById("bars").innerHTML = STATUS.map(([s, label]) => bar(s).replace(`<small>${s}</small>`, `<small>${label}</small>`)).join("");
+  document.getElementById("words").innerHTML = bar("modding", "Available mod") + bar("online", "Online Now!");
+  document.getElementById("menu").innerHTML = STATUS.map(([s, label, says], i) => `<button class="presence__item${i === 0 ? " presence__item--on" : ""}" type="button"><span class="presence presence--${s}">${label}</span><span class="presence__says">${says}</span></button>`).join("");
+  // Reload when dock.css changes (python's server sends Last-Modified).
+  let seen = "";
+  setInterval(async () => {
+    try {
+      const r = await fetch("../dock.css", { method: "HEAD", cache: "no-store" });
+      const m = r.headers.get("last-modified");
+      if (seen && m && m !== seen) location.reload();
+      seen = m || seen;
+    } catch {}
+  }, 1000);
+</script>
+</body>
+</html>

@@ -1745,7 +1745,7 @@
     }
     modBtn.classList.toggle("mod-btn--live", modLive);
     modBtn.classList.toggle("mod-btn--off", !modLive);
-    modBtn.title = modBtn.ariaLabel = `${lead ? "Lead mod" : "Mod"}${modOwner() ? ` · ${modOwner()}` : ""}${modLive ? " · you're Modding (ready to mod)" : " · set your status to Modding to show your sword"}`;
+    modBtn.title = modBtn.ariaLabel = `${lead ? "Lead mod" : "Mod"}${modOwner() ? ` · ${modOwner()}` : ""}${modLive ? " · you're an Available mod (ready to mod)" : " · set your status to Available mod to show your sword"}`;
     drawQuickAsk();
     drawPresence();
     statsBtn.hidden = true; // dropped from the bar (Mod and Connections stay); Stats still runs underneath
@@ -1999,10 +1999,10 @@
   // Side panel only: how your connections see you. The button opens a little menu of the
   // three to pick from.
   const STATUS = {
-    modding: { label: "Modding", says: "Online and ready to mod (the default): your Mod button shows the sword." },
+    modding: { label: "Available mod", says: "Online and ready to mod (the default): your Mod button shows the sword." },
     online: { label: "Online", says: "Online, but not modding right now." },
     idle: { label: "Idle", says: "Shown as away for a bit." },
-    offline: { label: "Offline", says: "Shown as offline. Things still reach you here." },
+    offline: { label: "Invisible", says: "Others see you as offline. Things still reach you here." },
   };
   const presenceMenu = el("div", "presence__menu");
   presenceMenu.setAttribute("role", "menu");
@@ -2034,18 +2034,19 @@
     setTimeout(() => ring.remove(), 2700);
   }
   setInterval(spinPresence, SPIN_AGAIN_MS);
-  // The first time you open the panel in 24 hours: an orange pixel person (the Messages orange) and "Online Now!"
-  // in bold white beside your dot instead of the spin, for 4 seconds, then it fades.
+  // The first time you open the panel in 24 hours: what you are, in bold white pixel-edged
+  // words beside your little person ("Available mod", or "Online Now!"), instead of the
+  // spin, for 4 seconds, then it fades.
   function onlineNow() {
-    if (!EMBED || presenceBtn.hidden || myStatus === "offline" || Date.now() - get("onlineNowAt", 0) < 24 * 3600 * 1000) return false;
+    if (!EMBED || presenceBtn.hidden || !["modding", "online"].includes(myStatus) || Date.now() - get("onlineNowAt", 0) < 24 * 3600 * 1000) return false;
     put("onlineNowAt", Date.now());
-    const tag = el("span", "presence__now");
+    const tag = el("span", "presence__now", myStatus === "modding" ? "Available mod" : "Online Now!");
     tag.setAttribute("aria-hidden", "true");
-    tag.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="M6 2h4v1h-4zM5 3h6v1h-6zM5 4h6v1h-6zM5 5h6v1h-6zM5 6h6v1h-6zM6 7h4v1h-4zM3 9h10v1h-10zM2 10h12v1h-12zM2 11h12v1h-12zM2 12h12v1h-12zM2 13h12v1h-12z"/></svg><span>Online Now!</span>'; // an orange pixel person, then the words
     presenceBtn.append(tag);
     setTimeout(() => tag.remove(), 4700);
     return true;
   }
+
   function openPresence(open) {
     presenceMenu.hidden = !open;
     if (open) {

@@ -5089,3 +5089,17 @@ body.has-space .msg-btn.pill--on, .msg-btn.pill--on { box-shadow: none; }
   text-shadow: 0 1px 0 #000, 0 2px 4px #000; animation: presenceNow 4.7s linear forwards; }
 .presence__now svg { flex: none; width: 16px; height: 16px; color: var(--honey); filter: drop-shadow(0 1px 0 #6b2a00); }
 @keyframes presenceNow { 0% { opacity: 0; } 4% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ===== Your status in the side panel's bar: a pixel person, not a dot ===== */
+/* Available mod: green, with a pixel sword beside it. Online: the Messages orange.
+   Idle: a soft yellow. Invisible (offline to others): gray. The same little people mark the choices in its menu. */
+.presence::before { width: 14px; height: 16px; border-radius: 0; box-shadow: none; background: var(--good); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 16' shape-rendering='crispEdges'%3E%3Cpath d='M5 2h4v1h-4zM4 3h6v1h-6zM4 4h6v1h-6zM4 5h6v1h-6zM4 6h6v1h-6zM5 7h4v1h-4zM2 9h10v1h-10zM1 10h12v1h-12zM1 11h12v1h-12zM1 12h12v1h-12zM1 13h12v1h-12z'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 16' shape-rendering='crispEdges'%3E%3Cpath d='M5 2h4v1h-4zM4 3h6v1h-6zM4 4h6v1h-6zM4 5h6v1h-6zM4 6h6v1h-6zM5 7h4v1h-4zM2 9h10v1h-10zM1 10h12v1h-12zM1 11h12v1h-12zM1 12h12v1h-12zM1 13h12v1h-12z'/%3E%3C/svg%3E") center / contain no-repeat; }
+.presence--modding::before { width: 24px; -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 16' shape-rendering='crispEdges'%3E%3Cpath d='M5 2h4v1h-4zM4 3h6v1h-6zM4 4h6v1h-6zM4 5h6v1h-6zM4 6h6v1h-6zM5 7h4v1h-4zM2 9h10v1h-10zM1 10h12v1h-12zM1 11h12v1h-12zM1 12h12v1h-12zM1 13h12v1h-12zM21 4h2v1h-2zM20 5h3v1h-3zM19 6h3v1h-3zM16 7h1v1h-1zM18 7h3v1h-3zM17 8h3v1h-3zM17 9h2v1h-2zM16 10h1v1h-1zM19 10h1v1h-1zM15 11h1v1h-1z'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 16' shape-rendering='crispEdges'%3E%3Cpath d='M5 2h4v1h-4zM4 3h6v1h-6zM4 4h6v1h-6zM4 5h6v1h-6zM4 6h6v1h-6zM5 7h4v1h-4zM2 9h10v1h-10zM1 10h12v1h-12zM1 11h12v1h-12zM1 12h12v1h-12zM1 13h12v1h-12zM21 4h2v1h-2zM20 5h3v1h-3zM19 6h3v1h-3zM16 7h1v1h-1zM18 7h3v1h-3zM17 8h3v1h-3zM17 9h2v1h-2zM16 10h1v1h-1zM19 10h1v1h-1zM15 11h1v1h-1z'/%3E%3C/svg%3E"); }
+.presence--online::before { background: var(--honey); }
+.presence--idle::before { background: var(--yellow); opacity: 0.75; } /* yellow, so it isn't mistaken for Online's orange */
+.presence--offline::before { background: var(--muted); box-shadow: none; opacity: 0.7; }
+.presence--bar::before { width: 14px; height: 16px; }
+.presence--bar.presence--modding::before { width: 24px; }
+.presence__says { padding-left: 20px; }
+/* The status names in its menu, in the pixel-edged font like the names elsewhere. */
+.presence__item .presence { font-family: "Pixelify Sans", "Plus Jakarta Sans", sans-serif; font-weight: 600; font-size: 14px; letter-spacing: 0.01em; }
