@@ -12,3 +12,6 @@ const TWITCH_CLIENT_ID = "v6pt264d6puelgyjk5nqbph90j25zz";
 const RELAY_URL = window.SANDBOX_RELAY || (location.hostname === "localhost"
   ? "ws://localhost:8788/ws"
   : "wss://streamer-buddy-relay.handsome-tom.workers.dev/ws");
+
+// Who the Top 8 popup tells people to message on Discord for more spots.
+const TOM_DISCORD_NAME = "myspacetomunofficial";

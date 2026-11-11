@@ -205,6 +205,9 @@
   // From the relay.
   let connections = []; // [{ login, mutual, online }]
   let requests = []; // [login] who added you
+  let owner = null; // whose allow list decides who can sign in (everyone's first connection); null: anyone can
+  let allowed = null; // the owner's own page only: [{ login, added, joined, used, limit }]
+  let limit = null; // how many people you can add (your Top 8), when there's an owner
   let tags = {}; // { tag: [logins] } your own groups of connections (Mods, Lead mods, Tech…)
   let myStatus = "modding"; // how connections see you: "modding" (the default) | "online" | "idle" | "offline"
   let mySince = 0; // when you came online (from the relay)
@@ -756,6 +759,10 @@
     ws.onclose = (e) => {
       if (ws !== socket) return;
       socket = null;
+      if (e.code === 4003) {
+        showSignedOut(`StreamerSpace is invite-only for now, and you're not on the list yet.${notAllowedBy ? ` Ask ${notAllowedBy} to add you.` : ""}`);
+        return;
+      }
       if (e.code === 4001) {
         renewSignin().then((ok) => (ok ? connect() : showSignedOut("Your Twitch sign-in ran out. Sign in again.")));
         return;
@@ -780,6 +787,9 @@
 
   function gotState(m) {
     const first = !ready;
+    if ("owner" in m) owner = m.owner || null;
+    allowed = m.allowed || null;
+    limit = m.limit || null;
     if (first) setTimeout(() => onlineNow() || spinPresence(), 400);
     connections = m.connections || [];
     requests = m.requests || [];
@@ -1016,10 +1026,53 @@
     return (rooms.find((r) => r.owner === me.login) || rooms.find((r) => !r.direct) || rooms.find((r) => chat[r.owner]?.length))?.owner || "";
   }
 
+  let notAllowedBy = ""; // who to ask, when the relay turned this sign-in away
+
+  // Your Top 8 is full: Tom pops up to say so (the relay refused the add).
+  function showTopEight(n) {
+    document.querySelector(".top8")?.remove();
+    const shade = el("div", "top8");
+    const box = el("div", "top8__box");
+    box.setAttribute("role", "dialog");
+    box.setAttribute("aria-label", "Your Top 8 is full");
+    const face = el("img", "top8__tom");
+    face.src = "icons/tom.png";
+    face.alt = "";
+    const close = () => {
+      shade.remove();
+      removeEventListener("keydown", onKey);
+    };
+    const onKey = (e) => e.key === "Escape" && close();
+    addEventListener("keydown", onKey);
+    shade.addEventListener("click", (e) => e.target === shade && close());
+    box.append(face, el("div", "top8__head", n === 8 ? "You've filled your Top 8!" : `You've filled all ${n} of your spots!`),
+      el("p", "top8__words", "Message MyspaceTomOfficial on Discord, and your list can be extended."));
+    // The Discord name, with a button to copy it.
+    const tag = el("div", "top8__discord");
+    tag.append(el("span", "top8__dlabel", "Discord"), el("b", "top8__dname", TOM_DISCORD_NAME));
+    box.append(tag);
+    const row = el("div", "top8__btns");
+    const copy = el("button", "cx__btn cx__btn--blue", "Copy Discord name");
+    copy.type = "button";
+    copy.addEventListener("click", () => {
+      navigator.clipboard?.writeText(TOM_DISCORD_NAME).then(() => (copy.textContent = "Copied!"), () => (copy.textContent = "Couldn't copy"));
+    });
+    row.append(copy);
+    const ok = el("button", "cx__btn", "OK");
+    ok.type = "button";
+    ok.addEventListener("click", close);
+    row.append(ok);
+    box.append(row);
+    shade.append(box);
+    document.body.append(shade);
+    ok.focus();
+  }
   function gotError(m) {
     for (const k of Object.keys(pending)) delete pending[k];
     nudging.clear();
     if (m.why === "signin") return; // the socket closing next deals with it
+    if (m.why === "notallowed") return void (notAllowedBy = m.owner || ""); // closing next, too
+    if (m.why === "topeight") return showTopEight(m.limit || limit || 8);
     askDraft.note = `${m.why}.`;
     setStatus(m.why, "bad");
     setTimeout(() => ready && setStatus("Online", "ok"), 6000);
@@ -3706,7 +3759,12 @@
       }
     }
     addCard.append(el("p", "cx__hint", "You can reach each other once you've both added each other."));
+    if (limit) {
+      const used = connections.filter((c) => c.login !== owner).length;
+      addCard.append(el("p", `cx__spots${used >= limit ? " cx__spots--full" : ""}`, limit === 8 ? `Top 8 · ${used} of 8 spots used` : `${used} of ${limit} spots used`));
+    }
     panel.append(addCard);
+    if (allowed) panel.append(allowCard());
 
     // ----- Groups (your tags)
     const able = connections.filter((c) => c.mutual).map((c) => c.login);
@@ -3907,6 +3965,102 @@
 
   // One person in the list: picture, name and how they are (a button for your private
   // chat), their groups, + to pin them into one, and × to remove them.
+  // ----- The allow list (the owner's Connections only) ----------------------------------
+  // Who can use StreamerSpace's buddy system at all. Adding someone connects them to you
+  // straight away (you're their first connection); taking them off signs them out.
+  let allowOpen = false;
+  let allowOff = ""; // asked "are you sure?" about taking this one off
+  function allowCard() {
+    const card = el("section", "cx__card cx__allowlist");
+    const head = el("button", "cx__sechead cx__allowhead");
+    head.type = "button";
+    head.setAttribute("aria-expanded", String(allowOpen));
+    head.append(el("span", "cx__label", `Allow list · ${allowed.length}`), el("span", "cx__allowtoggle", allowOpen ? "Hide" : "Show"));
+    head.addEventListener("click", () => {
+      allowOpen = !allowOpen;
+      allowOff = "";
+      render();
+    });
+    card.append(head);
+    card.append(el("p", "cx__hint", "Only people on this list can sign in. Everyone you add is connected to you automatically."));
+    if (!allowOpen) return card;
+
+    const form = el("form", "cx__addbar");
+    const input = textBox("Allow someone by Twitch name");
+    input.className = "cx__addinput";
+    input.dataset.key = "allow-add";
+    const go = el("button", "cx__addgo", "Allow");
+    go.type = "submit";
+    const note = el("p", "cx__note");
+    form.append(input, go);
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const login = input.value.trim().replace(/^@/, "").toLowerCase();
+      if (!/^[a-z0-9_]{2,25}$/.test(login)) return void (note.textContent = "That isn't a Twitch username.");
+      if (login === me.login) return void (note.textContent = "That's you: you're always allowed.");
+      if (allowed.some((a) => a.login === login)) return void (note.textContent = `${login} is already on the list.`);
+      go.disabled = true;
+      note.textContent = "";
+      const user = await lookUp(login).catch(() => null);
+      go.disabled = false;
+      if (!user) return void (note.textContent = `Couldn't find ${login} on Twitch.`);
+      input.value = "";
+      relay({ t: "allow", login: user.login, on: true });
+    });
+    card.append(form, note);
+
+    const list = el("div", "cx__list");
+    const newest = [...allowed].sort((a, b) => (b.added || 0) - (a.added || 0));
+    for (const a of newest) {
+      const row = el("div", "people__row cx__row cx__allowrow");
+      const who = el("div", "people__who");
+      const words = el("span", "people__words");
+      const name = el("span", "people__name", a.login);
+      if (colorOf(a.login)) name.style.color = colorOf(a.login);
+      words.append(name, el("span", "people__state", a.joined ? "signed up" : "hasn't signed in yet"));
+      who.append(personPic(a.login), words);
+      row.append(who);
+      // Their spots: how many people they've added, of how many they can.
+      const spots = el("div", "cx__spotset");
+      const step = (by, label, title) => {
+        const b = el("button", "cx__spotbtn", label);
+        b.type = "button";
+        b.title = title;
+        b.disabled = a.limit + by < 8 || a.limit + by > 100;
+        b.addEventListener("click", () => relay({ t: "allow", login: a.login, limit: a.limit + by }));
+        return b;
+      };
+      spots.append(step(-4, "−", `${a.login} gets 4 fewer spots`), el("span", `cx__spotn${a.used >= a.limit ? " cx__spotn--full" : ""}`, `${a.used}/${a.limit}`), step(4, "+", `Give ${a.login} 4 more spots`));
+      spots.title = `${a.login} has added ${a.used} of ${a.limit} people`;
+      row.append(spots);
+      if (allowOff === a.login) {
+        const yes = el("button", "cx__btn cx__btn--bad", "Take off");
+        yes.type = "button";
+        yes.title = `${a.login} is signed out and can't sign in again`;
+        yes.addEventListener("click", () => {
+          allowOff = "";
+          relay({ t: "allow", login: a.login, on: false });
+        });
+        const no = el("button", "cx__btn", "Keep");
+        no.type = "button";
+        no.addEventListener("click", () => {
+          allowOff = "";
+          render();
+        });
+        row.append(yes, no);
+      } else {
+        row.append(closeButton(() => {
+          allowOff = a.login;
+          render();
+        }, `Take ${a.login} off the allow list`));
+      }
+      list.append(row);
+    }
+    if (!allowed.length) list.append(el("p", "cx__hint", "Nobody yet. Add someone above."));
+    card.append(list);
+    return card;
+  }
+
   function personRow(list, { login, mutual, online, idle }) {
     const row = el("div", "people__row cx__row");
     const direct = directWith(login);
@@ -3949,7 +4103,11 @@
       if (tagOpen) document.querySelector(`[data-key="tag-${login}"]`)?.focus();
     });
     tagsEl.append(plus);
-    row.append(tagsEl, closeButton(() => relay({ t: "disconnect", login }), `Remove ${login}`));
+    // The owner and the people on their allow list stay connected: only the list ends it.
+    const fixed = login === owner || (me?.login === owner && allowed?.some((a) => a.login === login));
+    if (login === owner) words.append(el("span", "people__first", "Your first connection"));
+    row.append(tagsEl);
+    if (!fixed) row.append(closeButton(() => relay({ t: "disconnect", login }), `Remove ${login}`));
     list.append(row);
     if (tagOpen === login) {
       const addTag = el("form", "tagadd");

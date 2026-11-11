@@ -1,10 +1,15 @@
 # Streamer Buddy System relay (see src/index.js). Deploy: npx wrangler@3 deploy
+# StreamerSpace's public lookups (src/lookup.js) also need: npx wrangler@3 secret put LOOKUP_CLIENT_SECRET
+# (and LOOKUP_CLIENT_ID too, if the secret belongs to a second Twitch app).
 name = "streamer-buddy-relay"
 main = "src/index.js"
 compatibility_date = "2025-01-01"
 
 [vars]
 TWITCH_CLIENT_ID = "v6pt264d6puelgyjk5nqbph90j25zz"
+# Whose allow list decides who can sign in (everyone's first connection, with a Top 8 cap
+# for everyone else). See "Allow list" in src/index.js. Remove it to let anyone sign in.
+OWNER_LOGIN = "myspacetomofficial"
 
 [[durable_objects.bindings]]
 name = "HUB"

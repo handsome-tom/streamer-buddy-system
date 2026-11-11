@@ -7,6 +7,22 @@
 // only accepts sign-ins made for our own Twitch app, so who sent something
 // always comes from Twitch, never from the message.
 //
+// Allow list: when OWNER_LOGIN is set (wrangler.toml), only the owner and the people on
+// the owner's allow list can sign in; anyone else is told so and turned away (close code
+// 4003). Everyone on the list is connected to the owner both ways, automatically, as
+// their first connection (MySpace's Tom), and that connection can't be removed by either
+// side: taking someone off the allow list is what ends it (and signs them out). The
+// first time the list is needed it starts with everyone who already has an account, so
+// switching it on locks nobody out.
+//
+// Top 8: with an owner, everyone else can add up to 8 people (the owner doesn't count,
+// like Tom). A 9th is refused with error "topeight" and the dock shows Tom saying so; the
+// owner can give someone more from the allow list (limit). Requests from others still
+// arrive; adding one back counts.
+//
+// Kept as "allow": { logins: [login], added: { login: at }, limits: { login: n } }.
+// Without OWNER_LOGIN (the demo, local testing) anyone can sign in, as before.
+//
 // Connections: each person's list of who they've added. Two people can ask
 // each other only once both have added each other ("mutual"); until then the
 // other side sees the request. Whether someone's online is only shared
@@ -79,6 +95,8 @@
 //   statEvent { kind, n, who, viewers }  a sub, gift, cheer, follow or raid
 //   view { v }              what your OBS dock shows now (null: stop sharing); see Streamer View below
 //   seen { id }
+//   allow { login, on }     the owner only: put someone on (or take them off) the allow list
+//   allow { login, limit }  the owner only: how many people they can add (8 to 100)
 // Messages to a page:
 //   state { me, status, since, connections, requests, tags, questions, rooms, chat, statsOn, stats }   (on sign-in, and whenever
 //                                                       connections or who's online change)
@@ -99,7 +117,11 @@
 // as it changes), unless they've set themselves to Offline. When the last dock that sent
 // one closes, it's dropped and connections get v: null.
 
+import { lookup } from "./lookup.js";
+
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const TOP_EIGHT = 8; // people anyone but the owner can add, unless the owner gives them more
+const MAX_LIMIT = 100;
 const MAX_LEN = 200;
 const MAX_FLAGGED_LEN = 500; // a whole Twitch chat message
 const PIN_MS = 5 * 60 * 1000;
@@ -132,6 +154,7 @@ export default {
       if (req.headers.get("Upgrade") !== "websocket") return new Response("Expected a WebSocket", { status: 426 });
       return env.HUB.get(env.HUB.idFromName("hub")).fetch(req);
     }
+    if (url.pathname.startsWith("/api/")) return lookup(req, env, url); // StreamerSpace's public lookups (lookup.js)
     return new Response("Streamer Buddy System relay", { headers: { "content-type": "text/plain" } });
   },
 };
@@ -180,6 +203,7 @@ export class Hub {
       else if (m.t === "withdraw") await this.update(ws, who, m.id, (q) => q.from === who.login && !q.answer && !q.dismissed && !q.withdrawn && !(q.note && q.seenAt), (q) => (q.withdrawn = Date.now()));
       // Seen: the asker, of an answer; or the person a plain message went to.
       else if (m.t === "nudge") await this.nudge(ws, who, m.id, !!m.warn);
+      else if (m.t === "allow") await this.setAllowed(who.login, m);
       else if (m.t === "seen") await this.update(ws, who, m.id, (q) => !q.seenAt && ((q.from === who.login && q.answer) || (q.to === who.login && q.note && !q.answer && !q.dismissed)), (q) => (q.seenAt = Date.now()));
     } catch (e) {
       this.send(ws, { t: "error", why: "Something went wrong on the relay" });
@@ -210,6 +234,12 @@ export class Hub {
       this.send(ws, { t: "error", why: "signin", detail: "Twitch didn't accept that sign-in" });
       return ws.close(4001, "bad sign-in");
     }
+    const allow = await this.allowList();
+    const owner = this.owner();
+    if (allow && j.login !== owner && !allow.logins.includes(j.login)) {
+      this.send(ws, { t: "error", why: "notallowed", owner });
+      return ws.close(4003, "not on the allow list");
+    }
     const was = this.isOnline(j.login);
     ws.serializeAttachment({ login: j.login, id: j.user_id });
     const user = (await this.ctx.storage.get(`u:${j.login}`)) || { list: [] };
@@ -217,8 +247,89 @@ export class Hub {
     user.at = Date.now();
     if (!was) user.onlineAt = Date.now(); // came online (first page open)
     await this.ctx.storage.put(`u:${j.login}`, user);
+    if (allow && j.login !== owner) await this.linkOwner(j.login, true); // in case it went missing
     await this.sendState(j.login);
     if (!was) await this.tellConnections(j.login);
+  }
+
+  // ===== Allow list ==========================================================================
+
+  owner() {
+    return String(this.env.OWNER_LOGIN || "").toLowerCase();
+  }
+
+  // The allow list, or null when there's no owner (anyone can sign in).
+  async allowList() {
+    const owner = this.owner();
+    if (!owner) return null;
+    let a = await this.ctx.storage.get("allow");
+    if (!a) {
+      // First use: everyone already here stays, connected to the owner.
+      const here = Object.keys(await this.users()).filter((l) => l !== owner).sort();
+      a = { logins: here, added: Object.fromEntries(here.map((l) => [l, Date.now()])) };
+      await this.ctx.storage.put("allow", a);
+      for (const l of here) await this.linkOwner(l, true);
+    }
+    return a;
+  }
+
+  limitOf(login, a) {
+    return a?.limits?.[login] || TOP_EIGHT;
+  }
+
+  // The owner and someone on the list: added to each other's lists (or taken off both).
+  async linkOwner(login, on) {
+    const owner = this.owner();
+    if (!owner || login === owner) return;
+    const [uo, ul] = await Promise.all([this.ctx.storage.get(`u:${owner}`), this.ctx.storage.get(`u:${login}`)]);
+    const o = uo || { list: [] };
+    const u = ul || { list: [] };
+    const had = o.list.includes(login) && u.list.includes(owner);
+    if (on && had) return;
+    o.list = on ? [...new Set([...o.list, login])] : o.list.filter((l) => l !== login);
+    u.list = on ? [...new Set([...u.list, owner])] : u.list.filter((l) => l !== owner);
+    await this.ctx.storage.put(`u:${owner}`, o);
+    await this.ctx.storage.put(`u:${login}`, u);
+    await this.tellRoom(owner, [login]);
+    await this.tellRoom(login, [owner]);
+  }
+
+  async setAllowed(login, m) {
+    const owner = this.owner();
+    if (!owner || login !== owner) return;
+    const other = String(m.login || "").replace(/^@/, "").toLowerCase();
+    if (!/^[a-z0-9_]{2,25}$/.test(other) || other === owner) return;
+    const a = await this.allowList();
+    if ("limit" in m) {
+      const n = Math.round(Number(m.limit));
+      if (!a.logins.includes(other) || !(n >= TOP_EIGHT && n <= MAX_LIMIT)) return;
+      a.limits = { ...a.limits };
+      if (n === TOP_EIGHT) delete a.limits[other];
+      else a.limits[other] = n;
+      await this.ctx.storage.put("allow", a);
+      await this.sendState(other);
+      return this.sendState(owner);
+    }
+    const on = !!m.on;
+    if (on === a.logins.includes(other)) return this.sendState(owner);
+    if (on) {
+      a.logins = [...a.logins, other].sort();
+      a.added = { ...a.added, [other]: Date.now() };
+    } else {
+      a.logins = a.logins.filter((l) => l !== other);
+      delete a.added[other];
+      if (a.limits) delete a.limits[other];
+    }
+    await this.ctx.storage.put("allow", a);
+    await this.linkOwner(other, on);
+    if (!on) {
+      // Off the list: signed out now, wherever they are.
+      for (const ws of this.sockets(other)) {
+        this.send(ws, { t: "error", why: "notallowed", owner });
+        ws.close(4003, "not on the allow list");
+      }
+    }
+    await this.sendState(owner);
   }
 
   async left(ws) {
@@ -324,7 +435,16 @@ export class Hub {
       const v = await this.ctx.storage.get(`v:${c.login}`);
       if (v) views[c.login] = v;
     }
-    this.sendTo(login, { t: "state", me: login, status: users[login]?.status || "modding", since: users[login]?.onlineAt || 0, connections, requests, tags: users[login]?.tags || {}, questions, pins, rooms, chat, statsOn: !!users[login]?.statsOn, stats, views });
+    const owner = this.owner() || null;
+    let allowed;
+    if (owner && login === owner) {
+      const a = await this.allowList();
+      // joined: they've signed in at least once.
+      // used: how many people they've added (not counting the owner), of limit.
+      allowed = a.logins.map((l) => ({ login: l, added: a.added?.[l] || 0, joined: !!users[l]?.at, used: (users[l]?.list || []).filter((x) => x !== owner).length, limit: this.limitOf(l, a) }));
+    }
+    const limit = owner && login !== owner ? this.limitOf(login, await this.allowList()) : null;
+    this.sendTo(login, { t: "state", me: login, owner, allowed, limit, status: users[login]?.status || "modding", since: users[login]?.onlineAt || 0, connections, requests, tags: users[login]?.tags || {}, questions, pins, rooms, chat, statsOn: !!users[login]?.statsOn, stats, views });
   }
 
   // A room's latest messages. Anything over a week old is deleted, even if nobody
@@ -417,7 +537,16 @@ export class Hub {
   async setConnection(login, other, on) {
     other = String(other || "").toLowerCase();
     if (!/^[a-z0-9_]{2,25}$/.test(other) || other === login) return;
+    // The owner is everyone's first connection: only the allow list can end it.
+    const owner = this.owner();
+    if (!on && owner && (login === owner || other === owner) && (await this.allowList()).logins.includes(login === owner ? other : login)) {
+      return this.sendTo(login, { t: "error", why: login === owner ? "Take them off the allow list to remove them" : `${owner} is everyone's first connection` });
+    }
     const user = (await this.ctx.storage.get(`u:${login}`)) || { list: [] };
+    if (on && owner && login !== owner && !user.list.includes(other)) {
+      const limit = this.limitOf(login, await this.allowList());
+      if (user.list.filter((l) => l !== owner).length >= limit) return this.sendTo(login, { t: "error", why: "topeight", limit, owner });
+    }
     user.list = on ? [...new Set([...user.list, other])] : user.list.filter((l) => l !== other);
     await this.ctx.storage.put(`u:${login}`, user);
     await this.tellRoom(login, [other]);

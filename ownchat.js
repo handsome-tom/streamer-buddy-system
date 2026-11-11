@@ -58,6 +58,7 @@
   // Line icons: Lucide (lucide.dev, ISC license), the same set throughout.
   const ICON = {
     bookmark: '<path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"/>',
+    search: '<circle cx="11" cy="11" r="8"/> <path d="m21 21-4.3-4.3"/>',
     reply: '<path d="M20 18v-2a4 4 0 0 0-4-4H4"/> <path d="m9 17-5-5 5-5"/>',
     trash: '<path d="M10 11v6"/> <path d="M14 11v6"/> <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/> <path d="M3 6h18"/> <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
     ban: '<circle cx="12" cy="12" r="10"/> <path d="M4.929 4.929 19.07 19.071"/>',
@@ -134,9 +135,19 @@
     const bar = el("div", "oc-bar");
     const statusEl = el("span", "oc-status oc-status--wait", "Connecting…");
     const twitchBtn = button("oc-link", "Use Twitch chat", () => host.onChoose?.(), "Switch to Twitch's own chat");
-    const marksBtn = button("oc-marks", "", () => showMark(), "Go to your bookmarks (click again for the next)");
+    const marksBtn = button("oc-marks", "", () => openFind("marks"), "Your bookmarks: pick one to jump back to it");
     marksBtn.hidden = true;
-    bar.append(statusEl, marksBtn, twitchBtn);
+    // Find in chat: the magnifier turns the bar into a box (see "Find in chat" below).
+    const findBtn = iconButton("oc-find", "search", () => openFind(), "Find someone in chat, or words they said");
+    const findForm = el("form", "oc-findbox");
+    findForm.hidden = true;
+    const findInput = el("input", "oc-findbox__input");
+    Object.assign(findInput, { type: "search", maxLength: 60, placeholder: "Find a name or words", autocomplete: "off", spellcheck: false, name: "sbs-chat-find" });
+    findInput.setAttribute("data-1p-ignore", "");
+    findInput.setAttribute("data-lpignore", "true");
+    const findCount = el("span", "oc-findbox__count");
+    findForm.append(findInput, findCount, button("oc-findbox__close", "×", () => closeFind(), "Stop finding: show all of chat"));
+    bar.append(statusEl, findForm, findBtn, marksBtn, twitchBtn);
     const heldEl = el("div", "oc-held");
     heldEl.hidden = true;
     const listWrap = el("div", "oc-listwrap");
@@ -149,7 +160,9 @@
     moreBtn.hidden = true;
     const card = el("div", "oc-card");
     card.hidden = true;
-    listWrap.append(list, moreBtn, card);
+    const findList = el("div", "oc-findlist"); // names matching what's typed in the find box
+    findList.hidden = true;
+    listWrap.append(list, moreBtn, findList, card);
     const noteEl = el("div", "oc-note");
     noteEl.hidden = true;
     const replyEl = el("div", "oc-replying");
@@ -541,7 +554,10 @@
     function flushLines() {
       if (queue.length) {
         const batch = document.createDocumentFragment();
-        for (const line of queue) batch.append(line);
+        for (const line of queue) {
+          if (finding) matchLine(line);
+          batch.append(line);
+        }
         list.append(batch);
         queue = [];
         unseen = true;
@@ -558,12 +574,11 @@
 
     // ----- Bookmarks and "where I was" -------------------------------------------------
     // Bookmark a message for later with its 🔖 button (shown on hover); again to take it
-    // off. The 🔖 count in the bar goes back to them, newest first.
+    // off. The 🔖 count in the bar opens the Bookmarks tab of the find menu, to jump back.
     //
     // One click on a message puts an orange line under it, right across the chat: where
     // you were. Clicking another message moves it; clicking the same one takes it away.
     const marks = []; // bookmarked message ids, oldest first
-    let markShown = -1;
     let hereId = null;
     function drawMarks() {
       const n = marks.filter((id) => byId.has(id)).length;
@@ -577,14 +592,11 @@
       if (at >= 0) marks.splice(at, 1);
       else marks.push(id);
       line.classList.toggle("oc-line--marked", at < 0);
-      markShown = -1;
       drawMarks();
+      if (finding && findTab === "marks") drawFindList(findQuery());
     }
-    function showMark() {
-      const live = marks.filter((id) => byId.has(id));
-      if (!live.length) return drawMarks();
-      markShown = (markShown + 1) % live.length;
-      const line = byId.get(live[live.length - 1 - markShown]); // newest first
+    // Scrolls chat to a line and flashes it (a bookmark, or one picked in the find menu).
+    function jumpTo(line) {
       follow = false;
       holdUntil = Date.now() + HOVER_HOLD_MS;
       list.scrollTop += line.getBoundingClientRect().top - list.getBoundingClientRect().top - 8;
@@ -603,6 +615,232 @@
       if (hereId) line.classList.add("oc-line--here");
     });
     timers.push(setInterval(flushLines, FLUSH_MS));
+
+    // ----- Find in chat ----------------------------------------------------------------
+    // The magnifier in the bar turns it into a box: type part of a name, or some words.
+    // Chat shows only the lines that match (by name or by words), and matching names are
+    // offered underneath; picking one shows only that person's lines and opens their name
+    // card. × or Esc shows all of chat again.
+    //
+    // Chat only keeps its last few hundred lines, so each person's last lines are kept here
+    // too, for their name card. Only since this chat opened: Twitch doesn't give older chat.
+    const SAID_KEPT = 50; // lines kept per person
+    const PEOPLE_KEPT = 3000; // people remembered, the ones who spoke longest ago go first
+    const chatters = new Map(); // uid -> { uid, login, name, color, count, said: [{ id, text, at, gone }], last }
+    function remember(line, m) {
+      if (!m.userId) return;
+      let p = chatters.get(m.userId);
+      if (p) chatters.delete(m.userId); // put back below, so the map runs from longest ago to latest
+      else p = { uid: m.userId, count: 0, said: [] };
+      Object.assign(p, { login: m.login, name: m.name, color: m.color, last: line });
+      p.count++;
+      p.said.push({ id: m.id, text: m.text || "", at: Date.now() });
+      if (p.said.length > SAID_KEPT) p.said.shift();
+      chatters.set(m.userId, p);
+      if (chatters.size > PEOPLE_KEPT) chatters.delete(chatters.keys().next().value);
+    }
+
+    let finding = null; // while the box is open: {} nothing typed, { words }, or { uid } one person
+    let findPicked = -1;
+    const lower = (t) => String(t || "").toLowerCase();
+    function matchLine(line) {
+      let hit = false;
+      if (line.dataset.uid) {
+        if (finding.uid) hit = line.dataset.uid === finding.uid;
+        else if (finding.words) hit = [line.dataset.login, line.dataset.name, line.dataset.text].some((t) => lower(t).includes(finding.words));
+      }
+      line.classList.toggle("oc-line--found", hit);
+      return hit;
+    }
+    function applyFind() {
+      const on = !!(finding.uid || finding.words);
+      let n = 0;
+      for (const line of list.children) if (matchLine(line)) n++;
+      list.classList.toggle("oc-list--finding", on);
+      findCount.textContent = on ? (n ? `${n} ${n === 1 ? "line" : "lines"}` : "none here") : "";
+      follow = true;
+      holdUntil = 0;
+      toBottom();
+    }
+    function nameMatches(q) {
+      const all = [...chatters.values()].reverse(); // who spoke latest first
+      const has = (p, how) => how(lower(p.login)) || how(lower(p.name));
+      const starts = all.filter((p) => has(p, (t) => t.startsWith(q)));
+      const inside = all.filter((p) => !starts.includes(p) && has(p, (t) => t.includes(q)));
+      return [...starts, ...inside].slice(0, 6);
+    }
+    // The menu under the box has three tabs: Names (who matches what's typed), Messages
+    // (lines with those words in them, newest first) and Bookmarks (lines you bookmarked,
+    // newest first, narrowed by what's typed). Pick a name to see only them; pick a line to
+    // jump to it in chat.
+    let findTab = "names";
+    let findTabAuto = false; // the tab was picked for you, not clicked: typing may change it
+    const findQuery = () => lower(findInput.value.trim().replace(/^@/, ""));
+    function markedLines(q) {
+      return marks.map((id) => byId.get(id)).filter(Boolean).reverse()
+        .filter((l) => !q || [l.dataset.login, l.dataset.name, l.dataset.text].some((t) => lower(t).includes(q)));
+    }
+    const WORDS_SHOWN = 50;
+    function wordLines(q) {
+      if (!q) return [];
+      const out = [];
+      for (let l = list.lastElementChild; l && out.length < WORDS_SHOWN; l = l.previousElementSibling) {
+        if (l.dataset.uid && lower(l.dataset.text).includes(q)) out.push(l);
+      }
+      return out;
+    }
+    // While typing, show whichever tab has something, names first, unless you picked one.
+    function autoTab(q) {
+      if (!q) return;
+      const count = { names: nameMatches(q).length, words: wordLines(q).length, marks: markedLines(q).length };
+      if (!findTabAuto && count[findTab]) return;
+      findTab = count.names ? "names" : count.words ? "words" : count.marks ? "marks" : "names";
+      findTabAuto = true;
+    }
+    // The words with what was searched for marked, as text only (they're other people's).
+    function marked(text, q) {
+      const span = el("span", "oc-findlist__text");
+      const at = q ? lower(text).indexOf(q) : -1;
+      if (at < 0) {
+        span.textContent = text;
+        return span;
+      }
+      // Long lines start a little before the match, so it shows.
+      const from = at > 24 ? at - 18 : 0;
+      span.append((from ? "…" : "") + text.slice(from, at), el("mark", "oc-findlist__hit", text.slice(at, at + q.length)), text.slice(at + q.length));
+      return span;
+    }
+    function drawFindList(q) {
+      findList.replaceChildren();
+      findPicked = -1;
+      const names = q ? nameMatches(q) : [];
+      const words = wordLines(q);
+      const saved = markedLines(q);
+      const anyMarks = marks.some((id) => byId.has(id));
+      if (findTab === "names" && !q && anyMarks) {
+        findTab = "marks"; // nothing typed: show what's there
+        findTabAuto = true;
+      }
+      findList.hidden = !q && !anyMarks;
+      if (findList.hidden) return;
+
+      const tabs = el("div", "oc-findlist__tabs");
+      const tab = (key, label, n) => {
+        const t = button(`oc-findlist__tab${findTab === key ? " oc-findlist__tab--on" : ""}`, "", () => {
+          findTab = key;
+          findTabAuto = false;
+          drawFindList(findQuery());
+          findInput.focus();
+        });
+        if (key === "marks") t.innerHTML = icon("bookmark", 11);
+        t.append(el("span", "", label), el("span", "oc-findlist__tabn", String(n)));
+        t.addEventListener("mousedown", (e) => e.preventDefault());
+        tabs.append(t);
+      };
+      tab("names", "Names", names.length);
+      tab("words", "Messages", words.length >= WORDS_SHOWN ? `${WORDS_SHOWN}+` : words.length);
+      tab("marks", "Bookmarks", saved.length);
+      findList.append(tabs);
+
+      const item = (title, onPick) => {
+        const b = button("oc-findlist__item", "", onPick, title);
+        b.addEventListener("mousedown", (e) => e.preventDefault()); // the box keeps its focus
+        findList.append(b);
+        return b;
+      };
+      const nameEl = (name, color) => {
+        const who = el("span", "oc-findlist__name", name);
+        const c = safeColor(color);
+        if (c) who.style.color = c;
+        return who;
+      };
+      if (findTab === "names") {
+        for (const p of names) {
+          const b = item(`Show only ${p.name}'s lines, and their name card`, () => pickPerson(p));
+          b.append(nameEl(p.name, p.color), el("span", "oc-findlist__n", `${p.count > 999 ? "999+" : p.count} ${p.count === 1 ? "message" : "messages"}`));
+          b.person = p;
+        }
+        if (!names.length) findList.append(el("div", "oc-findlist__empty", q ? "No one by that name has chatted since this opened" : "Type a name"));
+      } else {
+        const lines = findTab === "words" ? words : saved;
+        for (const l of lines) {
+          const b = item(findTab === "words" ? "Jump to this line in chat" : "Jump back to this line in chat", () => {
+            closeFind();
+            jumpTo(l);
+          });
+          b.classList.add("oc-findlist__item--line");
+          b.append(nameEl(l.dataset.name, l.dataset.color), marked(l.dataset.text || "", findTab === "words" ? q : ""));
+          b.line = l;
+        }
+        if (findTab === "words") {
+          if (!words.length) findList.append(el("div", "oc-findlist__empty", q ? "No messages with that in them (chat keeps its last few hundred lines)" : "Type some words"));
+        } else if (!saved.length) findList.append(el("div", "oc-findlist__empty", anyMarks ? "No bookmarks match" : "Nothing bookmarked yet: hover a line and click its bookmark"));
+      }
+    }
+    function pickPerson(p) {
+      finding = { uid: p.uid };
+      findInput.value = p.name;
+      findList.hidden = true;
+      applyFind();
+      openCard(p.last, true);
+    }
+    function openFind(tabName) {
+      if (!finding) {
+        finding = {};
+        bar.classList.add("oc-bar--finding");
+        findForm.hidden = false;
+      }
+      findTab = tabName || "names";
+      findTabAuto = false;
+      drawFindList(findQuery());
+      findInput.focus();
+    }
+    function closeFind() {
+      if (!finding) return;
+      finding = null;
+      bar.classList.remove("oc-bar--finding");
+      findForm.hidden = true;
+      findList.hidden = true;
+      findInput.value = "";
+      findCount.textContent = "";
+      list.classList.remove("oc-list--finding");
+      for (const line of list.querySelectorAll(".oc-line--found")) line.classList.remove("oc-line--found");
+      follow = true;
+      holdUntil = 0;
+      toBottom();
+    }
+    findInput.addEventListener("input", () => {
+      const q = findQuery();
+      finding = q ? { words: q } : {};
+      autoTab(q);
+      applyFind();
+      drawFindList(q);
+    });
+    findInput.addEventListener("keydown", (e) => {
+      const items = [...findList.querySelectorAll(".oc-findlist__item")];
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeFind();
+      } else if ((e.key === "ArrowDown" || e.key === "ArrowUp") && !findList.hidden && items.length) {
+        e.preventDefault();
+        findPicked = (findPicked + (e.key === "ArrowDown" ? 1 : -1) + items.length + 1) % (items.length + 1) - 1;
+        items.forEach((b, i) => b.classList.toggle("oc-findlist__item--on", i === findPicked));
+      }
+    });
+    findForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const items = [...findList.querySelectorAll(".oc-findlist__item")];
+      const q = finding?.words;
+      const line = items[findPicked]?.line;
+      if (line) {
+        closeFind();
+        return jumpTo(line);
+      }
+      if (findTab !== "names") return;
+      // Enter: the name picked with the arrows, else a name typed in full, else the only match.
+      const p = items[findPicked]?.person || (q && items.map((b) => b.person).find((x) => lower(x.login) === q || lower(x.name) === q)) || (items.length === 1 && items[0].person);
+      if (p) pickPerson(p);
+    });
 
     function addLine(line) {
       queue.push(line);
@@ -706,6 +944,7 @@
       }
       line.append(who, ": ", body);
       byId.set(m.id, line);
+      remember(line, m);
       // Someone's first message in this channel, as Twitch marks it for mods. Twitch's
       // public chat says so (dock.js passes it on, see firstChat), and it can arrive before
       // or after the line itself.
@@ -725,6 +964,8 @@
     function hideLine(line) {
       if (line.classList.contains("oc-line--gone")) return;
       line.classList.add("oc-line--gone");
+      const kept = chatters.get(line.dataset.uid)?.said.find((x) => x.id === line.dataset.id);
+      if (kept) kept.gone = true;
       const body = line.querySelector(".oc-body");
       if (!body) return;
       body.hidden = true;
@@ -1459,7 +1700,7 @@
     // subscribed; their badges; Gift a Sub, Follow and Whisper; the mod buttons; and how
     // many messages and mod actions. Following and gifting can't be done by an app (Twitch
     // doesn't allow it), so those open the right Twitch page.
-    function openCard(line) {
+    function openCard(line, showSaid) {
       const { uid, name, login, staff, sub, tier, color } = line.dataset;
       card.replaceChildren();
       card.dataset.uid = uid;
@@ -1618,8 +1859,11 @@
         card.append(row, lengths);
       }
 
-      // Messages and mod actions, counted since this chat opened.
-      const theirs = [...list.querySelectorAll(".oc-line[data-uid]")].filter((l) => l.dataset.uid === uid);
+      // Messages and mod actions, counted since this chat opened. Their lines come from what's
+      // kept for each person (see "Find in chat"), so they're there after chat moves on.
+      const person = chatters.get(uid);
+      const count = person?.count || 0;
+      const theirs = person?.said || [];
       const a = actions.get(uid) || { bans: 0, timeouts: 0, deletes: 0, removed: 0 };
       const stats = el("div", "oc-card__stats");
       const stat = (value, label, title) => {
@@ -1629,15 +1873,20 @@
         stats.append(st);
         return st;
       };
-      const msgs = stat(theirs.length > 999 ? "999+" : String(theirs.length), "Messages", "Messages from them since this chat opened (click to see the latest)");
+      const msgs = stat(count > 999 ? "999+" : String(count), "Messages", "Messages from them since this chat opened (click to see them)");
       msgs.classList.add("oc-card__stat--click");
       msgs.addEventListener("click", () => (said.hidden = !said.hidden));
       stat(`${a.bans}/${a.timeouts}/${a.deletes}`, "Mod Actions", `Bans / time-outs / deletes since this chat opened${a.removed ? `, and ${a.removed} ban or time-out by another mod (Twitch doesn't say which)` : ""}`);
       card.append(stats);
 
       const said = el("div", "oc-card__said");
-      said.hidden = true;
-      for (const l of theirs.slice(-5)) said.append(el("div", `oc-card__msg${l.classList.contains("oc-line--gone") ? " oc-card__msg--gone" : ""}`, l.dataset.text || ""));
+      said.hidden = !showSaid;
+      if (count > theirs.length) said.append(el("div", "oc-card__msg oc-card__msg--note", `Their last ${theirs.length} of ${count.toLocaleString()}`));
+      for (const x of theirs) {
+        const row = el("div", `oc-card__msg${x.gone ? " oc-card__msg--gone" : ""}`);
+        row.append(el("span", "oc-card__when", new Date(x.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })), el("span", "", x.text));
+        said.append(row);
+      }
       if (!theirs.length) said.append(el("div", "oc-card__msg oc-card__msg--gone", "Nothing yet"));
       card.append(said);
 

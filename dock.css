@@ -5173,3 +5173,168 @@ body.embed .space__mark { right: auto; left: 14px; }
    your status. */
 .dots--mod { flex: 1 1 0; background: linear-gradient(90deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.7) 22%, rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0) 100%); border-radius: 0; }
 body.embed .bar:has(.dots--mod) .bar__status { flex: 0 0 0; min-width: 0; } /* its words live in the bar's tooltip; the strip takes the room */
+
+/* Find in chat (custom chat): a magnifier in the thin bar above the messages turns the bar
+   into a box; chat shows only the matching lines, with matching names offered underneath. */
+.oc-find {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 20px;
+  margin-left: auto;
+  margin-right: 6px;
+  padding: 0;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.oc-find svg { width: 14px; height: 14px; }
+.oc-find:hover { color: var(--text); background: rgba(125, 176, 239, 0.14); }
+.oc-find ~ .oc-marks, .oc-find ~ .oc-link { margin-left: 0; }
+.oc-bar--finding > .oc-status, .oc-bar--finding > .oc-find, .oc-bar--finding > .oc-marks, .oc-bar--finding > .oc-link { display: none; }
+body.livechat .oc-bar--finding::after { display: none; }
+.oc-findbox { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
+.oc-findbox[hidden] { display: none; }
+.oc-findbox__input {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 9px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+  background: rgba(12, 15, 26, 0.85);
+  border: 1px solid rgba(125, 176, 239, 0.35);
+  border-radius: 6px;
+  outline: none;
+}
+.oc-findbox__input:focus { border-color: #7db0ef; }
+.oc-findbox__input::-webkit-search-cancel-button { display: none; }
+.oc-findbox__count { flex: none; font-size: 10px; color: var(--muted); white-space: nowrap; }
+.oc-findbox__close {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.oc-findbox__close:hover { color: var(--text); background: rgba(125, 176, 239, 0.14); }
+.oc-list--finding > .oc-line:not(.oc-line--found) { display: none; }
+.oc-findlist {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 4px;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  background: #18181b;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+.oc-findlist[hidden] { display: none; }
+.oc-findlist__item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px;
+  font: inherit;
+  text-align: left;
+  color: var(--text);
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.oc-findlist__item:hover, .oc-findlist__item--on { background: rgba(125, 176, 239, 0.14); }
+.oc-findlist__name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.oc-findlist__n { flex: none; font-size: 11px; color: var(--muted); }
+/* The name card's Messages list: everything kept for them, scrolling when it's long. */
+.oc-card__said { max-height: 220px; overflow-y: auto; }
+.oc-card__msg { display: flex; gap: 6px; }
+.oc-card__when { flex: none; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.oc-card__msg--note { color: var(--muted); font-size: 11px; }
+/* The find menu's tabs: Names and Bookmarks. */
+.oc-findlist__tabs { display: flex; gap: 4px; padding: 0 0 4px; margin-bottom: 2px; border-bottom: 1px solid var(--line); }
+.oc-findlist__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.oc-findlist__tab:hover { color: var(--text); }
+.oc-findlist__tab--on { color: var(--text); background: rgba(125, 176, 239, 0.16); }
+.oc-findlist__tab--on:has(svg) { background: color-mix(in srgb, var(--amber) 26%, transparent); }
+.oc-findlist__tabn { font-size: 10px; opacity: 0.7; font-variant-numeric: tabular-nums; }
+.oc-findlist__item--line { justify-content: flex-start; align-items: baseline; }
+.oc-findlist__item--line .oc-findlist__name { flex: none; max-width: 40%; }
+.oc-findlist__item--line .oc-findlist__name::after { content: ":"; color: var(--muted); }
+.oc-findlist__text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.oc-findlist__empty { padding: 6px 8px; font-size: 11px; color: var(--muted); }
+.oc-findlist { max-height: calc(100% - 8px); overflow-y: auto; }
+/* The strip's right side kept small, so the bookmark count and magnifier stay clear of the
+   StreamerSpace name in the middle. */
+.oc-marks { gap: 3px; margin-right: 4px; padding: 0 6px 0 4px; height: 16px; font-size: 10px; font-weight: 700; line-height: 1; border-radius: 8px; }
+.oc-marks svg { width: 10px; height: 10px; }
+.oc-find { width: 18px; height: 16px; margin-right: 2px; }
+.oc-find svg { width: 12px; height: 12px; }
+/* The bookmark count and the Bookmarks tab in StreamerSpace's brand blue, not amber. */
+.oc-marks { color: #fff; background: #3f7dd8; }
+.oc-marks:hover { background: #5a95e6; }
+.oc-findlist__tab--on:has(svg) { background: color-mix(in srgb, #3f7dd8 40%, transparent); }
+/* The searched-for words inside a Messages result. */
+.oc-findlist__hit { padding: 0 1px; color: #fff; background: color-mix(in srgb, #3f7dd8 55%, transparent); border-radius: 2px; }
+
+/* The owner's allow list (Connections): who can sign in, and how many spots each has. */
+.cx__allowhead { width: 100%; padding: 0; font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+.cx__allowtoggle { margin-left: auto; font-size: 11px; color: #7db0ef; }
+.cx__allowlist .cx__list { margin-top: 8px; }
+.cx__allowrow { gap: 6px; }
+.cx__btn--bad { color: #fff; background: #c2413b; border-color: #c2413b; }
+.cx__btn--bad:hover { background: #d8544d; border-color: #d8544d; }
+.cx__spotset { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; flex: none; }
+.cx__spotbtn { width: 20px; height: 20px; padding: 0; font: inherit; font-size: 13px; line-height: 1; color: var(--muted); background: rgba(125, 176, 239, 0.1); border: 0; border-radius: 5px; cursor: pointer; }
+.cx__spotbtn:hover:not(:disabled) { color: #fff; background: #3f7dd8; }
+.cx__spotbtn:disabled { opacity: 0.35; cursor: default; }
+.cx__spotn { min-width: 34px; text-align: center; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.cx__spotn--full { color: #7db0ef; font-weight: 700; }
+/* Your own spots, under Add someone. */
+.cx__spots { margin: 6px 0 0; font-size: 11px; color: var(--muted); }
+.cx__spots--full { color: #7db0ef; font-weight: 700; }
+/* Tom marks your first connection. */
+.people__first { display: block; font-size: 10px; color: #7db0ef; }
+
+/* Top 8 full: Tom pops up. */
+.top8 { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(3, 5, 12, 0.7); backdrop-filter: blur(3px); }
+.top8__box { width: min(300px, 100%); padding: 18px 18px 16px; text-align: center; color: var(--text); background: #11151f; border: 1px solid rgba(125, 176, 239, 0.35); border-radius: 10px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6); }
+.top8__tom { width: 84px; height: 84px; border-radius: 50%; transform: rotate(180deg); border: 3px solid #3f7dd8; box-shadow: 0 0 18px rgba(63, 125, 216, 0.5); }
+.top8__head { margin-top: 10px; font-size: 16px; font-weight: 800; }
+.top8__words { margin: 6px 0 14px; font-size: 13px; line-height: 1.4; color: var(--muted); }
+.top8__btns { display: flex; justify-content: center; gap: 8px; }
+.top8__btns a { display: inline-flex; align-items: center; text-decoration: none; }
+.top8__discord { display: inline-flex; align-items: center; gap: 8px; margin: -4px 0 14px; padding: 6px 12px; background: rgba(63, 125, 216, 0.14); border: 1px solid rgba(125, 176, 239, 0.3); border-radius: 8px; user-select: all; }
+.top8__dlabel { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #7db0ef; }
+.top8__dname { font-size: 13px; color: #fff; }
