@@ -5361,3 +5361,34 @@ body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; 
   pointer-events: none;
 }
 .mod-btn__badge svg { width: 10px; height: 10px; }
+
+/* The mod side's top bar: a streamer who's live gets a bright purple, glowing ring (even
+   if you're not connected yet). Online but not live: plain, not dimmed. Offline: grayed. */
+.dot--chan.dot--live,
+.dot--chan.dot--live:hover,
+.dot--chan.dot--live.dot--current,
+.dot--chan.dot--live.dot--current:not(:hover) {
+  box-shadow: 0 0 0 2px #a970ff, 0 0 10px 3px rgba(169, 112, 255, 0.9), 0 0 22px 7px rgba(145, 70, 255, 0.5);
+  animation: liveGlow 2.4s ease-in-out infinite;
+}
+@keyframes liveGlow {
+  50% { box-shadow: 0 0 0 2px #bf94ff, 0 0 14px 4px rgba(169, 112, 255, 1), 0 0 28px 9px rgba(145, 70, 255, 0.6); }
+}
+@media (prefers-reduced-motion: reduce) { .dot--chan.dot--live { animation: none; } }
+
+/* Not connected with you yet: the broken chain sits over the middle of their picture,
+   a little bigger, instead of in a corner beside their badges. */
+.dot .dot__unlinked,
+.dots--mod .dot__unlinked,
+.dots--mods .dot__unlinked {
+  left: 50%;
+  top: 50%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  background: rgba(14, 14, 20, 0.72);
+  border: 0;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+.dot .dot__unlinked svg { width: 14px; height: 14px; }

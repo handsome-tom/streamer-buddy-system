@@ -523,7 +523,15 @@
   }
 
   // The extension (our parent page) handing over a sign-in.
-  addEventListener("message", (e) => {
+  addEventListener("message", fromParent);
+  // Anything the extension said before this file was listening (index.html kept it), once
+  // the rest of this file has run.
+  if (window.EARLY_CATCH) {
+    removeEventListener("message", window.EARLY_CATCH);
+    const early = window.EARLY_MESSAGES.splice(0);
+    setTimeout(() => early.forEach(fromParent), 0);
+  }
+  function fromParent(e) {
     // StreamerSpace's settings, from the extension's side panel (or the demo page).
     if (EMBED && e.source === parent && (String(e.origin).startsWith("chrome-extension://") || (SANDBOX && e.origin === location.origin))) gotExt(e.data);
     if (!EMBED || e.source !== parent || !String(e.origin).startsWith("chrome-extension://")) return;
@@ -539,7 +547,7 @@
       followStream();
       render();
     }
-  });
+  }
 
   async function validate() {
     const token = get("token");
@@ -1305,8 +1313,9 @@
   function modOwner() {
     if (!me) return "";
     const able = connections.filter((c) => c.mutual).map((c) => c.login);
-    if (watching && able.includes(watching)) return watching;
     const modFor = modLists?.modFor || [];
+    // On a stream you mod (connected or not) or of a connection: that's who Mod is about.
+    if (watching && (able.includes(watching) || modFor.includes(watching))) return watching;
     if (able.includes(svPicked) || modFor.includes(svPicked)) return svPicked;
     const sharing = Object.keys(views).filter((l) => l !== me.login);
     return able.find((l) => modFor.includes(l)) || able.find((l) => sharing.includes(l)) || able[0] || "";

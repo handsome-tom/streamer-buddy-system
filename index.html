@@ -91,6 +91,15 @@
        the current version.txt; a new version is picked up on the next load.
        Bump version.txt with every change. -->
   <script>
+    // The extension tells this page which channel its Twitch tab is on as soon as the frame
+    // loads, which is before dock.js (loaded below, after version.txt) is listening, and it
+    // doesn't say again until the tab changes. Keep anything that arrives early; dock.js
+    // hands it on once it's ready.
+    window.EARLY_MESSAGES = [];
+    window.EARLY_CATCH = (e) => window.EARLY_MESSAGES.push({ data: e.data, origin: e.origin, source: e.source });
+    addEventListener("message", window.EARLY_CATCH);
+  </script>
+  <script>
     (async () => {
       let v = "0";
       try {
