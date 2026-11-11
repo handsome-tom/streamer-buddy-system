@@ -5112,7 +5112,7 @@ body.has-space .msg-btn.pill--on, .msg-btn.pill--on { box-shadow: none; }
 /* The side panel: the connection glow (green when it's working) sits in the bottom-right
    corner on every screen, not the bar's top-left (dock.js, connGlow). */
 body.embed .bar__status::before { display: none; }
-.conn-glow { position: fixed; right: 0; bottom: 0; z-index: 30; width: 60px; height: 40px; pointer-events: none; opacity: 0.55; background: radial-gradient(ellipse at bottom right, var(--glow), transparent 70%); }
+.conn-glow { position: fixed; right: 0; bottom: 0; z-index: 30; width: 150px; height: 100px; pointer-events: none; opacity: 0.28; background: radial-gradient(ellipse at bottom right, var(--glow) 0%, color-mix(in srgb, var(--glow) 40%, transparent) 35%, transparent 72%); }
 .conn-glow:not([class*="bar__status--"]) { display: none; }
 /* The shade behind the people in the top bar: just as wide as the pictures, fading out to
    the left and darkest on the right. */
