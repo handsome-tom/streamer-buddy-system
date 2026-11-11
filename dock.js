@@ -1791,24 +1791,29 @@
     modBtn.hidden = !EMBED || !me;
     const modLive = modRinged();
     const lead = isLeadFor(modOwner());
-    // Modding (online and ready to mod): the green sword (hammer for a lead mod). Otherwise
-    // your own picture. Either way it wears the bar's only ring.
+    // Your own picture, wearing the bar's only ring. Modding (online and ready to mod): a
+    // green sword badge in its corner (hammer for a lead mod).
     const want = modIcon();
     if (modBtn.dataset.icon !== want) {
       modBtn.dataset.icon = want;
-      if (want === "pic") {
-        const img = el("img", "mod-btn__pic");
-        img.src = pics[me.login];
-        img.alt = "";
-        modBtn.replaceChildren(img);
-      } else if (want === "letter") {
-        modBtn.replaceChildren(el("span", "mod-btn__letter", me.login[0].toUpperCase()));
-      } else modBtn.innerHTML = want === "hammer" ? HAMMER_ICON : SWORD_ICON;
+      const [face, badge] = want.split("-");
+      let faceEl;
+      if (face === "pic") {
+        faceEl = el("img", "mod-btn__pic");
+        faceEl.src = pics[me.login];
+        faceEl.alt = "";
+      } else faceEl = el("span", "mod-btn__letter", me.login[0].toUpperCase());
+      modBtn.replaceChildren(faceEl);
+      if (badge) {
+        const b = el("span", `mod-btn__badge mod-btn__badge--${badge}`);
+        b.innerHTML = badge === "hammer" ? HAMMER_ICON : SWORD_ICON;
+        modBtn.append(b);
+      }
     }
     modBtn.classList.toggle("mod-btn--live", modLive);
     modBtn.classList.toggle("mod-btn--off", !modLive);
     modBtn.dataset.status = myStatus; // its ring takes your status's color (dock.css)
-    modBtn.title = modBtn.ariaLabel = `${lead ? "Lead mod" : "Mod"}${modOwner() ? ` · ${modOwner()}` : ""}${modLive ? " · you're an Available mod (ready to mod)" : " · set your status to Available mod to show your sword"}`;
+    modBtn.title = modBtn.ariaLabel = `${lead ? "Lead mod" : "Mod"}${modOwner() ? ` · ${modOwner()}` : ""}${modLive ? " · you're an Available mod (ready to mod)" : " · click to become an Available mod"}`;
     drawQuickAsk();
     drawPresence();
     statsBtn.hidden = true; // dropped from the bar (Mod and Connections stay); Stats still runs underneath
@@ -3156,10 +3161,11 @@
   function modRinged() {
     return EMBED && myStatus === "modding";
   }
-  // What the Mod button shows: "sword" / "hammer" while Modding, else "pic" (or "letter").
+  // What the Mod button shows: your picture (or letter), with a sword (hammer for a lead
+  // mod) in its corner while you're an Available mod.
   function modIcon() {
-    if (modRinged()) return isLeadFor(modOwner()) ? "hammer" : "sword";
-    return me && pics[me.login] ? "pic" : "letter";
+    const face = me && pics[me.login] ? "pic" : "letter";
+    return modRinged() ? `${face}-${isLeadFor(modOwner()) ? "hammer" : "sword"}` : face;
   }
   async function checkLive(login) {
     if (liveChecking.has(login)) return;
@@ -5138,10 +5144,11 @@
     view = "mod";
     render();
     main.scrollTop = 0;
-    // Showing your picture (not Available mod): it also opens your status menu, to change it.
-    if (modBtn.classList.contains("mod-btn--off")) {
-      e.stopPropagation(); // or the click-elsewhere closer would shut it straight away
-      openPresence(presenceMenu.hidden);
+    // Not an Available mod yet: clicking your picture makes you one (the sword appears).
+    // Other statuses are on the little person button beside it.
+    if (modBtn.classList.contains("mod-btn--off") && relay({ t: "status", status: "modding" })) {
+      myStatus = "modding";
+      render();
     }
   });
   askBtn.addEventListener("click", () => {

@@ -5340,3 +5340,24 @@ body.livechat .oc-bar--finding::after { display: none; }
 .top8__dname { font-size: 13px; color: #fff; }
 /* The Mod view's header: the streamer's status as the pixel person, no ring on their picture. */
 .mod__status { margin-left: -2px; }
+/* The Mod button is always your picture; as an Available mod it wears the green ring and a
+   small green sword (hammer for a lead mod) in its bottom-right corner. */
+.mod-btn { position: relative; }
+.mod-btn.mod-btn--live,
+.mod-btn.mod-btn--live:hover:not(:disabled),
+body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; }
+.mod-btn__badge {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #00ad03;
+  box-shadow: 0 0 0 2px #0e0e10;
+  pointer-events: none;
+}
+.mod-btn__badge svg { width: 10px; height: 10px; }
