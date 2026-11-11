@@ -746,6 +746,24 @@
   document.getElementById("tourBack").addEventListener("click", () => tour.show(tour.at - 1));
   document.getElementById("tourSkip").addEventListener("click", () => tour.end());
 
+  // ===== The mod's side panel's gear: StreamerSpace's settings, pretend =====================
+  // In Chrome the extension's side panel answers these (hub-panel.js); here the demo does,
+  // with a few of its real switches, kept in memory.
+  const extDemo = {
+    features: [["split", "Split screen"], ["streak", "Watch streak flame"], ["emotes", "Pinned emotes and Frequent Channels"], ["phrases", "Quick phrases and highlight words"], ["people", "Chatter notes (right-click a name)"], ["vodmarks", "Bookmarks and VOD markers"], ["flag", "Flag chat lines to the streamer"], ["quietnav", "Quieter top bar"]].map(([key, label]) => ({ key, label })),
+    off: ["quietnav"],
+  };
+  addEventListener("message", (e) => {
+    const mod = document.getElementById("mod").contentWindow;
+    if (e.source !== mod || !String(e.data?.t).startsWith("ext-")) return;
+    const tell = (m) => mod.postMessage(m, location.origin);
+    const m = e.data;
+    if (m.t === "ext-get") tell({ t: "ext-settings", features: extDemo.features, off: extDemo.off });
+    else if (m.t === "ext-set" && Array.isArray(m.off)) extDemo.off = m.off;
+    else if (m.t === "ext-backup") tell({ t: "ext-backup", count: 3, data: { app: "StreamerSpace", saved: new Date().toISOString(), local: { phrases: ["gg", "o7"], featuresOff: extDemo.off }, sync: { demo: true } } });
+    else if (m.t === "ext-restore") tell(m.data?.local ? { t: "ext-restored", count: Object.keys(m.data.local).length + Object.keys(m.data.sync || {}).length } : { t: "ext-restored", error: "no saved things in it" });
+  });
+
   // ===== Start: everyone added to each other, then the two panels ==========================
   (async () => {
     puppets.streamer = puppet("streamer", onAutoQuestion);

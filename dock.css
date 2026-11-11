@@ -5118,3 +5118,19 @@ body.embed .bar__status::before { display: none; }
    the left and darkest on the right. */
 .dots--mod, .dots--mods { flex: 0 1 auto; background: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.35) 45%, rgba(0, 0, 0, 0.7) 100%); border-radius: 0 6px 6px 0; }
 .dots--mod:not(:hover) { -webkit-mask-image: none; mask-image: none; }
+
+/* The side panel's gear (StreamerSpace's settings), bottom-right over the connection glow.
+   Room is kept at the bottom of each screen so it never covers a button. */
+.ext-gear { position: fixed; right: 6px; bottom: 6px; z-index: 31; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; background: none; color: rgba(255, 255, 255, 0.7); cursor: pointer; }
+.ext-gear:hover, .ext-gear--on { color: #fff; background: rgba(255, 255, 255, 0.08); }
+.ext-gear svg { display: block; width: 16px; height: 16px; }
+body.embed main { padding-bottom: 44px; }
+/* Its page: like Messages. */
+.xset__list { display: flex; flex-direction: column; margin: 0 0 6px; }
+.xset .set__row { padding: 7px 2px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+.xset__foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0 16px; }
+.xset__foot .panel__sub { margin: 0; }
+.xset__go { background: var(--purple); color: #fff; }
+.xset__keep { display: flex; gap: 8px; margin: 2px 0 6px; }
+/* The side panel: the faint brand mark goes bottom-left, clear of the gear. */
+body.embed .space__mark { right: auto; left: 14px; }

@@ -521,6 +521,8 @@
 
   // The extension (our parent page) handing over a sign-in.
   addEventListener("message", (e) => {
+    // StreamerSpace's settings, from the extension's side panel (or the demo page).
+    if (EMBED && e.source === parent && (String(e.origin).startsWith("chrome-extension://") || (SANDBOX && e.origin === location.origin))) gotExt(e.data);
     if (!EMBED || e.source !== parent || !String(e.origin).startsWith("chrome-extension://")) return;
     if (e.data?.t === "hub-token" && typeof e.data.token === "string") {
       put("token", e.data.token);
@@ -1707,7 +1709,7 @@
     pingCheck();
     // Keep typing where it was if things are redrawn under you.
     const typingIn = document.activeElement?.dataset?.key;
-    main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : view === "deck" ? deckPanel() : view === "mod" ? modPanel() : view === "messages" ? messagesPanel() : cardList());
+    main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : view === "deck" ? deckPanel() : view === "mod" ? modPanel() : view === "messages" ? messagesPanel() : view === "extsettings" ? extSettingsPanel() : cardList());
     main.classList.toggle("main--msgs", view === "messages" || (view === "chat" && EMBED)); // the dark Messages sheet
     if (LIVECHAT && (view !== "cards" || showAll) && main.firstElementChild?.childElementCount !== 0) main.prepend(inlineHead());
     drawDots();
@@ -1760,6 +1762,7 @@
     // The side panel's Messages tab carries the unread count; elsewhere it's on Connections.
     msgBtn.hidden = !EMBED || !me;
     msgBtn.classList.toggle("pill--on", view === "messages" || (view === "chat" && chatFrom === "messages"));
+    extGear?.classList.toggle("ext-gear--on", view === "extsettings");
     msgCount.textContent = !msgBtn.hidden && unreadChat ? String(unreadChat) : "";
     chatCount.textContent = msgBtn.hidden && unreadChat ? String(unreadChat) : "";
     if (POPOUT) closeWhenDone();
@@ -3301,6 +3304,115 @@
   // between any two connections (opened from their page; listed once it's been
   // used). Pick one, read and post; a room's owner picks the tag or closes it.
   // @name pings someone.
+  // ===== StreamerSpace's settings (side panel only) =========================================
+  // The Chrome extension's switches, Refresh Twitch, and Back up / Restore, on a page of
+  // their own here (the gear in the bottom-right corner). The extension keeps them, so this
+  // asks its side panel page (hub-panel.js) over postMessage and tells it what changes.
+  let ext = null; // { features: [{ key, label }], off: [keys] } once the extension answers
+  let extAskedAt = 0;
+  let extChanged = false;
+  let extNote = "";
+  const toExt = (m) => parent.postMessage(m, "*");
+  function gotExt(m) {
+    if (m?.t === "ext-settings") ext = { features: m.features || [], off: m.off || [] };
+    else if (m?.t === "ext-backup" && m.data) {
+      const blob = new Blob([JSON.stringify(m.data, null, 1)], { type: "application/json" });
+      const a = el("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `StreamerSpace backup ${String(m.data.saved || "").slice(0, 10)}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+      extNote = `Saved ${m.count} thing${m.count === 1 ? "" : "s"} to ${a.download} in your downloads.`;
+    } else if (m?.t === "ext-restored") {
+      extNote = m.error ? `That isn't a StreamerSpace backup (${m.error}).` : `Restored ${m.count} thing${m.count === 1 ? "" : "s"}.`;
+      if (!m.error) extChanged = true;
+    } else return;
+    if (view === "extsettings") render();
+  }
+  function extSettingsPanel() {
+    const panel = el("div", "panel msgs xset");
+    panel.append(el("div", "panel__head", "Settings"));
+    if (!ext) {
+      if (!extAskedAt) {
+        extAskedAt = Date.now();
+        toExt({ t: "ext-get" });
+        setTimeout(() => view === "extsettings" && !ext && render(), 1500);
+      }
+      panel.append(el("p", "panel__sub", Date.now() - extAskedAt < 1400 ? "Loading…" : "Update StreamerSpace (the Chrome extension) to change its settings here."));
+      return panel;
+    }
+    panel.append(el("div", "msgs__label", "StreamerSpace features"));
+    const list = el("div", "xset__list");
+    if (!ext.features.length) list.append(el("p", "panel__sub", "Open or refresh a Twitch tab once, then the switches show here."));
+    for (const { key, label } of ext.features) {
+      const row = el("label", "set__row");
+      const box = el("input", "set__switch");
+      box.type = "checkbox";
+      box.checked = !ext.off.includes(key);
+      box.addEventListener("change", () => {
+        ext.off = box.checked ? ext.off.filter((k) => k !== key) : [...ext.off, key];
+        toExt({ t: "ext-set", off: ext.off });
+        extChanged = true;
+        render();
+      });
+      row.append(el("span", "set__label", label), box);
+      list.append(row);
+    }
+    panel.append(list);
+    const foot = el("div", "xset__foot");
+    foot.append(el("span", "panel__sub", extChanged ? "Refresh Twitch to apply." : "Changes apply when you refresh Twitch."));
+    if (extChanged) {
+      const go = el("button", "pill xset__go", "Refresh Twitch");
+      go.type = "button";
+      go.addEventListener("click", () => {
+        toExt({ t: "ext-refresh" });
+        extChanged = false;
+        render();
+      });
+      foot.append(go);
+    }
+    panel.append(foot);
+    panel.append(el("div", "msgs__label", "Your saved things"));
+    const keep = el("div", "xset__keep");
+    const backup = el("button", "pill", "Back up");
+    backup.type = "button";
+    backup.addEventListener("click", () => toExt({ t: "ext-backup" }));
+    const file = el("input");
+    file.type = "file";
+    file.accept = ".json,application/json";
+    file.hidden = true;
+    file.addEventListener("change", async () => {
+      const f = file.files[0];
+      file.value = "";
+      if (!f) return;
+      try {
+        toExt({ t: "ext-restore", data: JSON.parse(await f.text()) });
+      } catch (e) {
+        extNote = `That isn't a StreamerSpace backup (${e.message}).`;
+        render();
+      }
+    });
+    const restore = el("button", "pill", "Restore");
+    restore.type = "button";
+    restore.addEventListener("click", () => file.click());
+    keep.append(backup, restore, file);
+    panel.append(keep, el("p", "panel__sub", extNote || "Phrases, notes, pins, markers and more, to a file."));
+    return panel;
+  }
+  // The gear, in the bottom-right corner over the connection glow.
+  const extGear = EMBED ? document.body.appendChild(el("button", "ext-gear")) : null;
+  if (extGear) {
+    extGear.type = "button";
+    extGear.title = extGear.ariaLabel = "Settings";
+    extGear.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="M6 1h4v1h-4zM2 2h2v1h-2zM6 2h4v1h-4zM12 2h2v1h-2zM2 3h12v1h-12zM3 4h10v1h-10zM3 5h10v1h-10zM1 6h5v1h-5zM10 6h5v1h-5zM1 7h5v1h-5zM10 7h5v1h-5zM1 8h5v1h-5zM10 8h5v1h-5zM1 9h5v1h-5zM10 9h5v1h-5zM3 10h10v1h-10zM3 11h10v1h-10zM2 12h12v1h-12zM2 13h2v1h-2zM6 13h4v1h-4zM12 13h2v1h-2zM6 14h4v1h-4z"/></svg>';
+    extGear.addEventListener("click", () => {
+      ext = null; // fresh each time it opens (clicked again, it closes: show() toggles)
+      extAskedAt = 0;
+      extNote = "";
+      show("extsettings");
+    });
+  }
+
   // Messages (the side panel's honey tab): your one-on-one chats, then group chats, newest
   // first, each with its last line and what's unread. Opening one goes to that chat.
   function messagesPanel() {
