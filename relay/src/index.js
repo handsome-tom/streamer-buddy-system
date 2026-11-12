@@ -809,12 +809,10 @@ export class Hub {
   // A note on one line of a channel's chat, written while it's live or on a VOD comment.
   // Kept against that moment, so it comes back on the same line in the VOD's chat replay.
   // No list or archive: a VOD asks only for the notes between its start and end.
-  // Seen by the channel's owner and their mutual connections (the same people as a
-  // flagged line). Kept as "n:<channel>:<at>:<id>" and dropped after NOTE_MS.
-
-  canSeeNotes(login, channel, users) {
-    return login === channel || (!!users[channel]?.list.includes(login) && !!users[login]?.list.includes(channel));
-  }
+  // Any channel's chat, not just connected streamers'. Seen by whoever wrote it and their
+  // mutual connections; and when the writer is the channel or one of its mutual
+  // connections, by the channel's owner and their mutual connections too (noteSeers).
+  // Kept as "n:<channel>:<at>:<id>" and dropped after NOTE_MS.
 
   async note(ws, who, m) {
     const channel = String(m.channel || "").toLowerCase();
@@ -828,7 +826,6 @@ export class Hub {
     this.notedAt[who.login] = [...recent, Date.now()];
 
     const users = await this.users();
-    if (!this.canSeeNotes(who.login, channel, users)) return this.send(ws, { t: "error", why: `You and ${channel} need to add each other first` });
     // A note left on a VOD comment says when that comment was (any time in the last NOTE_MS);
     // a live one is now.
     const now = Date.now();
@@ -840,18 +837,19 @@ export class Hub {
     // This channel's notes from before NOTE_MS go now.
     const old = await this.ctx.storage.list({ prefix: `n:${channel}:`, end: `n:${channel}:${pad13(now - NOTE_MS)}` });
     if (old.size) await this.ctx.storage.delete([...old.keys()]);
-    for (const l of noteTargets(channel, users)) this.sendTo(l, { t: "note", n });
+    for (const l of noteSeers(n, users)) this.sendTo(l, { t: "note", n });
   }
 
-  // A VOD's notes: the channel's, from its start to its end (ms).
+  // A channel's notes from one moment to another (ms): a VOD's, or a live channel's
+  // last few hours. Only the ones this person can see.
   async notes(ws, who, m) {
     const channel = String(m.channel || "").toLowerCase();
     const from = Number(m.from) || 0;
     const to = Math.min(Number(m.to) || 0, Date.now());
     if (!/^[a-z0-9_]{1,25}$/.test(channel) || !from || to <= from) return;
-    if (!this.canSeeNotes(who.login, channel, await this.users())) return this.send(ws, { t: "notes", channel, from, to, list: [] });
+    const users = await this.users();
     const found = await this.ctx.storage.list({ start: `n:${channel}:${pad13(from)}`, end: `n:${channel}:${pad13(to + 1)}`, limit: MAX_NOTES_SENT });
-    this.send(ws, { t: "notes", channel, from, to, list: [...found.values()].filter((n) => Date.now() - n.at < NOTE_MS) });
+    this.send(ws, { t: "notes", channel, from, to, list: [...found.values()].filter((n) => Date.now() - n.at < NOTE_MS && noteSeers(n, users).includes(who.login)) });
   }
 
   // Only whoever wrote a note can take it back.
@@ -860,7 +858,7 @@ export class Hub {
     const n = await this.ctx.storage.get(key);
     if (!n || n.from !== who.login) return;
     await this.ctx.storage.delete(key);
-    for (const l of noteTargets(n.channel, await this.users())) this.sendTo(l, { t: "unnote", id: n.id });
+    for (const l of noteSeers(n, await this.users())) this.sendTo(l, { t: "unnote", id: n.id });
   }
 
   // ===== Questions ===========================================================================
@@ -1012,10 +1010,14 @@ function cleanOptions(list) {
 const pad13 = (ms) => String(Math.max(0, Math.floor(ms))).padStart(13, "0");
 const noteKey = (n) => `n:${n.channel}:${pad13(n.at)}:${n.id}`;
 
-// Who sees a channel's chat notes as they're written: its owner and their mutual connections.
-function noteTargets(channel, users) {
-  const owner = users[channel] || { list: [] };
-  return [...new Set([channel, ...owner.list.filter((l) => users[l]?.list.includes(channel))])];
+// Who sees a chat note: whoever wrote it and their mutual connections; and when the writer
+// is the channel or one of its mutual connections, the channel and its mutual connections.
+function noteSeers(n, users) {
+  const mutuals = (login) => (users[login]?.list || []).filter((l) => users[l]?.list.includes(login));
+  const seers = [n.from, ...mutuals(n.from)];
+  const channelCircle = [n.channel, ...mutuals(n.channel)];
+  if (channelCircle.includes(n.from)) seers.push(...channelCircle);
+  return [...new Set(seers)];
 }
 
 function cleanTo(s, max) {
