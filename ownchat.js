@@ -532,20 +532,48 @@
     let follow = true; // staying at the newest message
     let holdUntil = 0; // the mouse is over the chat
     let unseen = false;
+    let newCount = 0; // lines that came in while chat was paused
+    let lastTop = 0;
 
     const held = () => !follow || Date.now() < holdUntil;
+    // The button over the bottom of chat, like Twitch's: shows while you're scrolled up
+    // (or new lines came in while the mouse held chat still), with how many are new.
+    function drawMore() {
+      const show = !follow || (held() && newCount > 0);
+      moreBtn.hidden = !show;
+      if (show) moreBtn.textContent = newCount ? `\u25BC ${newCount > 99 ? "99+" : newCount} new ${newCount === 1 ? "message" : "messages"}` : "Chat paused \u00B7 back to newest";
+    }
     function toBottom() {
       list.scrollTop = list.scrollHeight;
+      lastTop = list.scrollTop;
       unseen = false;
+      newCount = 0;
       moreBtn.hidden = true;
     }
+    // Pausing works like Twitch: any scroll up pauses chat right away (so the next batch of
+    // lines can't yank you back down mid-scroll), and scrolling back to the bottom resumes it.
     list.addEventListener("scroll", () => {
-      const nearEnd = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
-      if (nearEnd !== follow && (nearEnd || Date.now() >= holdUntil)) follow = nearEnd;
+      const gap = list.scrollHeight - list.scrollTop - list.clientHeight;
+      const goingUp = list.scrollTop < lastTop - 1;
+      lastTop = list.scrollTop;
+      if (goingUp && gap > 2) follow = false;
+      else if (gap < 40) follow = true;
       if (follow && Date.now() >= holdUntil) {
         unseen = false;
-        moreBtn.hidden = true;
+        newCount = 0;
       }
+      drawMore();
+    }, { passive: true });
+    // The wheel says "up" before the smooth scroll has moved anything, so pause on it now.
+    list.addEventListener("wheel", (e) => {
+      if (e.deltaY < 0 && list.scrollTop > 0) {
+        follow = false;
+        drawMore();
+      }
+    }, { passive: true });
+    // Grabbing the scrollbar or touching the chat holds it still while you drag.
+    list.addEventListener("pointerdown", () => {
+      holdUntil = Date.now() + HOVER_HOLD_MS;
     }, { passive: true });
     list.addEventListener("mousemove", () => {
       holdUntil = Date.now() + HOVER_HOLD_MS;
@@ -559,6 +587,7 @@
           batch.append(line);
         }
         list.append(batch);
+        if (held()) newCount += queue.length;
         queue = [];
         unseen = true;
       }
@@ -569,7 +598,7 @@
         first.remove();
       }
       if (!held()) toBottom();
-      else if (unseen) moreBtn.hidden = false;
+      else drawMore();
     }
 
     // ----- Bookmarks and "where I was" -------------------------------------------------
@@ -603,7 +632,7 @@
       line.classList.remove("oc-line--flash");
       void line.offsetWidth;
       line.classList.add("oc-line--flash");
-      if (unseen) moreBtn.hidden = false;
+      drawMore();
     }
     list.addEventListener("click", (e) => {
       const line = e.target.closest?.(".oc-line[data-id]");
