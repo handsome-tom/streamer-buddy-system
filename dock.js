@@ -775,6 +775,9 @@
         stats[m.owner] = m.s;
         if (view === "stats") render();
       }
+      else if (m.t === "note") gotNote(m.n);
+      else if (m.t === "notes") (m.list || []).forEach(gotNote);
+      else if (m.t === "unnote") ownChat?.unnote?.(m.id);
       else if (m.t === "error") gotError(m);
     };
     ws.onclose = (e) => {
@@ -995,6 +998,22 @@
   }
 
   // A flagged line's note shows who flagged it, once their picture's known.
+  // Chat notes (StreamerSpace, chat notes): a mod's note on a line of this channel's chat
+  // shows as a bubble above that line in custom chat. Twitch's own chat can't show them.
+  async function gotNote(n) {
+    if (!n || !LIVECHAT || n.channel !== liveChannel) return;
+    if (!pics[n.from]) await lookUp(n.from).catch(() => {});
+    try {
+      ownChat?.noteLine?.({ ...n, pic: pics[n.from] || "", color: colorOf(n.from) });
+    } catch {}
+  }
+  // The notes already on this channel's chat (the last 12 hours), once custom chat is up.
+  function askNotes() {
+    if (!LIVECHAT || !liveChannel || !ownChat || DEMO || socket?.readyState !== 1) return;
+    const now = Date.now();
+    socket.send(JSON.stringify({ t: "notes", channel: liveChannel, from: now - 12 * 60 * 60 * 1000, to: now }));
+  }
+
   async function flaggerPicture(icon, login) {
     if (!pics[login]) await lookUp(login).catch(() => {});
     if (!pics[login]) return;
@@ -5053,6 +5072,7 @@
         pretend: SANDBOX, // the public demo: links to Twitch say what they'd do instead
       });
       if (location.hostname === "localhost") window.__ownChat = ownChat;
+      setTimeout(askNotes, 2000); // after the first lines are in, so the notes find them
       for (const login of liveChatters) ownChat.here?.(login); // who was already here
       let lastTick = Date.now();
       ownChatWatch = setInterval(() => {

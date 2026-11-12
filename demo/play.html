@@ -397,6 +397,7 @@
             <button type="button" class="chip" data-click="modNudge" data-tip="→ Bumps mod1's waiting question up a color on the streamer's dock: orange, yellow, white.">Nudge<span class="go" aria-hidden="true">→</span></button>
             <button type="button" class="chip" data-click="modWarn" data-tip="→ For something that can't wait: the question turns red on the streamer's dock, with a louder beep.">Warn<span class="go" aria-hidden="true">→</span></button>
             <button type="button" class="chip" data-click="modFlag" data-tip="→ mod1 flags a viewer's message. It glows in the streamer's chat.">Flag a line<span class="go" aria-hidden="true">→</span></button>
+            <button type="button" class="chip" data-click="modChatNote" data-tip="→ mod1 leaves a note on a viewer's message. It shows as a text bubble above that line in the streamer's chat.">Note on a line<span class="go" aria-hidden="true">→</span></button>
           </div>
           <iframe id="mod" title="Mod side panel"></iframe>
         </div>
@@ -434,6 +435,7 @@
         <button id="modNudge" type="button" class="chip" data-tip="Moves mod1's oldest unanswered question up a color: orange, then yellow, then white.">Nudge</button>
         <button id="modWarn" type="button" class="chip" data-tip="What tapping Nudge six times sends: the question turns red, with a louder beep.">Warn</button>
         <button id="modFlag" type="button" class="chip" data-tip="mod1 flags a viewer's recent line. It glows in the streamer's chat.">Flag a chat line</button>
+        <button id="modChatNote" type="button" class="chip" data-tip="mod1 leaves a note on a viewer's recent line. It shows as a text bubble with mod1's picture, above that line in the streamer's chat.">Note on a chat line</button>
         <span class="pane__sep"></span>
         <button id="streamerAsk" type="button" class="chip" data-tip="The streamer asks mod1 something. Watch it arrive in the mod's panel on the left.">Streamer asks mod1</button>
         </div>
@@ -468,7 +470,7 @@
     </div>
   </section>
 <script type="module">
-  import { Socket, pretendTwitch } from "./hub.js?v=120"; // the number: bump it when hub.js changes, so browsers fetch the new one
+  import { Socket, pretendTwitch } from "./hub.js?v=121"; // the number: bump it when hub.js changes, so browsers fetch the new one
 
   const said = (text) => (document.getElementById("said").textContent = text);
   const pick = (list) => list[Math.floor(Math.random() * list.length)];
@@ -562,6 +564,16 @@
     if (!line) return said("Nothing in chat to flag yet: turn the chat feed on, or have someone talk");
     send(me, { t: "flash", kind: "chat", to: "streamer", channel: "streamer", chatter: line.who.toLowerCase(), chatterName: line.who, chatterColor: line.color, text: line.text, color: "#3fb2ff" });
     said(`${me} flagged ${line.who}'s line: it glows in the streamer's chat`);
+  });
+
+  // A chat note: what mods write on Twitch's chat with StreamerSpace (hover a line's right
+  // side, click the bubble). Here mod1 writes one on a viewer's recent line.
+  const CHAT_NOTES = ["Third account tonight with this exact line, keep an eye on it", "Regular, all good: they've been here since day one", "This one's been asking the same question all stream", "Same link they posted yesterday", "First time here, be nice to them"];
+  document.getElementById("modChatNote").addEventListener("click", () => {
+    const line = pretendTwitch.recentLine();
+    if (!line) return said("Nothing in chat to leave a note on yet: turn the chat feed on, or have someone talk");
+    send(me, { t: "note", channel: "streamer", chatter: line.who.toLowerCase(), chatterName: line.who, text: line.text, body: pick(CHAT_NOTES) });
+    said(`${me} left a note on ${line.who}'s line: it shows above it in the streamer's chat`);
   });
 
   // ===== Auto-play: mod1 and the streamer talk on their own ================================
@@ -708,6 +720,7 @@
     { title: "Nudge it", text: "No answer yet? A mod can nudge. The question moves up from green to orange, with one soft beep, and Streamer View on the left shows it too.", button: "mod1 nudges", look: "obs", click: "modNudge" },
     { title: "Quick info", text: "Not everything needs an answer. Quick info is a heads-up on the streamer's bar, with a lightning bolt, and it clears itself after 2 minutes.", button: "Send quick info", look: "obs", click: "modNote" },
     { title: "Flag a chat line", text: "A mod spots something in chat and flags it. The line glows in the streamer's chat, in the mod's color, so it's easy to find.", button: "mod1 flags a line", look: "obs", click: "modFlag" },
+    { title: "Leave a note on a chat line", text: "A mod can also write a note on one line of chat, like a text message. It shows as a bubble above that line, with the mod's picture, for the streamer and their connections only. Viewers never see it.", button: "mod1 leaves a note", look: "obs", click: "modChatNote" },
     { title: "The streamer asks back", text: "It works both ways. The streamer asks mod1 something, and it lands in the mod's side panel on the left, ready for a one-tap answer.", button: "Streamer asks mod1", look: "mod", click: "streamerAsk" },
     { title: "Twitch, built in: a raid", text: "Custom chat shows Twitch's own events as clean cards. Here comes a raid: a card for the raiding streamer, and a RAID tag on everyone who came with them.", button: "Start a raid", look: "obs", click: "tRaid" },
     { title: "A gift bomb", text: "Twenty gifted subs: a progress card at the top of chat, and a card that lists every person who got one.", button: "Drop a gift bomb", look: "obs", click: "tGift" },

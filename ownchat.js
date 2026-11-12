@@ -875,6 +875,50 @@
       queue.push(line);
     }
 
+    // ----- Chat notes ------------------------------------------------------------------
+    // Mods' notes on lines of chat (noteLine below). Found by who said it and what they said.
+    const notes = new Map(); // id -> note, until it's on its line or gives up waiting
+    const NOTE_WAIT_MS = 30 * 1000;
+    function placeNote(n) {
+      if (list.querySelector(`.oc-notebub[data-id="${CSS.escape(n.id)}"]`)) return true;
+      const login = String(n.chatter || "").toLowerCase();
+      const line = [...list.querySelectorAll(".oc-line[data-login]")].reverse().find((l) => l.dataset.login === login && (l.dataset.text === n.text || l.dataset.text.startsWith(n.text || "") || (n.text || "").startsWith(l.dataset.text)));
+      if (!line) {
+        n.waitSince ||= Date.now();
+        if (Date.now() - n.waitSince > NOTE_WAIT_MS) notes.delete(n.id);
+        return false;
+      }
+      notes.delete(n.id);
+      let stack = line.querySelector(":scope > .oc-notes");
+      if (!stack) {
+        stack = el("div", "oc-notes");
+        line.prepend(stack);
+      }
+      const mine = n.from === me.login;
+      const b = el("div", `oc-notebub${mine ? " oc-notebub--mine" : ""}`);
+      b.dataset.id = n.id;
+      const pic = el("span", "oc-notebub__pic");
+      if (n.pic) {
+        const img = el("img");
+        img.src = n.pic;
+        img.alt = "";
+        pic.append(img);
+      } else pic.textContent = (n.fromName || n.from || "?").slice(0, 1).toUpperCase();
+      const main = el("div", "oc-notebub__main");
+      const who = el("b", "oc-notebub__who", mine ? "You" : n.fromName || n.from);
+      if (n.color && !mine) who.style.color = n.color;
+      const time = el("small", "oc-notebub__time", new Date(n.at || Date.now()).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
+      const head = el("span", "oc-notebub__head");
+      head.append(pic, who);
+      main.append(head, el("span", "oc-notebub__body", n.body), time); // iPhone-style: picture and name inside
+      b.append(main);
+      b.title = `${n.fromName || n.from}'s note on ${n.chatterName || n.chatter}'s message`;
+      stack.append(b);
+      line.classList.add("oc-line--noted");
+      return true;
+    }
+    timers.push(setInterval(() => notes.forEach(placeNote), 1000));
+
     function addSystem(text, action) {
       const line = el("div", "oc-line oc-system", text);
       if (action) line.append(" ", button("oc-link", action.label, action.run));
@@ -2257,6 +2301,24 @@
         if (color) line.style.setProperty("--flag", color);
         line.classList.add("oc-line--flagged");
         return true;
+      },
+      // A mod's chat note (StreamerSpace's chat notes, from the relay through dock.js): a
+      // text-message bubble above the line it's about, with their picture. Notes that come
+      // before their line is drawn wait a little for it. Says whether it found the line.
+      noteLine(n) {
+        if (!n?.id) return false;
+        notes.set(n.id, n);
+        return placeNote(n);
+      },
+      unnote(id) {
+        notes.delete(id);
+        const b = list.querySelector(`.oc-notebub[data-id="${CSS.escape(String(id))}"]`);
+        const stack = b?.parentElement;
+        b?.remove();
+        if (stack && !stack.children.length) {
+          stack.closest(".oc-line")?.classList.remove("oc-line--noted");
+          stack.remove();
+        }
       },
       // Closes everything and hands back anything typed but not sent.
       stop() {
