@@ -906,7 +906,6 @@
       } else pic.textContent = (n.fromName || n.from || "?").slice(0, 1).toUpperCase();
       const main = el("div", "oc-notebub__main");
       const who = el("b", "oc-notebub__who", mine ? "You" : n.fromName || n.from);
-      if (n.color && !mine) who.style.color = n.color;
       const time = el("small", "oc-notebub__time", new Date(n.at || Date.now()).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
       const head = el("span", "oc-notebub__head");
       head.append(pic, who);
