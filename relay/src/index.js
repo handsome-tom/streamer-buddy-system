@@ -92,6 +92,10 @@
 //   say { owner, text }     post in someone's room (yours: owner is you)
 //   unflash { id }          clear a pinned flagged line, for everyone who has it; or take
 //                           back your own quick note or !vanish (while it's still showing)
+//   note { channel, chatter, chatterName, text, body, color, at }  a note on a line of a channel's
+//                           chat (at: a VOD comment's moment, ms); see Chat notes below
+//   notes { channel, from, to }  a VOD's notes (ms, its start and end); answered with notes { list }
+//   unnote { id, channel, at }  take back your own note
 //   flash { kind, to, text, chatter, color, channel }  something quick that
 //                           shows for a moment; see Flashes below
 //   statsShare { on }       share your stream stats with your connections
@@ -111,6 +115,9 @@
 //   flash { f }             a flash { id, kind, from, to, text, chatter, color, channel, at };
 //                           a flagged line also has chatterName, chatterColor, emotes { name: picture }
 //   unflash { id }          a pinned flagged line was cleared
+//   note { n }              a new chat note { id, channel, chatter, chatterName, text, from, body, at, color }
+//   notes { channel, from, to, list }  a VOD's chat notes
+//   unnote { id }           a chat note was taken back
 //   flashed { kind, reached }  how many people yours reached
 //   stats { owner, s }      someone's worked-out stats changed
 //   view { owner, v }       what a connection's OBS dock shows now (v null: it closed)
@@ -154,6 +161,10 @@ const MAX_VIEW_ITEMS = 12;
 const MAX_NUDGES = 3;
 const NUDGE_GAP_MS = 15 * 1000;
 const WARN_GAP_MS = 30 * 1000;
+const NOTE_MS = 60 * 24 * 60 * 60 * 1000; // chat notes: as long as Twitch keeps a VOD at most
+const MAX_NOTE_LEN = 300;
+const MAX_NOTES_PER_MINUTE = 20;
+const MAX_NOTES_SENT = 1000; // to one VOD
 
 export default {
   async fetch(req, env) {
@@ -201,6 +212,9 @@ export class Hub {
       else if (m.t === "say") await this.say(ws, who, m);
       else if (m.t === "flash") await this.flash(ws, who, m);
       else if (m.t === "unflash") await this.unflash(who, m);
+      else if (m.t === "note") await this.note(ws, who, m);
+      else if (m.t === "notes") await this.notes(ws, who, m);
+      else if (m.t === "unnote") await this.unnote(who, m);
       else if (m.t === "statsShare") await this.statsShare(who.login, m);
       else if (m.t === "sample") await this.sample(who.login, m.s);
       else if (m.t === "statEvent") await this.statEvent(who.login, m);
@@ -791,6 +805,64 @@ export class Hub {
     for (const l of targets) this.sendTo(l, { t: "unflash", id: f.id });
   }
 
+  // ===== Chat notes ==========================================================================
+  // A note on one line of a channel's chat, written while it's live or on a VOD comment.
+  // Kept against that moment, so it comes back on the same line in the VOD's chat replay.
+  // No list or archive: a VOD asks only for the notes between its start and end.
+  // Seen by the channel's owner and their mutual connections (the same people as a
+  // flagged line). Kept as "n:<channel>:<at>:<id>" and dropped after NOTE_MS.
+
+  canSeeNotes(login, channel, users) {
+    return login === channel || (!!users[channel]?.list.includes(login) && !!users[login]?.list.includes(channel));
+  }
+
+  async note(ws, who, m) {
+    const channel = String(m.channel || "").toLowerCase();
+    const body = cleanTo(m.body, MAX_NOTE_LEN);
+    const text = cleanTo(m.text, MAX_FLAGGED_LEN);
+    const chatter = clean(m.chatter).slice(0, 25).toLowerCase();
+    if (!/^[a-z0-9_]{1,25}$/.test(channel) || !body || !text || !chatter) return;
+    this.notedAt ||= {};
+    const recent = (this.notedAt[who.login] || []).filter((t) => Date.now() - t < 60000);
+    if (recent.length >= MAX_NOTES_PER_MINUTE) return this.send(ws, { t: "error", why: "Slow down a little" });
+    this.notedAt[who.login] = [...recent, Date.now()];
+
+    const users = await this.users();
+    if (!this.canSeeNotes(who.login, channel, users)) return this.send(ws, { t: "error", why: `You and ${channel} need to add each other first` });
+    // A note left on a VOD comment says when that comment was (any time in the last NOTE_MS);
+    // a live one is now.
+    const now = Date.now();
+    const asked = Math.floor(Number(m.at) || 0);
+    const at = asked > now - NOTE_MS && asked <= now ? asked : now;
+    const n = { id: crypto.randomUUID().slice(0, 8), channel, chatter, chatterName: clean(m.chatterName).slice(0, 50), text, from: who.login, body, at };
+    if (/^#[0-9a-f]{6}$/i.test(m.color || "")) n.color = m.color;
+    await this.ctx.storage.put(noteKey(n), n);
+    // This channel's notes from before NOTE_MS go now.
+    const old = await this.ctx.storage.list({ prefix: `n:${channel}:`, end: `n:${channel}:${pad13(now - NOTE_MS)}` });
+    if (old.size) await this.ctx.storage.delete([...old.keys()]);
+    for (const l of noteTargets(channel, users)) this.sendTo(l, { t: "note", n });
+  }
+
+  // A VOD's notes: the channel's, from its start to its end (ms).
+  async notes(ws, who, m) {
+    const channel = String(m.channel || "").toLowerCase();
+    const from = Number(m.from) || 0;
+    const to = Math.min(Number(m.to) || 0, Date.now());
+    if (!/^[a-z0-9_]{1,25}$/.test(channel) || !from || to <= from) return;
+    if (!this.canSeeNotes(who.login, channel, await this.users())) return this.send(ws, { t: "notes", channel, from, to, list: [] });
+    const found = await this.ctx.storage.list({ start: `n:${channel}:${pad13(from)}`, end: `n:${channel}:${pad13(to + 1)}`, limit: MAX_NOTES_SENT });
+    this.send(ws, { t: "notes", channel, from, to, list: [...found.values()].filter((n) => Date.now() - n.at < NOTE_MS) });
+  }
+
+  // Only whoever wrote a note can take it back.
+  async unnote(who, m) {
+    const key = noteKey({ channel: String(m.channel || "").toLowerCase(), at: Number(m.at) || 0, id: String(m.id || "").slice(0, 8) });
+    const n = await this.ctx.storage.get(key);
+    if (!n || n.from !== who.login) return;
+    await this.ctx.storage.delete(key);
+    for (const l of noteTargets(n.channel, await this.users())) this.sendTo(l, { t: "unnote", id: n.id });
+  }
+
   // ===== Questions ===========================================================================
 
   // To one person, or to "*": everyone you're mutually connected with, as one
@@ -934,6 +1006,16 @@ function cleanOptions(list) {
     if (v && v !== "+" && !out.includes(v)) out.push(v);
   }
   return out.slice(0, MAX_OPTIONS);
+}
+
+// Chat notes: kept in time order within each channel, so a VOD can ask for a stretch.
+const pad13 = (ms) => String(Math.max(0, Math.floor(ms))).padStart(13, "0");
+const noteKey = (n) => `n:${n.channel}:${pad13(n.at)}:${n.id}`;
+
+// Who sees a channel's chat notes as they're written: its owner and their mutual connections.
+function noteTargets(channel, users) {
+  const owner = users[channel] || { list: [] };
+  return [...new Set([channel, ...owner.list.filter((l) => users[l]?.list.includes(channel))])];
 }
 
 function cleanTo(s, max) {
