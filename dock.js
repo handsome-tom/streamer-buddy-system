@@ -207,6 +207,7 @@
   let requests = []; // [login] who added you
   let owner = null; // whose allow list decides who can sign in (everyone's first connection); null: anyone can
   let allowed = null; // the owner's own page only: [{ login, added, joined, used, limit }]
+  let asking = []; // the owner's own page only: people turned away, [{ login, at, first, tries }]
   let limit = null; // how many people you can add (your Top 8), when there's an owner
   let tags = {}; // { tag: [logins] } your own groups of connections (Mods, Lead mods, Tech…)
   let myStatus = "modding"; // how connections see you: "modding" (the default) | "online" | "idle" | "offline"
@@ -780,7 +781,7 @@
       if (ws !== socket) return;
       socket = null;
       if (e.code === 4003) {
-        showSignedOut(`StreamerSpace is invite-only for now, and you're not on the list yet.${notAllowedBy ? ` Ask ${notAllowedBy} to add you.` : ""}`);
+        showSignedOut(`StreamerSpace is invite-only for now, and you're not on the list yet.${notAllowedBy ? ` Your request to join was sent to ${notAllowedBy}. Once they allow you, sign in again.` : ""}`);
         return;
       }
       if (e.code === 4001) {
@@ -813,6 +814,7 @@
     }, 0);
     if ("owner" in m) owner = m.owner || null;
     allowed = m.allowed || null;
+    asking = m.asking || [];
     limit = m.limit || null;
     if (first) setTimeout(() => onlineNow() || spinPresence(), 400);
     connections = m.connections || [];
@@ -1806,9 +1808,9 @@
       again?.setSelectionRange?.(again.value.length, again.value.length);
     }
     askBtn.classList.toggle("pill--on", DECK ? view === "deck" : view === "ask" || (view === "cards" && !short() && get("askOpen", true)));
-    peopleBtn.classList.toggle("pill--badge", requests.length > 0);
+    peopleBtn.classList.toggle("pill--badge", requests.length + asking.length > 0);
     const unreadChat = rooms.reduce((sum, r) => sum + unread(r.owner), 0);
-    peopleBtn.title = [requests.length ? `${requests.length} waiting for you to add them back` : "", unreadChat ? `${unreadChat} unread in chat` : ""].filter(Boolean).join(", ");
+    peopleBtn.title = [requests.length ? `${requests.length} waiting for you to add them back` : "", asking.length ? `${asking.length} asking to join` : "", unreadChat ? `${unreadChat} unread in chat` : ""].filter(Boolean).join(", ");
     peopleBtn.title = peopleBtn.title ? `Connections and chat (${peopleBtn.title})` : "Connections and chat";
     peopleBtn.classList.toggle("pill--on", view === "people" || view === "chat");
     askBtn.textContent = DECK ? "Deck" : view === "ask" ? "Cancel" : "Ask";
@@ -4062,6 +4064,7 @@
     head.type = "button";
     head.setAttribute("aria-expanded", String(allowOpen));
     head.append(el("span", "cx__label", `Allow list · ${allowed.length}`), el("span", "cx__allowtoggle", allowOpen ? "Hide" : "Show"));
+    if (asking.length) head.querySelector(".cx__label").after(el("span", "cx__askcount", `${asking.length} asking`));
     head.addEventListener("click", () => {
       allowOpen = !allowOpen;
       allowOff = "";
@@ -4069,6 +4072,37 @@
     });
     card.append(head);
     card.append(el("p", "cx__hint", "Only people on this list can sign in. Everyone you add is connected to you automatically."));
+    // People who tried to sign in and were turned away: shown even with the list hidden.
+    if (asking.length) {
+      const asks = el("div", "cx__list cx__asks");
+      asks.append(el("div", "cx__label cx__askslabel", `Asking to join · ${asking.length}`));
+      for (const q of asking) {
+        const row = el("div", "people__row cx__row cx__allowrow cx__askrow");
+        const who = el("div", "people__who");
+        const words = el("span", "people__words");
+        const name = el("span", "people__name", q.login);
+        if (colorOf(q.login)) name.style.color = colorOf(q.login);
+        words.append(name, el("span", "people__state", `tried ${ago(q.at)}${q.tries > 1 ? ` · ${q.tries} times` : ""}`));
+        who.append(personPic(q.login), words);
+        const yes = el("button", "cx__btn cx__btn--blue", "Allow");
+        yes.type = "button";
+        yes.title = `Let ${q.login} sign in, connected to you`;
+        yes.addEventListener("click", () => {
+          yes.disabled = true;
+          relay({ t: "allow", login: q.login, on: true });
+        });
+        const no = el("button", "cx__btn", "Dismiss");
+        no.type = "button";
+        no.title = `Clear ${q.login}'s request (they can ask again by signing in)`;
+        no.addEventListener("click", () => {
+          no.disabled = true;
+          relay({ t: "allow", login: q.login, dismiss: true });
+        });
+        row.append(who, el("span", "cx__askgap"), yes, no);
+        asks.append(row);
+      }
+      card.append(asks);
+    }
     if (!allowOpen) return card;
 
     const form = el("form", "cx__addbar");

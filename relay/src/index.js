@@ -20,7 +20,11 @@
 // owner can give someone more from the allow list (limit). Requests from others still
 // arrive; adding one back counts.
 //
-// Kept as "allow": { logins: [login], added: { login: at }, limits: { login: n } }.
+// Asking to join: anyone turned away is remembered (newest MAX_ASKS) so the owner sees
+// them on the allow list with Allow and Dismiss. Allowing someone clears their ask.
+//
+// Kept as "allow": { logins: [login], added: { login: at }, limits: { login: n },
+// asks: { login: { at, first, tries } } }.
 // Without OWNER_LOGIN (the demo, local testing) anyone can sign in, as before.
 //
 // Connections: each person's list of who they've added. Two people can ask
@@ -124,6 +128,7 @@ import { lookup } from "./lookup.js";
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const TOP_EIGHT = 8; // people anyone but the owner can add, unless the owner gives them more
 const MAX_LIMIT = 100;
+const MAX_ASKS = 50; // people turned away, kept for the owner to allow
 const MAX_MOD_FOR = 300; // channels someone mods, as shared with their connections
 const MAX_LEN = 200;
 const MAX_FLAGGED_LEN = 500; // a whole Twitch chat message
@@ -241,7 +246,8 @@ export class Hub {
     const allow = await this.allowList();
     const owner = this.owner();
     if (allow && j.login !== owner && !allow.logins.includes(j.login)) {
-      this.send(ws, { t: "error", why: "notallowed", owner });
+      await this.askToJoin(j.login);
+      this.send(ws, { t: "error", why: "notallowed", owner, asked: true });
       return ws.close(4003, "not on the allow list");
     }
     const was = this.isOnline(j.login);
@@ -310,12 +316,30 @@ export class Hub {
     await this.tellRoom(login, [owner]);
   }
 
+  // Someone turned away: remembered as asking to join, and the owner's panel hears now.
+  async askToJoin(login) {
+    const a = await this.allowList();
+    const was = a.asks?.[login];
+    a.asks = { ...a.asks, [login]: { at: Date.now(), first: was?.first || Date.now(), tries: (was?.tries || 0) + 1 } };
+    const all = Object.entries(a.asks).sort((x, y) => y[1].at - x[1].at);
+    if (all.length > MAX_ASKS) a.asks = Object.fromEntries(all.slice(0, MAX_ASKS));
+    await this.ctx.storage.put("allow", a);
+    if (this.isOnline(this.owner())) await this.sendState(this.owner());
+  }
+
   async setAllowed(login, m) {
     const owner = this.owner();
     if (!owner || login !== owner) return;
     const other = String(m.login || "").replace(/^@/, "").toLowerCase();
     if (!/^[a-z0-9_]{2,25}$/.test(other) || other === owner) return;
     const a = await this.allowList();
+    if (m.dismiss) {
+      if (!a.asks?.[other]) return;
+      a.asks = { ...a.asks };
+      delete a.asks[other];
+      await this.ctx.storage.put("allow", a);
+      return this.sendState(owner);
+    }
     if ("limit" in m) {
       const n = Math.round(Number(m.limit));
       if (!a.logins.includes(other) || !(n >= TOP_EIGHT && n <= MAX_LIMIT)) return;
@@ -331,6 +355,10 @@ export class Hub {
     if (on) {
       a.logins = [...a.logins, other].sort();
       a.added = { ...a.added, [other]: Date.now() };
+      if (a.asks?.[other]) {
+        a.asks = { ...a.asks };
+        delete a.asks[other];
+      }
     } else {
       a.logins = a.logins.filter((l) => l !== other);
       delete a.added[other];
@@ -453,15 +481,16 @@ export class Hub {
       if (v) views[c.login] = v;
     }
     const owner = this.owner() || null;
-    let allowed;
+    let allowed, asking;
     if (owner && login === owner) {
       const a = await this.allowList();
       // joined: they've signed in at least once.
       // used: how many people they've added (not counting the owner), of limit.
       allowed = a.logins.map((l) => ({ login: l, added: a.added?.[l] || 0, joined: !!users[l]?.at, used: (users[l]?.list || []).filter((x) => x !== owner).length, limit: this.limitOf(l, a) }));
+      asking = Object.entries(a.asks || {}).map(([l, x]) => ({ login: l, at: x.at, first: x.first, tries: x.tries })).sort((x, y) => y.at - x.at);
     }
     const limit = owner && login !== owner ? this.limitOf(login, await this.allowList()) : null;
-    this.sendTo(login, { t: "state", me: login, owner, allowed, limit, status: users[login]?.status || "modding", since: users[login]?.onlineAt || 0, connections, requests, tags: users[login]?.tags || {}, questions, pins, rooms, chat, statsOn: !!users[login]?.statsOn, stats, views });
+    this.sendTo(login, { t: "state", me: login, owner, allowed, asking, limit, status: users[login]?.status || "modding", since: users[login]?.onlineAt || 0, connections, requests, tags: users[login]?.tags || {}, questions, pins, rooms, chat, statsOn: !!users[login]?.statsOn, stats, views });
   }
 
   // A room's latest messages. Anything over a week old is deleted, even if nobody

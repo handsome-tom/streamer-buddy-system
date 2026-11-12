@@ -5425,3 +5425,10 @@ body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; 
 #presenceBtn { height: 22px; min-width: 22px; }
 #presenceBtn::before { width: 11px; height: 13px; }
 #presenceBtn.presence--modding::before { width: 19px; }
+
+/* Asking to join (the owner's allow list): people turned away, with Allow and Dismiss. */
+.cx__askcount { margin-left: 8px; padding: 1px 7px; font-size: 11px; font-weight: 700; color: #fff; background: #3f7dd8; border-radius: 9px; }
+.cx__asks { margin-top: 8px; padding: 6px; background: rgba(63, 125, 216, 0.1); border: 1px solid rgba(63, 125, 216, 0.45); border-radius: 8px; }
+.cx__askslabel { margin-bottom: 2px; color: #7db0ef; }
+.cx__askgap { margin-left: auto; }
+.cx__askrow .cx__btn { flex: none; }
