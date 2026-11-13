@@ -110,10 +110,16 @@
       css.rel = "stylesheet";
       css.href = `dock.css?v=${v}`;
       document.head.append(css);
-      // ownchat.js is optional: if it doesn't load, the chat dock uses Twitch's chat.
+      // ownchat.js is optional: if it doesn't load, the chat dock uses Twitch's chat. Only the
+      // chat dock (?livechat, or coming back to it from Twitch's sign-in) ever uses it, so the
+      // side panel, pop-outs and phone deck skip it (113 KB they'd never run). Matches LIVECHAT
+      // in dock.js.
       // Inside the public demo (demo/): its pretend relay, Twitch and storage come first.
-      const demo = new URLSearchParams(location.search).has("sandbox") && window.parent !== window;
-      for (const src of [...(demo ? ["demo/sandbox.js"] : []), "config.js", "ownchat.js", "dock.js"]) {
+      const q = new URLSearchParams(location.search);
+      const demo = q.has("sandbox") && window.parent !== window;
+      const state = new URLSearchParams(location.hash.slice(1)).get("state") || q.get("state") || "";
+      const chatDock = !q.has("popout") && q.get("embed") !== "ext" && !q.has("deck") && (q.has("livechat") || state.endsWith("-livechat"));
+      for (const src of [...(demo ? ["demo/sandbox.js"] : []), "config.js", ...(chatDock ? ["ownchat.js"] : []), "dock.js"]) {
         await new Promise((done) => {
           const s = document.createElement("script");
           s.src = `${src}?v=${v}`;

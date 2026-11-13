@@ -242,7 +242,7 @@
   if (DEV) {
     for (const who of SANDBOX ? ["streamer", "mod1", "mod2"] : ["streamer", "streamer2", "mod1", "mod2"]) {
       if (pics[who]) continue;
-      const url = SANDBOX ? `demo/pics/${who}.png` : `/dev/memes/${who}.png`;
+      const url = SANDBOX ? `demo/pics/${who}.webp` : `/dev/memes/${who}.png`;
       fetch(url, { method: "HEAD" }).then((r) => r.ok && ((pics[who] = url), me && render())).catch(() => {});
     }
   }
@@ -1166,6 +1166,32 @@
       });
     } catch {}
   }
+  // The panic button's sound: a loud, bright chime, not a siren. Three bell notes rising
+  // quickly (C, E, G an octave up), each with a soft metallic overtone and a long ring, then
+  // the top note struck again. Clearly louder and fuller than the everyday notes.
+  function panicAlarm() {
+    try {
+      audio ||= new AudioContext();
+      audio.resume();
+      const now = audio.currentTime, peak = 0.34 * vol();
+      const bell = (freq, at, gain, ring) => {
+        for (const [mult, part] of [[1, 1], [2.76, 0.28], [5.4, 0.08]]) { // a bell's uneven overtones
+          const o = audio.createOscillator(), g = audio.createGain();
+          o.type = "sine";
+          o.frequency.value = freq * mult;
+          g.gain.setValueAtTime(0.0001, at);
+          g.gain.exponentialRampToValueAtTime(gain * part, at + 0.008);
+          g.gain.exponentialRampToValueAtTime(0.0001, at + ring / mult ** 0.5);
+          o.connect(g).connect(audio.destination);
+          o.start(at); o.stop(at + ring + 0.05);
+        }
+      };
+      bell(1047, now, peak, 1.2);
+      bell(1319, now + 0.12, peak, 1.2);
+      bell(1568, now + 0.24, peak, 1.6);
+      bell(2093, now + 0.62, peak * 0.8, 1.8);
+    } catch {}
+  }
   // Volume, from Settings: quiet, normal or loud.
   const VOLUME = { quiet: 0.5, normal: 1, loud: 1.6 };
   const vol = () => VOLUME[get("volume", "normal")] || 1;
@@ -1178,7 +1204,7 @@
   // A warning: two quick, higher notes, a little louder (even with reminders off).
   function ping(stage) {
     if (!soundOn() || dndOn()) return;
-    if (stage === PING_WARN) return tones([1319, 1319], 0.16, 0.26 * vol(), 0.14);
+    if (stage === PING_WARN) return panicAlarm();
     if (stage > 1 && !get("reminderBeeps", true)) return;
     tones([988], 0, (stage > 1 ? 0.13 : 0.22) * vol(), 0.22);
   }
@@ -1192,8 +1218,8 @@
   // Anything over an hour old when this panel first shows it doesn't ping or glow, unless
   // it's nudged after that.
   //
-  // A warning (q.warns: the asker tapped Nudge over and over) is red, past white, with a
-  // double beep each time one comes.
+  // The panic button (q.warns: the asker tapped Nudge over and over) is flashing red, past
+  // white, with a loud chime (panicAlarm) each time one comes.
   const PING_NAMES = ["", "Green", "Orange", "Yellow", "White", "Red"];
   const PING_TOP = 4;
   const PING_WARN = 5;
@@ -2528,7 +2554,7 @@
     wrap.setAttribute("role", "listitem");
     const row = el("div", `irow irow--${stageFor(q)}${replyOpen.has(id) ? " irow--open" : ""}`);
     const dot = el("span", `peek__ping peek__ping--${stageFor(q)}`);
-    dot.title = q.warns ? "Sent as a warning: needs you now" : q.nudges ? `Nudged ${q.nudges} time${q.nudges === 1 ? "" : "s"}` : "";
+    dot.title = q.warns ? "Panic button: needs you now" : q.nudges ? `Nudged ${q.nudges} time${q.nudges === 1 ? "" : "s"}` : "";
     const who = el("b", "irow__who", q.name);
     if (colorOf(q.from)) who.style.color = colorOf(q.from);
     const text = el("span", "irow__text");
@@ -2933,7 +2959,7 @@
   // While it can't be nudged (just nudged, or already white), the button still takes
   // taps: WARN_TAPS of them in quick succession sends them a warning, a heads-up that
   // something needs them right now (a mod looking out for the streamer), red on their
-  // screen with a louder beep. At most one every WARN_GAP_MS (the relay's limits too).
+  // screen with a loud chime. At most one every WARN_GAP_MS (the relay's limits too).
   const NUDGE_GAP_MS = 15 * 1000;
   const WARN_GAP_MS = 30 * 1000;
   const WARN_TAPS = 6;
@@ -2954,13 +2980,13 @@
     const color = warns ? PING_WARN : canNudge ? next : done ? PING_TOP : nudges + 1;
     const b = el("button", `nudge nudge--${color}${warns ? " nudge--warned" : ""}${taps.length ? " nudge--arming" : ""}`);
     b.type = "button";
-    const label = taps.length ? `Send warning: ${WARN_TAPS - taps.length} more` : warns ? "Warning sent" : canNudge ? (nudges ? "Nudge again" : "Nudge") : done ? "Nudged 3×" : "Nudged";
+    const label = taps.length ? `Panic button: ${WARN_TAPS - taps.length} more` : warns ? "Panic sent" : canNudge ? (nudges ? "Nudge again" : "Nudge") : done ? "Nudged 3×" : "Nudged";
     b.append(el("span", `peek__ping peek__ping--${color}`), el("span", null, label));
     b.disabled = busy || (!canNudge && warnWait > 0);
     b.title = canNudge
       ? `Remind them: it turns ${PING_NAMES[next].toLowerCase()} on their screen, with a soft beep`
-      : warnWait > 0 ? "Your warning just went to them; give them a moment"
-      : `Something needs them right now? Tap ${WARN_TAPS} times quickly to send them a warning (red on their screen, louder beep)`;
+      : warnWait > 0 ? "Your panic alert just went to them; give them a moment"
+      : `Something needs them right now? Hit the panic button: tap ${WARN_TAPS} times quickly (flashing red on their screen, with a loud chime)`;
     b.addEventListener("click", (e) => {
       e.stopPropagation();
       if (canNudge) {

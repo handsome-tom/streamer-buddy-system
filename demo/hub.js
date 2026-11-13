@@ -279,13 +279,13 @@ const twitch = (() => {
     },
     // A raid: the notice, then the raiders saying hello.
     raid() {
-      const from = "Lump"; // the raiding streamer (demo/pics/raider.png)
+      const from = "Lump"; // the raiding streamer (demo/pics/raider.webp)
       colorOf[from] = "#8fd14f"; // Lump's name color, which the raid card takes
       const count = 8 + Math.floor(Math.random() * 140);
       notice("raid", {
         who: from,
         system: `${count} raiders from ${from} have joined!`,
-        fields: { raid: { user_id: `u-${from}`, user_name: from, user_login: from.toLowerCase(), viewer_count: count, profile_image_url: new URL("pics/raider.png", import.meta.url).href } },
+        fields: { raid: { user_id: `u-${from}`, user_name: from, user_login: from.toLowerCase(), viewer_count: count, profile_image_url: new URL("pics/raider.webp", import.meta.url).href } },
       });
       // The raiders pour in over a few seconds: people from the other channel, about half
       // of them chatting here for the first time.
@@ -482,7 +482,7 @@ const twitch = (() => {
   const BIOS = ["Just here for the vibes.", "Cozy games, late nights, too much tea.", "Lurker by day, lurker by night.", "Speedrunner in training. Mostly falling off ledges.",
     "Artist, cat parent, chronic backseater.", "", "", "Here since the old days o7"];
   const GAMES = ["Just Chatting", "Minecraft", "Stardew Valley", "Elden Ring", "", "", "Art", "Fortnite"];
-  const PICS = { lump: "pics/raider.png", mod1: "pics/mod1.png", mod2: "pics/mod2.png", streamer: "pics/streamer.png" };
+  const PICS = { lump: "pics/raider.webp", mod1: "pics/mod1.webp", mod2: "pics/mod2.webp", streamer: "pics/streamer.webp" };
   function person(login) {
     const name = [...CHATTERS, ...NEWBIES, ...RAIDER_NAMES, "Lump", "mod1", "mod2", BOT].find((c) => c.toLowerCase() === login.toLowerCase()) || login;
     let h = 0;
