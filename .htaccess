@@ -1,0 +1,30 @@
+# Rules for streamspace.tv on Hostinger (Apache/LiteSpeed). GitHub Pages ignores this file.
+
+# https is forced by hPanel's "Force HTTPS" switch (Security -> SSL), not here,
+# so it can't loop behind Hostinger's CDN.
+RewriteEngine On
+
+# www.streamspace.tv -> streamspace.tv
+RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+
+# Not part of the website: the Git folder, the Cloudflare relay's source, dev tools, notes.
+RewriteRule ^(\.git|relay|dev)(/|$) - [F,L]
+RewriteRule ^(README\.md|\.gitignore)$ - [F,L]
+
+Options -Indexes
+DirectoryIndex index.html
+
+AddType application/manifest+json .webmanifest
+AddType font/woff2 .woff2
+AddType font/ttf .ttf
+
+# Pages and scripts check for a newer copy every time, so a push shows up right away.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|js|css|txt|webmanifest)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+  <FilesMatch "\.(png|jpg|jpeg|gif|svg|webp|woff2|ttf|pdf)$">
+    Header set Cache-Control "public, max-age=86400"
+  </FilesMatch>
+</IfModule>
