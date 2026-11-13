@@ -400,6 +400,25 @@
   .demo__wait { position: absolute; left: 0; right: 0; top: 40px; margin: 0; text-align: center; font-size: 13px; color: #8d8d97; animation: waitPulse 1.6s ease-in-out infinite alternate; }
   .demo__wait[hidden] { display: none; }
   @keyframes waitPulse { from { opacity: 0.4; } to { opacity: 1; } }
+  /* ===== The extension's 8-bit accent: Silkscreen (the pixel font the dock and side panel use for
+     their small labels) on eyebrows and small labels only. One weight, no fake bold, no smoothing. ===== */
+  @font-face { font-family: "Silkscreen"; font-weight: 400; font-display: swap; src: url("../fonts/silkscreen.woff2") format("woff2"), url("../fonts/silkscreen.ttf") format("truetype"); }
+  .eyebrow, .band__eyebrow {
+    font-family: "Silkscreen", "Plus Jakarta Sans", sans-serif; font-weight: 400; font-synthesis: none;
+    letter-spacing: 0.06em; -webkit-font-smoothing: none;
+  }
+  .eyebrow, .band__eyebrow { font-size: 12px; }
+  /* ===== Top bar: the logo in white with a soft off-white gradient and a shadow (the logo
+     file is used as a mask, so the gradient fills its shape); the three section links in the
+     pixel font, lighting up in their section's color on hover. ===== */
+  .top__brand { display: inline-flex; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 10px rgba(255, 255, 255, 0.12)); }
+  .top__logo { display: block; width: 187px; height: 32px; background: linear-gradient(180deg, #ffffff 0%, #f1eef8 55%, #d9d4e6 100%);
+    -webkit-mask: url("brand/streamerspace.svg") left center / contain no-repeat; mask: url("brand/streamerspace.svg") left center / contain no-repeat; }
+  .top nav a.top__sec { font-family: "Silkscreen", "Plus Jakarta Sans", sans-serif; font-weight: 400; font-synthesis: none; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; -webkit-font-smoothing: none; transition: color 0.15s, text-shadow 0.15s, background 0.15s; }
+  .top nav a.top__sec:hover { background: none; }
+  .top nav a.top__sec--mods:hover { color: #3fc98e; text-shadow: 0 0 10px rgba(63, 201, 142, 0.55); }
+  .top nav a.top__sec--streamer:hover { color: #a970ff; text-shadow: 0 0 10px rgba(169, 112, 255, 0.55); }
+  .top nav a.top__sec--viewers:hover { color: #f0a330; text-shadow: 0 0 10px rgba(240, 163, 48, 0.55); }
   @keyframes nebula { from { transform: rotate(0deg) scale(1); filter: blur(22px) hue-rotate(0deg); } to { transform: rotate(6deg) scale(1.06); filter: blur(26px) hue-rotate(-10deg); } }
   @media (prefers-reduced-motion: reduce) { .hero__art::before, .hero__art::after { animation: none; } }
   .hero__art { display: grid; place-items: center; }
@@ -536,11 +555,11 @@
   </div>
   <header class="top">
     <div class="wrap">
-      <a href="#" aria-label="StreamerSpace"><img src="brand/streamerspace.svg" alt="StreamerSpace" width="187" height="32"></a>
+      <a href="#" class="top__brand" aria-label="StreamerSpace"><span class="top__logo" role="img" aria-label="StreamerSpace"></span></a>
       <nav aria-label="Sections">
-        <a href="#mods">Mods</a>
-        <a href="#streamer">Streamer</a>
-        <a href="#viewers">Viewers</a>
+        <a href="#mods" class="top__sec top__sec--mods">Mods</a>
+        <a href="#streamer" class="top__sec top__sec--streamer">Streamer</a>
+        <a href="#viewers" class="top__sec top__sec--viewers">Viewers</a>
         <a href="#demo" class="cta">Try the demo</a>
       </nav>
     </div>

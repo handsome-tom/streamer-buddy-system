@@ -4505,6 +4505,18 @@ body.has-space.has-space .oc-line--marked {
   background: color-mix(in srgb, var(--amber) 10%, transparent);
 }
 .oc-line--marked::before { width: 17px; height: 17px; margin-right: 6px; vertical-align: -4px; }
+/* Flagged lines, matching: full width like the rest of chat (no indented dark box), tinted in
+   the flagger's color, with a solid bar down the left edge and a soft glow when it lands. */
+.oc-line--flagged, body.has-space.has-space .oc-line--flagged {
+  margin: 0;
+  padding-left: 12px;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--flag) 16%, transparent);
+  box-shadow: inset 3px 0 0 var(--flag);
+  animation: ocFlagIn 1.6s ease-out;
+}
+@keyframes ocFlagIn { 0% { background: color-mix(in srgb, var(--flag) 45%, transparent); box-shadow: inset 3px 0 0 var(--flag), 0 0 18px color-mix(in srgb, var(--flag) 50%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .oc-line--flagged { animation: none; } }
 .oc-marks { gap: 5px; padding: 3px 10px 3px 8px; font-size: 12.5px; font-weight: 800; }
 .oc-marks svg { width: 16px; height: 16px; }
 
@@ -5182,6 +5194,10 @@ body.embed .space__mark { right: auto; left: 14px; }
    your status. */
 .dots--mod { flex: 1 1 0; background: linear-gradient(90deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.7) 22%, rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0) 100%); border-radius: 0; }
 body.embed .bar:has(.dots--mod) .bar__status { flex: 0 0 0; min-width: 0; } /* its words live in the bar's tooltip; the strip takes the room */
+/* Streamer side, matching: the mods strip gets the same shade, darkest just behind the pictures
+   and fading to clear on the right, running a little past the last picture. The status text
+   keeps its room (the streamer needs to see it). */
+.dots--mods { background: linear-gradient(90deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.7) 22%, rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0) 100%); border-radius: 0; padding-right: 56px; }
 
 /* Find in chat (custom chat): a magnifier in the thin bar above the messages turns the bar
    into a box; chat shows only the matching lines, with matching names offered underneath. */
@@ -5457,3 +5473,39 @@ body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; 
 .oc-notes > .oc-notebub:last-child .oc-notebub__main::after { content: ""; position: absolute; left: -5px; bottom: 0; width: 16px; height: 18px; background: #2f63c0; clip-path: path("M6 0 Q6 14 0 18 Q10 18 16 12 L16 0 Z"); }
 .oc-notes > .oc-notebub--mine:last-child .oc-notebub__main::after { left: auto; right: -5px; clip-path: path("M10 0 Q10 14 16 18 Q6 18 0 12 L0 0 Z"); }
 .oc-line.oc-line--noted { border-radius: 6px; background: linear-gradient(90deg, rgba(63, 125, 216, 0.22), rgba(63, 125, 216, 0.06) 70%, transparent); box-shadow: none; }
+
+/* The Private chat button, as a direct message: their picture, their name in the pixel font,
+   and "Direct message" under it. */
+.person__chat--dm { display: inline-flex; align-items: center; gap: 9px; height: auto; padding: 6px 14px 6px 6px; text-align: left; }
+.person__chat-pic { flex: none; width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
+.person__chat-pic--letter { display: inline-grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; background: #3a3a44; }
+.person__chat-words { display: flex; flex-direction: column; line-height: 1.15; }
+.person__chat-name { font-family: "Pixelify Sans", "Plus Jakarta Sans", sans-serif; font-weight: 600; font-size: 14px; color: #fff; letter-spacing: 0.01em; }
+.person__chat-sub { font-size: 11px; font-weight: 600; color: var(--muted); }
+.person__chat--dm .pill__count { margin-left: 4px; }
+
+/* ===== Chat events, in the StreamerSpace site's style: 8-bit outline icons (ownchat.js,
+   PIXEL) standing on their own in the event's color with a soft glow, no filled disc; small
+   labels in the pixel font (Silkscreen); names in Pixelify Sans; everything else stays
+   Plus Jakarta Sans. ===== */
+.oc-event__icon, .oc-event--streak .oc-event__icon, .oc-event--bomb .oc-event__icon,
+.oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin {
+  width: 28px; height: 28px; background: none; border: 0; border-radius: 0;
+  color: var(--ev, var(--tc, #bf94ff)); box-shadow: none;
+}
+.oc-redeem .oc-event__icon, .oc-notice--announcement .oc-event__icon { color: var(--twitch-color, #bf94ff); }
+.oc-event__icon svg, .oc-topcard__pin svg { image-rendering: pixelated; filter: drop-shadow(0 0 6px color-mix(in srgb, currentColor 55%, transparent)); }
+.oc-event--bomb .oc-event__icon { width: 34px; height: 34px; }
+.oc-event--bomb .oc-event__icon svg { width: 28px; height: 28px; }
+.oc-topcard .oc-topcard__pin, .oc-topcard--pin .oc-topcard__pin { width: 20px; height: 20px; }
+.oc-firsttag, .oc-raid__title, .oc-notice--raid .oc-raid__title, .oc-topcard__label, .oc-topcard--pin .oc-topcard__label,
+.oc-notice__head, .oc-giftees__count, .oc-event__what {
+  font-family: "Silkscreen", "Plus Jakarta Sans", sans-serif; font-weight: 400; font-synthesis: none;
+  letter-spacing: 0.04em; -webkit-font-smoothing: none;
+}
+.oc-firsttag { font-size: 11px; }
+.oc-raid__title, .oc-notice--raid .oc-raid__title { font-size: 15px; text-transform: uppercase; }
+.oc-topcard__label, .oc-topcard--pin .oc-topcard__label { font-size: 12px; }
+.oc-notice__head, .oc-giftees__count { font-size: 11px; }
+.oc-event__what { font-size: 12px; }
+.oc-raid__name, .oc-redeem__head b:first-child, .oc-topcard__sender { font-family: "Pixelify Sans", "Plus Jakarta Sans", sans-serif; font-weight: 600; letter-spacing: 0.01em; }

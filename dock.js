@@ -3417,7 +3417,18 @@
     const direct = directWith(login);
     if (direct) {
       const n = unread(direct.owner);
-      const talk = el("button", "pill person__chat", "Private chat");
+      // Their picture and name (in the pixel font, like names elsewhere), with "Direct message"
+      // underneath, so it's clear who the private chat is with.
+      const talk = el("button", "pill person__chat person__chat--dm");
+      if (pics[login]) {
+        const img = el("img", "person__chat-pic");
+        img.src = pics[login];
+        img.alt = "";
+        talk.append(img);
+      } else talk.append(el("span", "person__chat-pic person__chat-pic--letter", login[0].toUpperCase()));
+      const words = el("span", "person__chat-words");
+      words.append(el("span", "person__chat-name", login), el("span", "person__chat-sub", "Direct message"));
+      talk.append(words);
       talk.type = "button";
       talk.title = `A chat only you and ${login} can see`;
       if (n) talk.append(el("span", "pill__count", String(n)));

@@ -440,6 +440,49 @@
   .menu__row--levels .chip--lvl { position: relative; }
   .menu__row--levels .chip--lvl:hover { border-color: var(--k); box-shadow: 0 0 10px color-mix(in srgb, var(--k) 35%, transparent); }
 
+  /* Demo buttons: no outlines, just big soft shadows behind them. The two menu headings
+     ("Try mod", "Try streamer") are bigger. */
+  .stage .menu .chip, .stage .screen:first-child .menu .chip, .stage .screen:last-child .menu .chip { border: 0; background: rgba(255, 255, 255, 0.06); box-shadow: 0 6px 22px 4px rgba(0, 0, 0, 0.75), 0 0 0 0 transparent; }
+  .stage .menu .chip:hover { background: rgba(255, 255, 255, 0.12); box-shadow: 0 8px 26px 6px rgba(0, 0, 0, 0.85); }
+  .stage .screen:first-child .menu .chip:hover { box-shadow: 0 8px 26px 6px rgba(0, 0, 0, 0.85), 0 0 14px rgba(63, 201, 142, 0.35); }
+  .stage .screen:last-child .menu .chip:hover { box-shadow: 0 8px 26px 6px rgba(0, 0, 0, 0.85), 0 0 14px rgba(169, 112, 255, 0.35); }
+  .stage .menu__row--levels .chip--lvl:hover { box-shadow: 0 8px 26px 6px rgba(0, 0, 0, 0.85), 0 0 14px color-mix(in srgb, var(--k) 45%, transparent); }
+  .stage .menu .chip.cue { background: rgba(125, 176, 239, 0.18); box-shadow: 0 6px 22px 4px rgba(0, 0, 0, 0.75), 0 0 0 2px var(--brand-light); }
+  .stage .menu__head { font-size: 15px; letter-spacing: 0.08em; margin-bottom: 4px; }
+
+  /* ===== The extension's 8-bit accent: Silkscreen (the pixel font the dock and side panel use for
+     their small labels) on eyebrows and small labels only. One weight, no fake bold, no smoothing. ===== */
+  @font-face { font-family: "Silkscreen"; font-weight: 400; font-display: swap; src: url("../fonts/silkscreen.woff2") format("woff2"), url("../fonts/silkscreen.ttf") format("truetype"); }
+  .eyebrow, .guide__top, .menu__cap, .stage .menu__head, .screen__label {
+    font-family: "Silkscreen", "Plus Jakarta Sans", sans-serif; font-weight: 400; font-synthesis: none;
+    letter-spacing: 0.06em; -webkit-font-smoothing: none;
+  }
+  .eyebrow { font-size: 12px; }
+  .guide__top { font-size: 11px; }
+  .menu__cap { font-size: 10px; }
+  .stage .menu__head { font-size: 15px; }
+  .screen__label { font-size: 11px; }
+  .screen__label small { font-family: "Plus Jakarta Sans", sans-serif; -webkit-font-smoothing: auto; letter-spacing: 0; }
+
+  /* Callouts: a ring round where something landed, and a short note beside it, on the panel
+     opposite the button pressed (green edge when a mod did it, purple when the streamer did). */
+  .callout { position: absolute; inset: 0 auto auto 0; z-index: 50; pointer-events: none; animation: calloutIn 0.25s ease-out; }
+  .callout--out { opacity: 0; transition: opacity 0.5s; }
+  @keyframes calloutIn { from { opacity: 0; transform: translateY(4px); } }
+  .callout__ring { position: absolute; border-radius: 12px; box-shadow: 0 0 0 2px var(--brand-light), 0 0 18px 2px rgba(125, 176, 239, 0.45); animation: calloutRing 1.4s ease-in-out infinite; }
+  @keyframes calloutRing { 50% { box-shadow: 0 0 0 2px var(--brand-light), 0 0 26px 6px rgba(125, 176, 239, 0.25); } }
+  .callout__text { position: absolute; margin: 0; padding: 7px 13px 8px; font-size: 13px; line-height: 1.4; color: #efeff1; border-radius: 18px; background: linear-gradient(180deg, #5b9af0, #2f63c0); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); text-shadow: none; }
+  .callout__head { display: inline; margin-right: 5px; }
+  .callout__pic { display: inline-flex; vertical-align: -5px; width: 20px; height: 20px; margin: 0 5px 0 -4px; border-radius: 50%; overflow: hidden; background: #2a5aa8; }
+  .callout__pic img { width: 100%; height: 100%; object-fit: cover; }
+  .callout__who { color: #fff; font-size: 12px; font-weight: 700; }
+  /* The bubble's tail, on the side facing what it points at: bottom-left when the bubble
+     sits above it (the usual iMessage corner), top-left, flipped, when it sits below. */
+  .callout__text::after { content: ""; position: absolute; left: -5px; top: 0; width: 16px; height: 18px; background: #5b9af0; clip-path: path("M6 18 Q6 4 0 0 Q10 0 16 6 L16 18 Z"); }
+  .callout__text--above::after { top: auto; bottom: 0; background: #2f63c0; clip-path: path("M6 0 Q6 14 0 18 Q10 18 16 12 L16 0 Z"); }
+  .callout--mod .callout__ring { box-shadow: 0 0 0 2px #5b9af0, 0 0 18px 2px rgba(91, 154, 240, 0.45); }
+  .callout--streamer .callout__ring { box-shadow: 0 0 0 2px #5b9af0, 0 0 18px 2px rgba(91, 154, 240, 0.45); }
+  @media (prefers-reduced-motion: reduce) { .callout, .callout__ring { animation: none; } }
 </style>
 <style>
   /* Inside the front page's frame: no backdrop or page padding of its own (the front page's
@@ -484,7 +527,7 @@
           <div class="screen__label">Mod's side panel <small>you're mod1, watching the streamer</small>
             <span class="info" tabindex="0" data-tip="What a mod sees in Chrome, next to Twitch: Streamer View at the top shows what's on the streamer's screen right now, then the box to ask, send quick info or a !vanish note.">?</span></div>
           <div class="menu menu--grouped" aria-label="Try as mod1">
-            <span class="menu__head">Try as mod1</span>
+            <span class="menu__head">Try mod</span>
             <div class="menu__row"><span class="menu__cap">Talk</span>
               <button type="button" class="chip" data-click="modNote" data-tip="→ A heads-up on the streamer's bar, with a lightning bolt. It goes after 2 minutes.">Quick info<span class="go" aria-hidden="true">→</span></button>
               <button type="button" class="chip" data-click="modVanish" data-tip="→ A short kind note on the streamer's bar, with a little devil. Gone in 30 seconds.">!vanish<span class="go" aria-hidden="true">→</span></button>
@@ -505,9 +548,9 @@
           <div class="screen__label">Streamer's OBS dock <small>you're the streamer</small>
             <span class="info" tabindex="0" data-tip="What the streamer sees in OBS: mods' pictures and the message area at the top, then their chat, with Twitch's events and mod tools built in. Hover a chat line to bookmark, pin or reply.">?</span></div>
           <div class="menu menu--grouped" aria-label="Try on the streamer's side">
-            <span class="menu__head">On the streamer's side <a class="menu__more" href="#allControls" data-tip="Every other Twitch event and chat control, below the screens.">More…</a></span>
+            <span class="menu__head">Try streamer <a class="menu__more" href="#allControls" data-tip="Every other Twitch event and chat control, below the screens.">More…</a></span>
             <div class="menu__row"><span class="menu__cap">Your mods</span>
-              <button type="button" class="chip" data-click="streamerAsk" data-tip="← The streamer asks mod1 something. It shows up in the mod's panel.">Ask mod1<span class="go" aria-hidden="true">←</span></button>
+              <button type="button" class="chip" data-click="streamerAsk" data-tip="← The streamer types a question in the dock's Message box and sends it to mod1. Watch it land in the mod's panel.">Ask mod1<span class="go" aria-hidden="true">←</span></button>
             </div>
             <div class="menu__row"><span class="menu__cap">Twitch events</span>
               <button type="button" class="chip" data-click="tRaid" data-k style="--k:#8fd14f" data-tip="Lump raids with a crowd. Raiders get a RAID tag with Lump's picture.">Raid</button>
@@ -604,7 +647,7 @@
   const open = {};
   function track(m) {
     if (m.t === "state") for (const q of m.questions || []) open[q.id] = q;
-    if (m.t === "q") open[m.q.id] = m.q;
+    if (m.t === "q") { open[m.q.id] = m.q; noticeAnswer(m.q); }
   }
 
   // The mod who isn't the left panel (mod2 at first) answers anything sent to them, a few
@@ -637,7 +680,34 @@
   const modNote = () => send(me, { t: "flash", kind: "info", to: "streamer", text: pick(MOD_NOTES) });
   const MOD_VANISH = ["You've got this", "Looking good today", "That was hilarious", "Drink some water"];
   const modVanish = () => send(me, { t: "flash", kind: "love", to: "streamer", text: pick(MOD_VANISH) });
-  const streamerAsk = () => send("streamer", { t: "ask", to: me, text: pick(STREAMER_ASKS), options: ["y", "n", "s", "o", "m", "t"] });
+  let lastStreamerAsk = "";
+  // The streamer asks the panel's mod, the way the streamer really would: typed into the
+  // "Message…" box on the dock's bar (its picker already on the mod) and sent, so it visibly
+  // starts on the streamer's side; then a note points at where it lands in the mod's panel.
+  // If the dock isn't ready (or is set to someone else), it's sent straight through instead.
+  const streamerAsk = async () => {
+    const text = (lastStreamerAsk = pick(STREAMER_ASKS));
+    let doc = null;
+    try { doc = document.getElementById("obs").contentDocument; } catch {}
+    const form = doc?.getElementById("quickAsk");
+    const input = form?.querySelector(".qa__text");
+    const to = form?.querySelector(".qa__pic")?.getAttribute("src") || "";
+    if (!form || !input || !to.includes(`/${me}.`) || typeof form.requestSubmit !== "function") {
+      send("streamer", { t: "ask", to: me, text, options: ["y", "n", "s", "o", "m", "t"] });
+      setTimeout(() => calloutFor("streamerAsk"), 0);
+      return;
+    }
+    showCallout("obs", form, `Asking ${me} right from my bar: pick who, type it, press Enter.`, "streamer");
+    input.value = "";
+    for (const ch of text) {
+      input.value += ch;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      await wait(28);
+    }
+    await wait(350);
+    form.requestSubmit();
+    setTimeout(() => calloutFor("streamerAsk"), 600);
+  };
   const waitingOnStreamer = () => Object.values(open).filter((q) => q.from === me && q.to === "streamer" && !q.note && !q.answer && !q.dismissed && !q.withdrawn).sort((a, b) => a.at - b.at);
   // Ask -> Nudge -> Panic are levels, and each one works on its own: if there's no question
   // that level can use, it asks a fresh one first and then nudges or panics it. They never
@@ -905,6 +975,93 @@
     else if (m.t === "ext-backup") tell({ t: "ext-backup", count: 3, data: { app: "StreamerSpace", saved: new Date().toISOString(), local: { phrases: ["gg", "o7"], featuresOff: extDemo.off }, sync: { demo: true } } });
     else if (m.t === "ext-restore") tell(m.data?.local ? { t: "ext-restored", count: Object.keys(m.data.local).length + Object.keys(m.data.sync || {}).length } : { t: "ext-restored", error: "no saved things in it" });
   });
+
+
+  // ===== Callouts: what each button did, pointed out on the other side ========================
+  // Press something on one side and a small note pops up on the other panel, pointing at where
+  // it landed (found inside that panel's page: same origin). Answers go the other way: when one
+  // side answers, the note points at where the answer shows up for the person who asked.
+  const CALLOUTS = {
+    modAsk: { on: "obs", from: "mod", find: ".peek", say: () => "My question lands here, under your bar. Never on stream. Answer with ♥ ✓ ✗ or ?, or type a reply." },
+    modNote: { on: "obs", from: "mod", find: ".qflash--info", say: () => "Quick info from me: it shows here for 2 minutes, then clears itself." },
+    modVanish: { on: "obs", from: "mod", find: ".qflash--love", say: () => "A !vanish note from me: here for 30 seconds, then it fades away." },
+    modNudge: { on: "obs", from: "mod", find: ".peek", say: () => "Nudged! My question moves up a color, and your outline turns warmer." },
+    modWarn: { on: "obs", from: "mod", find: ".peek", say: () => "Panic button! Your whole dock flashes red, with a loud chime." },
+    modFlag: { on: "obs", from: "mod", find: ".oc-line--flagged", say: () => "I flagged this chat line: it's marked in my color so you can find it fast." },
+    modChatNote: { on: "obs", from: "mod", find: ".oc-notebub", say: () => "My note sits right above that chat line. Viewers never see it." },
+    streamerAsk: { on: "mod", from: "streamer", find: ".ilist .irow", text: () => lastStreamerAsk, say: () => "My question lands here in your side panel, ready for a one-tap answer." },
+    tRaid: { on: "obs", from: "twitch", find: ".oc-notice", say: () => "A raid: a card for the raiding streamer, and a RAID tag on everyone who came with them." },
+    tGift: { on: "obs", from: "twitch", find: ".oc-topcard--gift", say: () => "Gift bomb: progress at the top of chat, then a card listing everyone who got one." },
+    tFirst: { on: "obs", from: "twitch", find: ".oc-line--first", say: () => "First-time chatters are labeled, so they're easy to welcome." },
+    tStreak: { on: "obs", from: "twitch", find: ".oc-notice", say: () => "A watch streak, shown as a clean card in chat." },
+    tPoll: { on: "obs", from: "twitch", find: ".oc-topcard--poll", say: () => "The poll sits at the top of chat, with live votes." },
+  };
+  const panelDoc = (id) => { try { return document.getElementById(id).contentDocument; } catch { return null; } };
+  let callout = null;
+  function showCallout(on, target, text, from) {
+    callout?.remove();
+    const frame = document.getElementById(on);
+    const box = document.createElement("div");
+    box.className = `callout callout--${from}`;
+    // Looks like the iPhone-style chat notes: a blue bubble with the sender's picture and name.
+    // Twitch's own events come from "Twitch", with the StreamerSpace mark.
+    const who = from === "mod" ? me : from === "streamer" ? "streamer" : "Twitch";
+    const pic = from === "twitch" ? "brand/mark.svg" : `pics/${who}.webp`;
+    box.innerHTML = `<span class="callout__ring"></span><p class="callout__text"><span class="callout__head"><span class="callout__pic"><img src="${pic}" alt=""></span><b class="callout__who"></b></span><span class="callout__say"></span></p>`;
+    box.querySelector(".callout__who").textContent = who;
+    box.querySelector(".callout__say").textContent = text;
+    document.body.append(box);
+    callout = box;
+    const place = () => {
+      if (!box.isConnected) return;
+      const f = frame.getBoundingClientRect();
+      const t = target.isConnected ? target.getBoundingClientRect() : null;
+      if (!t || !t.width) return box.remove();
+      const ring = box.querySelector(".callout__ring");
+      const x = f.left + scrollX, y = f.top + scrollY;
+      Object.assign(ring.style, { left: `${x + t.left - 4}px`, top: `${y + t.top - 4}px`, width: `${t.width + 8}px`, height: `${t.height + 8}px` });
+      const note = box.querySelector(".callout__text");
+      const w = Math.min(300, f.width - 24);
+      const below = t.bottom + 14 + note.offsetHeight < f.height;
+      Object.assign(note.style, { width: `${w}px`, left: `${x + Math.max(12, Math.min(f.width - w - 12, t.left + t.width / 2 - w / 2))}px`, top: below ? `${y + t.bottom + 14}px` : `${y + t.top - 14 - note.offsetHeight}px` });
+      note.classList.toggle("callout__text--above", !below);
+      requestAnimationFrame(place);
+    };
+    place();
+    setTimeout(() => box.classList.add("callout--out"), 6500);
+    setTimeout(() => box.remove(), 7000);
+  }
+  function calloutFor(id) {
+    const c = CALLOUTS[id];
+    const doc = panelDoc(c.on);
+    if (!doc) return;
+    const before = new Set(doc.querySelectorAll(c.find));
+    setTimeout(() => {
+      const all = [...doc.querySelectorAll(c.find)];
+      const want = c.text?.();
+      const el = (want && all.find((e) => e.textContent.includes(want))) || all.find((e) => !before.has(e)) || all[all.length - 1];
+      if (el) showCallout(c.on, el, c.say(), c.from);
+    }, 1100);
+  }
+  // (Ask mod1 shows its own notes, in order, from streamerAsk.)
+  for (const id of Object.keys(CALLOUTS)) if (id !== "streamerAsk") document.getElementById(id)?.addEventListener("click", () => calloutFor(id));
+  // Answers, back the other way.
+  const toldAnswer = new Set();
+  function noticeAnswer(q) {
+    if (!q.answer || toldAnswer.has(q.id)) return;
+    toldAnswer.add(q.id);
+    setTimeout(() => {
+      if (q.from === me && q.to === "streamer") {
+        const doc = panelDoc("mod");
+        const el = doc && ([...doc.querySelectorAll(".mod__reactions *, .sv__row, .log__row")].find((e) => e.children.length < 8 && e.textContent.includes(q.text)) || doc.querySelector(".mod__reactions"));
+        if (el) showCallout("mod", el, "I answered your question: it shows up here in your side panel.", "streamer");
+      } else if (q.from === "streamer" && q.to === me) {
+        const doc = panelDoc("obs");
+        const el = doc?.querySelector(".peek");
+        if (el) showCallout("obs", el, "I answered: it pops up here on your bar.", "mod");
+      }
+    }, 900);
+  }
 
   // ===== Start: everyone added to each other, then the two panels ==========================
   (async () => {

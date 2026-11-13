@@ -95,6 +95,23 @@
     megaphone: '<path d="M3 10.2c0-1 .8-1.8 1.8-1.8H8l8.6-4.6c.7-.4 1.4.1 1.4.9v14.6c0 .8-.7 1.3-1.4.9L8 15.6H4.8c-1 0-1.8-.8-1.8-1.8z"/><path d="M8.2 16.2l1.5 4.2c.2.6-.2 1.1-.8 1.1H7.6c-.4 0-.8-.3-.9-.7l-1.3-4.6z"/><rect x="19.6" y="10" width="2.4" height="4" rx="1.2"/>',
     raid: '<path d="M3 11.2L20.6 3.4c.6-.3 1.2.3.9.9L13.8 21c-.3.7-1.3.6-1.5-.1l-1.9-6.4-6.4-1.9c-.7-.2-.8-1.2-.1-1.5z"/>',
   };
+  // 8-bit outline versions of the event icons (made from the line icons above on a 16-pixel
+  // grid), to match the StreamerSpace site: outlined, pixelated, drawn in the event's color.
+  const PIXEL = {
+    flame: "M6 2h3v1h-3zM6 3h3v1h-3zM6 4h1v1h-1zM8 4h2v1h-2zM6 5h1v1h-1zM9 5h2v1h-2zM6 6h2v1h-2zM10 6h2v1h-2zM6 7h2v1h-2zM11 7h2v1h-2zM3 8h2v1h-2zM6 8h2v1h-2zM12 8h1v1h-1zM3 9h4v1h-4zM12 9h1v1h-1zM3 10h1v1h-1zM12 10h1v1h-1zM3 11h1v1h-1zM12 11h1v1h-1zM3 12h2v1h-2zM11 12h2v1h-2zM4 13h2v1h-2zM10 13h2v1h-2zM5 14h6v1h-6z",
+    star: "M7 1h2v1h-2zM6 2h4v1h-4zM6 3h4v1h-4zM5 4h2v1h-2zM9 4h2v1h-2zM1 5h5v1h-5zM10 5h5v1h-5zM1 6h2v1h-2zM13 6h2v1h-2zM1 7h2v1h-2zM13 7h2v1h-2zM2 8h2v1h-2zM12 8h2v1h-2zM3 9h2v1h-2zM11 9h2v1h-2zM4 10h1v1h-1zM11 10h1v1h-1zM3 11h2v1h-2zM11 11h2v1h-2zM3 12h2v1h-2zM6 12h4v1h-4zM11 12h2v1h-2zM3 13h4v1h-4zM9 13h4v1h-4zM3 14h2v1h-2zM11 14h2v1h-2z",
+    crown: "M7 1h2v1h-2zM7 2h2v1h-2zM1 3h2v1h-2zM6 3h4v1h-4zM13 3h2v1h-2zM1 4h3v1h-3zM6 4h1v1h-1zM9 4h1v1h-1zM12 4h3v1h-3zM1 5h6v1h-6zM9 5h6v1h-6zM1 6h2v1h-2zM4 6h2v1h-2zM10 6h2v1h-2zM13 6h2v1h-2zM2 7h1v1h-1zM13 7h1v1h-1zM2 8h1v1h-1zM13 8h1v1h-1zM2 9h2v1h-2zM12 9h2v1h-2zM2 10h2v1h-2zM12 10h2v1h-2zM3 11h10v1h-10zM3 13h10v1h-10zM3 14h10v1h-10z",
+    giftfill: "M3 1h4v1h-4zM9 1h4v1h-4zM3 2h1v1h-1zM6 2h4v1h-4zM12 2h1v1h-1zM3 3h1v1h-1zM7 3h2v1h-2zM12 3h1v1h-1zM2 4h12v1h-12zM1 5h2v1h-2zM7 5h2v1h-2zM13 5h2v1h-2zM1 6h2v1h-2zM7 6h2v1h-2zM13 6h2v1h-2zM2 7h12v1h-12zM2 8h1v1h-1zM7 8h2v1h-2zM13 8h1v1h-1zM2 9h1v1h-1zM7 9h2v1h-2zM13 9h1v1h-1zM2 10h1v1h-1zM7 10h2v1h-2zM13 10h1v1h-1zM2 11h1v1h-1zM7 11h2v1h-2zM13 11h1v1h-1zM2 12h1v1h-1zM7 12h2v1h-2zM13 12h1v1h-1zM2 13h12v1h-12zM3 14h10v1h-10z",
+    gem: "M4 1h8v1h-8zM3 2h10v1h-10zM2 3h2v1h-2zM6 3h1v1h-1zM9 3h1v1h-1zM12 3h2v1h-2zM1 4h2v1h-2zM5 4h2v1h-2zM9 4h2v1h-2zM13 4h2v1h-2zM1 5h14v1h-14zM1 6h14v1h-14zM1 7h2v1h-2zM5 7h2v1h-2zM9 7h2v1h-2zM13 7h2v1h-2zM2 8h2v1h-2zM5 8h2v1h-2zM9 8h2v1h-2zM12 8h2v1h-2zM3 9h1v1h-1zM6 9h1v1h-1zM9 9h1v1h-1zM12 9h1v1h-1zM3 10h2v1h-2zM6 10h4v1h-4zM11 10h2v1h-2zM4 11h8v1h-8zM5 12h6v1h-6zM6 13h4v1h-4zM6 14h4v1h-4z",
+    heartfill: "M3 2h4v1h-4zM9 2h4v1h-4zM2 3h3v1h-3zM6 3h4v1h-4zM12 3h2v1h-2zM1 4h2v1h-2zM7 4h2v1h-2zM13 4h2v1h-2zM1 5h1v1h-1zM14 5h1v1h-1zM1 6h1v1h-1zM14 6h1v1h-1zM1 7h1v1h-1zM14 7h1v1h-1zM1 8h2v1h-2zM13 8h2v1h-2zM2 9h2v1h-2zM12 9h2v1h-2zM3 10h2v1h-2zM11 10h2v1h-2zM4 11h2v1h-2zM10 11h2v1h-2zM5 12h2v1h-2zM9 12h2v1h-2zM6 13h4v1h-4zM7 14h2v1h-2z",
+    sparkles: "M7 1h2v1h-2zM13 1h1v1h-1zM7 2h2v1h-2zM12 2h2v1h-2zM6 3h4v1h-4zM11 3h4v1h-4zM6 4h4v1h-4zM13 4h1v1h-1zM6 5h1v1h-1zM9 5h1v1h-1zM3 6h4v1h-4zM9 6h4v1h-4zM1 7h4v1h-4zM11 7h4v1h-4zM1 8h4v1h-4zM11 8h4v1h-4zM3 9h4v1h-4zM9 9h4v1h-4zM6 10h1v1h-1zM9 10h1v1h-1zM6 11h4v1h-4zM6 12h4v1h-4zM7 13h2v1h-2zM7 14h2v1h-2z",
+    megaphone: "M13 1h1v1h-1zM11 2h4v1h-4zM2 3h10v1h-10zM13 3h2v1h-2zM1 4h9v1h-9zM13 4h2v1h-2zM1 5h2v1h-2zM5 5h1v1h-1zM13 5h2v1h-2zM1 6h2v1h-2zM5 6h1v1h-1zM13 6h2v1h-2zM1 7h2v1h-2zM5 7h1v1h-1zM13 7h2v1h-2zM1 8h2v1h-2zM4 8h2v1h-2zM13 8h2v1h-2zM2 9h10v1h-10zM13 9h2v1h-2zM3 10h2v1h-2zM6 10h2v1h-2zM10 10h5v1h-5zM4 11h1v1h-1zM6 11h2v1h-2zM12 11h2v1h-2zM4 12h2v1h-2zM7 12h2v1h-2zM4 13h2v1h-2zM7 13h2v1h-2zM5 14h3v1h-3z",
+    pin: "M4 1h8v1h-8zM3 2h2v1h-2zM11 2h2v1h-2zM3 3h3v1h-3zM10 3h3v1h-3zM4 4h3v1h-3zM9 4h3v1h-3zM5 5h2v1h-2zM9 5h2v1h-2zM5 6h2v1h-2zM9 6h2v1h-2zM5 7h2v1h-2zM9 7h2v1h-2zM4 8h2v1h-2zM10 8h2v1h-2zM3 9h2v1h-2zM11 9h2v1h-2zM3 10h1v1h-1zM12 10h1v1h-1zM3 11h10v1h-10zM7 12h2v1h-2zM7 13h2v1h-2zM7 14h2v1h-2z",
+    chart: "M1 2h2v1h-2zM1 3h2v1h-2zM8 3h1v1h-1zM1 4h2v1h-2zM8 4h1v1h-1zM1 5h2v1h-2zM8 5h1v1h-1zM1 6h2v1h-2zM8 6h1v1h-1zM11 6h2v1h-2zM1 7h2v1h-2zM8 7h1v1h-1zM11 7h2v1h-2zM1 8h2v1h-2zM8 8h1v1h-1zM11 8h2v1h-2zM1 9h2v1h-2zM5 9h1v1h-1zM8 9h1v1h-1zM11 9h2v1h-2zM1 10h2v1h-2zM5 10h1v1h-1zM8 10h1v1h-1zM11 10h2v1h-2zM1 11h2v1h-2zM5 11h1v1h-1zM8 11h1v1h-1zM11 11h2v1h-2zM1 12h2v1h-2zM1 13h13v1h-13zM2 14h12v1h-12z",
+    raid: "M12 1h3v1h-3zM9 2h6v1h-6zM6 3h9v1h-9zM3 4h5v1h-5zM10 4h4v1h-4zM1 5h4v1h-4zM9 5h5v1h-5zM1 6h3v1h-3zM8 6h3v1h-3zM12 6h2v1h-2zM3 7h7v1h-7zM12 7h1v1h-1zM5 8h4v1h-4zM11 8h2v1h-2zM7 9h2v1h-2zM11 9h2v1h-2zM7 10h2v1h-2zM11 10h1v1h-1zM8 11h1v1h-1zM10 11h2v1h-2zM8 12h4v1h-4zM9 13h2v1h-2zM9 14h2v1h-2z",
+  };
+  const pixel = (name, size = 18) =>
+    PIXEL[name] ? `<svg viewBox="0 0 16 16" width="${size}" height="${size}" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="${PIXEL[name]}"/></svg>` : glyph(name, size);
   // White or dark words, whichever reads better on a color ("#rrggbb").
   const inkFor = (hex) => {
     const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
@@ -1060,7 +1077,7 @@
     function redemptionLine(name, title, cost, words) {
       const line = el("div", "oc-line oc-redeem");
       const art = el("span", "oc-event__icon");
-      art.innerHTML = glyph("sparkles", 17);
+      art.innerHTML = pixel("sparkles", 18);
       const box = el("div", "oc-event__words");
       const head = el("div", "oc-redeem__head");
       head.append(el("b", "", name), " redeemed ", el("b", "oc-redeem__title", title));
@@ -1245,7 +1262,7 @@
       if (ev) {
         line.classList.add("oc-event", `oc-event--${ev.tone}`);
         const art = el("span", "oc-event__icon");
-        art.innerHTML = glyph(ev.icon, 18);
+        art.innerHTML = pixel(ev.icon, 20);
         const words = el("div", "oc-event__words");
         if (fromChannel) words.append(el("span", "oc-shared", fromChannel));
         const big = el("div", "oc-event__big");
@@ -1276,7 +1293,7 @@
         const c = ANNOUNCE_COLORS[String(e.announcement?.color || "").toUpperCase()];
         if (c) line.style.setProperty("--twitch-color", c);
         const art = el("span", "oc-event__icon");
-        art.innerHTML = glyph("megaphone", 17);
+        art.innerHTML = pixel("megaphone", 18);
         const box = el("div", "oc-event__words");
         box.append(el("div", "oc-notice__head", `${e.chatter_user_name || "A moderator"} · Announcement`));
         if (e.message?.text) {
@@ -1518,7 +1535,7 @@
       const head = el("div", "oc-topcard__head");
       if (iconName) {
         const art = el("span", "oc-topcard__pin");
-        art.innerHTML = icon(iconName, 14);
+        art.innerHTML = pixel(iconName, 16);
         head.append(art);
       }
       head.append(el("span", "oc-topcard__label", label));
