@@ -478,15 +478,15 @@
   @keyframes calloutIn { from { opacity: 0; transform: translateY(4px); } }
   .callout__ring { position: absolute; border-radius: 12px; box-shadow: 0 0 0 2px var(--brand-light), 0 0 18px 2px rgba(125, 176, 239, 0.45); animation: calloutRing 1.4s ease-in-out infinite; }
   @keyframes calloutRing { 50% { box-shadow: 0 0 0 2px var(--brand-light), 0 0 26px 6px rgba(125, 176, 239, 0.25); } }
-  .callout__text { position: absolute; margin: 0; padding: 7px 13px 8px; font-size: 13px; line-height: 1.4; color: #efeff1; border-radius: 18px; background: linear-gradient(180deg, #5b9af0, #2f63c0); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); text-shadow: none; }
+  /* A plain black tooltip (not a chat bubble, so it can't be mistaken for a mod's note), with a
+     small arrow pointing at what it explains; --ax is where the arrow sits along it. */
+  .callout__text { position: absolute; margin: 0; padding: 9px 13px 10px; font-size: 12.5px; line-height: 1.45; color: #efeff1; background: #000; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 14px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6); text-shadow: none; }
+  .callout__text::after { content: ""; position: absolute; left: var(--ax, 50%); top: -6px; width: 10px; height: 10px; margin-left: -5px; background: #000; border: 1px solid rgba(255, 255, 255, 0.14); border-right: 0; border-bottom: 0; transform: rotate(45deg); }
+  .callout__text--above::after { top: auto; bottom: -6px; transform: rotate(225deg); }
   .callout__head { display: inline; margin-right: 5px; }
-  .callout__pic { display: inline-flex; vertical-align: -5px; width: 20px; height: 20px; margin: 0 5px 0 -4px; border-radius: 50%; overflow: hidden; background: #2a5aa8; }
+  .callout__pic { display: inline-flex; vertical-align: -5px; width: 20px; height: 20px; margin: 0 6px 0 -2px; border-radius: 50%; overflow: hidden; background: #222228; }
   .callout__pic img { width: 100%; height: 100%; object-fit: cover; }
   .callout__who { color: #fff; font-size: 12px; font-weight: 700; }
-  /* The bubble's tail, on the side facing what it points at: bottom-left when the bubble
-     sits above it (the usual iMessage corner), top-left, flipped, when it sits below. */
-  .callout__text::after { content: ""; position: absolute; left: -5px; top: 0; width: 16px; height: 18px; background: #5b9af0; clip-path: path("M6 18 Q6 4 0 0 Q10 0 16 6 L16 18 Z"); }
-  .callout__text--above::after { top: auto; bottom: 0; background: #2f63c0; clip-path: path("M6 0 Q6 14 0 18 Q10 18 16 12 L16 0 Z"); }
   .callout--mod .callout__ring { box-shadow: 0 0 0 2px #5b9af0, 0 0 18px 2px rgba(91, 154, 240, 0.45); }
   .callout--streamer .callout__ring { box-shadow: 0 0 0 2px #5b9af0, 0 0 18px 2px rgba(91, 154, 240, 0.45); }
   @media (prefers-reduced-motion: reduce) { .callout, .callout__ring { animation: none; } }
@@ -520,6 +520,67 @@
   html.embedded #space { display: none; }
   html.embedded .demo { padding-top: 0; padding-bottom: 0; }
   html.embedded body { overflow: hidden; }
+
+  /* ===== Two sides of one coin, behind the panels ===== */
+  .stage { position: relative; isolation: isolate; }
+  .sides { position: absolute; z-index: -1; top: -70px; bottom: -40px; left: calc(50% - 50vw); width: 100vw; overflow: hidden; pointer-events: none; }
+  .sides__half { position: absolute; top: 0; bottom: 0; width: 50%; }
+  /* Streamer on the left and mods on the right in the main demo; flipped for the mod walkthrough. */
+  .sides__half--streamer { left: 0; --c: 169, 112, 255; --side: right; }
+  .sides__half--mod { left: 50%; --c: 63, 201, 142; --side: left; }
+  .story-mod .sides__half--streamer { left: 50%; --side: left; }
+  .story-mod .sides__half--mod { left: 0; --side: right; }
+  /* Half an ellipse each, centered on the cut, glowing all the way out to the edge. */
+  .sides__half--streamer { background: radial-gradient(ellipse 100% 62% at 100% 50%, rgba(var(--c), 0.46), rgba(var(--c), 0.2) 42%, rgba(var(--c), 0.08) 75%, rgba(var(--c), 0.05) 100%); }
+  .sides__half--mod { background: radial-gradient(ellipse 100% 62% at 0% 50%, rgba(var(--c), 0.42), rgba(var(--c), 0.18) 42%, rgba(var(--c), 0.08) 75%, rgba(var(--c), 0.05) 100%); }
+  .story-mod .sides__half--streamer { background: radial-gradient(ellipse 100% 62% at 0% 50%, rgba(var(--c), 0.46), rgba(var(--c), 0.2) 42%, rgba(var(--c), 0.08) 75%, rgba(var(--c), 0.05) 100%); }
+  .story-mod .sides__half--mod { background: radial-gradient(ellipse 100% 62% at 100% 50%, rgba(var(--c), 0.42), rgba(var(--c), 0.18) 42%, rgba(var(--c), 0.08) 75%, rgba(var(--c), 0.05) 100%); }
+  /* The cut: a thin, bright ellipse dead center between the panels. */
+  .sides__line { position: absolute; left: 50%; top: 8%; bottom: 8%; width: 4px; margin-left: -2px; border-radius: 50%; background: radial-gradient(ellipse 50% 50% at 50% 50%, #fff, rgba(255, 255, 255, 0.75) 35%, rgba(255, 255, 255, 0.15) 75%, transparent); box-shadow: 0 0 24px 5px rgba(255, 255, 255, 0.16); }
+  /* The side's name, big and faint, running down the outer edge. */
+  .sides__word { position: absolute; top: 50%; font-family: "Silkscreen", "Pixelify Sans", monospace; font-size: clamp(54px, 6.4vw, 128px); line-height: 1; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(var(--c), 0.2); writing-mode: vertical-rl; white-space: nowrap; }
+  .sides__word::before { content: attr(data-w); } /* from an attribute, so the demo's name swap leaves it alone */
+  .sides__half--streamer .sides__word { left: max(12px, calc(50% - 448px - 30px - 2.4em)); transform: translateY(-50%) rotate(180deg); }
+  .sides__half--mod .sides__word { right: max(12px, calc(50% - 448px - 30px - 2.4em)); transform: translateY(-50%); }
+  .story-mod .sides__half--streamer .sides__word { left: auto; right: max(12px, calc(50% - 448px - 30px - 2.4em)); transform: translateY(-50%); }
+  .story-mod .sides__half--mod .sides__word { right: auto; left: max(12px, calc(50% - 448px - 30px - 2.4em)); transform: translateY(-50%) rotate(180deg); }
+  /* A few of the side's features, just the icon and the headline, drifting slowly. */
+  .sides__feats { position: absolute; top: 12%; bottom: 12%; width: 200px; margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; justify-content: space-around; }
+  .sides__half--streamer .sides__feats, .story-mod .sides__half--mod .sides__feats { right: 478px; left: auto; align-items: flex-end; }
+  .sides__half--mod .sides__feats, .story-mod .sides__half--streamer .sides__feats { left: 478px; right: auto; align-items: flex-start; }
+  .sides__feat { display: flex; align-items: center; gap: 8px; max-width: 200px; padding: 7px 12px 7px 9px; font-size: 12.5px; font-weight: 700; line-height: 1.25; color: #e8e8ee; background: rgba(4, 5, 11, 0.55); border: 1px solid rgba(var(--c), 0.35); border-radius: 12px; box-shadow: 0 0 22px rgba(var(--c), 0.12); animation: sideFloat 7s ease-in-out infinite alternate; animation-delay: calc(var(--i) * -1.7s); }
+  .sides__feat:nth-child(even) { margin-inline: 22px; }
+  .sides__feat svg { flex: none; width: 18px; height: 18px; color: rgb(var(--c)); }
+  .sides__feat svg .pix { fill: currentColor; stroke: none; }
+  @keyframes sideFloat { from { transform: translateY(-7px); } to { transform: translateY(7px); } }
+  /* Only where there's room beside the panels; stacked panels (one column) skip it all. */
+  @media (max-width: 1379px) { .sides__feats { display: none; } }
+  @media (max-width: 1079px) { .sides__word { display: none; } }
+  @media (max-width: 920px) { .sides { display: none; } }
+  @media (prefers-reduced-motion: reduce) { .sides__feat { animation: none; } }
+  html { overflow-x: clip; }
+
+  /* ===== Hand-holding: one thing to look at, one thing to press ===== */
+  /* The panel this step is about stays bright; the other one steps back. */
+  .stage--focus .screen iframe { transition: opacity 0.35s, filter 0.35s; }
+  .stage--focus .screen:not(.spot) iframe { opacity: 0.4; filter: saturate(0.5); }
+  /* A bouncing arrow over the panel to look at. */
+  .stage .screen.spot .screen__label::after { content: ""; position: absolute; left: 50%; top: -30px; width: 22px; height: 22px; margin-left: -11px; background: var(--brand-light); clip-path: polygon(30% 0, 70% 0, 70% 50%, 100% 50%, 50% 100%, 0 50%, 30% 50%); filter: drop-shadow(0 0 8px rgba(125, 176, 239, 0.8)); animation: lookDown 1s ease-in-out infinite; }
+  @keyframes lookDown { 50% { transform: translateY(6px); } }
+  /* The button to press next: glowing, with arrows pointing in at it from both sides. */
+  .guide__actions { gap: 22px; }
+  #tourDo.btn--main { position: relative; margin: 0 34px; animation: pressMe 1.6s ease-in-out infinite; }
+  #tourDo.btn--main::before, #tourDo.btn--main::after { content: ""; position: absolute; top: 50%; width: 22px; height: 18px; margin-top: -9px; background: var(--brand-light); filter: drop-shadow(0 0 6px rgba(125, 176, 239, 0.8)); }
+  #tourDo.btn--main::before { left: -32px; clip-path: polygon(0 30%, 55% 30%, 55% 0, 100% 50%, 55% 100%, 55% 70%, 0 70%); animation: pointRight 0.9s ease-in-out infinite; }
+  #tourDo.btn--main::after { right: -32px; clip-path: polygon(100% 30%, 45% 30%, 45% 0, 0 50%, 45% 100%, 45% 70%, 100% 70%); animation: pointLeft 0.9s ease-in-out infinite; }
+  @keyframes pressMe { 50% { box-shadow: 0 0 0 4px rgba(125, 176, 239, 0.28), 0 0 30px rgba(125, 176, 239, 0.6); } }
+  @keyframes pointRight { 50% { transform: translateX(5px); } }
+  @keyframes pointLeft { 50% { transform: translateX(-5px); } }
+  /* The callout's big arrow, pointing at what it's about from beside the ring. */
+  .callout__point { position: absolute; width: 30px; height: 24px; background: var(--brand-light); filter: drop-shadow(0 0 8px rgba(125, 176, 239, 0.9)); clip-path: polygon(0 30%, 55% 30%, 55% 0, 100% 50%, 55% 100%, 55% 70%, 0 70%); animation: pointRight 0.9s ease-in-out infinite; }
+  .callout__point--left { clip-path: polygon(100% 30%, 45% 30%, 45% 0, 0 50%, 45% 100%, 45% 70%, 100% 70%); animation-name: pointLeft; }
+  .story-mod .callout__point, .story-mod .stage .screen.spot .screen__label::after { background: #3fc98e; }
+  @media (prefers-reduced-motion: reduce) { #tourDo.btn--main, #tourDo.btn--main::before, #tourDo.btn--main::after, .callout__point, .stage .screen.spot .screen__label::after { animation: none; } }
 </style>
 </head>
 <body>
@@ -552,6 +613,14 @@
         </div>
       </div>
       <div class="stage">
+        <!-- Behind the two panels: two sides of one coin. Each panel's side glows in its own
+             color (half of one big ellipse), with a hard cut down the middle, a thin light on
+             the cut, the side's name large and faint, and a few of its features floating. -->
+        <div class="sides" aria-hidden="true">
+          <div class="sides__half sides__half--streamer"><span class="sides__word" data-w="streamer"></span><ul class="sides__feats"><li class="sides__feat" style="--i:0"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M2 1h12v1h-12zM1 2h14v1h-14zM1 3h2v1h-2zM13 3h2v1h-2zM1 4h2v1h-2zM13 4h2v1h-2zM1 5h2v1h-2zM13 5h2v1h-2zM1 6h2v1h-2zM13 6h2v1h-2zM1 7h2v1h-2zM13 7h2v1h-2zM1 8h2v1h-2zM13 8h2v1h-2zM1 9h2v1h-2zM13 9h2v1h-2zM1 10h2v1h-2zM13 10h2v1h-2zM1 11h13v1h-13zM1 12h4v1h-4zM1 13h3v1h-3z"/></svg><span>Chat and your mods, one dock</span></li><li class="sides__feat" style="--i:1"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M13 3h1v1h-1zM12 4h2v1h-2zM11 5h2v1h-2zM10 6h2v1h-2zM2 7h1v1h-1zM9 7h2v1h-2zM2 8h2v1h-2zM8 8h2v1h-2zM3 9h2v1h-2zM7 9h2v1h-2zM4 10h4v1h-4zM5 11h2v1h-2z"/></svg><span>Answer in one tap</span></li><li class="sides__feat" style="--i:2"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M5 2h2v1h-2zM5 3h2v1h-2zM4 4h4v1h-4zM4 5h4v1h-4zM4 6h1v1h-1zM7 6h1v1h-1zM1 7h4v1h-4zM7 7h2v1h-2zM12 7h3v1h-3zM1 8h3v1h-3zM7 8h2v1h-2zM11 8h4v1h-4zM8 9h1v1h-1zM11 9h1v1h-1zM8 10h4v1h-4zM8 11h4v1h-4zM9 12h2v1h-2zM9 13h2v1h-2z"/></svg><span>Only loud when it matters</span></li><li class="sides__feat" style="--i:3"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M7 1h2v1h-2zM7 2h2v1h-2zM6 3h4v1h-4zM6 4h4v1h-4zM6 5h1v1h-1zM9 5h1v1h-1zM3 6h4v1h-4zM9 6h4v1h-4zM1 7h4v1h-4zM11 7h4v1h-4zM1 8h4v1h-4zM11 8h4v1h-4zM3 9h4v1h-4zM9 9h4v1h-4zM6 10h1v1h-1zM9 10h1v1h-1zM6 11h4v1h-4zM6 12h4v1h-4zM7 13h2v1h-2zM7 14h2v1h-2z"/></svg><span>Every event at a glance</span></li></ul></div>
+          <div class="sides__half sides__half--mod"><span class="sides__word" data-w="mod"></span><ul class="sides__feats"><li class="sides__feat" style="--i:0"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M5 3h6v1h-6zM3 4h3v1h-3zM10 4h3v1h-3zM2 5h2v1h-2zM7 5h2v1h-2zM12 5h2v1h-2zM1 6h2v1h-2zM6 6h4v1h-4zM13 6h2v1h-2zM1 7h1v1h-1zM5 7h2v1h-2zM9 7h2v1h-2zM13 7h2v1h-2zM1 8h2v1h-2zM5 8h2v1h-2zM9 8h2v1h-2zM14 8h1v1h-1zM1 9h2v1h-2zM6 9h4v1h-4zM13 9h2v1h-2zM2 10h2v1h-2zM7 10h2v1h-2zM12 10h2v1h-2zM3 11h3v1h-3zM10 11h3v1h-3zM5 12h6v1h-6z"/></svg><span>See what they see</span></li><li class="sides__feat" style="--i:1"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M12 1h3v1h-3zM9 2h6v1h-6zM6 3h9v1h-9zM3 4h5v1h-5zM10 4h4v1h-4zM1 5h4v1h-4zM9 5h5v1h-5zM1 6h3v1h-3zM8 6h3v1h-3zM12 6h2v1h-2zM3 7h7v1h-7zM12 7h1v1h-1zM5 8h4v1h-4zM11 8h2v1h-2zM7 9h2v1h-2zM11 9h2v1h-2zM7 10h2v1h-2zM11 10h1v1h-1zM8 11h1v1h-1zM10 11h2v1h-2zM8 12h4v1h-4zM9 13h2v1h-2zM9 14h2v1h-2z"/></svg><span>Ask without cluttering chat</span></li><li class="sides__feat" style="--i:2"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M5 1h6v1h-6zM4 2h2v1h-2zM10 2h2v1h-2zM4 3h1v1h-1zM11 3h1v1h-1zM3 4h2v1h-2zM11 4h2v1h-2zM3 5h2v1h-2zM11 5h2v1h-2zM3 6h2v1h-2zM11 6h2v1h-2zM3 7h2v1h-2zM11 7h2v1h-2zM3 8h1v1h-1zM12 8h1v1h-1zM2 9h2v1h-2zM12 9h2v1h-2zM2 10h2v1h-2zM12 10h2v1h-2zM1 11h14v1h-14zM6 13h1v1h-1zM9 13h1v1h-1zM6 14h4v1h-4z"/></svg><span>Nudge, or hit the panic button</span></li><li class="sides__feat" style="--i:3"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M2 1h7v1h-7zM13 1h1v1h-1zM2 2h2v1h-2zM7 2h7v1h-7zM2 3h1v1h-1zM13 3h1v1h-1zM2 4h1v1h-1zM13 4h1v1h-1zM2 5h1v1h-1zM13 5h1v1h-1zM2 6h1v1h-1zM13 6h1v1h-1zM2 7h1v1h-1zM13 7h1v1h-1zM2 8h1v1h-1zM13 8h1v1h-1zM2 9h7v1h-7zM12 9h2v1h-2zM2 10h2v1h-2zM7 10h7v1h-7zM2 11h1v1h-1zM2 12h1v1h-1zM2 13h1v1h-1zM2 14h1v1h-1z"/></svg><span>Flag a line, or leave a note on it</span></li></ul></div>
+          <i class="sides__line"></i>
+        </div>
         <div class="screen">
           <div class="screen__label">Mod's side panel <small>you're mod1, watching the streamer</small>
             <span class="info" tabindex="0" data-tip="What a mod sees in Chrome, next to Twitch: Streamer View at the top shows what's on the streamer's screen right now, then the box to ask, send quick info or a !vanish note.">?</span></div>
@@ -990,6 +1059,8 @@
       document.getElementById("tourBack").hidden = this.at === 0;
       document.getElementById("tourSkip").hidden = !!st.done;
       for (const id of ["mod", "obs"]) document.getElementById(id).closest(".screen").classList.toggle("spot", st.look === id);
+      document.querySelector(".stage").classList.toggle("stage--focus", !!st.look);
+      if (callout?.classList.contains("callout--stay")) callout.remove();
       // Dots for progress, and the real menu button for this step glows, so people learn the menus.
       document.getElementById("tourDots").innerHTML = STEPS.map((_, j) => `<i class="${j < this.at ? "done" : j === this.at ? "now" : ""}"></i>`).join("");
       document.getElementById("tourCount").textContent = `${this.at + 1} of ${STEPS.length}`;
@@ -1020,6 +1091,8 @@
     end() {
       document.getElementById("tour").hidden = true;
       for (const id of ["mod", "obs"]) document.getElementById(id).closest(".screen").classList.remove("spot");
+      document.querySelector(".stage").classList.remove("stage--focus");
+      if (callout?.classList.contains("callout--stay")) callout.remove();
       for (const c of document.querySelectorAll(".menu .chip.cue")) c.classList.remove("cue");
       if (!feeding) document.getElementById("feed").click(); // the tour skipped: chat starts anyway
       said("Try anything from the menus under each screen");
@@ -1085,11 +1158,11 @@
     const frame = document.getElementById(on);
     const box = document.createElement("div");
     box.className = `callout callout--${from}`;
-    // Looks like the iPhone-style chat notes: a blue bubble with the sender's picture and name.
-    // Twitch's own events come from "Twitch", with the StreamSpace mark.
+    // Who's "saying" it, with their picture and name, in a black tooltip (not a blue bubble, so
+    // it can't be mistaken for a real message). Twitch's own events come from "Twitch", with the StreamSpace mark.
     const who = from === "mod" ? me : from === "streamer" ? "streamer" : from === "guide" ? "StreamSpace" : "Twitch";
     const pic = from === "twitch" || from === "guide" ? "brand/mark.svg" : `pics/${who}.webp`;
-    box.innerHTML = `<span class="callout__ring"></span><p class="callout__text"><span class="callout__head"><span class="callout__pic"><img src="${pic}" alt=""></span><b class="callout__who"></b></span><span class="callout__say"></span></p>`;
+    box.innerHTML = `<span class="callout__ring"></span><span class="callout__point"></span><p class="callout__text"><span class="callout__head"><span class="callout__pic"><img src="${pic}" alt=""></span><b class="callout__who"></b></span><span class="callout__say"></span></p>`;
     box.querySelector(".callout__who").textContent = who;
     box.querySelector(".callout__say").textContent = text;
     document.body.append(box);
@@ -1102,14 +1175,24 @@
       const ring = box.querySelector(".callout__ring");
       const x = f.left + scrollX, y = f.top + scrollY;
       Object.assign(ring.style, { left: `${x + t.left - 4}px`, top: `${y + t.top - 4}px`, width: `${t.width + 8}px`, height: `${t.height + 8}px` });
+      // The big arrow: from the outside of the panel when there's room, pointing in at the ring.
+      const point = box.querySelector(".callout__point");
+      const fromLeft = true; // just left of what it points at (outside the panel when that's at its edge)
+      Object.assign(point.style, { top: `${y + t.top + Math.min(t.height, 60) / 2 - 12}px`, left: fromLeft ? `${x + t.left - 42}px` : `${x + t.right + 12}px` });
+      point.classList.toggle("callout__point--left", !fromLeft);
       const note = box.querySelector(".callout__text");
-      const w = Math.min(300, f.width - 24);
+      const w = Math.min(280, f.width - 24);
       const below = t.bottom + 14 + note.offsetHeight < f.height;
-      Object.assign(note.style, { width: `${w}px`, left: `${x + Math.max(12, Math.min(f.width - w - 12, t.left + t.width / 2 - w / 2))}px`, top: below ? `${y + t.bottom + 14}px` : `${y + t.top - 14 - note.offsetHeight}px` });
+      const left = Math.max(12, Math.min(f.width - w - 12, t.left + t.width / 2 - w / 2));
+      const ax = Math.max(14, Math.min(w - 14, t.left + t.width / 2 - left)); // arrow under the target's middle
+      Object.assign(note.style, { width: `${w}px`, left: `${x + left}px`, top: below ? `${y + t.bottom + 12}px` : `${y + t.top - 12 - note.offsetHeight}px` });
+      note.style.setProperty("--ax", `${ax}px`);
       note.classList.toggle("callout__text--above", !below);
       requestAnimationFrame(place);
     };
     place();
+    // While the tour waits for the visitor to do something, the pointer stays until they do.
+    if (typeof tour !== "undefined" && tour.waiting) return box.classList.add("callout--stay");
     setTimeout(() => box.classList.add("callout--out"), 6500);
     setTimeout(() => box.remove(), 7000);
   }
