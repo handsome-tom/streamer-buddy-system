@@ -558,7 +558,8 @@
   @keyframes breathe { from { filter: hue-rotate(0deg) brightness(1); } to { filter: hue-rotate(-12deg) brightness(1.12); } }
   #space .planet { animation: orbit 40s ease-in-out infinite alternate; transition: opacity 0.6s ease; }
   /* While the hero (with its own big planet) is on screen, the backdrop planet stays hidden so there aren't two. */
-  .hero-in-view #space .planet { opacity: 0; }
+  /* The backdrop planet stays away until you're halfway down the mod walkthrough. */
+  html:not(.planet-on) #space .planet { opacity: 0; }
   @keyframes orbit { from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-30px, 24px) rotate(-8deg); } }
   @media (prefers-reduced-motion: reduce) { #space, #space::before, #space::after, #space .planet { animation: none !important; } }
 
@@ -580,6 +581,7 @@
   .thanks__name { font-size: 22px; font-weight: 800; color: #fff; text-decoration: none; }
   .thanks__name:hover { color: var(--brand-light); }
   .thanks__bit { margin: 4px 0 0; font-size: 14px; color: #a3a3ad; }
+  .thanks__aside { margin: 2px 0 0; font-size: 12px; font-style: italic; color: #75757f; }
   .thanks__head { margin-top: 48px; font-size: 13px; }
   .thanks__note { max-width: 520px; margin: 0 auto 26px; font-size: 15px; line-height: 1.6; color: #c6c6d0; }
   /* A compact, wrapping list (picture, then name), so it stays tidy as more testers join. */
@@ -596,6 +598,61 @@
   .thanks__links a { color: #8d8d97; }
   .thanks__links a:hover { color: #efeff1; }
   @media (max-width: 600px) { .getit { padding: 110px 0 56px; } .thanks__me { flex-direction: column; text-align: center; } }
+
+  /* ===== Breathing room: the hero spaced out, and a clear gap before the demo ===== */
+  /* The hero fills most of the first screen (under the 58px top bar), leaving a sliver at the
+     bottom where the demo's heading peeks in: a quiet hint that there's more below. */
+  .hero { display: flex; align-items: center; min-height: calc(100svh - 58px - 110px); box-sizing: border-box; padding: 72px 0 80px; }
+  .hero > .wrap { width: 100%; }
+  .hero .eyebrow { margin-bottom: 10px; }
+  .hero h1 { margin: 18px 0 32px; }
+  .hero__lead { line-height: 1.75; max-width: 580px; }
+  .hero__ctas { gap: 14px; margin-top: 46px; }
+  .demo--framed { padding-top: 40px; }
+  /* A bigger planet now that the hero has the room. The text keeps its column (so the headline
+     stays on two lines) and the planet grows out into the right-hand margin. */
+  .hero__art { width: min(440px, 30vw); translate: -70px 0; } /* room on the right for the ring and the moon's orbit */
+  @media (max-width: 860px) { .hero__art { width: min(340px, 100%); translate: 0 0; } }
+  @media (max-width: 860px) { .hero { min-height: calc(100svh - 58px - 80px); padding: 56px 0 64px; } .hero h1 { margin: 14px 0 24px; } .hero__ctas { margin-top: 34px; } }
+
+  /* ===== The Tom moon as a real 3D coin: Tom on both faces, turning as it orbits ===== */
+  /* No clipping or filter on the moon itself (either would flatten the 3D); each face does its own. */
+  .hero-moon { overflow: visible; border-radius: 0; box-shadow: none; transform-style: preserve-3d; --lit: 1; --edge: 1; }
+  .hero-moon::before, .hero-moon::after { content: none; }
+  .hero-moon__face { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    filter: brightness(var(--lit)); opacity: var(--edge); }
+  /* Soft edges all round, so it never shows a hard cut, even side-on. (On the picture and the
+     shading inside each face: a mask on the turning face itself stops it drawing at all.) */
+  .hero-moon__face img, .hero-moon__face::after { -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 50%, rgba(0, 0, 0, 0.6) 61%, transparent 70%); mask-image: radial-gradient(circle at 50% 50%, #000 50%, rgba(0, 0, 0, 0.6) 61%, transparent 70%); }
+  .hero-moon__face--back { transform: rotateY(180deg); }
+  .hero-moon__face img { display: block; width: 100%; height: 100%; object-fit: cover; transform: scale(1.12); filter: grayscale(0.3) contrast(1.05); } /* tom.png is upside down on purpose: keep it that way */
+  /* Lit from the upper left like the planet, darker toward the far edge. */
+  .hero-moon__face::after { content: ""; position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.08) 22%, transparent 40%), radial-gradient(circle at 36% 32%, transparent 40%, rgba(6, 10, 26, 0.55) 78%); }
+
+  /* ===== Smooth motion: animate only movement and fading, which the graphics card does for free ===== */
+  /* (Animating blur, color filters or a background's position makes the browser repaint big blurred
+     areas every frame, which dropped the hero to about 15 frames a second and made the planet and
+     the Tom moon jumpy.) */
+  /* Stars: the layers are a little bigger than the screen and slide, instead of sliding the background inside them. */
+  #space::before { inset: -320px; animation: driftT 160s linear infinite; will-change: transform; }
+  #space::after { inset: -560px; animation: drift2T 240s linear infinite, twinkle 4s ease-in-out infinite alternate; will-change: transform, opacity; }
+  @keyframes driftT { from { transform: translate(0, 0); } to { transform: translate(-320px, 320px); } }
+  @keyframes drift2T { from { transform: translate(0, 0); } to { transform: translate(560px, -560px); } }
+  /* The slow "breathing": a fade instead of a color filter over the whole screen. */
+  #space { animation: breatheO 18s ease-in-out infinite alternate; will-change: opacity; }
+  @keyframes breatheO { from { opacity: 0.9; } to { opacity: 1; } }
+  /* The glow behind the planet: blurred once, then only turned and scaled. */
+  .hero__art::before { animation-name: nebulaT; will-change: transform; }
+  @keyframes nebulaT { from { transform: rotate(0deg) scale(1); } to { transform: rotate(6deg) scale(1.06); } }
+  .hero__art::after { will-change: opacity; }
+  /* The color streaks: blurred once; the whole set fades gently instead of each blurred shape. */
+  .hero__swathes { will-change: opacity; animation: swathesO 12s ease-in-out infinite alternate; }
+  .hero__swathes .sw { animation: none; opacity: 0.36; }
+  @keyframes swathesO { from { opacity: 0.72; } to { opacity: 1; } }
+  /* The planet and its moon on their own layers too. */
+  .hero-planet__globe, .hero-moon { will-change: transform; }
+  @media (prefers-reduced-motion: reduce) { #space, #space::before, #space::after, .hero__art::before, .hero__swathes { animation: none !important; } }
 </style>
 </head>
 <body>
@@ -678,7 +735,7 @@
           <path class="sw sw--ll" fill="url(#swLL)" d="M-640 150 Q-330 85 -145 68 Q-80 120 -40 185 Q-300 215 -640 260 Z"/>
           <path class="sw sw--lr" fill="url(#swLR)" d="M-15 210 Q20 110 75 60 Q160 42 460 25 L460 300 Z"/>
         </g>
-      </svg><div class="hero-planet"><canvas class="hero-ring hero-ring--back"></canvas><div class="hero-planet__globe"><canvas class="hero-planet__canvas"></canvas></div><canvas class="hero-ring hero-ring--front"></canvas><span class="hero-moon"><img src="brand/tom.png" alt="" width="128" height="128"></span></div></div>
+      </svg><div class="hero-planet"><canvas class="hero-ring hero-ring--back"></canvas><div class="hero-planet__globe"><canvas class="hero-planet__canvas"></canvas></div><canvas class="hero-ring hero-ring--front"></canvas><span class="hero-moon"><span class="hero-moon__face"><img src="brand/tom.png" alt="" width="128" height="128"></span><span class="hero-moon__face hero-moon__face--back"><img src="brand/tom.png" alt="" width="128" height="128"></span></span></div></div>
     </div>
   </section>
 
@@ -817,7 +874,8 @@
         <img src="brand/tom.png" alt="" width="72" height="72">
         <div>
           <a class="thanks__name" href="https://www.twitch.tv/myspacetomofficial" target="_blank" rel="noopener">MyspaceTomOfficial</a>
-          <p class="thanks__bit">Yes, it's a parody account. Fake Tom, real friend.</p>
+          <p class="thanks__bit">Fake Tom, Real Friend</p>
+          <p class="thanks__aside">Yes, it's a parody account.</p>
         </div>
       </div>
       <h3 class="thanks__head">Credits</h3>
@@ -920,15 +978,26 @@
   })();
 </script>
 <script>
-  // Hide the backdrop planet while the hero, which has its own planet, is on screen.
+  // The backdrop planet shows up once the middle of the screen is past the middle of the mod
+  // walkthrough, and goes again above that (the hero has its own planet up top).
   (() => {
-    const hero = document.querySelector(".hero");
-    if (!hero || !("IntersectionObserver" in window)) return;
-    new IntersectionObserver(([e]) => document.documentElement.classList.toggle("hero-in-view", e.isIntersecting), { threshold: 0.15 }).observe(hero);
+    const mod = document.getElementById("mod-walkthrough");
+    if (!mod) return;
+    let ticking = false;
+    const check = () => {
+      ticking = false;
+      const r = mod.getBoundingClientRect();
+      document.documentElement.classList.toggle("planet-on", innerHeight / 2 > r.top + r.height / 2);
+    };
+    const soon = () => { if (!ticking) { ticking = true; requestAnimationFrame(check); } };
+    addEventListener("scroll", soon, { passive: true });
+    addEventListener("resize", soon);
+    new ResizeObserver(soon).observe(mod); // the walkthrough's frame grows once it loads
+    check();
   })();
 </script>
 <script>
-  // The hero planet's glints run round the ring and the Tom moon orbits on a wider, steeper path.
+  // The hero planet's glints run round the ring, and the Tom moon orbits on its own path, crossing the ring.
   // Both go behind the planet on the far side and in front on the near side.
   (() => {
     const planet = document.querySelector(".hero-planet");
@@ -952,9 +1021,15 @@
         place(g, W, a, 0.88, 0.068, -14, 0.25);
         g.style.opacity = (0.55 + 0.45 * Math.abs(Math.cos(a))).toFixed(2);
       });
-      const ma = s * 0.32 + 2.2;
-      place(moon, W, ma, 1.1, 1.1 * 0.26, -16, 0.06); // same plane as the ring, just outside it
-      moon.style.filter = `brightness(${(0.8 + 0.2 * Math.sin(ma)).toFixed(2)})`; // a little dimmer on the far side
+      const ma = s * 0.42 + 2.2;
+      // Its own orbit, crossing the ring: tilted the other way and a little rounder, on its own beat.
+      place(moon, W, ma, 1.02, 1.02 * 0.34, 30, 0.08);
+      // And it turns as it goes, like a coin: Tom on the front, Tom on the back. Side-on it fades a
+      // little, and its soft edges mean there's no hard line at that moment.
+      const spin = s * 1.1;
+      moon.style.transform += ` perspective(500px) rotateX(-12deg) rotateY(${(spin * 180 / Math.PI) % 360}deg)`;
+      moon.style.setProperty("--lit", (0.8 + 0.2 * Math.sin(ma)).toFixed(2)); // a little dimmer on the far side
+      moon.style.setProperty("--edge", (0.45 + 0.55 * Math.abs(Math.cos(spin))).toFixed(2));
       if (!still) requestAnimationFrame(draw);
     };
     requestAnimationFrame(draw);
