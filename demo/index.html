@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="brand/mark.svg" type="image/svg+xml">
 <meta name="theme-color" content="#0b1a3a">
-<title>StreamerSpace · Streamer Buddy System demo</title>
-<meta name="description" content="Click around Streamer Buddy System: a mod's side panel and the streamer's OBS dock, side by side, with pretend people. Nothing here is real.">
+<title>StreamerSpace · a small space for your people on Twitch</title>
+<meta name="description" content="StreamerSpace is a small, friendly hub for the streamers, mods and regulars who look out for each other on Twitch. Click around the live demo with pretend people. Nothing here is real.">
 <!--
   The public demo: both sides of Streamer Buddy System on one screen, the mod's Chrome
   side panel ("mod1") and the streamer's OBS chat dock ("streamer"), talking to each other
@@ -317,6 +317,36 @@
   .hero { padding: 52px 0 30px; }
   .hero h1 { margin: 8px 0 12px; font-size: clamp(30px, 4.2vw, 46px); }
   .hero__lead { font-size: 16px; max-width: 600px; }
+  /* The headline gag: "MySpace 2.0" fills both lines, glitches into "JK", then the real headline
+     glitches in. All three sit in the same grid cell, so the real one sets the size. */
+  .hgag { display: grid; }
+  .hgag > .hg { grid-area: 1 / 1; }
+  .hero h1 .hgag__real { background: none; color: inherit; }
+  .hgag__fake, .hgag__jk { display: none; align-self: center; cursor: pointer; }
+  .hgag__fake { font-size: min(2.05em, 13vw); line-height: 1; white-space: nowrap; letter-spacing: -0.04em; }
+  .hero h1 .hgag__jk { background: none; color: #fff; font-size: 0.5em; transition: opacity 0.45s ease; }
+  .hgag__typed { font-weight: inherit; }
+  .hgag__caret { display: inline-block; width: 0.07em; height: 0.95em; margin-left: 0.06em; vertical-align: -0.12em; background: var(--brand-light); animation: caret 1s steps(1, end) infinite; }
+  .gag-typing .hgag__caret { animation: none; }
+  @keyframes caret { 50% { opacity: 0; } }
+  .gag-fake .hgag__fake { display: block; animation: hgIn 0.3s steps(3, end); }
+  .gag-jk .hgag__jk { display: block; }
+  .gag-fake .hgag__real, .gag-jk .hgag__real { opacity: 0; }
+  .gag-out .hgag__fake { animation: hgOut 0.4s steps(4, end) forwards; }
+  .gag-fadeout .hgag__jk { opacity: 0; }
+  .gag-in .hgag__real { animation: hgFade 0.6s ease; }
+  @keyframes hgFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes hgIn {
+    0% { opacity: 0; transform: translateX(10px); clip-path: inset(40% 0 35% 0); filter: hue-rotate(90deg) brightness(1.8); }
+    35% { opacity: 1; transform: translateX(-7px) skewX(-6deg); clip-path: inset(0 0 60% 0); }
+    70% { transform: translateX(4px); clip-path: inset(55% 0 0 0); filter: hue-rotate(-60deg); }
+    100% { opacity: 1; transform: none; clip-path: inset(0); filter: none; } }
+  @keyframes hgOut {
+    0% { transform: none; clip-path: inset(0); }
+    25% { transform: translateX(-8px) skewX(-8deg); clip-path: inset(10% 0 50% 0); filter: hue-rotate(90deg); text-shadow: 6px 0 #f05, -6px 0 #0cf; }
+    50% { transform: translateX(10px); clip-path: inset(60% 0 5% 0); filter: brightness(1.8); }
+    75% { transform: translateX(-4px) translateY(2px); clip-path: inset(30% 0 30% 0); opacity: 0.6; }
+    100% { opacity: 0; clip-path: inset(50% 0 50% 0); } }
   .hero__ctas { margin-top: 20px; }
   .hero__art { width: min(300px, 100%); translate: -70px 0; } /* room on the right for the ring and the moon */
   /* The hero planet is the background planet (#space .planet) up close: same blues, same thin
@@ -419,6 +449,23 @@
   .top nav a.top__sec--mods:hover { color: #3fc98e; text-shadow: 0 0 10px rgba(63, 201, 142, 0.55); }
   .top nav a.top__sec--streamer:hover { color: #a970ff; text-shadow: 0 0 10px rgba(169, 112, 255, 0.55); }
   .top nav a.top__sec--viewers:hover { color: #f0a330; text-shadow: 0 0 10px rgba(240, 163, 48, 0.55); }
+  /* ===== Split section flipped to match the demo: the streamer (purple) on the left, mods
+     (green) on the right; each side's tint still comes from its own outer edge. ===== */
+  .duo > .duo__side--streamer { order: -1; padding-right: clamp(16px, 4vw, 52px); padding-left: max(clamp(16px, 4vw, 52px), calc(50vw - 580px)); }
+  .duo > .duo__side--mods { order: 1; padding-left: clamp(16px, 4vw, 52px); padding-right: max(clamp(16px, 4vw, 52px), calc(50vw - 580px)); }
+  .duo > .duo__side--streamer::before { background: linear-gradient(90deg, rgba(var(--c-rgb), 0.12), rgba(var(--c-rgb), 0.03) 75%, transparent); }
+  .duo > .duo__side--mods::before { background: linear-gradient(270deg, rgba(var(--c-rgb), 0.12), rgba(var(--c-rgb), 0.03) 75%, transparent); }
+  @media (max-width: 860px) {
+    .duo > .duo__side--streamer, .duo > .duo__side--mods { padding: 48px 16px 44px; }
+    .duo > .duo__side--mods::before, .duo > .duo__side--streamer::before { background: linear-gradient(180deg, rgba(var(--c-rgb), 0.1), rgba(var(--c-rgb), 0.02) 75%, transparent); }
+  }
+  /* ===== The mod walkthrough section: dark like the rest, with a mod-green glow ===== */
+  .moddemo { position: relative; padding: 70px 0 40px; isolation: isolate; }
+  .moddemo::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background: radial-gradient(70% 55% at 50% 30%, rgba(63, 201, 142, 0.13), transparent 75%);
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent); mask-image: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent); }
+  .moddemo__frame { height: 1400px; }
+  .moddemo__wait { top: 100px; color: #3fc98e; }
   @keyframes nebula { from { transform: rotate(0deg) scale(1); filter: blur(22px) hue-rotate(0deg); } to { transform: rotate(6deg) scale(1.06); filter: blur(26px) hue-rotate(-10deg); } }
   @media (prefers-reduced-motion: reduce) { .hero__art::before, .hero__art::after { animation: none; } }
   .hero__art { display: grid; place-items: center; }
@@ -538,8 +585,8 @@
           <div class="r-box r-box--orange"><h3>Tom's Friend Space</h3>
             <div class="r-blog"><b>Tom has <span style="color:#c00">8</span> friends.</b></div>
             <div class="r-friends">
-              <div class="r-friend"><b>mod1</b><i style="--f:linear-gradient(135deg,#3fc98e,#1a6)"></i></div>
-              <div class="r-friend"><b>mod2</b><i style="--f:linear-gradient(135deg,#5a8de8,#235)"></i></div>
+              <div class="r-friend"><b>BlazeMod420</b><i style="--f:linear-gradient(135deg,#3fc98e,#1a6)"></i></div>
+              <div class="r-friend"><b>DrCoolMod67</b><i style="--f:linear-gradient(135deg,#5a8de8,#235)"></i></div>
               <div class="r-friend"><b>Lump</b><i style="--f:linear-gradient(135deg,#8fd14f,#350)"></i></div>
               <div class="r-friend"><b>quietlurker</b><i style="--f:linear-gradient(135deg,#ccc,#555)"></i></div>
               <div class="r-friend"><b>sleepycat42</b><i style="--f:linear-gradient(135deg,#e2568f,#612)"></i></div>
@@ -557,8 +604,8 @@
     <div class="wrap">
       <a href="#" class="top__brand" aria-label="StreamerSpace"><span class="top__logo" role="img" aria-label="StreamerSpace"></span></a>
       <nav aria-label="Sections">
-        <a href="#mods" class="top__sec top__sec--mods">Mods</a>
         <a href="#streamer" class="top__sec top__sec--streamer">Streamer</a>
+        <a href="#mods" class="top__sec top__sec--mods">Mods</a>
         <a href="#viewers" class="top__sec top__sec--viewers">Viewers</a>
         <a href="#demo" class="cta">Try the demo</a>
       </nav>
@@ -568,12 +615,16 @@
   <section class="hero">
     <div class="wrap">
       <div>
-      <p class="eyebrow">StreamerSpace · Streamer Buddy System</p>
-      <h1>Look out for your streamer, <span>without getting in the way.</span></h1>
-      <p class="hero__lead">Mods ask and look out from a side panel in Chrome. The streamer sees it all in one calm OBS dock that's also their chat. Nothing ever shows on stream.</p>
+      <p class="eyebrow">StreamerSpace · your people, one small space</p>
+      <h1 class="hgag" id="hgag"><span class="hg hgag__real">Your little corner of Twitch, <span>supported by your&nbsp;community.</span></span><span class="hg hgag__fake" aria-hidden="true">MySpace 2.0</span><span class="hg hgag__jk" aria-hidden="true" data-text="jk, it's actually better than that."><b class="hgag__typed"></b><i class="hgag__caret"></i></span></h1>
+      <script>
+        // Set before the first paint so the real headline never flashes before the gag.
+        if (!matchMedia("(prefers-reduced-motion: reduce)").matches && !location.hash) document.getElementById("hgag").classList.add("gag-fake");
+      </script>
+      <p class="hero__lead">Not a social network, just a small hub for the people who make a stream feel like home. Whoever's live, whoever's modding and whoever's just hanging out in chat, you're all part of it.</p>
       <div class="hero__ctas">
         <a class="btn btn--main" href="#demo">Try the live demo</a>
-        <a class="btn" href="#mods">See what it does</a>
+        <a class="btn" href="#mods">Meet the crew</a>
       </div>
       </div>
       <div class="hero__art" aria-hidden="true"><svg class="hero__swathes" viewBox="-700 -350 1400 700" width="1400" height="700" aria-hidden="true">
@@ -632,8 +683,8 @@
   <section class="duo" aria-label="For mods and for the streamer">
     <div class="duo__side duo__side--mods" id="mods">
       <p class="band__eyebrow"><svg class="duo__pix" viewBox="0 0 8 8" width="32" height="32" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M6 0h2v1h-2zM5 1h3v1h-3zM4 2h3v1h-3zM1 3h1v1h-1zM3 3h3v1h-3zM2 4h3v1h-3zM2 5h2v1h-2zM1 6h1v1h-1zM4 6h1v1h-1zM0 7h1v1h-1z"/></svg>For mods</p>
-      <h2 class="band__title">Help the streamer without cluttering their chat.</h2>
-      <p class="band__lead">A side panel next to Twitch for asking, nudging and looking out, all kept between you and the streamer.</p>
+      <h2 class="band__title">Have the streamer's back, quietly.</h2>
+      <p class="band__lead">A side panel next to Twitch for asking, nudging and looking out, kept between you, the streamer and the mods you're connected with. Chat stays clean, and nobody has to go it alone.</p>
       <ul class="ft-grid">
         <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M5 3h6v1h-6zM3 4h3v1h-3zM10 4h3v1h-3zM2 5h2v1h-2zM7 5h2v1h-2zM12 5h2v1h-2zM1 6h2v1h-2zM6 6h4v1h-4zM13 6h2v1h-2zM1 7h1v1h-1zM5 7h2v1h-2zM9 7h2v1h-2zM13 7h2v1h-2zM1 8h2v1h-2zM5 8h2v1h-2zM9 8h2v1h-2zM14 8h1v1h-1zM1 9h2v1h-2zM6 9h4v1h-4zM13 9h2v1h-2zM2 10h2v1h-2zM7 10h2v1h-2zM12 10h2v1h-2zM3 11h3v1h-3zM10 11h3v1h-3zM5 12h6v1h-6z"/></svg></span><div><h4>See what they see</h4><p>Streamer View shows exactly what's on the streamer's dock right now, so you never ask twice or pile on.</p></div></li>
         <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M12 1h3v1h-3zM9 2h6v1h-6zM6 3h9v1h-9zM3 4h5v1h-5zM10 4h4v1h-4zM1 5h4v1h-4zM9 5h5v1h-5zM1 6h3v1h-3zM8 6h3v1h-3zM12 6h2v1h-2zM3 7h7v1h-7zM12 7h1v1h-1zM5 8h4v1h-4zM11 8h2v1h-2zM7 9h2v1h-2zM11 9h2v1h-2zM7 10h2v1h-2zM11 10h1v1h-1zM8 11h1v1h-1zM10 11h2v1h-2zM8 12h4v1h-4zM9 13h2v1h-2zM9 14h2v1h-2z"/></svg></span><div><h4>Ask without cluttering chat</h4><p>Ask, Quick info or a !vanish note: type it, press Enter. The streamer answers with one tap, and nothing ever shows on stream.</p></div></li>
@@ -648,8 +699,8 @@
     <div class="duo__line" aria-hidden="true"></div>
     <div class="duo__side duo__side--streamer" id="streamer">
       <p class="band__eyebrow"><svg class="duo__pix" viewBox="0 0 8 8" width="32" height="32" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M1 1h1v1h-1zM3 1h1v1h-1zM0 2h5v1h-5zM6 2h2v1h-2zM0 3h8v2h-8zM0 5h5v1h-5zM6 5h2v1h-2z"/></svg>For the streamer</p>
-      <h2 class="band__title">Keep yapping. We'll keep track.</h2>
-      <p class="band__lead">Chat, mods and the Twitch bits that matter, in one OBS dock that stays quiet until something actually needs the streamer.</p>
+      <h2 class="band__title">Keep yapping. Your people have you covered.</h2>
+      <p class="band__lead">Chat, your mods and the Twitch bits that matter, in one OBS dock that stays quiet until someone actually needs you. Your friends keep an eye out so you can just stream.</p>
       <ul class="ft-grid">
         <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M2 1h12v1h-12zM1 2h14v1h-14zM1 3h2v1h-2zM13 3h2v1h-2zM1 4h2v1h-2zM13 4h2v1h-2zM1 5h2v1h-2zM13 5h2v1h-2zM1 6h2v1h-2zM13 6h2v1h-2zM1 7h2v1h-2zM13 7h2v1h-2zM1 8h2v1h-2zM13 8h2v1h-2zM1 9h2v1h-2zM13 9h2v1h-2zM1 10h2v1h-2zM13 10h2v1h-2zM1 11h13v1h-13zM1 12h4v1h-4zM1 13h3v1h-3z"/></svg></span><div><h4>Chat and your mods, one dock</h4><p>Your chat, Twitch's events and your mods' questions together in one OBS dock, so there's one place to look.</p></div></li>
         <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M13 3h1v1h-1zM12 4h2v1h-2zM11 5h2v1h-2zM10 6h2v1h-2zM2 7h1v1h-1zM9 7h2v1h-2zM2 8h2v1h-2zM8 8h2v1h-2zM3 9h2v1h-2zM7 9h2v1h-2zM4 10h4v1h-4zM5 11h2v1h-2z"/></svg></span><div><h4>Answer in one tap</h4><p>Questions wait quietly under the bar. Answer with ♥ ✓ ✗ or ?, or type a quick reply, without leaving the conversation.</p></div></li>
@@ -664,17 +715,40 @@
     </div>
   </section>
 
+  <!-- The mod walkthrough: the same pretend world as the live demo, told from the mod's side
+       (play.html?story=mod). Loads only as someone scrolls toward it. -->
+  <section class="moddemo" id="mod-walkthrough" aria-label="Mod walkthrough">
+    <iframe id="modFrame" class="demo__frame moddemo__frame" data-src="play.html?embed&amp;story=mod" title="Mod walkthrough"></iframe>
+    <p class="demo__wait moddemo__wait" id="modWait" aria-hidden="true">Loading the mod walkthrough…</p>
+  </section>
+<script>
+  (() => {
+    const frame = document.getElementById("modFrame");
+    addEventListener("message", (e) => {
+      if (e.source !== frame.contentWindow || e.origin !== location.origin || e.data?.t !== "demo-height") return;
+      frame.style.height = `${Math.ceil(e.data.h)}px`;
+      document.getElementById("modWait").hidden = true;
+    });
+    const start = () => { if (!frame.src) frame.src = frame.dataset.src; };
+    if (location.hash === "#mod-walkthrough") start();
+    if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) { io.disconnect(); start(); } }, { rootMargin: "900px 0px" });
+      io.observe(frame);
+    } else start();
+  })();
+</script>
+
   <section class="viewer" id="viewers">
     <div class="wrap">
       <p class="band__eyebrow">For viewers</p>
-      <h2 class="band__title">Twitch, just a bit nicer to watch.</h2>
-      <p class="band__lead">The rest of StreamerSpace: small fixes and extras for anyone who watches a lot of Twitch, mod or not.</p>
+      <h2 class="band__title">Just watching? You're part of it too.</h2>
+      <p class="band__lead">The regulars, the lurkers and the people who show up every night are what make a community. This is the rest of StreamerSpace: small, friendly extras for anyone who hangs out on Twitch, mod or not.</p>
       <ul class="ft-grid">
         <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M4 1h1v1h-1zM3 2h3v1h-3zM3 3h5v1h-5zM3 4h2v1h-2zM7 4h2v1h-2zM3 5h2v1h-2zM8 5h3v1h-3zM3 6h2v1h-2zM10 6h2v1h-2zM3 7h2v1h-2zM11 7h3v1h-3zM3 8h2v1h-2zM11 8h3v1h-3zM3 9h2v1h-2zM10 9h2v1h-2zM3 10h2v1h-2zM8 10h3v1h-3zM3 11h2v1h-2zM7 11h2v1h-2zM3 12h5v1h-5zM3 13h3v1h-3zM4 14h1v1h-1z"/></svg></span><div><h4>A better player</h4><p>Click anywhere to pause, even over overlays like Tangia, with a 1% volume step and easier-to-grab controls.</p></div></li>
         <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M2 1h12v1h-12zM1 2h14v1h-14zM1 3h2v1h-2zM7 3h2v1h-2zM13 3h2v1h-2zM1 4h2v1h-2zM7 4h2v1h-2zM13 4h2v1h-2zM1 5h2v1h-2zM7 5h2v1h-2zM13 5h2v1h-2zM1 6h2v1h-2zM7 6h2v1h-2zM13 6h2v1h-2zM1 7h2v1h-2zM7 7h2v1h-2zM13 7h2v1h-2zM1 8h2v1h-2zM7 8h2v1h-2zM13 8h2v1h-2zM1 9h2v1h-2zM7 9h2v1h-2zM13 9h2v1h-2zM1 10h2v1h-2zM7 10h2v1h-2zM13 10h2v1h-2zM1 11h2v1h-2zM7 11h2v1h-2zM13 11h2v1h-2zM1 12h2v1h-2zM7 12h2v1h-2zM13 12h2v1h-2zM1 13h14v1h-14zM2 14h12v1h-12z"/></svg></span><div><h4>Two streams at once</h4><p>Watch two streams side by side, each with its own chat, and pick which one you hear.</p></div></li>
         <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M6 2h3v1h-3zM6 3h3v1h-3zM6 4h1v1h-1zM8 4h2v1h-2zM6 5h1v1h-1zM9 5h2v1h-2zM6 6h2v1h-2zM10 6h2v1h-2zM6 7h2v1h-2zM11 7h2v1h-2zM3 8h2v1h-2zM6 8h2v1h-2zM12 8h1v1h-1zM3 9h4v1h-4zM12 9h1v1h-1zM3 10h1v1h-1zM12 10h1v1h-1zM3 11h1v1h-1zM12 11h1v1h-1zM3 12h2v1h-2zM11 12h2v1h-2zM4 13h2v1h-2zM10 13h2v1h-2zM5 14h6v1h-6z"/></svg></span><div><h4>Watch streaks, kept alive</h4><p>A flame shows your streak's progress, and a saver keeps it going quietly in the background.</p></div></li>
         <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M4 1h8v1h-8zM3 2h10v1h-10zM2 3h2v1h-2zM12 3h2v1h-2zM1 4h2v1h-2zM13 4h2v1h-2zM1 5h14v1h-14zM1 6h14v1h-14zM2 7h1v1h-1zM13 7h1v1h-1zM2 8h2v1h-2zM12 8h2v1h-2zM3 9h2v1h-2zM11 9h2v1h-2zM4 10h2v1h-2zM10 10h2v1h-2zM5 11h1v1h-1zM10 11h1v1h-1zM5 12h2v1h-2zM9 12h2v1h-2zM6 13h4v1h-4zM7 14h2v1h-2z"/></svg></span><div><h4>Channel points, sorted</h4><p>Search rewards, star favorites to the top, and claim bonus points automatically.</p></div></li>
-        <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M2 1h9v1h-9zM1 2h11v1h-11zM1 3h2v1h-2zM9 3h4v1h-4zM1 4h2v1h-2zM9 4h2v1h-2zM12 4h2v1h-2zM1 5h2v1h-2zM9 5h6v1h-6zM1 6h2v1h-2zM10 6h5v1h-5zM1 7h2v1h-2zM13 7h2v1h-2zM1 8h2v1h-2zM13 8h2v1h-2zM1 9h2v1h-2zM13 9h2v1h-2zM1 10h2v1h-2zM13 10h2v1h-2zM1 11h2v1h-2zM13 11h2v1h-2zM1 12h2v1h-2zM13 12h2v1h-2zM1 13h14v1h-14zM2 14h12v1h-12z"/></svg></span><div><h4>Notes on people</h4><p>Remember where you know someone from, their pronouns and a note, in every channel's chat.</p></div></li>
+        <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M2 1h9v1h-9zM1 2h11v1h-11zM1 3h2v1h-2zM9 3h4v1h-4zM1 4h2v1h-2zM9 4h2v1h-2zM12 4h2v1h-2zM1 5h2v1h-2zM9 5h6v1h-6zM1 6h2v1h-2zM10 6h5v1h-5zM1 7h2v1h-2zM13 7h2v1h-2zM1 8h2v1h-2zM13 8h2v1h-2zM1 9h2v1h-2zM13 9h2v1h-2zM1 10h2v1h-2zM13 10h2v1h-2zM1 11h2v1h-2zM13 11h2v1h-2zM1 12h2v1h-2zM13 12h2v1h-2zM1 13h14v1h-14zM2 14h12v1h-12z"/></svg></span><div><h4>Notes on people</h4><p>Remember where you know someone from, their pronouns and a note, so familiar faces never feel like strangers in any channel's chat.</p></div></li>
         <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M4 1h8v1h-8zM3 2h10v1h-10zM3 3h1v1h-1zM12 3h1v1h-1zM3 4h1v1h-1zM12 4h1v1h-1zM3 5h1v1h-1zM12 5h1v1h-1zM3 6h1v1h-1zM12 6h1v1h-1zM3 7h1v1h-1zM12 7h1v1h-1zM3 8h1v1h-1zM12 8h1v1h-1zM3 9h1v1h-1zM12 9h1v1h-1zM3 10h1v1h-1zM12 10h1v1h-1zM3 11h1v1h-1zM6 11h4v1h-4zM12 11h1v1h-1zM3 12h4v1h-4zM9 12h4v1h-4zM3 13h3v1h-3zM10 13h3v1h-3zM3 14h1v1h-1zM12 14h1v1h-1z"/></svg></span><div><h4>Bookmarks on streams and VODs</h4><p>Mark a moment live or on a VOD, add a note, and jump straight back to it later.</p></div></li>
         <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M4 1h8v1h-8zM3 2h3v1h-3zM10 2h3v1h-3zM2 3h2v1h-2zM12 3h2v1h-2zM1 4h2v1h-2zM13 4h2v1h-2zM1 5h2v1h-2zM13 5h2v1h-2zM1 6h1v1h-1zM14 6h1v1h-1zM1 7h1v1h-1zM14 7h1v1h-1zM1 8h1v1h-1zM14 8h1v1h-1zM1 9h1v1h-1zM5 9h2v1h-2zM9 9h2v1h-2zM14 9h1v1h-1zM1 10h2v1h-2zM6 10h4v1h-4zM13 10h2v1h-2zM1 11h2v1h-2zM13 11h2v1h-2zM2 12h2v1h-2zM12 12h2v1h-2zM3 13h3v1h-3zM10 13h3v1h-3zM4 14h8v1h-8z"/></svg></span><div><h4>Emotes and phrases at hand</h4><p>Pin favorite emotes, keep a row of channels you visit, and save phrases you type a lot.</p></div></li>
         <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M4 1h8v1h-8zM3 2h2v1h-2zM11 2h2v1h-2zM3 3h3v1h-3zM10 3h3v1h-3zM4 4h3v1h-3zM9 4h3v1h-3zM5 5h2v1h-2zM9 5h2v1h-2zM5 6h2v1h-2zM9 6h2v1h-2zM5 7h2v1h-2zM9 7h2v1h-2zM4 8h2v1h-2zM10 8h3v1h-3zM3 9h2v1h-2zM11 9h2v1h-2zM3 10h1v1h-1zM12 10h1v1h-1zM3 11h10v1h-10zM7 12h2v1h-2zM7 13h2v1h-2zM7 14h2v1h-2z"/></svg></span><div><h4>Your Twitch, tidied</h4><p>Pin channels to the sidebar, switch accounts, clear notifications, and back up all your settings.</p></div></li>
@@ -687,7 +761,7 @@
   <footer class="foot">
     <div class="wrap">
       <span class="tom"><img src="brand/tom.png" alt="" width="26" height="26"> <img src="brand/streamerspace.svg" alt="StreamerSpace" style="width:auto;height:20px"></span>
-      <span>Questions, answers and flagged lines go only to the people you've connected with. In this demo everyone is pretend and nothing is sent anywhere.</span>
+      <span>Not a social network, just your people. Questions, answers, notes and flagged lines go only to the friends you've connected with. In this demo everyone is pretend and nothing is sent anywhere.</span>
       <p class="credits">Created by <a href="https://www.twitch.tv/myspacetomofficial" target="_blank" rel="noopener">MyspaceTomOfficial</a>.
         <span class="credits__thanks">Credits: <a href="https://www.twitch.tv/tallglassofbees" target="_blank" rel="noopener">TallGlassOfBees</a>, <span class="credits__name">TallGlassOfWasps</span> and <span class="credits__name">Roman</span>.</span></p>
     </div>
@@ -711,12 +785,54 @@
       r.classList.add("glitch");
       setTimeout(() => {
         r.remove();
+        document.dispatchEvent(new Event("retro-done"));
         document.body.classList.add("site-in");
         setTimeout(() => document.body.classList.remove("site-in"), 600);
       }, 650);
     };
     const t = setTimeout(glitch, 1900);
     r.addEventListener("click", () => (clearTimeout(t), glitch()));
+  })();
+</script>
+<script>
+  // The headline gag: "MySpace 2.0" for a beat, glitches out, then "jk, it's actually better than that."
+  // types out behind a cursor, fades away, and the real headline fades in.
+  // Starts once the retro intro (if it's showing) has gone; a click on it skips ahead.
+  (() => {
+    const h = document.getElementById("hgag");
+    if (!h.classList.contains("gag-fake")) return;
+    const timers = [];
+    const at = (ms, f) => timers.push(setTimeout(f, ms));
+    const jk = h.querySelector(".hgag__jk");
+    const typed = jk.querySelector(".hgag__typed");
+    const line = jk.dataset.text;
+    const finish = () => {
+      timers.forEach(clearTimeout);
+      h.classList.remove("gag-fake", "gag-jk", "gag-out", "gag-typing", "gag-fadeout");
+      h.classList.add("gag-in");
+      setTimeout(() => h.classList.remove("gag-in"), 650);
+    };
+    const run = () => {
+      at(1500, () => h.classList.add("gag-out"));
+      at(1900, () => {
+        h.classList.remove("gag-fake", "gag-out");
+        h.classList.add("gag-jk");
+      });
+      // A short blink of the cursor, then the line types out, a little unevenly like a person.
+      let t = 2350;
+      at(t, () => h.classList.add("gag-typing"));
+      for (let i = 1; i <= line.length; i++) {
+        t += 38 + (line[i - 1] === "," || line[i - 1] === " " ? 40 : 0) + Math.random() * 25;
+        at(t, () => { typed.textContent = line.slice(0, i); });
+      }
+      at(t + 10, () => h.classList.remove("gag-typing"));
+      at(t + 1300, () => h.classList.add("gag-fadeout"));
+      at(t + 1800, finish);
+    };
+    h.addEventListener("click", () => h.classList.contains("gag-fake") || h.classList.contains("gag-jk") ? finish() : null);
+    const r = document.getElementById("retro");
+    if (r && !r.hidden) document.addEventListener("retro-done", run, { once: true });
+    else run();
   })();
 </script>
 <script>

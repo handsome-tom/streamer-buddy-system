@@ -496,11 +496,13 @@ const twitch = (() => {
     const drawn = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 70"><rect width="70" height="70" fill="${color}"/><text x="35" y="47" font-family="Arial" font-weight="bold" font-size="34" fill="#18181b" text-anchor="middle">${letter}</text></svg>`)}`;
     return {
       id: `u-${name}`, login: name.toLowerCase(), display_name: name, broadcaster_type: "", type: "",
-      description: name === "Lump" ? "Big green streamer. Raids with love." : BIOS[h % BIOS.length],
+      description: name === "Lump" ? "🌿 Big green streamer from the swamp! Cozy Minecraft builds every week, horror on Fridays. Raids with love 💚 | Discord: discord.gg/lumpswamp | Business: lump@example.com" : BIOS[h % BIOS.length],
       profile_image_url: PICS[name.toLowerCase()] ? new URL(PICS[name.toLowerCase()], import.meta.url).href : drawn,
       created_at: new Date(Date.now() - age).toISOString(),
       followedAt: follows ? new Date(Date.now() - Math.min(age - day, (5 + (h % 700)) * day)).toISOString() : "",
-      game: name === "Lump" ? "Just Chatting" : GAMES[(h >> 3) % GAMES.length],
+      game: name === "Lump" || name === "streamer" ? "Minecraft" : GAMES[(h >> 3) % GAMES.length],
+      // Tags for the raid card's "you share" (the pretend streamer and Lump overlap a little).
+      tags: name === "Lump" ? ["English", "Cozy", "Building", "Wholesome"] : name === "streamer" ? ["English", "Cozy", "Chatting"] : [],
     };
   }
   // Badge pictures, drawn here (Twitch's own are its artwork): a shaded tile in the badge's
@@ -591,8 +593,9 @@ const twitch = (() => {
       return json(200, { data: p.followedAt ? [{ user_id: p.id, user_login: p.login, user_name: p.display_name, followed_at: p.followedAt }] : [], total: 1 });
     }
     if (route === "/channels") {
-      const p = person(u.searchParams.get("broadcaster_id").replace(/^u-/, ""));
-      return json(200, { data: [{ broadcaster_id: p.id, broadcaster_name: p.display_name, game_name: p.game, title: "" }] });
+      const bid = u.searchParams.get("broadcaster_id");
+      const p = person(bid === "1" ? "streamer" : bid.replace(/^u-/, "")); // "1" is the pretend streamer's own channel
+      return json(200, { data: [{ broadcaster_id: p.id, broadcaster_name: p.display_name, game_name: p.game, title: "", tags: p.tags }] });
     }
     if (route === "/moderation/chat") {
       event("channel.chat.message_delete", { message_id: u.searchParams.get("message_id"), target_user_id: "x" });
@@ -651,6 +654,12 @@ const twitch = (() => {
 function seed(login) {
   const base = { svOpen: "true" };
   if (login === "streamer") Object.assign(base, { chatToken: JSON.stringify("mock"), ownChat: "true", colors: JSON.stringify({ streamer: "#ff7f50" }) }); // the streamer's chat color
+  // The streamer's custom chat remembers Lump: two raids before and a few visits to chat, so
+  // the raid card's "Raided you before" and "Chatted here" have something to show.
+  if (login === "streamer") {
+    const day = 86400000, now = Date.now();
+    base["ocMemory:1"] = JSON.stringify({ since: now - 200 * day, raids: { "u-Lump": [2, now - 24 * day, 54] }, chat: { "u-Lump": [now - 150 * day, now - 9 * day, 14, "lump"] } });
+  }
   return base;
 }
 

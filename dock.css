@@ -5509,3 +5509,11 @@ body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; 
 .oc-notice__head, .oc-giftees__count { font-size: 11px; }
 .oc-event__what { font-size: 12px; }
 .oc-raid__name, .oc-redeem__head b:first-child, .oc-topcard__sender { font-family: "Pixelify Sans", "Plus Jakarta Sans", sans-serif; font-weight: 600; letter-spacing: 0.01em; }
+
+/* The raid card's "about them": a short line from their bio, then small facts (what they
+   stream next to what you stream, tags you share, whether they follow you). */
+.oc-raid__about { margin-top: 6px; }
+.oc-raid__bio { font-size: 12.5px; line-height: 1.4; color: color-mix(in srgb, var(--text, #efeff1) 85%, transparent); font-style: italic; }
+.oc-raid__bio::before { content: "“"; } .oc-raid__bio::after { content: "”"; }
+.oc-raid__facts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.oc-raid__fact { padding: 2px 8px; font-size: 11px; font-weight: 600; color: #efeff1; background: color-mix(in srgb, var(--raid, #8fd14f) 18%, rgba(0, 0, 0, 0.35)); border-radius: 999px; }

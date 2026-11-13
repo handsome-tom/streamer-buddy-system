@@ -1202,6 +1202,98 @@
       return null;
     }
 
+    // ----- Memory of your own channel: who has chatted here and who has raided you -----
+    // Kept on this computer only (this page's storage), per channel, counted from the day it
+    // starts. The raid card uses it: "Raided you before", "Chatted here 14 times".
+    // chat: user id -> [first seen, last seen, messages, login]; raids: user id -> [times, last, viewers]
+    let mem = null;
+    let memTimer = 0;
+    const memKey = () => `ocMemory:${broadcasterId || channel}`;
+    function memory() {
+      if (mem) return mem;
+      try { mem = JSON.parse(localStorage.getItem(memKey())) || {}; } catch { mem = {}; }
+      mem.chat ||= {};
+      mem.raids ||= {};
+      mem.since ||= Date.now();
+      return mem;
+    }
+    function memSave() {
+      clearTimeout(memTimer);
+      memTimer = setTimeout(() => {
+        const m = memory();
+        const ids = Object.keys(m.chat);
+        if (ids.length > 4000) for (const id of ids.sort((a, b) => m.chat[a][1] - m.chat[b][1]).slice(0, ids.length - 4000)) delete m.chat[id];
+        try { localStorage.setItem(memKey(), JSON.stringify(m)); } catch {}
+      }, 3000);
+    }
+    function memChat(uid, login) {
+      if (!uid) return;
+      const m = memory(), now = Date.now(), c = m.chat[uid];
+      m.chat[uid] = c ? [c[0], now, c[2] + 1, login || c[3]] : [now, now, 1, login || ""];
+      memSave();
+    }
+    // Before counting this raid, what we knew; then count it.
+    function memRaid(uid, viewers) {
+      const m = memory();
+      const before = { raid: m.raids[uid] ? [...m.raids[uid]] : null, chat: m.chat[uid] ? [...m.chat[uid]] : null, since: m.since };
+      const r = m.raids[uid];
+      m.raids[uid] = [(r?.[0] || 0) + 1, Date.now(), viewers || 0];
+      memSave();
+      return before;
+    }
+
+    // ----- A raider, at a glance (the raid card's "about them") -----
+    let myChannelInfo = null;
+    async function myChannel() {
+      if (myChannelInfo && Date.now() - myChannelInfo.at < 10 * 60 * 1000) return myChannelInfo.c;
+      const c = (await quiet(`/channels?broadcaster_id=${broadcasterId}`))?.data?.[0] || null;
+      myChannelInfo = { at: Date.now(), c };
+      return c;
+    }
+    // A bio, simplified: no links, emails, emoji or "Discord: … | Business: …" bits, just the
+    // first sentence or two, kept short.
+    function simpleBio(text) {
+      if (!text) return "";
+      const parts = String(text).split(/\s*[|•·\n]+\s*/).filter((p) => !/(discord|business|e-?mail|contact|inquir|twitter|tiktok|instagram|youtube|x\.com|socials?|merch|donat|tips?:|sponsor)/i.test(p));
+      let t = parts.join(". ")
+        .replace(/https?:\/\/\S+/gi, "").replace(/\b\S+\.(gg|com|tv|net|org|io|ly|me|co)\/\S*/gi, "").replace(/\S+@\S+\.\S+/g, "")
+        .replace(/\p{Extended_Pictographic}|\uFE0F|\u200D/gu, "").replace(/\s+/g, " ").replace(/\s+([.,!?])/g, "$1").replace(/([.!?]){2,}/g, "$1").trim();
+      const sentences = t.match(/[^.!?]+[.!?]?/g) || [];
+      let out = "";
+      for (const sn of sentences) {
+        if (out && (out + sn).length > 120) break;
+        out += sn;
+      }
+      out = out.trim() || t;
+      return out.length > 130 ? `${out.slice(0, 127).replace(/\s+\S*$/, "")}…` : out;
+    }
+    async function raidAbout(uid, box, before) {
+      const [a, mine] = await Promise.all([aboutPerson(uid), myChannel()]);
+      const bits = [];
+      // From this channel's memory first: raids and chatting here.
+      if (before) {
+        const ago = (t) => (Date.now() - t < 86400000 ? "today" : `${howLong(t)} ago`);
+        bits.push(before.raid ? `Raided you before: ${before.raid[0]}× · last ${ago(before.raid[1])}` : "First raid on you");
+        bits.push(before.chat ? `Chatted here ${plural(before.chat[2], "time", "times")} · last ${ago(before.chat[1])}` : "Hasn't chatted here yet");
+      }
+      const bio = simpleBio(a.user?.description);
+      if (bio) box.append(el("div", "oc-raid__bio", bio));
+      const theirs = a.channel || {};
+      const same = (x, y) => x && y && String(x).toLowerCase() === String(y).toLowerCase();
+      if (theirs.game_name) bits.push(same(theirs.game_name, mine?.game_name) ? `Also streams ${theirs.game_name}, like you` : `Streams ${theirs.game_name}`);
+      const myTags = new Set((mine?.tags || []).map((x) => String(x).toLowerCase()));
+      const shared = (theirs.tags || []).filter((x) => myTags.has(String(x).toLowerCase())).slice(0, 3);
+      if (shared.length) bits.push(`You share: ${shared.join(", ")}`);
+      if (a.follow) bits.push(`Follows you · ${howLong(a.follow.followed_at)}`);
+      else if (a.follow === false) bits.push("Doesn't follow you yet");
+      if (bits.length) {
+        const row = el("div", "oc-raid__facts");
+        for (const b of bits) row.append(el("span", "oc-raid__fact", b));
+        box.append(row);
+      }
+      box.hidden = !box.childElementCount;
+    }
+
     function noticeLine(e) {
       const kind = String(e.notice_type || "").replace(/^shared_chat_/, "");
       const what = SUB_NOTICES.includes(kind) ? "sub" : kind === "bits_badge_tier" || kind === "charity_donation" ? "gold" : kind;
@@ -1239,14 +1331,18 @@
         const n = Number(r.viewer_count) || 0;
         words.append(el("div", "oc-raid__title", "Raid!"), name, ` is raiding with ${n.toLocaleString()} ${n === 1 ? "viewer" : "viewers"}`);
         if (fromChannel) words.append(` (to ${fromChannel})`);
+        // About them, filled in a moment later from Twitch: a short, cleaned-up line from their
+        // bio, what they stream next to what you stream, tags you share, and whether they
+        // follow you. (Twitch only lets an app see the follows of whoever is signed in, so
+        // channels you both follow can't be shown.)
+        if (r.user_id && !fromChannel) {
+          const about = el("div", "oc-raid__about");
+          about.hidden = true;
+          words.append(about);
+          raidAbout(r.user_id, about, memRaid(r.user_id, n));
+        }
         head.append(words);
         line.append(head);
-        if (!fromChannel) {
-          line.append(button("oc-act oc-raid__hi", "Welcome them", () => {
-            input.value = `Welcome in, @${r.user_name || r.user_login} and the raiders! <3`;
-            input.focus();
-          }, "Puts a welcome in the message box for you to send"));
-        }
         return line;
       }
       if (kind === "community_sub_gift" && e.community_sub_gift) giftCard(e);
@@ -1318,6 +1414,7 @@
     function gotEvent(type, e) {
       if (type === "channel.chat.message") {
         sawHere(e.chatter_user_login);
+        if (!e.source_broadcaster_user_id || e.source_broadcaster_user_id === broadcasterId) memChat(e.chatter_user_id, e.chatter_user_login);
         // A reward someone typed into. On your own channel the redemption itself says so
         // (with the reward's name and their words), so its chat copy isn't shown twice.
         if (e.channel_points_custom_reward_id && channel === me.login && redemptionsOn) return;

@@ -13,7 +13,12 @@
   straight (demo/play.html) to work on it without the front page's intro and hero; the front
   page (demo/index.html) shows it in a frame (?embed), and "Start over" reloads only this.
 -->
-<script>if (new URLSearchParams(location.search).has("embed")) document.documentElement.classList.add("embedded");</script>
+<script>
+  if (new URLSearchParams(location.search).has("embed")) document.documentElement.classList.add("embedded");
+  // ?story=mod: the mod walkthrough (the front page's second demo): the same pretend world,
+  // told from the mod's side, in green.
+  if (new URLSearchParams(location.search).get("story") === "mod") document.documentElement.classList.add("story-mod");
+</script>
 <style>
   /* ===== Twitch Space: the public site, with the live demo in the middle ===== */
   @font-face { font-family: "Plus Jakarta Sans"; font-weight: 400 800; font-display: swap; src: url("../fonts/plus-jakarta-sans.woff2") format("woff2"); }
@@ -483,6 +488,28 @@
   .callout--mod .callout__ring { box-shadow: 0 0 0 2px #5b9af0, 0 0 18px 2px rgba(91, 154, 240, 0.45); }
   .callout--streamer .callout__ring { box-shadow: 0 0 0 2px #5b9af0, 0 0 18px 2px rgba(91, 154, 240, 0.45); }
   @media (prefers-reduced-motion: reduce) { .callout, .callout__ring { animation: none; } }
+  /* "Ask BlazeMod420" is long: it takes two columns of its row. */
+  .menu__row .chip[data-click="streamerAsk"] { grid-column: span 2; }
+  /* The streamer's dock on the left, the mod's panel on the right (the page keeps the mod's
+     panel first, so the side colors and scripts are unchanged; only the order flips). */
+  .stage .screen:last-child { order: -1; }
+
+  /* ===== The mod walkthrough (?story=mod): same dark space, mod green and white. The mod's
+     panel on the left; the streamer's dock on the right; the guide drives, so no menus. ===== */
+  .story-mod .stage .screen:last-child { order: 0; }
+  .story-mod .stage .menu, .story-mod #allControls, .story-mod #auto { display: none !important; }
+  .story-mod .demo__head .eyebrow, .story-mod .guide__top { color: #3fc98e; }
+  .story-mod .demo__head h2 { color: #fff; }
+  .story-mod .guide { background: rgba(4, 20, 14, 0.6); box-shadow: 0 0 46px 30px rgba(4, 20, 14, 0.6); }
+  .story-mod .guide h3 { color: #fff; }
+  .story-mod .guide__dots i.done { background: rgba(63, 201, 142, 0.6); }
+  .story-mod .guide__dots i.now { background: #3fc98e; box-shadow: 0 0 8px #3fc98e; }
+  .story-mod .guide__actions .btn--main { color: #052016; background: linear-gradient(180deg, #ffffff, #dff7ec); border-color: #bff0d8; box-shadow: 0 8px 24px rgba(63, 201, 142, 0.35), inset 0 1px 0 #fff; }
+  .story-mod .guide__actions .btn--main:hover { filter: none; background: linear-gradient(180deg, #ffffff, #c9f2df); }
+  .story-mod .screen.spot iframe { outline-color: rgba(63, 201, 142, 0.7); box-shadow: 0 0 30px rgba(63, 201, 142, 0.22); }
+  .story-mod .callout__ring { box-shadow: 0 0 0 2px #3fc98e, 0 0 18px 2px rgba(63, 201, 142, 0.45) !important; }
+  .story-mod .screen:first-child .screen__label { color: #3fc98e; }
+  .story-mod .demo__run .chip.on { border-color: #3fc98e; }
 </style>
 <style>
   /* Inside the front page's frame: no backdrop or page padding of its own (the front page's
@@ -501,7 +528,7 @@
         <div>
           <p class="eyebrow">Live demo</p>
           <h2>Try it: you're both sides at once.</h2>
-          <p>On the left, a mod's side panel in Chrome. On the right, the streamer's OBS dock with chat. Everyone here is pretend, and nothing is sent anywhere.</p>
+          <p>On the left, the streamer's OBS dock with chat. On the right, a mod's side panel in Chrome. Say hi to the crew: everyone here is pretend, and nothing is sent anywhere.</p>
         </div>
       </div>
 
@@ -526,31 +553,32 @@
         <div class="screen">
           <div class="screen__label">Mod's side panel <small>you're mod1, watching the streamer</small>
             <span class="info" tabindex="0" data-tip="What a mod sees in Chrome, next to Twitch: Streamer View at the top shows what's on the streamer's screen right now, then the box to ask, send quick info or a !vanish note.">?</span></div>
+          <iframe id="mod" title="Mod side panel"></iframe>
           <div class="menu menu--grouped" aria-label="Try as mod1">
             <span class="menu__head">Try mod</span>
             <div class="menu__row"><span class="menu__cap">Talk</span>
-              <button type="button" class="chip" data-click="modNote" data-tip="→ A heads-up on the streamer's bar, with a lightning bolt. It goes after 2 minutes.">Quick info<span class="go" aria-hidden="true">→</span></button>
-              <button type="button" class="chip" data-click="modVanish" data-tip="→ A short kind note on the streamer's bar, with a little devil. Gone in 30 seconds.">!vanish<span class="go" aria-hidden="true">→</span></button>
+              <button type="button" class="chip" data-click="modNote" data-tip="← A heads-up on the streamer's bar, with a lightning bolt. It goes after 2 minutes.">Quick info<span class="go" aria-hidden="true">←</span></button>
+              <button type="button" class="chip" data-click="modVanish" data-tip="← A short kind note on the streamer's bar, with a little devil. Gone in 30 seconds.">!vanish<span class="go" aria-hidden="true">←</span></button>
             </div>
             <div class="menu__row menu__row--levels"><span class="menu__cap">Escalate</span>
-              <button type="button" class="chip chip--lvl" data-k style="--k:#00b371" data-level="1" data-click="modAsk" data-tip="→ mod1 asks the streamer a yes-or-no question. It waits on the streamer's dock with ♥ ✓ ✗ ?">Ask<span class="go" aria-hidden="true">→</span></button>
-              <button type="button" class="chip chip--lvl" data-k style="--k:#ff6a00" data-level="2" data-click="modNudge" data-tip="→ Bumps mod1's waiting question up a color on the streamer's dock: orange, yellow, white.">Nudge<span class="go" aria-hidden="true">→</span></button>
-              <button type="button" class="chip chip--lvl" data-k style="--k:#ff2a1f" data-level="3" data-click="modWarn" data-tip="→ The panic button, for something that can't wait: the streamer's dock flashes red with a loud chime.">Panic<span class="go" aria-hidden="true">→</span></button>
+              <button type="button" class="chip chip--lvl" data-k style="--k:#00b371" data-level="1" data-click="modAsk" data-tip="← mod1 asks the streamer a yes-or-no question. It waits on the streamer's dock with ♥ ✓ ✗ ?">Ask<span class="go" aria-hidden="true">←</span></button>
+              <button type="button" class="chip chip--lvl" data-k style="--k:#ff6a00" data-level="2" data-click="modNudge" data-tip="← Bumps mod1's waiting question up a color on the streamer's dock: orange, yellow, white.">Nudge<span class="go" aria-hidden="true">←</span></button>
+              <button type="button" class="chip chip--lvl" data-k style="--k:#ff2a1f" data-level="3" data-click="modWarn" data-tip="← The panic button, for something that can't wait: the streamer's dock flashes red with a loud chime.">Panic<span class="go" aria-hidden="true">←</span></button>
             </div>
             <div class="menu__row"><span class="menu__cap">In chat</span>
-              <button type="button" class="chip" data-click="modFlag" data-tip="→ mod1 flags a viewer's message. It glows in the streamer's chat.">Flag a line<span class="go" aria-hidden="true">→</span></button>
-              <button type="button" class="chip" data-click="modChatNote" data-tip="→ mod1 leaves a note on a viewer's message. It shows as a text bubble above that line in the streamer's chat.">Note on a line<span class="go" aria-hidden="true">→</span></button>
+              <button type="button" class="chip" data-click="modFlag" data-tip="← mod1 flags a viewer's message. It glows in the streamer's chat.">Flag a line<span class="go" aria-hidden="true">←</span></button>
+              <button type="button" class="chip" data-click="modChatNote" data-tip="← mod1 leaves a note on a viewer's message. It shows as a text bubble above that line in the streamer's chat.">Note on a line<span class="go" aria-hidden="true">←</span></button>
             </div>
           </div>
-          <iframe id="mod" title="Mod side panel"></iframe>
         </div>
         <div class="screen">
           <div class="screen__label">Streamer's OBS dock <small>you're the streamer</small>
             <span class="info" tabindex="0" data-tip="What the streamer sees in OBS: mods' pictures and the message area at the top, then their chat, with Twitch's events and mod tools built in. Hover a chat line to bookmark, pin or reply.">?</span></div>
+          <iframe id="obs" title="Streamer's OBS dock"></iframe>
           <div class="menu menu--grouped" aria-label="Try on the streamer's side">
-            <span class="menu__head">Try streamer <a class="menu__more" href="#allControls" data-tip="Every other Twitch event and chat control, below the screens.">More…</a></span>
+            <span class="menu__head">Try streamer <a class="menu__more" href="#allControls" data-tip="Every other Twitch event and chat control, just below.">More…</a></span>
             <div class="menu__row"><span class="menu__cap">Your mods</span>
-              <button type="button" class="chip" data-click="streamerAsk" data-tip="← The streamer types a question in the dock's Message box and sends it to mod1. Watch it land in the mod's panel.">Ask mod1<span class="go" aria-hidden="true">←</span></button>
+              <button type="button" class="chip" data-click="streamerAsk" data-tip="→ The streamer types a question in the dock's Message box and sends it to mod1. Watch it land in the mod's panel.">Ask mod1<span class="go" aria-hidden="true">→</span></button>
             </div>
             <div class="menu__row"><span class="menu__cap">Twitch events</span>
               <button type="button" class="chip" data-click="tRaid" data-k style="--k:#8fd14f" data-tip="Lump raids with a crowd. Raiders get a RAID tag with Lump's picture.">Raid</button>
@@ -560,7 +588,6 @@
               <button type="button" class="chip" data-click="tPoll" data-k style="--k:#5a8de8" data-tip="A poll, with live votes at the top of chat.">Poll</button>
             </div>
           </div>
-          <iframe id="obs" title="Streamer's OBS dock"></iframe>
         </div>
       </div>
       <details class="all" id="allControls">
@@ -584,7 +611,7 @@
         <button id="modFlag" type="button" class="chip" data-tip="mod1 flags a viewer's recent line. It glows in the streamer's chat.">Flag a chat line</button>
         <button id="modChatNote" type="button" class="chip" data-tip="mod1 leaves a note on a viewer's recent line. It shows as a text bubble with mod1's picture, above that line in the streamer's chat.">Note on a chat line</button>
         <span class="pane__sep"></span>
-        <button id="streamerAsk" type="button" class="chip" data-tip="The streamer asks mod1 something. Watch it arrive in the mod's panel on the left.">Streamer asks mod1</button>
+        <button id="streamerAsk" type="button" class="chip" data-tip="The streamer asks mod1 something. Watch it arrive in the mod's panel on the right.">Streamer asks mod1</button>
         </div>
         <div class="pane" role="tabpanel" id="paneChat" aria-labelledby="tabChat" hidden>
         <select id="chatter" data-tip="Who joins, talks or leaves."><option>mod1</option><option>mod2</option></select>
@@ -789,6 +816,12 @@
   }
   function onAutoQuestion(m) {
     track(m);
+    // In the mod walkthrough the streamer answers the mod's questions by themself, a little
+    // later (the panic button's and nudged ones too).
+    if (STORY && m.t === "q" && m.q.from === me && m.q.to === "streamer" && !m.q.note && !m.q.answer && !answered.has(m.q.id)) {
+      answered.add(m.q.id);
+      answerLater("streamer", m.q, 9000 + Math.random() * 3000);
+    }
     if (!auto || m.t !== "q" || m.q.answer || m.q.dismissed || m.q.seenAt || answered.has(m.q.id)) return;
     const q = m.q;
     if (q.from === me && q.to === "streamer") {
@@ -821,11 +854,11 @@
   document.getElementById("cJoin").addEventListener("click", () => (pretendTwitch.join(chatter()), said(`${chatter()} joined the chat`)));
   document.getElementById("cSay").addEventListener("click", () => (pretendTwitch.say(chatter(), pick(LINES)), said(`${chatter()} chatted`)));
   document.getElementById("cPart").addEventListener("click", () => (pretendTwitch.part(chatter()), said(`${chatter()} left the chat`)));
-  // Twitch's own events, shown in the streamer's custom chat on the right.
+  // Twitch's own events, shown in the streamer's custom chat on the left.
   const on = (id, run) => document.getElementById(id).addEventListener("click", run);
   on("tRaid", () => {
     const { from, count } = pretendTwitch.raid();
-    said(`${from} raided with ${count} viewers: watch the streamer's chat on the right`);
+    said(`${from} raided with ${count} viewers: watch the streamer's chat on the left`);
   });
   on("tFirst", () => said(`${pretendTwitch.first()} chatted for the first time`));
   on("tCmd", () => {
@@ -858,7 +891,7 @@
   on("tAnnounce", () => (pretendTwitch.announce(), said("mod2 made an announcement")));
   document.getElementById("reload").addEventListener("click", () => location.reload());
 
-  // The short menus above the screens press the same buttons as the full menu below.
+  // The short menus under the screens press the same buttons as the full menu below.
   for (const b of document.querySelectorAll("[data-click]")) b.addEventListener("click", () => document.getElementById(b.dataset.click).click());
   document.querySelector(".menu__more")?.addEventListener("click", () => (document.getElementById("allControls").open = true));
 
@@ -881,7 +914,7 @@
   // The labels and menus about the left panel (not the chat or Twitch tabs, which name
   // mod2 on purpose: mod2 is the one who pins and announces there).
   function relabel() {
-    const swap = (t) => t.replace(/mod[12]/g, (n) => (n === "mod1" ? "mod2" : "mod1"));
+    const swap = (t) => t.replace(/mod[12]|BlazeMod420|DrCoolMod67/g, (n) => ({ mod1: "mod2", mod2: "mod1", BlazeMod420: "DrCoolMod67", DrCoolMod67: "BlazeMod420" })[n]);
     for (const box of document.querySelectorAll(".stage .screen__label, .stage .menu, #paneMods, #auto")) {
       for (const el of [box, ...box.querySelectorAll("*")]) {
         for (const a of ["data-tip", "aria-label"]) if (el.hasAttribute(a)) el.setAttribute(a, swap(el.getAttribute(a)));
@@ -896,7 +929,7 @@
     relabel();
     document.getElementById("mod").src = `../?dev=${me}&embed=ext&watch=streamer&modfor=streamer,streamer2&sandbox`;
     if (!document.getElementById("tour").hidden) tour.show(tour.at);
-    said(`You're ${me} now: the panel on the left is ${me}'s`);
+    said(`You're ${me} now: the panel on the right is ${me}'s`);
   }
   document.getElementById("obs").addEventListener("load", (e) => {
     e.target.contentDocument?.addEventListener("change", (ev) => ev.target.id === "quickTo" && becomeMod(ev.target.value));
@@ -904,17 +937,32 @@
 
   // ===== The guided tour: one thing at a time, nothing until it's pressed ==================
   // Each step says what to press and where to look; its button does it, then Next.
-  const STEPS = [
-    { title: "A mod asks the streamer something", text: "Chat is already running on the right. Now mod1 has a question. It shows up quietly under the streamer's bar, never on stream. Answer it on the right with ♥ ✓ ✗ or ?, or type a reply.", button: "mod1 asks a question", look: "obs", click: "modAsk" },
-    { title: "Nudge it", text: "No answer yet? A mod can nudge. The question moves up from green to orange, with one soft beep, and Streamer View on the left shows it too.", button: "mod1 nudges", look: "obs", click: "modNudge" },
+  const STORY = document.documentElement.classList.contains("story-mod");
+  // The mod walkthrough's steps: a shift as the mod, from first look to the panic button.
+  const MOD_STEPS = [
+    { title: "You're on the mod team", text: "You're BlazeMod420, modding for RomansEmpire.TV. Your StreamerSpace side panel sits next to Twitch in Chrome. At the top, Streamer View shows exactly what's on the streamer's screen right now, so you never ask twice.", button: "Start my shift", look: "mod",
+      run: () => { const doc = panelDoc("mod"), el = doc?.querySelector(".sv") || doc?.querySelector(".panel"); if (el) showCallout("mod", el, "This is Streamer View: what's on RomansEmpire.TV's screen right now.", "guide"); said("Your shift has started. Chat is live on the right."); } },
+    { title: "Ask without interrupting", text: "The raid is coming up. Instead of typing in chat, ask quietly: it waits under the streamer's bar, never on stream. Their answer comes back to your panel a few seconds later.", button: "Ask about the raid", look: "obs", click: "modAsk" },
+    { title: "Give a heads-up", text: "An ad break is coming. Quick info shows on their bar for 2 minutes and clears itself, no reply needed.", button: "Send quick info", look: "obs", click: "modNote" },
+    { title: "No answer? Nudge", text: "They're deep in a fight and haven't answered. A nudge moves your question up a color and their outline turns orange. It's limited, so it can't turn into spam.", button: "Nudge them", look: "obs", click: "modNudge" },
+    { title: "Spot trouble in chat", text: "Someone's stirring things up. Flag their line and it's marked in your color in the streamer's chat and every connected mod's.", button: "Flag a line", look: "obs", click: "modFlag" },
+    { title: "Leave a note for the team", text: "Write a note right on that chat line. The streamer and the other mods see it as a bubble; viewers never do.", button: "Leave a note", look: "obs", click: "modChatNote" },
+    { title: "When it can't wait", text: "A real emergency, like a hate raid or something private showing on stream? Hit the panic button: their dock flashes red with a loud chime until they look.", button: "Hit the panic button", look: "obs", click: "modWarn" },
+    { title: "Cheer them on", text: "A !vanish note is a little kindness: it pops up on their bar for 30 seconds, then fades away.", button: "Send a !vanish note", look: "obs", click: "modVanish" },
+    { title: "They ask you back", text: "Now the streamer needs a hand. Their question lands in your side panel on the left. Answer it with one tap.", button: "RomansEmpire.TV asks you", look: "mod", click: "streamerAsk" },
+    { title: "That's a shift", text: "That's modding with StreamerSpace: quiet questions, heads-ups, flags and notes, and the panic button for when it matters. Try anything again right in your panel on the left.", button: "Done", look: "", done: true },
+  ];
+  const STEPS = STORY ? MOD_STEPS : [
+    { title: "A mod asks the streamer something", text: "Chat is already running on the left. Now mod1 has a question. It shows up quietly under the streamer's bar, never on stream. Answer it on the left with ♥ ✓ ✗ or ?, or type a reply.", button: "mod1 asks a question", look: "obs", click: "modAsk" },
+    { title: "Nudge it", text: "No answer yet? A mod can nudge. The question moves up from green to orange, with one soft beep, and Streamer View on the right shows it too.", button: "mod1 nudges", look: "obs", click: "modNudge" },
     { title: "Quick info", text: "Not everything needs an answer. Quick info is a heads-up on the streamer's bar, with a lightning bolt, and it clears itself after 2 minutes.", button: "Send quick info", look: "obs", click: "modNote" },
     { title: "Flag a chat line", text: "A mod spots something in chat and flags it. The line glows in the streamer's chat, in the mod's color, so it's easy to find.", button: "mod1 flags a line", look: "obs", click: "modFlag" },
     { title: "Leave a note on a chat line", text: "A mod can also write a note on one line of chat, like a text message. It shows as a bubble above that line, with the mod's picture, for the streamer and their connections only. Viewers never see it.", button: "mod1 leaves a note", look: "obs", click: "modChatNote" },
-    { title: "The streamer asks back", text: "It works both ways. The streamer asks mod1 something, and it lands in the mod's side panel on the left, ready for a one-tap answer.", button: "Streamer asks mod1", look: "mod", click: "streamerAsk" },
+    { title: "The streamer asks back", text: "It works both ways. The streamer asks mod1 something, and it lands in the mod's side panel on the right, ready for a one-tap answer.", button: "Streamer asks mod1", look: "mod", click: "streamerAsk" },
     { title: "Twitch, built in: a raid", text: "Custom chat shows Twitch's own events as clean cards. Here comes a raid: a card for the raiding streamer, and a RAID tag on everyone who came with them.", button: "Start a raid", look: "obs", click: "tRaid" },
     { title: "A gift bomb", text: "Twenty gifted subs: a progress card at the top of chat, and a card that lists every person who got one.", button: "Drop a gift bomb", look: "obs", click: "tGift" },
-    { title: "Do Not Disturb", text: "Need focus? On the right, click the hand in the streamer's top bar and pick 15 minutes. Then send quick info: it waits quietly until Do Not Disturb ends.", button: "Send quick info", look: "obs", click: "modNote" },
-    { title: "Your turn", text: "That's the tour. Use the menus above each screen to try anything again, open Every demo control below for the rest, or turn on Auto-play and just watch.", button: "Done", look: "", done: true },
+    { title: "Do Not Disturb", text: "Need focus? On the left, click the hand in the streamer's top bar and pick 15 minutes. Then send quick info: it waits quietly until Do Not Disturb ends.", button: "Send quick info", look: "obs", click: "modNote" },
+    { title: "Your turn", text: "That's the tour. Use the menus under each screen to try anything again, open Every demo control below them for the rest, or turn on Auto-play and just watch.", button: "Done", look: "", done: true },
   ];
   const tour = {
     at: 0,
@@ -941,7 +989,7 @@
       for (const id of ["mod", "obs"]) document.getElementById(id).closest(".screen").classList.remove("spot");
       for (const c of document.querySelectorAll(".menu .chip.cue")) c.classList.remove("cue");
       if (!feeding) document.getElementById("feed").click(); // the tour skipped: chat starts anyway
-      said("Try anything from the menus above each screen");
+      said("Try anything from the menus under each screen");
     },
   };
   document.getElementById("tourDo").addEventListener("click", () => {
@@ -1005,8 +1053,8 @@
     box.className = `callout callout--${from}`;
     // Looks like the iPhone-style chat notes: a blue bubble with the sender's picture and name.
     // Twitch's own events come from "Twitch", with the StreamerSpace mark.
-    const who = from === "mod" ? me : from === "streamer" ? "streamer" : "Twitch";
-    const pic = from === "twitch" ? "brand/mark.svg" : `pics/${who}.webp`;
+    const who = from === "mod" ? me : from === "streamer" ? "streamer" : from === "guide" ? "StreamerSpace" : "Twitch";
+    const pic = from === "twitch" || from === "guide" ? "brand/mark.svg" : `pics/${who}.webp`;
     box.innerHTML = `<span class="callout__ring"></span><p class="callout__text"><span class="callout__head"><span class="callout__pic"><img src="${pic}" alt=""></span><b class="callout__who"></b></span><span class="callout__say"></span></p>`;
     box.querySelector(".callout__who").textContent = who;
     box.querySelector(".callout__say").textContent = text;
@@ -1063,6 +1111,62 @@
     }, 900);
   }
 
+
+  // ===== The demo's people, by name =========================================================
+  // Inside, the demo's accounts stay "streamer", "mod1" and "mod2" (a "." can't be in a real
+  // Twitch username). On screen they read as these names everywhere: this page, both panels
+  // (re-applied whenever a panel loads), the notes and chat. "streamer" is only renamed where
+  // it's someone's name on its own, never in sentences like "the streamer's dock".
+  const NAMES = { streamer: "RomansEmpire.TV", mod1: "BlazeMod420", mod2: "DrCoolMod67" };
+  const renameText = (t) => {
+    let out = t.replace(/\bmod1\b/g, NAMES.mod1).replace(/\bmod2\b/g, NAMES.mod2);
+    if (out.trim() === "streamer") out = out.replace("streamer", NAMES.streamer);
+    return out;
+  };
+  const SKIP = new Set(["INPUT", "TEXTAREA", "SCRIPT", "STYLE", "SELECT", "OPTION"]);
+  function renameNode(node) {
+    if (node.nodeType === 3) {
+      if (!node.parentElement || SKIP.has(node.parentElement.tagName) || node.parentElement.isContentEditable) return;
+      const v = node.nodeValue, n = renameText(v);
+      if (n !== v) node.nodeValue = n;
+      return;
+    }
+    if (node.nodeType !== 1 || SKIP.has(node.tagName)) return;
+    for (const a of ["title", "data-tip", "aria-label", "placeholder"]) {
+      const v = node.getAttribute(a);
+      if (v && /\bmod[12]\b/.test(v)) node.setAttribute(a, renameText(v));
+    }
+    for (const c of node.childNodes) renameNode(c);
+  }
+  function renameIn(doc) {
+    if (!doc?.body || doc.__named) return;
+    doc.__named = true;
+    renameNode(doc.body);
+    new MutationObserver((ms) => {
+      for (const m of ms) {
+        if (m.type === "characterData") renameNode(m.target);
+        else if (m.type === "attributes") renameNode(m.target);
+        else for (const n of m.addedNodes) renameNode(n);
+      }
+    }).observe(doc.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["title", "data-tip", "aria-label", "placeholder"] });
+  }
+  renameIn(document);
+  for (const id of ["mod", "obs"]) {
+    const f = document.getElementById(id);
+    f.addEventListener("load", () => { try { renameIn(f.contentDocument); } catch {} });
+  }
+
+  if (STORY) {
+    const head = document.querySelector(".demo__head");
+    head.querySelector(".eyebrow").textContent = "Mod walkthrough";
+    head.querySelector("h2").textContent = "A shift as a mod.";
+    head.querySelector("p:not(.eyebrow)").textContent = "You're BlazeMod420, modding for RomansEmpire.TV. Follow along: each step is something mods do every stream. On the left is your side panel; on the right, what the streamer sees.";
+    const [modLabel, obsLabel] = ["mod", "obs"].map((id) => document.getElementById(id).closest(".screen").querySelector(".screen__label"));
+    modLabel.firstChild.nodeValue = "Your side panel ";
+    modLabel.querySelector("small").textContent = "you're BlazeMod420";
+    obsLabel.firstChild.nodeValue = "What the streamer sees ";
+    obsLabel.querySelector("small").textContent = "RomansEmpire.TV's OBS dock";
+  }
   // ===== Start: everyone added to each other, then the two panels ==========================
   (async () => {
     puppets.streamer = puppet("streamer", onAutoQuestion);
