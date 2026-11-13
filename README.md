@@ -13,7 +13,7 @@ the asker's side.
 | Name | What it is | Where |
 | --- | --- | --- |
 | **Streamer Buddy System** | This project: a web page used as an OBS dock | this repo |
-| **StreamerSpace** | The Chrome extension (formerly Twitch Space, and before that MytwitchTom) | its own repos |
+| **StreamSpace** | The Chrome extension (formerly Twitch Space, and before that MytwitchTom) | its own repos |
 | **Ask the Streamer** | A feature of Twitch Space; Streamer Buddy System answers its questions | inside Twitch Space |
 
 Always say the full name, **Streamer Buddy System**. This project shares no code

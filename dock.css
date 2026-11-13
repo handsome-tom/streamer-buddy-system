@@ -3834,7 +3834,7 @@ body.livechat .bar::after {
   transform: rotate(-12deg);
 }
 @keyframes bar-planet { from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-24px, -4px) rotate(-6deg); } }
-/* The StreamerSpace name, faint, in the middle of custom chat's thin status line. */
+/* The StreamSpace name, faint, in the middle of custom chat's thin status line. */
 body.livechat .oc-bar {
   position: relative;
   background: linear-gradient(180deg, #0d0d10, #0a0a0c);
@@ -5140,7 +5140,7 @@ body.embed .bar__status::before { display: none; }
 .dots--mod, .dots--mods { flex: 0 1 auto; background: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.35) 45%, rgba(0, 0, 0, 0.7) 100%); border-radius: 0 6px 6px 0; }
 .dots--mod:not(:hover) { -webkit-mask-image: none; mask-image: none; }
 
-/* The side panel's gear (StreamerSpace's settings), bottom-right over the connection glow.
+/* The side panel's gear (StreamSpace's settings), bottom-right over the connection glow.
    Room is kept at the bottom of each screen so it never covers a button. */
 .ext-gear { position: fixed; right: 6px; bottom: 6px; z-index: 31; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; background: none; color: rgba(255, 255, 255, 0.7); cursor: pointer; }
 .ext-gear:hover, .ext-gear--on { color: #fff; background: rgba(255, 255, 255, 0.08); }
@@ -5152,7 +5152,7 @@ body.embed main { padding-bottom: 44px; }
 .xset__foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0 16px; }
 .xset__foot .panel__sub { margin: 0; }
 .xset__go { background: #3f7dd8; color: #fff; }
-/* StreamerSpace blue, not purple, on its Settings page. */
+/* StreamSpace blue, not purple, on its Settings page. */
 .xset .set__switch:checked { background: #3f7dd8; }
 .xset .set__switch:focus-visible { outline-color: #3f7dd8; }
 .xset .msgs__label { color: #7db0ef; }
@@ -5321,12 +5321,12 @@ body.livechat .oc-bar--finding::after { display: none; }
 .oc-findlist__empty { padding: 6px 8px; font-size: 11px; color: var(--muted); }
 .oc-findlist { max-height: calc(100% - 8px); overflow-y: auto; }
 /* The strip's right side kept small, so the bookmark count and magnifier stay clear of the
-   StreamerSpace name in the middle. */
+   StreamSpace name in the middle. */
 .oc-marks { gap: 3px; margin-right: 4px; padding: 0 6px 0 4px; height: 16px; font-size: 10px; font-weight: 700; line-height: 1; border-radius: 8px; }
 .oc-marks svg { width: 10px; height: 10px; }
 .oc-find { width: 18px; height: 16px; margin-right: 2px; }
 .oc-find svg { width: 12px; height: 12px; }
-/* The bookmark count and the Bookmarks tab in StreamerSpace's brand blue, not amber. */
+/* The bookmark count and the Bookmarks tab in StreamSpace's brand blue, not amber. */
 .oc-marks { color: #fff; background: #3f7dd8; }
 .oc-marks:hover { background: #5a95e6; }
 .oc-findlist__tab--on:has(svg) { background: color-mix(in srgb, #3f7dd8 40%, transparent); }
@@ -5455,7 +5455,7 @@ body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; 
 .cx__askrow .cx__btn { flex: none; }
 
 /* ===== Chat notes: a mod's note on a line, as an iPhone-style text bubble above it =====
-   Same look as StreamerSpace's chat notes on Twitch (the extension's styles.css). */
+   Same look as StreamSpace's chat notes on Twitch (the extension's styles.css). */
 .oc-notes { display: flex; flex-direction: column; gap: 4px; margin: 2px 0 8px; font-size: 13px; line-height: 1.35; }
 .oc-notebub { display: flex; max-width: 88%; color: #efeff1; animation: oc-note-up 0.32s ease-out; }
 .oc-notebub--mine { align-self: flex-end; }
@@ -5484,7 +5484,7 @@ body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; 
 .person__chat-sub { font-size: 11px; font-weight: 600; color: var(--muted); }
 .person__chat--dm .pill__count { margin-left: 4px; }
 
-/* ===== Chat events, in the StreamerSpace site's style: 8-bit outline icons (ownchat.js,
+/* ===== Chat events, in the StreamSpace site's style: 8-bit outline icons (ownchat.js,
    PIXEL) standing on their own in the event's color with a soft glow, no filled disc; small
    labels in the pixel font (Silkscreen); names in Pixelify Sans; everything else stays
    Plus Jakarta Sans. ===== */

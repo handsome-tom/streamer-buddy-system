@@ -533,7 +533,7 @@
     setTimeout(() => early.forEach(fromParent), 0);
   }
   function fromParent(e) {
-    // StreamerSpace's settings, from the extension's side panel (or the demo page).
+    // StreamSpace's settings, from the extension's side panel (or the demo page).
     if (EMBED && e.source === parent && (String(e.origin).startsWith("chrome-extension://") || (SANDBOX && e.origin === location.origin))) gotExt(e.data);
     if (!EMBED || e.source !== parent || !String(e.origin).startsWith("chrome-extension://")) return;
     if (e.data?.t === "hub-token" && typeof e.data.token === "string") {
@@ -784,7 +784,7 @@
       if (ws !== socket) return;
       socket = null;
       if (e.code === 4003) {
-        showSignedOut(`StreamerSpace is invite-only for now, and you're not on the list yet.${notAllowedBy ? ` Your request to join was sent to ${notAllowedBy}. Once they allow you, sign in again.` : ""}`);
+        showSignedOut(`StreamSpace is invite-only for now, and you're not on the list yet.${notAllowedBy ? ` Your request to join was sent to ${notAllowedBy}. Once they allow you, sign in again.` : ""}`);
         return;
       }
       if (e.code === 4001) {
@@ -998,7 +998,7 @@
   }
 
   // A flagged line's note shows who flagged it, once their picture's known.
-  // Chat notes (StreamerSpace, chat notes): a mod's note on a line of this channel's chat
+  // Chat notes (StreamSpace, chat notes): a mod's note on a line of this channel's chat
   // shows as a bubble above that line in custom chat. Twitch's own chat can't show them.
   async function gotNote(n) {
     if (!n || !LIVECHAT || n.channel !== liveChannel) return;
@@ -1705,7 +1705,7 @@
     const mark = el("img", "set__brandmark");
     mark.src = "icons/ts-mark.svg";
     mark.alt = "";
-    brand.append(mark, el("span", null, "StreamerSpace"), el("span", "set__brandbuild", `Build ${window.DOCK_VERSION || "?"}`));
+    brand.append(mark, el("span", null, "StreamSpace"), el("span", "set__brandbuild", `Build ${window.DOCK_VERSION || "?"}`));
     parts.push(brand);
     settingsEl.replaceChildren(...parts);
   }
@@ -2410,7 +2410,7 @@
     const dots = modChannels().map((login) => {
       const lead = isLeadFor(login);
       const live = streaming(login);
-      const on = !!conn(login)?.online; // on StreamerSpace: shown plain, not dimmed
+      const on = !!conn(login)?.online; // on StreamSpace: shown plain, not dimmed
       // Lit (the lavender glow) only while they're actually streaming.
       // Not on Streamer Buddy yet (not a connection either way): their Twitch picture with
       // a small broken-chain badge (not linked with you yet).
@@ -3323,7 +3323,7 @@
     if (c?.mutual) {
       const status = !c.online ? "offline" : c.idle ? "idle" : c.modding ? "modding" : "online";
       const mark = el("span", `presence presence--${status} mod__status`);
-      mark.title = `${owner}: ${status === "offline" ? "offline in StreamerSpace" : STATUS[status].label}`;
+      mark.title = `${owner}: ${status === "offline" ? "offline in StreamSpace" : STATUS[status].label}`;
       mark.setAttribute("aria-label", mark.title);
       head.append(mark);
     }
@@ -3509,7 +3509,7 @@
   // between any two connections (opened from their page; listed once it's been
   // used). Pick one, read and post; a room's owner picks the tag or closes it.
   // @name pings someone.
-  // ===== StreamerSpace's settings (side panel only) =========================================
+  // ===== StreamSpace's settings (side panel only) =========================================
   // The Chrome extension's switches, Refresh Twitch, and Back up / Restore, on a page of
   // their own here (the gear in the bottom-right corner). The extension keeps them, so this
   // asks its side panel page (hub-panel.js) over postMessage and tells it what changes.
@@ -3524,12 +3524,12 @@
       const blob = new Blob([JSON.stringify(m.data, null, 1)], { type: "application/json" });
       const a = el("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `StreamerSpace backup ${String(m.data.saved || "").slice(0, 10)}.json`;
+      a.download = `StreamSpace backup ${String(m.data.saved || "").slice(0, 10)}.json`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 60000);
       extNote = `Saved ${m.count} thing${m.count === 1 ? "" : "s"} to ${a.download} in your downloads.`;
     } else if (m?.t === "ext-restored") {
-      extNote = m.error ? `That isn't a StreamerSpace backup (${m.error}).` : `Restored ${m.count} thing${m.count === 1 ? "" : "s"}.`;
+      extNote = m.error ? `That isn't a StreamSpace backup (${m.error}).` : `Restored ${m.count} thing${m.count === 1 ? "" : "s"}.`;
       if (!m.error) extChanged = true;
     } else return;
     if (view === "extsettings") render();
@@ -3543,10 +3543,10 @@
         toExt({ t: "ext-get" });
         setTimeout(() => view === "extsettings" && !ext && render(), 1500);
       }
-      panel.append(el("p", "panel__sub", Date.now() - extAskedAt < 1400 ? "Loading…" : "Update StreamerSpace (the Chrome extension) to change its settings here."));
+      panel.append(el("p", "panel__sub", Date.now() - extAskedAt < 1400 ? "Loading…" : "Update StreamSpace (the Chrome extension) to change its settings here."));
       return panel;
     }
-    panel.append(el("div", "msgs__label", "StreamerSpace features"));
+    panel.append(el("div", "msgs__label", "StreamSpace features"));
     const list = el("div", "xset__list");
     if (!ext.features.length) list.append(el("p", "panel__sub", "Open or refresh a Twitch tab once, then the switches show here."));
     for (const { key, label } of ext.features) {
@@ -3593,7 +3593,7 @@
       try {
         toExt({ t: "ext-restore", data: JSON.parse(await f.text()) });
       } catch (e) {
-        extNote = `That isn't a StreamerSpace backup (${e.message}).`;
+        extNote = `That isn't a StreamSpace backup (${e.message}).`;
         render();
       }
     });
@@ -3863,7 +3863,7 @@
     mark.src = "icons/ts-mark.svg";
     mark.alt = "";
     const titles = el("div", "cx__titles");
-    titles.append(el("div", "cx__title", "Connections"), el("div", "cx__by", "StreamerSpace · Streamer Buddy System"));
+    titles.append(el("div", "cx__title", "Connections"), el("div", "cx__by", "StreamSpace · Streamer Buddy System"));
     head.append(mark, titles);
     panel.append(head);
 
@@ -4110,7 +4110,7 @@
   // One person in the list: picture, name and how they are (a button for your private
   // chat), their groups, + to pin them into one, and × to remove them.
   // ----- The allow list (the owner's Connections only) ----------------------------------
-  // Who can use StreamerSpace's buddy system at all. Adding someone connects them to you
+  // Who can use StreamSpace's buddy system at all. Adding someone connects them to you
   // straight away (you're their first connection); taking them off signs them out.
   let allowOpen = false;
   let allowOff = ""; // asked "are you sure?" about taking this one off
@@ -4326,7 +4326,7 @@
     const mark = el("img", "signin__mark");
     mark.src = "icons/ts-mark.svg";
     mark.alt = "";
-    box.append(mark, el("div", "signin__head", "Streamer Buddy System"), el("p", "signin__sub", "Quick questions between you and the people you've connected with."), el("p", "signin__by", "Part of StreamerSpace"));
+    box.append(mark, el("div", "signin__head", "Streamer Buddy System"), el("p", "signin__sub", "Quick questions between you and the people you've connected with."), el("p", "signin__by", "Part of StreamSpace"));
     if (message) box.append(el("p", "signin__error", message));
     const b = el("button", "signin__btn", "Sign in with Twitch");
     b.type = "button";

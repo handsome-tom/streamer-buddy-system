@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="brand/mark.svg" type="image/svg+xml">
 <meta name="theme-color" content="#0b1a3a">
-<title>StreamerSpace · a small space for your people on Twitch</title>
-<meta name="description" content="StreamerSpace is a small, friendly hub for the streamers, mods and regulars who look out for each other on Twitch. Click around the live demo with pretend people. Nothing here is real.">
+<title>StreamSpace · a small space for your people on Twitch</title>
+<meta name="description" content="StreamSpace is a small, friendly hub for the streamers, mods and regulars who look out for each other on Twitch. Click around the live demo with pretend people. Nothing here is real.">
 <!--
   The public demo: both sides of Streamer Buddy System on one screen, the mod's Chrome
   side panel ("mod1") and the streamer's OBS chat dock ("streamer"), talking to each other
@@ -323,7 +323,8 @@
   .hgag > .hg { grid-area: 1 / 1; }
   .hero h1 .hgag__real { background: none; color: inherit; }
   .hgag__fake, .hgag__jk { display: none; align-self: center; cursor: pointer; }
-  .hgag__fake { font-size: min(2.05em, 13vw); line-height: 1; white-space: nowrap; letter-spacing: -0.04em; }
+  /* The gradient only paints inside the box, so pad it past the "y" tail (and take the room back with margins). */
+  .hgag__fake { font-size: min(2.05em, 13vw); line-height: 1; white-space: nowrap; letter-spacing: -0.04em; padding: 0.05em 0.04em 0.22em 0; margin: -0.05em -0.04em -0.22em 0; }
   .hero h1 .hgag__jk { background: none; color: #fff; font-size: 0.5em; transition: opacity 0.45s ease; }
   .hgag__typed { font-weight: inherit; }
   .hgag__caret { display: inline-block; width: 0.07em; height: 0.95em; margin-left: 0.06em; vertical-align: -0.12em; background: var(--brand-light); animation: caret 1s steps(1, end) infinite; }
@@ -350,7 +351,7 @@
   .hero__ctas { margin-top: 20px; }
   .hero__art { width: min(300px, 100%); translate: -70px 0; } /* room on the right for the ring and the moon */
   /* The hero planet is the background planet (#space .planet) up close: same blues, same thin
-     tilted ring, same shading, with the StreamerSpace mark on its face. */
+     tilted ring, same shading, with the StreamSpace mark on its face. */
   /* A little cosmos behind the planet: soft clouds in the theme's colors (mod green, streamer purple,
      viewer honey) that slowly drift and breathe, with a few stars, fading out at the edges. */
   .hero__art { isolation: isolate; }
@@ -442,8 +443,8 @@
      file is used as a mask, so the gradient fills its shape); the three section links in the
      pixel font, lighting up in their section's color on hover. ===== */
   .top__brand { display: inline-flex; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 10px rgba(255, 255, 255, 0.12)); }
-  .top__logo { display: block; width: 187px; height: 32px; background: linear-gradient(180deg, #ffffff 0%, #f1eef8 55%, #d9d4e6 100%);
-    -webkit-mask: url("brand/streamerspace.svg") left center / contain no-repeat; mask: url("brand/streamerspace.svg") left center / contain no-repeat; }
+  .top__logo { display: block; width: 167px; height: 32px; background: linear-gradient(180deg, #ffffff 0%, #f1eef8 55%, #d9d4e6 100%);
+    -webkit-mask: url("brand/streamspace.svg") left center / contain no-repeat; mask: url("brand/streamspace.svg") left center / contain no-repeat; }
   .top nav a.top__sec { font-family: "Silkscreen", "Plus Jakarta Sans", sans-serif; font-weight: 400; font-synthesis: none; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; -webkit-font-smoothing: none; transition: color 0.15s, text-shadow 0.15s, background 0.15s; }
   .top nav a.top__sec:hover { background: none; }
   .top nav a.top__sec--mods:hover { color: #3fc98e; text-shadow: 0 0 10px rgba(63, 201, 142, 0.55); }
@@ -566,7 +567,7 @@
   <div id="space" aria-hidden="true"><div class="planet"><i class="planet__globe"></i></div></div>
   <div id="retro" aria-hidden="true" hidden>
     <div class="r-wrap">
-      <div class="r-top"><div class="r-top__in"><div class="r-logo">streamerspace<small>a place for streamers</small></div>
+      <div class="r-top"><div class="r-top__in"><div class="r-logo">streamspace<small>a place for streamers</small></div>
         <div class="r-search">Search: <span></span> <b>Search</b></div></div></div>
       <div class="r-nav"><div class="r-nav__in"><a>Home</a> | <a>Browse</a> | <a>Streams</a> | <a>Mods</a> | <a>Chat</a> | <a>Clips</a> | <a>Raids</a> | <a>Emotes</a> | <a>Bits</a> | <a>Help</a></div></div>
       <div class="r-page">
@@ -602,7 +603,7 @@
   </div>
   <header class="top">
     <div class="wrap">
-      <a href="#" class="top__brand" aria-label="StreamerSpace"><span class="top__logo" role="img" aria-label="StreamerSpace"></span></a>
+      <a href="#" class="top__brand" aria-label="StreamSpace"><span class="top__logo" role="img" aria-label="StreamSpace"></span></a>
       <nav aria-label="Sections">
         <a href="#streamer" class="top__sec top__sec--streamer">Streamer</a>
         <a href="#mods" class="top__sec top__sec--mods">Mods</a>
@@ -615,7 +616,7 @@
   <section class="hero">
     <div class="wrap">
       <div>
-      <p class="eyebrow">StreamerSpace · your people, one small space</p>
+      <p class="eyebrow">StreamSpace · your people, one small space</p>
       <h1 class="hgag" id="hgag"><span class="hg hgag__real">Your little corner of Twitch, <span>supported by your&nbsp;community.</span></span><span class="hg hgag__fake" aria-hidden="true">MySpace 2.0</span><span class="hg hgag__jk" aria-hidden="true" data-text="jk, it's actually better than that."><b class="hgag__typed"></b><i class="hgag__caret"></i></span></h1>
       <script>
         // Set before the first paint so the real headline never flashes before the gag.
@@ -691,7 +692,7 @@
         <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M5 1h6v1h-6zM4 2h2v1h-2zM10 2h2v1h-2zM4 3h1v1h-1zM11 3h1v1h-1zM3 4h2v1h-2zM11 4h2v1h-2zM3 5h2v1h-2zM11 5h2v1h-2zM3 6h2v1h-2zM11 6h2v1h-2zM3 7h2v1h-2zM11 7h2v1h-2zM3 8h1v1h-1zM12 8h1v1h-1zM2 9h2v1h-2zM12 9h2v1h-2zM2 10h2v1h-2zM12 10h2v1h-2zM1 11h14v1h-14zM6 13h1v1h-1zM9 13h1v1h-1zM6 14h4v1h-4z"/></svg></span><div><h4>Nudge, or hit the panic button</h4><p>Nudge a question that's waiting. If it can't wait, the panic button flashes the streamer's dock red with an alarm. Limited, so it never turns into spam.</p></div></li>
         <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M2 1h7v1h-7zM13 1h1v1h-1zM2 2h2v1h-2zM7 2h7v1h-7zM2 3h1v1h-1zM13 3h1v1h-1zM2 4h1v1h-1zM13 4h1v1h-1zM2 5h1v1h-1zM13 5h1v1h-1zM2 6h1v1h-1zM13 6h1v1h-1zM2 7h1v1h-1zM13 7h1v1h-1zM2 8h1v1h-1zM13 8h1v1h-1zM2 9h7v1h-7zM12 9h2v1h-2zM2 10h2v1h-2zM7 10h7v1h-7zM2 11h1v1h-1zM2 12h1v1h-1zM2 13h1v1h-1zM2 14h1v1h-1z"/></svg></span><div><h4>Flag a line, or leave a note on it</h4><p>Flag a message so it glows in the streamer's chat, or pin a note to it that only your circle can see.</p></div></li>
         <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M5 1h2v1h-2zM10 1h1v1h-1zM3 2h6v1h-6zM10 2h3v1h-3zM3 3h1v1h-1zM8 3h1v1h-1zM11 3h2v1h-2zM3 4h1v1h-1zM8 4h1v1h-1zM12 4h1v1h-1zM3 5h1v1h-1zM8 5h1v1h-1zM12 5h1v1h-1zM3 6h6v1h-6zM11 6h2v1h-2zM4 7h4v1h-4zM10 7h2v1h-2zM3 9h6v1h-6zM12 9h1v1h-1zM1 10h10v1h-10zM12 10h3v1h-3zM1 11h1v1h-1zM9 11h2v1h-2zM13 11h2v1h-2zM1 12h1v1h-1zM10 12h1v1h-1zM14 12h1v1h-1zM1 13h1v1h-1zM10 13h1v1h-1zM14 13h1v1h-1zM1 14h1v1h-1zM10 14h1v1h-1zM14 14h1v1h-1z"/></svg></span><div><h4>Private chats and mod rooms</h4><p>Talk one-to-one, or in a group room like “Mod squad,” with the streamer and the mods you're connected with.</p></div></li>
-        <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M3 3h1v1h-1zM12 3h1v1h-1zM2 4h2v1h-2zM12 4h2v1h-2zM2 5h1v1h-1zM5 5h1v1h-1zM7 5h2v1h-2zM10 5h1v1h-1zM13 5h1v1h-1zM1 6h2v1h-2zM4 6h8v1h-8zM13 6h2v1h-2zM1 7h2v1h-2zM4 7h3v1h-3zM9 7h3v1h-3zM13 7h2v1h-2zM1 8h2v1h-2zM4 8h3v1h-3zM9 8h3v1h-3zM13 8h2v1h-2zM1 9h2v1h-2zM4 9h8v1h-8zM13 9h2v1h-2zM2 10h1v1h-1zM5 10h1v1h-1zM7 10h2v1h-2zM10 10h1v1h-1zM13 10h1v1h-1zM2 11h2v1h-2zM12 11h2v1h-2zM3 12h1v1h-1zM12 12h1v1h-1z"/></svg></span><div><h4>Know the moment they go live</h4><p>A green dot on the StreamerSpace icon whenever a channel you mod for is live. Hover it to see who.</p></div></li>
+        <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M3 3h1v1h-1zM12 3h1v1h-1zM2 4h2v1h-2zM12 4h2v1h-2zM2 5h1v1h-1zM5 5h1v1h-1zM7 5h2v1h-2zM10 5h1v1h-1zM13 5h1v1h-1zM1 6h2v1h-2zM4 6h8v1h-8zM13 6h2v1h-2zM1 7h2v1h-2zM4 7h3v1h-3zM9 7h3v1h-3zM13 7h2v1h-2zM1 8h2v1h-2zM4 8h3v1h-3zM9 8h3v1h-3zM13 8h2v1h-2zM1 9h2v1h-2zM4 9h8v1h-8zM13 9h2v1h-2zM2 10h1v1h-1zM5 10h1v1h-1zM7 10h2v1h-2zM10 10h1v1h-1zM13 10h1v1h-1zM2 11h2v1h-2zM12 11h2v1h-2zM3 12h1v1h-1zM12 12h1v1h-1z"/></svg></span><div><h4>Know the moment they go live</h4><p>A green dot on the StreamSpace icon whenever a channel you mod for is live. Hover it to see who.</p></div></li>
         <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M4 1h8v1h-8zM3 2h2v1h-2zM11 2h2v1h-2zM3 3h2v1h-2zM6 3h4v1h-4zM11 3h2v1h-2zM3 4h2v1h-2zM6 4h4v1h-4zM11 4h2v1h-2zM3 5h2v1h-2zM11 5h2v1h-2zM3 6h2v1h-2zM11 6h2v1h-2zM3 7h2v1h-2zM6 7h4v1h-4zM11 7h2v1h-2zM3 8h2v1h-2zM11 8h2v1h-2zM3 9h2v1h-2zM6 9h4v1h-4zM11 9h2v1h-2zM3 10h2v1h-2zM6 10h4v1h-4zM11 10h2v1h-2zM3 11h2v1h-2zM11 11h2v1h-2zM3 12h2v1h-2zM11 12h2v1h-2zM3 13h2v1h-2zM11 13h2v1h-2zM4 14h8v1h-8z"/></svg></span><div><h4>A deck on your phone</h4><p>Add it to your home screen: big buttons that send a question, quick info or a !vanish note in one tap.</p></div></li>
         <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M6 1h2v1h-2zM4 2h4v1h-4zM3 3h2v1h-2zM6 3h2v1h-2zM2 4h2v1h-2zM6 4h2v1h-2zM2 5h1v1h-1zM6 5h2v1h-2zM1 6h2v1h-2zM6 6h2v1h-2zM1 7h2v1h-2zM7 7h2v1h-2zM13 7h1v1h-1zM1 8h2v1h-2zM8 8h7v1h-7zM1 9h2v1h-2zM9 9h6v1h-6zM2 10h1v1h-1zM13 10h1v1h-1zM2 11h2v1h-2zM12 11h2v1h-2zM3 12h2v1h-2zM11 12h2v1h-2zM4 13h8v1h-8zM6 14h4v1h-4z"/></svg></span><div><h4>Say when you're away</h4><p>Set yourself to Online, Idle or Offline, so the streamer knows who's around to help.</p></div></li>
       </ul>
@@ -742,7 +743,7 @@
     <div class="wrap">
       <p class="band__eyebrow">For viewers</p>
       <h2 class="band__title">Just watching? You're part of it too.</h2>
-      <p class="band__lead">The regulars, the lurkers and the people who show up every night are what make a community. This is the rest of StreamerSpace: small, friendly extras for anyone who hangs out on Twitch, mod or not.</p>
+      <p class="band__lead">The regulars, the lurkers and the people who show up every night are what make a community. This is the rest of StreamSpace: small, friendly extras for anyone who hangs out on Twitch, mod or not.</p>
       <ul class="ft-grid">
         <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M4 1h1v1h-1zM3 2h3v1h-3zM3 3h5v1h-5zM3 4h2v1h-2zM7 4h2v1h-2zM3 5h2v1h-2zM8 5h3v1h-3zM3 6h2v1h-2zM10 6h2v1h-2zM3 7h2v1h-2zM11 7h3v1h-3zM3 8h2v1h-2zM11 8h3v1h-3zM3 9h2v1h-2zM10 9h2v1h-2zM3 10h2v1h-2zM8 10h3v1h-3zM3 11h2v1h-2zM7 11h2v1h-2zM3 12h5v1h-5zM3 13h3v1h-3zM4 14h1v1h-1z"/></svg></span><div><h4>A better player</h4><p>Click anywhere to pause, even over overlays like Tangia, with a 1% volume step and easier-to-grab controls.</p></div></li>
         <li class="ft"><span class="ft__icon"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M2 1h12v1h-12zM1 2h14v1h-14zM1 3h2v1h-2zM7 3h2v1h-2zM13 3h2v1h-2zM1 4h2v1h-2zM7 4h2v1h-2zM13 4h2v1h-2zM1 5h2v1h-2zM7 5h2v1h-2zM13 5h2v1h-2zM1 6h2v1h-2zM7 6h2v1h-2zM13 6h2v1h-2zM1 7h2v1h-2zM7 7h2v1h-2zM13 7h2v1h-2zM1 8h2v1h-2zM7 8h2v1h-2zM13 8h2v1h-2zM1 9h2v1h-2zM7 9h2v1h-2zM13 9h2v1h-2zM1 10h2v1h-2zM7 10h2v1h-2zM13 10h2v1h-2zM1 11h2v1h-2zM7 11h2v1h-2zM13 11h2v1h-2zM1 12h2v1h-2zM7 12h2v1h-2zM13 12h2v1h-2zM1 13h14v1h-14zM2 14h12v1h-12z"/></svg></span><div><h4>Two streams at once</h4><p>Watch two streams side by side, each with its own chat, and pick which one you hear.</p></div></li>
@@ -760,7 +761,7 @@
 
   <footer class="foot">
     <div class="wrap">
-      <span class="tom"><img src="brand/tom.png" alt="" width="26" height="26"> <img src="brand/streamerspace.svg" alt="StreamerSpace" style="width:auto;height:20px"></span>
+      <span class="tom"><img src="brand/tom.png" alt="" width="26" height="26"> <img src="brand/streamspace.svg" alt="StreamSpace" style="width:auto;height:20px"></span>
       <span>Not a social network, just your people. Questions, answers, notes and flagged lines go only to the friends you've connected with. In this demo everyone is pretend and nothing is sent anywhere.</span>
       <p class="credits">Created by <a href="https://www.twitch.tv/myspacetomofficial" target="_blank" rel="noopener">MyspaceTomOfficial</a>.
         <span class="credits__thanks">Credits: <a href="https://www.twitch.tv/tallglassofbees" target="_blank" rel="noopener">TallGlassOfBees</a>, <span class="credits__name">TallGlassOfWasps</span> and <span class="credits__name">Roman</span>.</span></p>
@@ -881,7 +882,7 @@
   // site's blues) is made once from 3D noise, so it has no seam and no pinch at the poles. Each frame
   // it is wrapped on the sphere and turned; a height map gives bumps that catch the light (bump
   // mapping), a cloud layer drifts a little faster than the surface, and a light-blue atmosphere glows
-  // at the edge. The StreamerSpace mark sits on the front and the back. Drawn only while the hero shows.
+  // at the edge. The StreamSpace mark sits on the front and the back. Drawn only while the hero shows.
   (() => {
     const cv = document.querySelector(".hero-planet__canvas");
     if (!cv) return;

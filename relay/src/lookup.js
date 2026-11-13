@@ -1,4 +1,4 @@
-// Public lookups for StreamerSpace (the Chrome extension), through Twitch's official API
+// Public lookups for StreamSpace (the Chrome extension), through Twitch's official API
 // (Helix) with this app's own app token, instead of Twitch's private website API.
 // Only public facts about channels, never anyone's sign-in:
 //
@@ -10,7 +10,7 @@
 // The app token needs a client secret, set once with `npx wrangler@3 secret put
 // LOOKUP_CLIENT_SECRET`. If Streamer Buddy's own Twitch app is a Public client (no secret),
 // make a second, Confidential app on dev.twitch.tv and also set LOOKUP_CLIENT_ID to its ID.
-// Without a secret every lookup answers 503 and StreamerSpace just goes without.
+// Without a secret every lookup answers 503 and StreamSpace just goes without.
 //
 // Answers are kept in memory for a short while (workers.dev has no shared cache), so many
 // people with the same pinned channel cost Twitch one call, not hundreds.
@@ -138,7 +138,7 @@ function answer(origin, status, body) {
 
 export async function lookup(req, env, url) {
   const origin = req.headers.get("Origin") || "";
-  if (origin && !ORIGINS.test(origin)) return answer("", 403, { error: "Not from Twitch or StreamerSpace" });
+  if (origin && !ORIGINS.test(origin)) return answer("", 403, { error: "Not from Twitch or StreamSpace" });
   if (req.method === "OPTIONS") return answer(origin, 204, null);
   if (req.method !== "GET") return answer(origin, 405, { error: "GET only" });
   try {

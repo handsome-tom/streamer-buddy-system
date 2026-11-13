@@ -1,5 +1,5 @@
 # Streamer Buddy System relay (see src/index.js). Deploy: npx wrangler@3 deploy
-# StreamerSpace's public lookups (src/lookup.js) also need: npx wrangler@3 secret put LOOKUP_CLIENT_SECRET
+# StreamSpace's public lookups (src/lookup.js) also need: npx wrangler@3 secret put LOOKUP_CLIENT_SECRET
 # (and LOOKUP_CLIENT_ID too, if the secret belongs to a second Twitch app).
 name = "streamer-buddy-relay"
 main = "src/index.js"

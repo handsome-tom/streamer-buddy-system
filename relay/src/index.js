@@ -173,7 +173,7 @@ export default {
       if (req.headers.get("Upgrade") !== "websocket") return new Response("Expected a WebSocket", { status: 426 });
       return env.HUB.get(env.HUB.idFromName("hub")).fetch(req);
     }
-    if (url.pathname.startsWith("/api/")) return lookup(req, env, url); // StreamerSpace's public lookups (lookup.js)
+    if (url.pathname.startsWith("/api/")) return lookup(req, env, url); // StreamSpace's public lookups (lookup.js)
     return new Response("Streamer Buddy System relay", { headers: { "content-type": "text/plain" } });
   },
 };

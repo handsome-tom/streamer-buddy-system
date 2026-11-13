@@ -96,7 +96,7 @@
     raid: '<path d="M3 11.2L20.6 3.4c.6-.3 1.2.3.9.9L13.8 21c-.3.7-1.3.6-1.5-.1l-1.9-6.4-6.4-1.9c-.7-.2-.8-1.2-.1-1.5z"/>',
   };
   // 8-bit outline versions of the event icons (made from the line icons above on a 16-pixel
-  // grid), to match the StreamerSpace site: outlined, pixelated, drawn in the event's color.
+  // grid), to match the StreamSpace site: outlined, pixelated, drawn in the event's color.
   const PIXEL = {
     flame: "M6 2h3v1h-3zM6 3h3v1h-3zM6 4h1v1h-1zM8 4h2v1h-2zM6 5h1v1h-1zM9 5h2v1h-2zM6 6h2v1h-2zM10 6h2v1h-2zM6 7h2v1h-2zM11 7h2v1h-2zM3 8h2v1h-2zM6 8h2v1h-2zM12 8h1v1h-1zM3 9h4v1h-4zM12 9h1v1h-1zM3 10h1v1h-1zM12 10h1v1h-1zM3 11h1v1h-1zM12 11h1v1h-1zM3 12h2v1h-2zM11 12h2v1h-2zM4 13h2v1h-2zM10 13h2v1h-2zM5 14h6v1h-6z",
     star: "M7 1h2v1h-2zM6 2h4v1h-4zM6 3h4v1h-4zM5 4h2v1h-2zM9 4h2v1h-2zM1 5h5v1h-5zM10 5h5v1h-5zM1 6h2v1h-2zM13 6h2v1h-2zM1 7h2v1h-2zM13 7h2v1h-2zM2 8h2v1h-2zM12 8h2v1h-2zM3 9h2v1h-2zM11 9h2v1h-2zM4 10h1v1h-1zM11 10h1v1h-1zM3 11h2v1h-2zM11 11h2v1h-2zM3 12h2v1h-2zM6 12h4v1h-4zM11 12h2v1h-2zM3 13h4v1h-4zM9 13h4v1h-4zM3 14h2v1h-2zM11 14h2v1h-2z",
@@ -2415,7 +2415,7 @@
         line.classList.add("oc-line--flagged");
         return true;
       },
-      // A mod's chat note (StreamerSpace's chat notes, from the relay through dock.js): a
+      // A mod's chat note (StreamSpace's chat notes, from the relay through dock.js): a
       // text-message bubble above the line it's about, with their picture. Notes that come
       // before their line is drawn wait a little for it. Says whether it found the line.
       noteLine(n) {

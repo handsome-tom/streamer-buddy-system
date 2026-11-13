@@ -370,6 +370,8 @@
   .guide__link { padding: 4px 2px; font: inherit; font-size: 12.5px; color: #8d8d97; background: none; border: 0; cursor: pointer; }
   .guide__link:hover { color: #efeff1; }
   .guide__link[hidden] { display: none; }
+  /* Your turn: the guide waits for the visitor to do the real thing. */
+  .guide--yourturn p { color: #efeff1; font-weight: 600; }
   /* The status line and Auto-play / Start over: one quiet floating line, no bar */
   .demo__bar { justify-content: center; gap: 14px; padding: 18px 0 0; border: 0; }
   .demo__bar .console__said { flex: 0 1 auto; font-size: 12.5px; color: #9a9aa5; }
@@ -784,7 +786,7 @@
     said(`${me} flagged ${line.who}'s line: it glows in the streamer's chat`);
   });
 
-  // A chat note: what mods write on Twitch's chat with StreamerSpace (hover a line's right
+  // A chat note: what mods write on Twitch's chat with StreamSpace (hover a line's right
   // side, click the bubble). Here mod1 writes one on a viewer's recent line.
   const CHAT_NOTES = ["Third account tonight with this exact line, keep an eye on it", "Regular, all good: they've been here since day one", "This one's been asking the same question all stream", "Same link they posted yesterday", "First time here, be nice to them"];
   document.getElementById("modChatNote").addEventListener("click", () => {
@@ -938,51 +940,82 @@
   // ===== The guided tour: one thing at a time, nothing until it's pressed ==================
   // Each step says what to press and where to look; its button does it, then Next.
   const STORY = document.documentElement.classList.contains("story-mod");
-  // The mod walkthrough's steps: a shift as the mod, from first look to the panic button.
+  // Built from what works in interactive demos: one story instead of a list of features, about
+  // 7 short steps (~25 words each) that say why it matters, what to press and what happens, and
+  // "your turn" moments where the visitor does the real thing (answers a question) and the tour
+  // waits for them. waitFor: "answer" (the streamer answers a mod) or "modAnswer" (the mod
+  // answers the streamer); then: what the guide says while it waits. after: a second button
+  // pressed a moment later.
+  // The mod walkthrough: a shift as the mod, from first look to a little kindness.
   const MOD_STEPS = [
-    { title: "You're on the mod team", text: "You're BlazeMod420, modding for RomansEmpire.TV. Your StreamerSpace side panel sits next to Twitch in Chrome. At the top, Streamer View shows exactly what's on the streamer's screen right now, so you never ask twice.", button: "Start my shift", look: "mod",
+    { title: "You're on the crew tonight", text: "You're BlazeMod420, modding for your friend RomansEmpire.TV. Streamer View at the top of your panel shows what's on their screen right now, so you never ask twice.", button: "Start my shift", look: "mod",
       run: () => { const doc = panelDoc("mod"), el = doc?.querySelector(".sv") || doc?.querySelector(".panel"); if (el) showCallout("mod", el, "This is Streamer View: what's on RomansEmpire.TV's screen right now.", "guide"); said("Your shift has started. Chat is live on the right."); } },
-    { title: "Ask without interrupting", text: "The raid is coming up. Instead of typing in chat, ask quietly: it waits under the streamer's bar, never on stream. Their answer comes back to your panel a few seconds later.", button: "Ask about the raid", look: "obs", click: "modAsk" },
-    { title: "Give a heads-up", text: "An ad break is coming. Quick info shows on their bar for 2 minutes and clears itself, no reply needed.", button: "Send quick info", look: "obs", click: "modNote" },
-    { title: "No answer? Nudge", text: "They're deep in a fight and haven't answered. A nudge moves your question up a color and their outline turns orange. It's limited, so it can't turn into spam.", button: "Nudge them", look: "obs", click: "modNudge" },
-    { title: "Spot trouble in chat", text: "Someone's stirring things up. Flag their line and it's marked in your color in the streamer's chat and every connected mod's.", button: "Flag a line", look: "obs", click: "modFlag" },
-    { title: "Leave a note for the team", text: "Write a note right on that chat line. The streamer and the other mods see it as a bubble; viewers never do.", button: "Leave a note", look: "obs", click: "modChatNote" },
-    { title: "When it can't wait", text: "A real emergency, like a hate raid or something private showing on stream? Hit the panic button: their dock flashes red with a loud chime until they look.", button: "Hit the panic button", look: "obs", click: "modWarn" },
-    { title: "Cheer them on", text: "A !vanish note is a little kindness: it pops up on their bar for 30 seconds, then fades away.", button: "Send a !vanish note", look: "obs", click: "modVanish" },
-    { title: "They ask you back", text: "Now the streamer needs a hand. Their question lands in your side panel on the left. Answer it with one tap.", button: "RomansEmpire.TV asks you", look: "mod", click: "streamerAsk" },
-    { title: "That's a shift", text: "That's modding with StreamerSpace: quiet questions, heads-ups, flags and notes, and the panic button for when it matters. Try anything again right in your panel on the left.", button: "Done", look: "", done: true },
+    { title: "Ask, don't spam chat", text: "Something to check with them? Ask quietly instead of typing in chat: it waits under their bar, never on stream, and their answer comes back to you.", button: "Ask them something", look: "obs", click: "modAsk" },
+    { title: "No answer? Nudge", text: "They're mid-fight and haven't seen it. A nudge moves your question up a color and warms their outline. It's limited, so it never turns into spam.", button: "Nudge them", look: "obs", click: "modNudge" },
+    { title: "Spot trouble in chat", text: "Someone's stirring things up. Flag the line in your color, then leave a note on it for the team. The streamer and mods see both; viewers never do.", button: "Flag it and leave a note", look: "obs", click: "modFlag", after: "modChatNote" },
+    { title: "When it can't wait", text: "A hate raid, or something private showing on stream? The panic button flashes their dock red with a chime until they look.", button: "Hit the panic button", look: "obs", click: "modWarn" },
+    { title: "Cheer them on", text: "Modding isn't only trouble. A !vanish note pops a little kindness onto their bar for 30 seconds, then fades away.", button: "Send a !vanish note", look: "obs", click: "modVanish" },
+    { title: "They ask you back", text: "Now your friend needs a hand. RomansEmpire.TV asks you something, and it lands right in your panel on the left.", button: "RomansEmpire.TV asks you", look: "mod", click: "streamerAsk",
+      waitFor: "modAnswer", then: "Your turn: answer it in your panel on the left. One tap is enough." },
+    { title: "That's a shift", text: "Quiet questions, nudges, flags and notes, a panic button for real trouble, and a little kindness. That's looking out for each other.", button: "Done", look: "", done: true },
   ];
+  // The main demo: a night on stream, as the streamer, with your crew on the other side.
   const STEPS = STORY ? MOD_STEPS : [
-    { title: "A mod asks the streamer something", text: "Chat is already running on the left. Now mod1 has a question. It shows up quietly under the streamer's bar, never on stream. Answer it on the left with ♥ ✓ ✗ or ?, or type a reply.", button: "mod1 asks a question", look: "obs", click: "modAsk" },
-    { title: "Nudge it", text: "No answer yet? A mod can nudge. The question moves up from green to orange, with one soft beep, and Streamer View on the right shows it too.", button: "mod1 nudges", look: "obs", click: "modNudge" },
-    { title: "Quick info", text: "Not everything needs an answer. Quick info is a heads-up on the streamer's bar, with a lightning bolt, and it clears itself after 2 minutes.", button: "Send quick info", look: "obs", click: "modNote" },
-    { title: "Flag a chat line", text: "A mod spots something in chat and flags it. The line glows in the streamer's chat, in the mod's color, so it's easy to find.", button: "mod1 flags a line", look: "obs", click: "modFlag" },
-    { title: "Leave a note on a chat line", text: "A mod can also write a note on one line of chat, like a text message. It shows as a bubble above that line, with the mod's picture, for the streamer and their connections only. Viewers never see it.", button: "mod1 leaves a note", look: "obs", click: "modChatNote" },
-    { title: "The streamer asks back", text: "It works both ways. The streamer asks mod1 something, and it lands in the mod's side panel on the right, ready for a one-tap answer.", button: "Streamer asks mod1", look: "mod", click: "streamerAsk" },
-    { title: "Twitch, built in: a raid", text: "Custom chat shows Twitch's own events as clean cards. Here comes a raid: a card for the raiding streamer, and a RAID tag on everyone who came with them.", button: "Start a raid", look: "obs", click: "tRaid" },
-    { title: "A gift bomb", text: "Twenty gifted subs: a progress card at the top of chat, and a card that lists every person who got one.", button: "Drop a gift bomb", look: "obs", click: "tGift" },
-    { title: "Do Not Disturb", text: "Need focus? On the left, click the hand in the streamer's top bar and pick 15 minutes. Then send quick info: it waits quietly until Do Not Disturb ends.", button: "Send quick info", look: "obs", click: "modNote" },
-    { title: "Your turn", text: "That's the tour. Use the menus under each screen to try anything again, open Every demo control below them for the rest, or turn on Auto-play and just watch.", button: "Done", look: "", done: true },
+    { title: "Friday night, going live", text: "You're RomansEmpire.TV, and chat is filling up on the left. Your crew is here too: mod1 is watching from their panel on the right.", button: "Let's go", look: "obs",
+      run: () => said("You're live. Chat is running on the left; mod1's panel is on the right.") },
+    { title: "A question, not chat spam", text: "mod1 has a quick question. Instead of asking in chat, they ask you quietly. It waits under your bar, never on stream.", button: "mod1 asks you", look: "obs", click: "modAsk",
+      waitFor: "answer", then: "Your turn: answer it on the left with ♥ ✓ ✗ or ?. Your answer pops up in their panel on the right." },
+    { title: "A friend raids you", text: "Lump is raiding! The raid card remembers them: they've raided before and chatted here plenty, so you can welcome a friend, not a stranger.", button: "Start the raid", look: "obs", click: "tRaid" },
+    { title: "Trouble in the rush", text: "In the raid rush, mod1 spots a bad line. They flag it in their color and leave a note for the crew. Viewers never see either.", button: "Flag it and leave a note", look: "obs", click: "modFlag", after: "modChatNote" },
+    { title: "You need a hand too", text: "It works both ways. Ask mod1 something from your dock, and it lands in their side panel on the right.", button: "Ask mod1", look: "mod", click: "streamerAsk",
+      waitFor: "modAnswer", then: "Now be the mod: answer it in the panel on the right. One tap is enough." },
+    { title: "When it really can't wait", text: "Most nights it stays quiet. But if something serious shows on stream, a mod can hit the panic button: your dock flashes red until you look.", button: "Hit the panic button", look: "obs", click: "modWarn" },
+    { title: "That's your crew", text: "Quiet questions, a raid you remember, trouble handled and help when it counts. Play with anything under the screens, or see a mod's whole shift below.", button: "Done", look: "", done: true },
   ];
   const tour = {
     at: 0,
+    waiting: "",
     show(i) {
       this.at = Math.max(0, Math.min(STEPS.length - 1, i));
+      this.waiting = "";
       const st = STEPS[this.at];
       document.getElementById("tour").hidden = false;
-      document.getElementById("tourCount").textContent = `${this.at + 1} / ${STEPS.length}`;
+      document.getElementById("tour").classList.remove("guide--yourturn");
       document.getElementById("tour").style.setProperty("--tour-progress", ((this.at + 1) / STEPS.length).toFixed(3));
       document.getElementById("tourTitle").textContent = asMe(st.title);
       document.getElementById("tourText").textContent = asMe(st.text);
-      document.getElementById("tourDo").textContent = asMe(st.button);
+      const go = document.getElementById("tourDo");
+      go.textContent = asMe(st.button);
+      go.className = "btn btn--main";
       document.getElementById("tourBack").hidden = this.at === 0;
       document.getElementById("tourSkip").hidden = !!st.done;
       for (const id of ["mod", "obs"]) document.getElementById(id).closest(".screen").classList.toggle("spot", st.look === id);
       // Dots for progress, and the real menu button for this step glows, so people learn the menus.
       document.getElementById("tourDots").innerHTML = STEPS.map((_, j) => `<i class="${j < this.at ? "done" : j === this.at ? "now" : ""}"></i>`).join("");
-      document.getElementById("tourCount").textContent = `Step ${this.at + 1} of ${STEPS.length}`;
+      document.getElementById("tourCount").textContent = `${this.at + 1} of ${STEPS.length}`;
       for (const c of document.querySelectorAll(".menu .chip.cue")) c.classList.remove("cue");
       if (st.click) document.querySelector(`.menu .chip[data-click="${st.click}"]`)?.classList.add("cue");
+    },
+    // The step's button was pressed (from the guide or the glowing menu button): the second
+    // button, if any, then on to the next step, or wait for the visitor's turn.
+    acted() {
+      const st = STEPS[this.at];
+      if (st.after) setTimeout(() => document.getElementById(st.after).click(), 2600);
+      for (const c of document.querySelectorAll(".menu .chip.cue")) c.classList.remove("cue");
+      if (!st.waitFor) return this.show(this.at + 1);
+      this.waiting = st.waitFor;
+      document.getElementById("tour").classList.add("guide--yourturn");
+      document.getElementById("tourText").textContent = asMe(st.then);
+      const go = document.getElementById("tourDo");
+      go.textContent = "Skip this →";
+      go.className = "guide__link";
+      for (const id of ["mod", "obs"]) document.getElementById(id).closest(".screen").classList.toggle("spot", (st.waitFor === "answer" ? "obs" : "mod") === id);
+    },
+    // Called when a question gets answered: the visitor did their part, so move on.
+    answered(kind) {
+      if (document.getElementById("tour").hidden || this.waiting !== kind) return;
+      this.waiting = "";
+      setTimeout(() => this.show(this.at + 1), 1800); // let the answer's own callout land first
     },
     end() {
       document.getElementById("tour").hidden = true;
@@ -994,19 +1027,20 @@
   };
   document.getElementById("tourDo").addEventListener("click", () => {
     const st = STEPS[tour.at];
+    if (tour.waiting) return (tour.waiting = "", tour.show(tour.at + 1)); // "Skip this"
     if (st.done) return tour.end();
     if (st.run) st.run();
     if (st.click) document.getElementById(st.click).click();
-    tour.show(tour.at + 1);
+    tour.acted();
   });
   document.getElementById("tourBack").addEventListener("click", () => tour.show(tour.at - 1));
   document.addEventListener("click", (e) => {
     const chip = e.target.closest(".menu .chip.cue");
-    if (chip && !document.getElementById("tour").hidden) setTimeout(() => tour.show(tour.at + 1), 0);
+    if (chip && !document.getElementById("tour").hidden) setTimeout(() => tour.acted(), 0);
   });
   document.getElementById("tourSkip").addEventListener("click", () => tour.end());
 
-  // ===== The mod's side panel's gear: StreamerSpace's settings, pretend =====================
+  // ===== The mod's side panel's gear: StreamSpace's settings, pretend =====================
   // In Chrome the extension's side panel answers these (hub-panel.js); here the demo does,
   // with a few of its real switches, kept in memory.
   const extDemo = {
@@ -1020,7 +1054,7 @@
     const m = e.data;
     if (m.t === "ext-get") tell({ t: "ext-settings", features: extDemo.features, off: extDemo.off });
     else if (m.t === "ext-set" && Array.isArray(m.off)) extDemo.off = m.off;
-    else if (m.t === "ext-backup") tell({ t: "ext-backup", count: 3, data: { app: "StreamerSpace", saved: new Date().toISOString(), local: { phrases: ["gg", "o7"], featuresOff: extDemo.off }, sync: { demo: true } } });
+    else if (m.t === "ext-backup") tell({ t: "ext-backup", count: 3, data: { app: "StreamSpace", saved: new Date().toISOString(), local: { phrases: ["gg", "o7"], featuresOff: extDemo.off }, sync: { demo: true } } });
     else if (m.t === "ext-restore") tell(m.data?.local ? { t: "ext-restored", count: Object.keys(m.data.local).length + Object.keys(m.data.sync || {}).length } : { t: "ext-restored", error: "no saved things in it" });
   });
 
@@ -1038,7 +1072,7 @@
     modFlag: { on: "obs", from: "mod", find: ".oc-line--flagged", say: () => "I flagged this chat line: it's marked in my color so you can find it fast." },
     modChatNote: { on: "obs", from: "mod", find: ".oc-notebub", say: () => "My note sits right above that chat line. Viewers never see it." },
     streamerAsk: { on: "mod", from: "streamer", find: ".ilist .irow", text: () => lastStreamerAsk, say: () => "My question lands here in your side panel, ready for a one-tap answer." },
-    tRaid: { on: "obs", from: "twitch", find: ".oc-notice", say: () => "A raid: a card for the raiding streamer, and a RAID tag on everyone who came with them." },
+    tRaid: { on: "obs", from: "twitch", find: ".oc-notice", say: () => "Lump's raid card: a bit about them, what you share, and that they've raided you before. Everyone who came along gets a RAID tag." },
     tGift: { on: "obs", from: "twitch", find: ".oc-topcard--gift", say: () => "Gift bomb: progress at the top of chat, then a card listing everyone who got one." },
     tFirst: { on: "obs", from: "twitch", find: ".oc-line--first", say: () => "First-time chatters are labeled, so they're easy to welcome." },
     tStreak: { on: "obs", from: "twitch", find: ".oc-notice", say: () => "A watch streak, shown as a clean card in chat." },
@@ -1052,8 +1086,8 @@
     const box = document.createElement("div");
     box.className = `callout callout--${from}`;
     // Looks like the iPhone-style chat notes: a blue bubble with the sender's picture and name.
-    // Twitch's own events come from "Twitch", with the StreamerSpace mark.
-    const who = from === "mod" ? me : from === "streamer" ? "streamer" : from === "guide" ? "StreamerSpace" : "Twitch";
+    // Twitch's own events come from "Twitch", with the StreamSpace mark.
+    const who = from === "mod" ? me : from === "streamer" ? "streamer" : from === "guide" ? "StreamSpace" : "Twitch";
     const pic = from === "twitch" || from === "guide" ? "brand/mark.svg" : `pics/${who}.webp`;
     box.innerHTML = `<span class="callout__ring"></span><p class="callout__text"><span class="callout__head"><span class="callout__pic"><img src="${pic}" alt=""></span><b class="callout__who"></b></span><span class="callout__say"></span></p>`;
     box.querySelector(".callout__who").textContent = who;
@@ -1098,6 +1132,8 @@
   function noticeAnswer(q) {
     if (!q.answer || toldAnswer.has(q.id)) return;
     toldAnswer.add(q.id);
+    if (q.from === me && q.to === "streamer") tour.answered("answer");
+    else if (q.from === "streamer" && q.to === me) tour.answered("modAnswer");
     setTimeout(() => {
       if (q.from === me && q.to === "streamer") {
         const doc = panelDoc("mod");

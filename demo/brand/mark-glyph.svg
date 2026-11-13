@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="50 25 650 750" width="650" height="750">
-<!-- The StreamerSpace mark on its own (no tile), in the background planet's blues, for putting on the planet. Paths from mark.svg. -->
+<!-- The StreamSpace mark on its own (no tile), in the background planet's blues, for putting on the planet. Paths from mark.svg. -->
 <defs>
   <linearGradient id="bubble" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a9cdf6"/><stop offset="1" stop-color="#7db0ef"/></linearGradient>
   <linearGradient id="people" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e6f0ff"/><stop offset="1" stop-color="#a9cdf6"/></linearGradient>
