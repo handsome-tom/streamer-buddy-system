@@ -498,7 +498,6 @@
 
   /* ===== The mod walkthrough (?story=mod): same dark space, mod green and white. The mod's
      panel on the left; the streamer's dock on the right; the guide drives, so no menus. ===== */
-  .story-mod .stage .screen:last-child { order: 0; }
   .story-mod .stage .menu, .story-mod #allControls, .story-mod #auto { display: none !important; }
   .story-mod .demo__head .eyebrow, .story-mod .guide__top { color: #3fc98e; }
   .story-mod .demo__head h2 { color: #fff; }
@@ -525,16 +524,12 @@
   .stage { position: relative; isolation: isolate; }
   .sides { position: absolute; z-index: -1; top: -70px; bottom: -40px; left: calc(50% - 50vw); width: 100vw; overflow: hidden; pointer-events: none; }
   .sides__half { position: absolute; top: 0; bottom: 0; width: 50%; }
-  /* Streamer on the left and mods on the right in the main demo; flipped for the mod walkthrough. */
+  /* Streamer on the left and mods on the right, the same as everywhere else on the site. */
   .sides__half--streamer { left: 0; --c: 169, 112, 255; --side: right; }
   .sides__half--mod { left: 50%; --c: 63, 201, 142; --side: left; }
-  .story-mod .sides__half--streamer { left: 50%; --side: left; }
-  .story-mod .sides__half--mod { left: 0; --side: right; }
   /* Half an ellipse each, centered on the cut, glowing all the way out to the edge. */
   .sides__half--streamer { background: radial-gradient(ellipse 100% 62% at 100% 50%, rgba(var(--c), 0.46), rgba(var(--c), 0.2) 42%, rgba(var(--c), 0.08) 75%, rgba(var(--c), 0.05) 100%); }
   .sides__half--mod { background: radial-gradient(ellipse 100% 62% at 0% 50%, rgba(var(--c), 0.42), rgba(var(--c), 0.18) 42%, rgba(var(--c), 0.08) 75%, rgba(var(--c), 0.05) 100%); }
-  .story-mod .sides__half--streamer { background: radial-gradient(ellipse 100% 62% at 0% 50%, rgba(var(--c), 0.46), rgba(var(--c), 0.2) 42%, rgba(var(--c), 0.08) 75%, rgba(var(--c), 0.05) 100%); }
-  .story-mod .sides__half--mod { background: radial-gradient(ellipse 100% 62% at 100% 50%, rgba(var(--c), 0.42), rgba(var(--c), 0.18) 42%, rgba(var(--c), 0.08) 75%, rgba(var(--c), 0.05) 100%); }
   /* The cut: a thin, bright ellipse dead center between the panels. */
   .sides__line { position: absolute; left: 50%; top: 8%; bottom: 8%; width: 4px; margin-left: -2px; border-radius: 50%; background: radial-gradient(ellipse 50% 50% at 50% 50%, #fff, rgba(255, 255, 255, 0.75) 35%, rgba(255, 255, 255, 0.15) 75%, transparent); box-shadow: 0 0 24px 5px rgba(255, 255, 255, 0.16); }
   /* The side's name, big and faint, running down the outer edge. */
@@ -542,12 +537,10 @@
   .sides__word::before { content: attr(data-w); } /* from an attribute, so the demo's name swap leaves it alone */
   .sides__half--streamer .sides__word { left: max(12px, calc(50% - 448px - 30px - 2.4em)); transform: translateY(-50%) rotate(180deg); }
   .sides__half--mod .sides__word { right: max(12px, calc(50% - 448px - 30px - 2.4em)); transform: translateY(-50%); }
-  .story-mod .sides__half--streamer .sides__word { left: auto; right: max(12px, calc(50% - 448px - 30px - 2.4em)); transform: translateY(-50%); }
-  .story-mod .sides__half--mod .sides__word { right: auto; left: max(12px, calc(50% - 448px - 30px - 2.4em)); transform: translateY(-50%) rotate(180deg); }
   /* A few of the side's features, just the icon and the headline, drifting slowly. */
   .sides__feats { position: absolute; top: 12%; bottom: 12%; width: 200px; margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; justify-content: space-around; }
-  .sides__half--streamer .sides__feats, .story-mod .sides__half--mod .sides__feats { right: 478px; left: auto; align-items: flex-end; }
-  .sides__half--mod .sides__feats, .story-mod .sides__half--streamer .sides__feats { left: 478px; right: auto; align-items: flex-start; }
+  .sides__half--streamer .sides__feats { right: 478px; left: auto; align-items: flex-end; }
+  .sides__half--mod .sides__feats { left: 478px; right: auto; align-items: flex-start; }
   .sides__feat { display: flex; align-items: center; gap: 8px; max-width: 200px; padding: 7px 12px 7px 9px; font-size: 12.5px; font-weight: 700; line-height: 1.25; color: #e8e8ee; background: rgba(4, 5, 11, 0.55); border: 1px solid rgba(var(--c), 0.35); border-radius: 12px; box-shadow: 0 0 22px rgba(var(--c), 0.12); animation: sideFloat 7s ease-in-out infinite alternate; animation-delay: calc(var(--i) * -1.7s); }
   .sides__feat:nth-child(even) { margin-inline: 22px; }
   .sides__feat svg { flex: none; width: 18px; height: 18px; color: rgb(var(--c)); }
@@ -1018,14 +1011,14 @@
   // The mod walkthrough: a shift as the mod, from first look to a little kindness.
   const MOD_STEPS = [
     { title: "You're on the crew tonight", text: "You're BlazeMod420, modding for your friend RomansEmpire.TV. Streamer View at the top of your panel shows what's on their screen right now, so you never ask twice.", button: "Start my shift", look: "mod",
-      run: () => { const doc = panelDoc("mod"), el = doc?.querySelector(".sv") || doc?.querySelector(".panel"); if (el) showCallout("mod", el, "This is Streamer View: what's on RomansEmpire.TV's screen right now.", "guide"); said("Your shift has started. Chat is live on the right."); } },
+      run: () => { const doc = panelDoc("mod"), el = doc?.querySelector(".sv") || doc?.querySelector(".panel"); if (el) showCallout("mod", el, "This is Streamer View: what's on RomansEmpire.TV's screen right now.", "guide"); said("Your shift has started. Chat is live on the left."); } },
     { title: "Ask, don't spam chat", text: "Something to check with them? Ask quietly instead of typing in chat: it waits under their bar, never on stream, and their answer comes back to you.", button: "Ask them something", look: "obs", click: "modAsk" },
     { title: "No answer? Nudge", text: "They're mid-fight and haven't seen it. A nudge moves your question up a color and warms their outline. It's limited, so it never turns into spam.", button: "Nudge them", look: "obs", click: "modNudge" },
     { title: "Spot trouble in chat", text: "Someone's stirring things up. Flag the line in your color, then leave a note on it for the team. The streamer and mods see both; viewers never do.", button: "Flag it and leave a note", look: "obs", click: "modFlag", after: "modChatNote" },
     { title: "When it can't wait", text: "A hate raid, or something private showing on stream? The panic button flashes their dock red with a chime until they look.", button: "Hit the panic button", look: "obs", click: "modWarn" },
     { title: "Cheer them on", text: "Modding isn't only trouble. A !vanish note pops a little kindness onto their bar for 30 seconds, then fades away.", button: "Send a !vanish note", look: "obs", click: "modVanish" },
-    { title: "They ask you back", text: "Now your friend needs a hand. RomansEmpire.TV asks you something, and it lands right in your panel on the left.", button: "RomansEmpire.TV asks you", look: "mod", click: "streamerAsk",
-      waitFor: "modAnswer", then: "Your turn: answer it in your panel on the left. One tap is enough." },
+    { title: "They ask you back", text: "Now your friend needs a hand. RomansEmpire.TV asks you something, and it lands in your panel on the right.", button: "RomansEmpire.TV asks you", look: "mod", click: "streamerAsk",
+      waitFor: "modAnswer", then: "Your turn: answer it in your panel on the right. One tap is enough." },
     { title: "That's a shift", text: "Quiet questions, nudges, flags and notes, a panic button for real trouble, and a little kindness. That's looking out for each other.", button: "Done", look: "", done: true },
   ];
   // The main demo: a night on stream, as the streamer, with your crew on the other side.
@@ -1279,7 +1272,7 @@
     const head = document.querySelector(".demo__head");
     head.querySelector(".eyebrow").textContent = "Mod walkthrough";
     head.querySelector("h2").textContent = "A shift as a mod.";
-    head.querySelector("p:not(.eyebrow)").textContent = "You're BlazeMod420, modding for RomansEmpire.TV. Follow along: each step is something mods do every stream. On the left is your side panel; on the right, what the streamer sees.";
+    head.querySelector("p:not(.eyebrow)").textContent = "You're BlazeMod420, modding for RomansEmpire.TV. Follow along: each step is something mods do every stream. On the left, what the streamer sees; on the right, your side panel.";
     const [modLabel, obsLabel] = ["mod", "obs"].map((id) => document.getElementById(id).closest(".screen").querySelector(".screen__label"));
     modLabel.firstChild.nodeValue = "Your side panel ";
     modLabel.querySelector("small").textContent = "you're BlazeMod420";
