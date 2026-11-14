@@ -680,7 +680,7 @@
   html.bare .screen__label, html.bare .menu, html.bare #allControls, html.bare .callout, html.bare .clickhint, html.bare .screen::before { display: none !important; }
   html.bare [data-tip]::after { display: none !important; }
   html.bare .demo { padding: 16px 0; }
-  html.bare .stage { margin-top: 0; gap: 20px; grid-template-columns: minmax(150px, 210px) minmax(0, 420px) minmax(0, 420px) minmax(150px, 210px); grid-template-rows: auto; align-items: start; }
+  html.bare .stage { margin-top: 0; gap: 16px; padding: 0 16px; grid-template-columns: minmax(130px, 190px) minmax(280px, 420px) minmax(280px, 420px) minmax(130px, 190px) minmax(280px, 360px); grid-template-rows: auto; align-items: start; justify-content: center; }
   html.bare .stage .screen { display: block; grid-row: auto; }
   html.bare .stage iframe { height: calc(100vh - 32px); min-height: 480px; }
   /* Every demo control, plainly: the streamer's on the far left, the mod's on the far right,
@@ -876,10 +876,21 @@
     // here: the page's own rule for this looks for the last panel, which is now a list.)
     streamer.style.order = "-2";
     document.getElementById("obs").closest(".screen").style.order = "-1";
+    // Far right: a pretend Twitch chat, the streamer's chat as the mod sees it on twitch.tv
+    // with StreamSpace (twitch/chat.html). It starts with the panels (the script below).
+    const twitch = document.createElement("div");
+    twitch.className = "screen";
+    twitch.style.order = "1";
+    const chat = document.createElement("iframe");
+    chat.id = "twitch";
+    chat.title = "Twitch chat (pretend), as the mod sees it with StreamSpace";
+    chat.dataset.src = "twitch/chat.html";
+    twitch.append(chat);
+    stage.append(twitch);
   }
 </script>
 <script type="module">
-  import { Socket, pretendTwitch } from "./hub.js?v=128"; // the number: bump it when hub.js changes, so browsers fetch the new one
+  import { Socket, pretendTwitch } from "./hub.js?v=129"; // the number: bump it when hub.js changes, so browsers fetch the new one
 
   const said = (text) => (document.getElementById("said").textContent = text);
   const pick = (list) => list[Math.floor(Math.random() * list.length)];
@@ -1498,6 +1509,8 @@
     }
     document.getElementById("mod").src = "../?dev=mod1&embed=ext&watch=streamer&modfor=streamer,streamer2&sandbox";
     document.getElementById("obs").src = "../?dev=streamer&livechat&ownchat&mock&lightms=6000&mods=mod1,mod2&sandbox";
+    const twitchChat = document.getElementById("twitch"); // the playground's pretend Twitch chat
+    if (twitchChat) twitchChat.src = twitchChat.dataset.src;
     // Chat comes alive on its own once the streamer's dock is up, so the screens are never empty;
     // the guide then walks through the mod features one at a time (not in the playground).
     if (document.documentElement.classList.contains("bare")) document.getElementById("tour").hidden = true;

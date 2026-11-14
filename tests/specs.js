@@ -310,4 +310,27 @@ export const tests = {
     h.check(!/follow you|Follows you/.test(card.textContent), `it shouldn't say anything about following: ${card.querySelector(".oc-raid__about")?.textContent}`);
     h.check(/followers/.test(card.querySelector(".oc-raid__sub")?.textContent || ""), "the follower count still shows (it needs no permission)");
   },
+
+  // ----- The playground's pretend Twitch chat (StreamSpace's real chat scripts) --------------
+
+  async "in the pretend Twitch chat, StreamSpace's flag reaches the streamer and typing chats as the mod"(h) {
+    const streamer = h.person("streamer");
+    const mod = h.person("mod1");
+    await h.friends(streamer, mod);
+    const tw = await h.panel("mod1", "twitch");
+    h.pretendTwitch.say("hellofoxy", "is this the right stream?");
+    const line = await h.until(() => [...tw.doc.querySelectorAll(".chat-line__message")].find((l) => l.textContent.includes("is this the right stream?")), "the line in the pretend Twitch chat");
+    await h.until(() => tw.doc.documentElement.classList.contains("tbc-flagging"), "StreamSpace to offer its flag here");
+    line.dispatchEvent(new tw.win.MouseEvent("mouseover", { bubbles: true }));
+    (await h.until(() => line.querySelector(".tbc-flagbtn"), "the flag button on the line")).click();
+    await streamer.next("flash", (m) => m.f.kind === "chat" && m.f.chatter === "hellofoxy" && m.f.text === "is this the right stream?" && m.f.from === "mod1");
+    await h.until(() => line.classList.contains("tbc-flagged"), "the line to glow in the Twitch chat");
+    h.check(tw.$(".tbc-hubchat") && tw.$(".tbc-phrases-btn"), "the handshake and quick phrases buttons");
+    const input = tw.$('[data-a-target="chat-input"]');
+    input.textContent = "on it";
+    input.dispatchEvent(new tw.win.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await h.until(() => [...tw.doc.querySelectorAll('.chat-line__message[data-a-user="mod1"]')].some((l) => l.textContent.includes("on it") && l.textContent.includes("BlazeMod420")), "the mod's own line, as BlazeMod420, boxed");
+    h.check(tw.$('.chat-line__message[data-a-user="mod1"] .tbc-me'), "the mod's name boxed (StreamSpace's \"your name\")");
+    noErrors(tw);
+  },
 };

@@ -1,0 +1,47 @@
+/* The pretend Twitch chat's look: close to Twitch's dark chat, so the playground shows the
+   chat a mod really uses. Only the layout and colors; no Twitch art. */
+:root { color-scheme: dark; --tw-bg: #18181b; --tw-line-hover: #26262c; --tw-text: #efeff1; --tw-muted: #adadb8; --tw-border: #35353b; --tw-purple: #9147ff; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--tw-bg); color: var(--tw-text); font: 13px/20px Inter, "Helvetica Neue", Helvetica, Arial, sans-serif; overflow: hidden; }
+.tw-chat { display: flex; flex-direction: column; height: 100%; }
+
+.stream-chat-header { position: relative; display: flex; align-items: center; justify-content: space-between; height: 50px; padding: 0 10px; border-bottom: 1px solid var(--tw-border); flex: none; }
+.stream-chat-header > div { display: flex; align-items: center; gap: 4px; }
+.tw-chat__title { position: absolute; left: 50%; transform: translateX(-50%); margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+.tw-iconbtn { display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0; color: var(--tw-text); background: none; border: 0; border-radius: 4px; cursor: pointer; }
+.tw-iconbtn:hover { background: rgba(83, 83, 95, 0.48); }
+.tw-iconbtn--small { width: 24px; height: 24px; }
+
+.chat-scrollable-area__message-container { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 0; overflow-wrap: anywhere; }
+.tw-welcome { padding: 5px 20px; color: var(--tw-muted); }
+.chat-line__message { position: relative; padding: 5px 20px; border-radius: 4px; margin: 0 10px; }
+.chat-line__message:hover { background: var(--tw-line-hover); }
+.chat-line__message-container { display: block; }
+.chat-line__username-container { display: inline; }
+.chat-badge { width: 18px; height: 18px; margin: 0 3px 1px 0; vertical-align: middle; border-radius: 3px; }
+.chat-line__username { cursor: pointer; }
+.chat-author__display-name { font-weight: 700; }
+.chat-line__message--emote { height: 28px; margin: -4px 0; vertical-align: middle; }
+.mention-fragment { font-weight: 700; padding: 0 2px; border-radius: 2px; background: rgba(83, 83, 95, 0.38); }
+.tw-deleted { color: var(--tw-muted); font-style: italic; }
+.chat-line__icons { position: absolute; top: -12px; right: 14px; display: none; padding: 2px; background: var(--tw-bg); border: 1px solid var(--tw-border); border-radius: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); }
+.chat-line__message:hover .chat-line__icons { display: flex; }
+
+.user-notice-line { margin: 5px 10px; padding: 6px 16px; border-left: 4px solid var(--tw-purple); background: rgba(145, 71, 255, 0.08); }
+.user-notice-line[data-kind="raid"] { border-left-color: #ff6a00; background: rgba(255, 106, 0, 0.1); }
+.user-notice-line[data-kind="announcement"] { border-left-color: #00c7ac; }
+.tw-notice__head { font-weight: 600; }
+.tw-notice__msg { margin-top: 2px; }
+
+.tw-paused { position: absolute; left: 50%; bottom: 112px; transform: translateX(-50%); padding: 5px 12px; font: inherit; font-weight: 600; color: #fff; background: rgba(0, 0, 0, 0.75); border: 0; border-radius: 4px; cursor: pointer; }
+
+.chat-input { flex: none; padding: 10px 10px 12px; }
+.chat-input__textarea { position: relative; display: flex; align-items: center; min-height: 40px; padding: 0 6px 0 10px; background: rgba(83, 83, 95, 0.38); border: 2px solid transparent; border-radius: 6px; }
+.chat-input__textarea:focus-within { background: #000; border-color: var(--tw-purple); }
+.chat-wysiwyg-input__editor { flex: 1; min-width: 0; max-height: 92px; overflow-y: auto; padding: 8px 0; outline: none; white-space: pre-wrap; }
+.chat-wysiwyg-input__editor:empty::before { content: attr(data-placeholder); color: var(--tw-muted); pointer-events: none; }
+.tw-chat__inputbtns { display: flex; gap: 2px; }
+.chat-input__buttons-container { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+.tw-chat__points { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; color: var(--tw-text); }
+.tw-chatbtn { height: 30px; padding: 0 10px; font: inherit; font-weight: 600; color: #fff; background: var(--tw-purple); border: 0; border-radius: 4px; cursor: pointer; }
+.tw-chatbtn:hover { background: #772ce8; }

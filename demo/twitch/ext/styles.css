@@ -1,0 +1,2294 @@
+/* One animated value drives everything so the buttons, slider and tooltip
+   grow together. 1 = Twitch's normal size, 1.5 = full size. content.js raises
+   it gradually as the mouse approaches the controls. */
+@property --tbc-z {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
+.player-controls__left-control-group {
+  --tbc-z: 1;
+  transition: --tbc-z 150ms ease-out;
+}
+
+/* Play/pause and mute buttons. */
+.player-controls__left-control-group [data-a-target="player-play-pause-button"],
+.player-controls__left-control-group [data-a-target="player-mute-unmute-button"] {
+  zoom: var(--tbc-z);
+}
+
+/* Volume slider: scales up and eases from its normal width (--tbc-base)
+   to the hovered width (--tbc-w); both are set per-slider by content.js. */
+.player-controls__left-control-group .tbc-slider-zoom {
+  zoom: var(--tbc-z);
+}
+.player-controls__left-control-group .tbc-slider-wrap {
+  width: calc(var(--tbc-base) + (var(--tbc-w) - var(--tbc-base)) * (var(--tbc-z) - 1) * 2) !important;
+  max-width: none !important;
+}
+
+/* Volume % tooltip: Twitch sets its offset in on-screen pixels, but it lives inside
+   the zoomed slider, so the offset gets scaled twice. Un-zoom the anchor, then
+   re-zoom its contents so the tooltip keeps its size. */
+.player-controls__left-control-group .volume-slider__slider-container [style*="inset-inline-start"] {
+  zoom: calc(1 / var(--tbc-z));
+}
+.player-controls__left-control-group .volume-slider__slider-container [style*="inset-inline-start"] > * {
+  zoom: var(--tbc-z);
+}
+
+/* Pinned emotes row (pins.js), sized to match Twitch's own picker sections. */
+.tbc-pins__title {
+  padding: 8px 16px;
+  font-size: 14px;
+}
+.tbc-pins__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 5px;
+  padding: 4px 8px 8px;
+}
+.tbc-pins__emote {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 15%;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.tbc-pins__emote:hover {
+  background: var(--color-background-interactable-hover, rgba(83, 83, 95, 0.48));
+}
+.tbc-pins__emote img {
+  width: 28px;
+  height: 28px;
+}
+.tbc-pins__hint {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.7;
+}
+/* Drag to reorder: a bar shows where the dragged pin will land. */
+.tbc-pins__emote.tbc-dragging {
+  opacity: 0.4;
+}
+.tbc-pins__emote.tbc-drop-before {
+  box-shadow: inset 3px 0 0 #a970ff;
+}
+.tbc-pins__emote.tbc-drop-after {
+  box-shadow: inset -3px 0 0 #a970ff;
+}
+
+/* Watch streak flame (streak.js), sitting next to the bits / points balances. */
+.tbc-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 6px;
+  margin-left: 4px;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tbc-streak:hover {
+  background: var(--color-background-interactable-hover, rgba(83, 83, 95, 0.48));
+}
+.tbc-streak svg {
+  fill: #ff7a2f;
+}
+.tbc-streak__left {
+  font-weight: 400;
+  opacity: 0.7;
+}
+.tbc-streak__left:empty {
+  display: none;
+}
+.tbc-streak--done .tbc-streak__left {
+  color: #00c27a;
+  opacity: 1;
+}
+/* While streak.js reads the rewards panel in the background, keep it invisible. */
+html.tbc-peek [role="dialog"][aria-labelledby="channel-points-reward-center-header"] {
+  visibility: hidden !important;
+}
+
+/* 1% volume button (content.js), between the speaker icon and the slider: small,
+   and it grows with the other controls on hover. While hidden it takes no space,
+   so the slider sits right next to the icon as usual. */
+.player-controls__left-control-group .tbc-one {
+  zoom: var(--tbc-z);
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 0;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  /* Hidden until you hover the sound controls (content.js adds --shown). */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease, width 150ms ease, margin 150ms ease;
+}
+.player-controls__left-control-group .tbc-one.tbc-one--shown {
+  width: 26px;
+  margin: 0 2px;
+  opacity: 1;
+  pointer-events: auto;
+}
+.player-controls__left-control-group .tbc-one:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* VOD markers (vodmarks.js): a thin line through the seek bar with a round head
+   above it. The layer itself ignores the mouse so Twitch's seek bar still works. */
+.tbc-marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10; /* above Twitch's playhead knob, so markers win clicks */
+}
+/* Twitch's playhead is replaced by the bigger one from knob.js. */
+[data-a-target="player-seekbar"] .seekbar-bar > span:not(.seekbar-segment) {
+  visibility: hidden;
+}
+/* Give the markers their own lane: lift Twitch's time row (current time /
+   length) and the hover time label 14px above the bar. The controls are
+   anchored to the bottom of the player, so extra space here pushes them up. */
+.vod-seekbar-time-labels {
+  margin-bottom: 14px;
+}
+.tbc-mark {
+  position: absolute;
+  bottom: 0;
+  width: 2px;
+  height: 16px;
+  margin-left: -1px;
+  background: #ffb31a;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.tbc-mark::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: -5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffb31a;
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.6);
+}
+/* A wider invisible grab area so the marker is easy to hit. */
+.tbc-mark::after {
+  content: "";
+  position: absolute;
+  top: -8px;
+  bottom: 0;
+  left: -7px;
+  right: -7px;
+}
+.tbc-mark:hover::before,
+.tbc-mark--dragging::before {
+  background: #ffd36b;
+}
+.tbc-mark--dragging {
+  cursor: grabbing;
+}
+/* A marker with a note gets a white ring so you can tell them apart. */
+.tbc-mark--noted::before {
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.6), inset 0 0 0 2px #fff;
+}
+
+/* Note editor for markers (vodmarks.js). */
+.tbc-editor {
+  position: fixed;
+  z-index: 10000;
+  width: 260px;
+  padding: 10px;
+  border-radius: 3px;
+  background: #18181b;
+  color: #efeff1;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+  font: 13px/1.3 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+}
+.tbc-editor__title {
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.tbc-editor__input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #53535f;
+  border-radius: 2px;
+  background: #0e0e10;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+.tbc-editor__input:focus {
+  border-color: #a970ff;
+}
+.tbc-editor__buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.tbc-editor__buttons button {
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 2px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tbc-editor__save {
+  background: #9147ff;
+  color: #fff;
+}
+.tbc-editor__remove {
+  background: none;
+  color: #ff8280;
+}
+
+/* "Mark this moment" button in the live player's right-hand controls. */
+.tbc-live-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 30px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tbc-live-mark:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.tbc-live-mark svg {
+  fill: currentColor;
+}
+.tbc-live-mark__count {
+  color: #ffb31a;
+}
+.tbc-live-mark__count:empty {
+  display: none;
+}
+
+/* Chatter tags in chat (people.js): channel pictures before the name,
+   pronouns after it. */
+.tbc-known {
+  display: inline-flex;
+  gap: 2px;
+  margin-right: 3px;
+  vertical-align: middle;
+}
+.tbc-known img {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #53535f;
+}
+.tbc-pronouns {
+  display: inline-block;
+  margin: 0 2px 0 4px;
+  padding: 0 4px;
+  border-radius: 2px;
+  background: rgba(169, 112, 255, 0.25);
+  color: #d5bfff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  vertical-align: middle;
+}
+.tbc-pronouns--note::after {
+  content: " ✎";
+}
+
+/* Right-click flyout for a chatter. */
+.tbc-people {
+  position: fixed;
+  z-index: 10000;
+  width: 300px;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  padding: 12px;
+  border-radius: 3px;
+  background: #18181b;
+  color: #efeff1;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
+  font: 13px/1.35 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+}
+.tbc-people button {
+  font: inherit;
+  cursor: pointer;
+}
+.tbc-people__head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 15px;
+}
+.tbc-people__login {
+  color: #adadb8;
+  font-size: 12px;
+}
+.tbc-people__close {
+  margin-left: auto;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: #adadb8;
+  font-size: 18px;
+  line-height: 1;
+}
+.tbc-people__label {
+  margin: 10px 0 5px;
+  color: #adadb8;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.tbc-people__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.tbc-people__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 2px 2px 3px;
+  border-radius: 3px;
+  background: #2f2f35;
+}
+.tbc-people__chip-x {
+  padding: 0 5px;
+  border: 0;
+  background: none;
+  color: #adadb8;
+}
+.tbc-people__avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #53535f;
+  flex: none;
+}
+.tbc-people__search,
+.tbc-people__other,
+.tbc-people__note {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #53535f;
+  border-radius: 2px;
+  background: #0e0e10;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+.tbc-people__search:focus,
+.tbc-people__other:focus,
+.tbc-people__note:focus {
+  border-color: #a970ff;
+}
+.tbc-people__note {
+  resize: vertical;
+}
+.tbc-people__other {
+  margin-top: 6px;
+}
+.tbc-people__results {
+  display: flex;
+  flex-direction: column;
+}
+.tbc-people__result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+.tbc-people__result:hover,
+.tbc-people__result:focus {
+  background: #2f2f35;
+}
+.tbc-people__result--typed {
+  color: #adadb8;
+}
+.tbc-people__sync {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  color: #7a7a85;
+  font-size: 11px;
+}
+.tbc-people__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #bf94ff;
+  font-size: 11px;
+}
+.tbc-people__pronouns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.tbc-people__pronoun {
+  padding: 4px 8px;
+  border: 1px solid #53535f;
+  border-radius: 3px;
+  background: none;
+  color: inherit;
+  font-size: 12px;
+}
+.tbc-people__pronoun--on {
+  border-color: #a970ff;
+  background: #9147ff;
+  color: #fff;
+}
+.tbc-people__foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+.tbc-people__clear {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: #ff8280;
+}
+.tbc-people__done {
+  padding: 5px 14px;
+  border: 0;
+  border-radius: 2px;
+  background: #9147ff;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Frequent Channels row in the emote picker (freqchannels.js); the heading
+   reuses the Pinned row's .tbc-pins__title style. */
+.tbc-freqch__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 16px 8px;
+}
+.tbc-freqch__channel {
+  width: 34px;
+  height: 34px;
+  padding: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+.tbc-freqch__channel:hover {
+  background: var(--color-background-interactable-hover, rgba(83, 83, 95, 0.48));
+}
+.tbc-freqch__channel img {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: block;
+}
+.tbc-freqch__channel {
+  position: relative;
+}
+/* × in the corner to remove a channel, shown on hover. */
+.tbc-freqch__x {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  display: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #3a3a3d;
+  color: #fff;
+  font-size: 11px;
+  line-height: 14px;
+  text-align: center;
+}
+.tbc-freqch__channel:hover .tbc-freqch__x {
+  display: block;
+}
+.tbc-freqch__x:hover {
+  background: #e91916;
+}
+.tbc-freqch__channel.tbc-dragging {
+  opacity: 0.4;
+}
+.tbc-freqch__channel.tbc-drop-before {
+  box-shadow: inset 3px 0 0 #a970ff;
+}
+.tbc-freqch__channel.tbc-drop-after {
+  box-shadow: inset -3px 0 0 #a970ff;
+}
+/* Brief highlight when a channel is added from the sidebar. */
+.tbc-freqch__channel--new {
+  background: rgba(169, 112, 255, 0.45);
+}
+
+/* Marker list (vodmarks.js): pops up above the bookmark button, live or VOD. */
+.tbc-marklist {
+  position: fixed;
+  z-index: 10000;
+  width: 280px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 10px;
+  border-radius: 3px;
+  background: #18181b;
+  color: #efeff1;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
+  font: 13px/1.35 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+}
+.tbc-marklist__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.tbc-marklist__add {
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 2px;
+  background: #9147ff;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tbc-marklist__empty {
+  margin: 4px 0;
+  color: #adadb8;
+  font-size: 12px;
+}
+.tbc-marklist__items {
+  display: flex;
+  flex-direction: column;
+}
+.tbc-marklist__row {
+  display: flex;
+  align-items: center;
+  border-radius: 2px;
+}
+.tbc-marklist__row:hover {
+  background: #2f2f35;
+}
+.tbc-marklist__row--new {
+  background: rgba(255, 179, 26, 0.14);
+  box-shadow: inset 2px 0 0 #ffb31a;
+}
+.tbc-marklist__delete {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin-right: 4px;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: #adadb8;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.tbc-marklist__delete:hover {
+  background: rgba(235, 4, 0, 0.25);
+  color: #fff;
+}
+.tbc-marklist__item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tbc-marklist__time {
+  color: #ffb31a;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.tbc-marklist__note {
+  color: #adadb8;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+/* VOD playhead (knob.js): grows as the mouse gets close (--tbc-k), easy to drag.
+   Sits under the markers (z-index 10) so markers still win clicks. */
+.tbc-knob {
+  position: absolute;
+  top: 50%;
+  width: 0;
+  height: 0;
+  z-index: 9;
+  pointer-events: none;
+}
+.tbc-knob__dot {
+  position: absolute;
+  left: -7px;
+  top: -7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), 0 1px 4px rgba(0, 0, 0, 0.5);
+  transform: scale(var(--tbc-k, 1));
+  transition: transform 80ms ease-out;
+  pointer-events: auto;
+  cursor: grab;
+}
+.tbc-knob--drag .tbc-knob__dot {
+  cursor: grabbing;
+}
+/* Time shown above the playhead while dragging. */
+.tbc-knob__time {
+  position: absolute;
+  bottom: 22px;
+  left: 0;
+  transform: translateX(-50%);
+  display: none;
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tbc-knob--drag .tbc-knob__time {
+  display: block;
+}
+
+/* FindMyFriends line in the left sidebar's hover box (findmyfriends.js). */
+.tbc-buddies {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  color: #00c27a;
+  font-size: 12px;
+  font-weight: 600;
+}
+.tbc-buddies--none {
+  color: #adadb8;
+  font-weight: 400;
+}
+/* Tiny friend pictures under the game name in the left sidebar (findmyfriends.js). */
+.tbc-faces {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  padding-left: 2px; /* room for the first picture's ring */
+}
+.tbc-faces img {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #53535f;
+  box-shadow: 0 0 0 2px #fff;
+}
+/* Ring colour by how recently they chatted (findmyfriends.js ringFor). */
+.tbc-faces img.tbc-face--5 {
+  box-shadow: 0 0 0 2px #00c27a; /* green: within 5 minutes */
+}
+.tbc-faces img.tbc-face--10 {
+  box-shadow: 0 0 0 2px #ff8a00; /* orange: within 10 minutes */
+}
+.tbc-faces img.tbc-face--20 {
+  box-shadow: 0 0 0 2px #ffd400; /* yellow: within 20 minutes */
+}
+.tbc-faces img.tbc-face--old {
+  box-shadow: 0 0 0 2px #fff; /* white: longer ago */
+}
+.tbc-faces span {
+  margin-left: 2px;
+  color: #00c27a;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* Friends button in Twitch's top bar, left of the Prime crown (findmyfriends.js). */
+.tbc-bbtn-wrap {
+  display: flex;
+  align-items: center;
+  margin: 0 4px;
+}
+.tbc-bbtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  color: #efeff1;
+  cursor: pointer;
+}
+.tbc-bbtn:hover {
+  background: rgba(83, 83, 95, 0.48);
+}
+.tbc-bbtn__count:not(:empty) {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  border-radius: 3px;
+  background: #00c27a;
+  color: #0e0e10;
+  font: 700 10px/15px Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+  text-align: center;
+}
+/* Its drop-down: every buddy and where they last chatted. */
+.tbc-bdrop {
+  position: fixed;
+  z-index: 5000;
+  width: 280px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  box-sizing: border-box;
+  border-radius: 3px;
+  background: #18181b;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+  color: #efeff1;
+  font: 13px/1.4 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+}
+.tbc-bdrop__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 6px 6px;
+  color: #adadb8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tbc-bdrop__empty {
+  margin: 4px 6px;
+  color: #7a7a85;
+  font-size: 12px;
+}
+.tbc-bdrop__items {
+  overflow-y: auto;
+}
+.tbc-bdrop__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 6px;
+  border-radius: 3px;
+  color: inherit;
+  text-decoration: none;
+}
+a.tbc-bdrop__row:hover {
+  background: #2f2f35;
+}
+.tbc-bdrop__row img {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #53535f;
+  box-shadow: 0 0 0 2px #3a3a42;
+}
+.tbc-bdrop__row img.tbc-face--5 { box-shadow: 0 0 0 2px #00c27a; }
+.tbc-bdrop__row img.tbc-face--10 { box-shadow: 0 0 0 2px #ff8a00; }
+.tbc-bdrop__row img.tbc-face--20 { box-shadow: 0 0 0 2px #ffd400; }
+.tbc-bdrop__row img.tbc-face--old { box-shadow: 0 0 0 2px #fff; }
+.tbc-bdrop__who {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.tbc-bdrop__name {
+  font-weight: 600;
+}
+.tbc-bdrop__where {
+  overflow: hidden;
+  color: #7a7a85;
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tbc-bdrop__where b {
+  color: #bf94ff;
+  font-weight: 600;
+}
+
+/* "Edit friends" in the friends drop-down's heading (findmyfriends.js). */
+.tbc-bdrop__edit {
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 2px;
+  background: rgba(83, 83, 95, 0.48);
+  color: #efeff1;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+.tbc-bdrop__edit:hover {
+  background: #9147ff;
+}
+
+/* Search box at the top of the channel points rewards panel (rewardsearch.js).
+   It stays put while the list scrolls under it. */
+.tbc-rsearch {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  grid-column: 1 / -1; /* full width if the list is laid out as a grid */
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 4px 8px;
+  background: var(--color-background-base, #18181b);
+}
+.tbc-rsearch__input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid #53535f;
+  border-radius: 2px;
+  background: #0e0e10;
+  color: #efeff1;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+.tbc-rsearch__input:focus {
+  border-color: #a970ff;
+}
+.tbc-rsearch__count {
+  flex: none;
+  color: #adadb8;
+  font-size: 11px;
+}
+.tbc-rsearch__count:empty {
+  display: none;
+}
+.tbc-rsearch-hide {
+  display: none !important;
+}
+
+/* Hover tooltip for the watch streak flame (streak.js). */
+.tbc-streak-tip {
+  position: fixed;
+  z-index: 10000;
+  max-width: 280px;
+  padding: 7px 10px;
+  border-radius: 3px;
+  background: #fff;
+  color: #0e0e10;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  font: 12px/1.4 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+  pointer-events: none;
+}
+.tbc-streak-tip__head {
+  font-weight: 700;
+}
+
+/* Streak Saver mode pills in the left sidebar, above "Save your Streak"
+   (streaksaver.js): Auto Saver | Streak Saver | Off. */
+.tbc-ssmode {
+  display: flex;
+  gap: 4px;
+  margin: 10px 10px 6px;
+}
+.tbc-ssmode__opt {
+  padding: 3px 7px;
+  border: 1px solid #53535f;
+  border-radius: 3px;
+  background: none;
+  color: #adadb8;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tbc-ssmode__opt:hover {
+  border-color: #adadb8;
+}
+.tbc-ssmode__opt--on {
+  border-color: #00c27a;
+  background: rgba(0, 194, 122, 0.15);
+  color: #00c27a;
+}
+.tbc-ssmode__opt--on[data-mode="off"] {
+  border-color: #adadb8;
+  background: rgba(173, 173, 184, 0.15);
+  color: #efeff1;
+}
+
+/* X on the "Save your Streak" row (streaksaver.js). */
+a[class*="saveYourStreakSideNavRow"] {
+  position: relative;
+}
+a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
+  display: none;
+}
+.tbc-ssx {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: #adadb8;
+  font: 16px/22px Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+  text-align: center;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+.tbc-ssx:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #efeff1;
+}
+.side-nav--collapsed .tbc-ssx {
+  display: none;
+}
+
+/* Pop-up when the saver gave up waiting for Twitch. */
+.tbc-gaveup {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+.tbc-gaveup__card {
+  width: 320px;
+  padding: 20px;
+  border-radius: 3px;
+  background: #18181b;
+  color: #efeff1;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  font: 14px/1.4 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+  text-align: center;
+}
+.tbc-gaveup__tom {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+}
+.tbc-gaveup__msg {
+  margin: 12px 0 6px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.tbc-gaveup__sub {
+  margin: 0 0 14px;
+  color: #adadb8;
+  font-size: 12px;
+}
+.tbc-gaveup__ok {
+  padding: 6px 22px;
+  border: 0;
+  border-radius: 2px;
+  background: #9147ff;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Status label inside the saver window. */
+.tbc-saver {
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  z-index: 10000;
+  transform: translateX(-50%);
+  padding: 5px 12px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  font: 600 12px/1.3 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+  pointer-events: none;
+}
+
+/* Chat box buttons (phrases.js): Bits, emotes and quick phrases at 24px, centred
+   in the chat box, so all three fit about where Twitch had the first two. */
+.tbc-chat-buttons {
+  display: flex;
+  align-items: center;
+}
+.tbc-chat-buttons [data-a-target="bits-button"],
+.tbc-chat-buttons [data-a-target="emote-picker-button"],
+.tbc-phrases-btn {
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 0 !important;
+}
+.tbc-chat-buttons [data-a-target="bits-button"] svg,
+.tbc-chat-buttons [data-a-target="emote-picker-button"] svg,
+.tbc-phrases-btn svg {
+  width: 17px !important;
+  height: 17px !important;
+}
+/* Twitch sits this row near the bottom of the chat box; centre it vertically. */
+.chat-input__textarea div:has(> .tbc-chat-buttons) {
+  top: 0 !important;
+  bottom: 0 !important;
+  display: flex !important;
+  align-items: center;
+  padding-top: 4px; /* the box's border makes plain centring sit 2px high */
+}
+/* Stop typed text before it reaches the (now wider) row of icons. */
+.chat-input__textarea [data-a-target="chat-input"] {
+  padding-right: 12px !important;
+}
+.tbc-phrases-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: var(--color-fill-button-icon, #efeff1);
+  cursor: pointer;
+}
+.tbc-phrases-btn svg {
+  fill: currentColor;
+}
+.tbc-phrases-btn:hover {
+  background: var(--color-background-button-text-hover, rgba(83, 83, 95, 0.48));
+}
+
+/* Quick phrases pop-up, just above the chat box. */
+.tbc-phrases {
+  position: fixed;
+  z-index: 10000;
+  box-sizing: border-box;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 10px;
+  border-radius: 3px;
+  background: #18181b;
+  color: #efeff1;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
+  font: 13px/1.35 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+}
+.tbc-phrases__head {
+  margin-bottom: 6px;
+  color: #adadb8;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.tbc-phrases__empty {
+  color: #7a7a85;
+  font-size: 12px;
+}
+.tbc-phrases__row {
+  display: flex;
+  align-items: center;
+  border-radius: 2px;
+}
+.tbc-phrases__row:hover {
+  background: #2f2f35;
+}
+.tbc-phrases__use {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.tbc-phrases__x {
+  flex: none;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: #adadb8;
+  font-size: 16px;
+  cursor: pointer;
+}
+.tbc-phrases__x:hover {
+  color: #ff8280;
+}
+.tbc-phrases__add {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.tbc-phrases__new {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid #53535f;
+  border-radius: 2px;
+  background: #0e0e10;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+.tbc-phrases__new:focus {
+  border-color: #a970ff;
+}
+.tbc-phrases__save {
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 2px;
+  background: #9147ff;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+/* Emote button in the quick phrase add row: opens Twitch's emote picker for the phrase. */
+.tbc-phrases__emote {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  padding: 0;
+  border: 1px solid #53535f;
+  border-radius: 2px;
+  background: none;
+  color: #efeff1;
+  cursor: pointer;
+}
+.tbc-phrases__emote svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+.tbc-phrases__emote:hover {
+  background: #2f2f35;
+}
+.tbc-phrases__emote--on {
+  border-color: #a970ff;
+  background: rgba(169, 112, 255, 0.25);
+}
+/* Emote pictures inside a quick phrase. */
+.tbc-phrases__emoteimg {
+  width: 22px;
+  height: 22px;
+  margin: -3px 1px;
+  vertical-align: middle;
+  object-fit: contain;
+}
+
+/* Account switcher in Twitch's avatar menu (accounts.js). */
+.tbc-acct-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.tbc-acct-btn {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: #adadb8;
+  font-size: 12px;
+  line-height: 20px;
+  cursor: pointer;
+}
+.tbc-acct-btn:hover {
+  background: rgba(83, 83, 95, 0.48);
+  color: #efeff1;
+}
+.tbc-acct-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 10px 8px;
+  padding: 6px;
+  border: 1px solid #3a3a3d;
+  border-radius: 3px;
+  color: #adadb8;
+  font-size: 12px;
+}
+.tbc-acct-item {
+  display: flex;
+  align-items: center;
+}
+.tbc-acct-pick,
+.tbc-acct-action {
+  flex: 1;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: #efeff1;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.tbc-acct-pick:hover:not(:disabled),
+.tbc-acct-action:hover {
+  background: #2f2f35;
+}
+.tbc-acct-item--current .tbc-acct-pick {
+  color: #00c27a;
+  cursor: default;
+}
+.tbc-acct-action {
+  color: #bf94ff;
+}
+.tbc-acct-forget {
+  padding: 0 6px;
+  border: 0;
+  background: none;
+  color: #adadb8;
+  font-size: 14px;
+  cursor: pointer;
+}
+.tbc-acct-forget:hover {
+  color: #ff8280;
+}
+
+/* Split screen (splitview.js): the pill in the sidebar hover box... */
+.tbc-split-pill {
+  display: block;
+  margin-top: 6px;
+  padding: 3px 10px;
+  border: 1px solid #a970ff;
+  border-radius: 3px;
+  background: rgba(169, 112, 255, 0.15);
+  color: #d5bfff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tbc-split-pill:hover {
+  background: rgba(169, 112, 255, 0.3);
+}
+/* ...and the split itself: everything right of the left sidebar, two columns,
+   each a stream with its chat underneath. */
+.tbc-split {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  z-index: 1500;
+  display: flex;
+  gap: 2px;
+  background: #0e0e10;
+}
+.tbc-split__col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #18181b;
+}
+.tbc-split__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 26px;
+  padding: 0 4px 0 10px;
+  color: #efeff1;
+  font: 600 12px/1 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+}
+.tbc-split__close {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: #adadb8;
+  font-size: 16px;
+  cursor: pointer;
+}
+.tbc-split__close:hover {
+  background: #2f2f35;
+  color: #fff;
+}
+.tbc-split__player {
+  flex: none;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 60%;
+  border: 0;
+  background: #000;
+}
+.tbc-split__chat {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border: 0;
+}
+/* The sound menu on the line between the two videos: only left, both, only
+   right. Shows while you hover either video (or the menu itself). */
+.tbc-split__audio {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 3px;
+  border-radius: 3px;
+  background: rgba(14, 14, 16, 0.88);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s 0.6s;
+}
+.tbc-split:has(.tbc-split__player:hover) .tbc-split__audio,
+.tbc-split__audio:hover {
+  opacity: 1;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+.tbc-split__audio-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 20px;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: #adadb8;
+  cursor: pointer;
+}
+.tbc-split__audio-btn:hover {
+  background: #2f2f35;
+  color: #fff;
+}
+.tbc-split__audio-btn--on,
+.tbc-split__audio-btn--on:hover {
+  background: #a970ff;
+  color: #fff;
+}
+
+/* Pinned Channels list at the top of the left sidebar, and the Pin button
+   next to Follow on a channel's page (pinchannels.js). Rows are a bit
+   smaller than Twitch's own sidebar rows. */
+.tbc-pinned {
+  margin-bottom: 4px;
+}
+.tbc-pinned__head {
+  padding: 10px 10px 4px;
+  color: #efeff1;
+  font-size: 14px;
+  font-weight: 600;
+}
+.tbc-pinned__row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px;
+  color: #efeff1;
+  text-decoration: none;
+}
+.tbc-pinned__row:hover {
+  background: rgba(83, 83, 95, 0.38);
+  color: #efeff1;
+  text-decoration: none;
+}
+.tbc-pinned__avatar {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #35353b;
+  object-fit: cover;
+}
+.tbc-pinned__row:not(.tbc-pinned__row--live) .tbc-pinned__avatar {
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+.tbc-pinned__text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.25;
+}
+.tbc-pinned__name,
+.tbc-pinned__sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tbc-pinned__name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.tbc-pinned__row:not(.tbc-pinned__row--live) .tbc-pinned__name {
+  color: #adadb8;
+}
+.tbc-pinned__sub {
+  color: #adadb8;
+  font-size: 11.5px;
+}
+.tbc-pinned__status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #efeff1;
+}
+.tbc-pinned__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #eb0400;
+}
+.tbc-pinned__unpin {
+  display: none;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: #adadb8;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.tbc-pinned__unpin:hover {
+  color: #efeff1;
+}
+.tbc-pinned__row:hover .tbc-pinned__status {
+  display: none;
+}
+.tbc-pinned__row:hover .tbc-pinned__unpin {
+  display: block;
+}
+/* Collapsed sidebar: just the pictures. */
+.side-nav--collapsed .tbc-pinned__head,
+.side-nav--collapsed .tbc-pinned__text,
+.side-nav--collapsed .tbc-pinned__status,
+.side-nav--collapsed .tbc-pinned__unpin {
+  display: none !important;
+}
+.side-nav--collapsed .tbc-pinned__row {
+  justify-content: center;
+  padding: 4px 0;
+}
+.tbc-pinbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  margin-right: 10px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 2px;
+  background: rgba(83, 83, 95, 0.38);
+  color: #efeff1;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tbc-pinbtn:hover {
+  background: rgba(83, 83, 95, 0.55);
+}
+.tbc-pinbtn--on {
+  color: #bf94ff;
+}
+
+/* Your own name in chat: your username on your messages, and when someone
+   else writes it (myname.js). A box in your chat-name colour. */
+.tbc-me {
+  padding: 1px 5px;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tbc-me-color, currentColor) 75%, transparent);
+  background: color-mix(in srgb, var(--tbc-me-color, currentColor) 18%, transparent);
+}
+
+/* Pause corner: the bottom-left quarter of the video, above the controls, on top of
+   any extension laid over the video (content.js). Shows itself on hover. */
+.tbc-pausezone {
+  position: absolute;
+  left: 0;
+  bottom: 76px; /* above the controls and the live timeline */
+  z-index: 3;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  width: 50%;
+  height: calc(50% - 38px);
+  padding: 10px;
+  box-sizing: border-box;
+  color: transparent;
+  cursor: pointer;
+}
+.tbc-pausezone.tbc-pausezone--seen:hover {
+  color: rgba(255, 255, 255, 0.55);
+  background: radial-gradient(circle at 0 100%, rgba(0, 0, 0, 0.3), transparent 70%);
+}
+/* Not on VODs: their seek bar sits where the corner would start, and they
+   have no extension overlays, so a click anywhere on the video already works. */
+.video-player__overlay:has([data-a-target="player-seekbar"]) > .tbc-pausezone {
+  display: none;
+}
+
+/* Live timeline above the player controls, styled like Twitch's purple VOD
+   seek bar: start of the stream on the left, now on the right, your marks as
+   orange pins (vodmarks.js). */
+.tbc-livebar {
+  padding: 10px 10px 2px;
+}
+.tbc-livebar__track {
+  position: relative;
+  height: 4px;
+  border-radius: 2px;
+  background: #9147ff; /* Twitch's purple, like the seek bar on VODs */
+  cursor: crosshair;
+}
+.tbc-livebar__track::after {
+  /* A taller invisible strip, so the thin line is easy to hit. */
+  content: "";
+  position: absolute;
+  inset: -8px 0;
+}
+.tbc-livebar .tbc-mark {
+  bottom: -4px;
+  height: 12px;
+}
+.tbc-livebar .tbc-mark::before {
+  top: -10px;
+  width: 10px;
+  height: 10px;
+  left: -4px;
+}
+
+/* Favorite rewards (rewardsearch.js): a star in each reward's top-right corner
+   (shown on hover, always shown once a favorite), and favorites moved up under
+   a "Favorites" heading, below Power-ups and the watch streak, with a line
+   between them and the other rewards. The list is a wrapping row, so "order" does the moving. */
+.tbc-rsearch {
+  order: -1;
+}
+.tbc-rstar-head {
+  order: 1;
+  width: 100%;
+  padding: 4px 0 6px;
+  color: #efeff1;
+  font-size: 13px;
+  font-weight: 600;
+}
+.tbc-rstarred {
+  order: 2;
+}
+.tbc-rstar-end {
+  order: 3;
+  width: 100%;
+  height: 1px;
+  margin: 2px 0 10px;
+  background: #3a3a3d;
+}
+.tbc-rafter {
+  order: 4;
+}
+.tbc-rstar-host {
+  position: relative;
+}
+.tbc-rstar {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 2;
+  display: flex;
+  padding: 3px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #efeff1;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  opacity: 0;
+  cursor: pointer;
+}
+.tbc-rstar-host:hover .tbc-rstar {
+  opacity: 1;
+}
+.tbc-rstar svg {
+  fill: inherit;
+  stroke: inherit;
+}
+.tbc-rstar--on {
+  opacity: 1;
+  color: #ffb31a;
+  fill: #ffb31a;
+}
+
+/* "Highlight words" at the top of the quick phrases pop-up (phrases.js): small,
+   the words as chips with ×, and a slim box to add one. */
+.tbc-hl .tbc-phrases__head {
+  margin-bottom: 4px;
+}
+
+.tbc-hl__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+}
+.tbc-hl__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+}
+.tbc-hl__x {
+  padding: 0 0 0 2px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1;
+  opacity: 0.6;
+  cursor: pointer;
+}
+.tbc-hl__x:hover {
+  opacity: 1;
+}
+.tbc-hl__add .tbc-phrases__chipnew {
+  width: 80px;
+  padding: 2px 6px;
+  font-size: 12px;
+}
+.tbc-phrases__head--sub {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #2f2f35;
+}
+
+/* ===== Handshake buttons for the hub (hub.js) ===== */
+.tbc-hubbtn-wrap {
+  display: flex;
+  align-items: center;
+}
+.tbc-hubbtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #efeff1;
+  cursor: pointer;
+}
+/* In the top bar, right of the search box (which keeps 16px to its right). */
+.tbc-hubtop-wrap {
+  margin-left: -8px;
+}
+.tbc-hubtop {
+  width: 36px;
+  height: 36px;
+  border-radius: 3px;
+  background: rgba(83, 83, 95, 0.38);
+}
+.tbc-hubtop:hover {
+  background: rgba(83, 83, 95, 0.6);
+}
+/* In the chat header: smaller and quiet until you point at it. */
+.tbc-hubchat-wrap {
+  margin-right: 2px;
+}
+.tbc-hubchat {
+  width: 26px;
+  height: 26px;
+  border-radius: 2px;
+  opacity: 0.45;
+}
+.tbc-hubchat svg {
+  width: 15px;
+  height: 15px;
+}
+.tbc-hubchat:hover {
+  opacity: 1;
+  background: rgba(83, 83, 95, 0.48);
+}
+
+/* ===== Flagging chat lines (flag.js) ===== */
+.chat-line__message:hover {
+  position: relative;
+}
+/* Sits in a strip left of each line, widened from Twitch's 16px so the button
+   never covers the words. */
+.tbc-flagging .chat-line__message {
+  padding-left: 26px !important;
+}
+.tbc-flagbtn {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  z-index: 2;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #2f2f35;
+  color: #ffb31a; /* flag.js sets your chat colour once it knows it */
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+.chat-line__message:hover .tbc-flagbtn {
+  display: flex;
+}
+.tbc-flagbtn:hover {
+  background: #53535f;
+}
+.tbc-flagged {
+  position: relative;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 2px var(--tbc-flag), 0 0 12px var(--tbc-flag);
+}
+/* While a line glows, the flagger's picture takes the flag button's place. */
+.chat-line__message.tbc-flagged .tbc-flagbtn {
+  display: none;
+}
+.tbc-flagpic {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  z-index: 2;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.chat-line__message.tbc-flagged:hover .tbc-flagpic {
+  display: none;
+}
+.tbc-flagx {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  z-index: 3;
+  display: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #2f2f35;
+  color: #efeff1;
+  font: 16px/24px Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+  text-align: center;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+.chat-line__message.tbc-flagged:hover .tbc-flagx {
+  display: block;
+}
+.tbc-flagx:hover {
+  background: #53535f;
+}
+.tbc-flagtoast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 10000;
+  padding: 8px 12px;
+  border-radius: 3px;
+  background: #18181b;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+  color: #efeff1;
+  font: 600 13px/1.4 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ===== Notes on chat lines (chatnotes.js) ===== */
+/* The dot: inside the line, just left of Twitch's reply and three-dot buttons, once the
+   pointer heads that way. */
+.tbc-notehost {
+  position: relative;
+}
+.tbc-notedot {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 28%, #7db0ef 0%, #3f7dd8 55%, #2a5aa8 100%);
+  box-shadow: 0 4px 18px rgba(63, 125, 216, 0.6), 0 0 0 2px rgba(4, 5, 11, 0.9);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.8);
+  transition: opacity 0.5s ease-out, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1); /* a smooth half-second grow, no bounce */
+}
+/* Gone at once (chat moved it away from the pointer), no fading out. */
+.tbc-notedot--quick {
+  transition: none;
+}
+.tbc-notedot--on {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+.tbc-notedot:hover {
+  box-shadow: 0 6px 26px rgba(63, 125, 216, 0.85), 0 0 0 2px rgba(4, 5, 11, 0.9);
+}
+/* Notes above their line, as text-message bubbles in StreamSpace's look (space black,
+   navy glass, its brand blue): others' on the left, yours on the right in blue, each
+   with its writer's picture. */
+.tbc-notes {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 3px;
+  font: 13px/1.35 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+}
+.tbc-note {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: 88%;
+  color: #efeff1;
+}
+.tbc-note--mine {
+  flex-direction: row-reverse;
+  align-self: flex-end;
+}
+.tbc-note--new {
+  animation: tbc-note-up 0.32s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+@keyframes tbc-note-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.94);
+  }
+}
+/* iPhone-style bubbles: solid, very round, a curled tail at the bottom corner, and the
+   writer's picture and name inside at the top. */
+.tbc-note__main {
+  position: relative;
+  min-width: 0;
+  padding: 6px 12px 6px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #5b9af0, #2f63c0); /* the send button's blue on the mod side, top to bottom */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  text-shadow: none;
+  overflow-wrap: anywhere;
+}
+.tbc-note--mine .tbc-note__main {
+  box-shadow: 0 10px 30px rgba(63, 125, 216, 0.35);
+}
+/* Picture, name, then the note on the same line, wrapping down underneath. */
+.tbc-note__head {
+  display: inline;
+  margin-right: 5px;
+}
+.tbc-note__pic {
+  vertical-align: -5px;
+  margin: 0 5px 0 -4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #2a5aa8;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+}
+.tbc-note__who {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.tbc-note--mine .tbc-note__who {
+  color: #fff;
+}
+.tbc-note__when {
+  float: right;
+  margin: 5px 0 -2px 10px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 10.5px;
+  line-height: 1;
+}
+.tbc-note--mine .tbc-note__when {
+  color: rgba(255, 255, 255, 0.75);
+}
+.tbc-note__x {
+  align-self: center;
+  display: none;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: #adadb8;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.tbc-note:hover .tbc-note__x {
+  display: block;
+}
+.tbc-note__x:hover {
+  color: #fff;
+}
+/* The bottom bubble's curled tail, like a text message's; the box being written in
+   points down at its comment too. The comment itself is lit faintly to match. */
+.tbc-notes > .tbc-note:last-child .tbc-note__main::after {
+  content: "";
+  position: absolute;
+  left: -5px;
+  bottom: 0;
+  width: 16px;
+  height: 18px;
+  background: #2f63c0; /* the gradient's bottom */
+  clip-path: path("M6 0 Q6 14 0 18 Q10 18 16 12 L16 0 Z");
+}
+.tbc-notes > .tbc-note--mine:last-child .tbc-note__main::after {
+  left: auto;
+  right: -5px;
+  clip-path: path("M10 0 Q10 14 16 18 Q6 18 0 12 L0 0 Z");
+}
+.tbc-notes > .tbc-notebox:last-child::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  bottom: -15px;
+  width: 20px;
+  height: 16px;
+  background: #0b1224;
+  clip-path: polygon(0 0, 100% 0, 10% 100%);
+}
+.tbc-noted {
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(63, 125, 216, 0.22), rgba(63, 125, 216, 0.06) 70%, transparent);
+}
+/* The box to write one: a rounded message field with a round send button. */
+.tbc-notebox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 4px 4px 14px;
+  border-radius: 20px;
+  background: linear-gradient(160deg, rgba(16, 24, 44, 0.97), rgba(6, 9, 18, 0.97));
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(125, 176, 239, 0.35), 0 0 20px rgba(63, 125, 216, 0.25);
+  animation: tbc-note-up 0.25s ease-out;
+}
+.tbc-notebox textarea {
+  flex: 1;
+  min-width: 0;
+  resize: none;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: #efeff1;
+  font: inherit;
+}
+.tbc-notebox textarea::placeholder {
+  color: #7f8aa3;
+}
+.tbc-notebox__send {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #3f7dd8;
+  color: #fff;
+  cursor: pointer;
+}
+.tbc-notebox__send:hover {
+  background: #5a92e6;
+}
+
+/* Channel column down the right of the emote picker (freqchannels.js), in
+   place of the one Twitch's newer picker dropped. */
+.tbc-chnav-host {
+  position: relative;
+}
+.tbc-chnav-host > .scrollable-area {
+  margin-right: 44px;
+}
+.tbc-chnav {
+  position: absolute;
+  right: 0;
+  width: 44px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0;
+  box-sizing: border-box;
+  border-left: 1px solid var(--color-border-base, rgba(83, 83, 95, 0.48));
+}
+.tbc-chnav__item {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tbc-chnav__item:hover {
+  background: var(--color-background-interactable-hover, rgba(83, 83, 95, 0.48));
+}
+.tbc-chnav__item--on {
+  box-shadow: 0 0 0 2px #a970ff;
+}
+.tbc-chnav__item img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: block;
+}
+
+/* The streak flame steps aside while Twitch's own streak popup shows (streak.js). */
+.tbc-streak.tbc-streak--away {
+  display: none;
+}
+
+/* Clear all, in the header of Twitch's notifications panel (clearnotifs.js). */
+.tbc-clearnotifs {
+  padding: 3px 8px;
+  border: 1px solid #53535f;
+  border-radius: 3px;
+  background: none;
+  color: #adadb8;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tbc-clearnotifs:hover {
+  border-color: #adadb8;
+  color: #efeff1;
+}
+.tbc-clearnotifs--sure {
+  border-color: #eb0400;
+  color: #ff8280;
+}
+.tbc-clearnotifs:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+/* Quieter top bar (quietnav.js): Prime, Bits and Ad-Free hidden behind a caret, no red counts. */
+.tbc-navquiet .tbc-navhide,
+.tbc-navquiet .tbc-navcount,
+.tbc-navquiet .top-nav__menu .onsite-notifications-toast-manager {
+  display: none !important;
+}
+/* Open, the right side keeps its hidden width (quietnav.js), so its buttons mustn't squash. */
+html:not(.tbc-navquiet) .tbc-navmenu > * {
+  flex-shrink: 0;
+}
+.tbc-navcaret {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 30px;
+  margin: 0 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--color-text-alt-2, #adadb8);
+  cursor: pointer;
+}
+.tbc-navcaret:hover {
+  background: var(--color-background-button-text-hover, rgba(83, 83, 95, 0.38));
+  color: var(--color-text-base, #efeff1);
+}
+
+/* Precise clip trimming row under the clip editor's timeline (cliptrim.js). */
+.tbc-ctrim {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin: 8px 0 4px;
+  font-size: 13px;
+  color: var(--color-text-base, #efeff1);
+}
+.tbc-ctrim-edge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.tbc-ctrim-label {
+  font-weight: 600;
+  margin-right: 4px;
+}
+.tbc-ctrim-time {
+  width: 84px;
+  padding: 4px 6px;
+  border: 1px solid var(--color-border-base, #53535f);
+  border-radius: 4px;
+  background: var(--color-background-base, #18181b);
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.tbc-ctrim-time:focus {
+  outline: 2px solid #a970ff;
+  outline-offset: 0;
+}
+.tbc-ctrim-btn {
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--color-background-interactable-hover, rgba(83, 83, 95, 0.38));
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.tbc-ctrim-btn:hover {
+  background: #772ce8;
+  color: #fff;
+}
+.tbc-ctrim-len {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+.tbc-ctrim-box {
+  width: 100%;
+}
+.tbc-ctrim--busy {
+  opacity: 0.55;
+  pointer-events: none;
+}
+/* On a VOD: the whole VOD, with the loaded piece you can drag (cliptrim.js). */
+.tbc-ctrim-vod {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 4px 0 8px;
+  font-size: 12px;
+  color: var(--color-text-base, #efeff1);
+}
+.tbc-ctrim-track {
+  position: relative;
+  flex: 1 1 160px;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--color-background-interactable-hover, rgba(83, 83, 95, 0.38));
+  cursor: pointer;
+  touch-action: none;
+}
+.tbc-ctrim-piece {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  min-width: 6px;
+  border-radius: 4px;
+  background: #a970ff;
+  box-shadow: 0 0 0 2px rgba(169, 112, 255, 0.35);
+  cursor: grab;
+}
+.tbc-ctrim-track:active .tbc-ctrim-piece {
+  cursor: grabbing;
+}
+.tbc-ctrim-info {
+  flex-basis: 100%;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}

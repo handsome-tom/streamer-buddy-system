@@ -690,6 +690,7 @@ function seed(login) {
   return base;
 }
 
-window.SANDBOX = { Socket, fetch: (url, init) => twitch.api(url, init), seed };
+// say: something said in the pretend chat (the playground's pretend Twitch chat, as the mod).
+window.SANDBOX = { Socket, fetch: (url, init) => twitch.api(url, init), seed, say: (who, text) => twitch.controls.say(who, text) };
 export const pretendTwitch = twitch.controls;
 export const resetRelay = (extra) => relay.reset(extra);

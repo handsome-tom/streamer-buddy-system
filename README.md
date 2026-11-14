@@ -29,6 +29,15 @@ the real dock, as the streamer's OBS dock and mods' side panels, on the demo's p
 "nudge" in their name. To watch them, serve the folder and open `tests/harness.html`.
 Tests live in `tests/specs.js`, one entry per thing people rely on.
 
+## Testing Playground (test.streamspace.tv)
+
+The test site opens on the playground (`demo/playground.html` → `demo/play.html?bare`): every
+demo control on the outside, the streamer's OBS dock and a mod's side panel in the middle,
+and on the far right a pretend Twitch chat (`demo/twitch/`) where StreamSpace's real chat
+scripts run (flag, chat notes, right-click notes, your name boxed, quick phrases), as mod1.
+Those scripts are copies: after changing them in the extension, run
+`sh dev/sync-extension.sh` and bump `version.txt`.
+
 ## For the streamer: adding it to OBS
 
 1. In OBS, open **Docks → Custom Browser Docks…**

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Twitch chat (pretend) · Testing Playground</title>
+<!--
+  A pretend Twitch chat for the Testing Playground (play.html?bare): the streamer's chat as a
+  mod (mod1, shown as BlazeMod420) sees it on twitch.tv with StreamSpace installed. The chat
+  is the demo's pretend chat (demo/hub.js), drawn the way Twitch draws its own, and
+  StreamSpace's real chat scripts (ext/) run on it: the flag, chat notes, right-clicking a
+  name, your name boxed, quick phrases. shim.js stands in for Chrome and twitch.tv.
+  Not Twitch's code or art: only built to look close enough for the extension to work on.
+-->
+<link rel="stylesheet" href="ext/styles.css">
+<link rel="stylesheet" href="chat.css">
+<script src="shim.js"></script>
+</head>
+<body>
+  <div class="tw-chat">
+    <div class="stream-chat-header">
+      <button type="button" class="tw-iconbtn" aria-label="Collapse Chat" title="Collapse Chat"><svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M4 16V4H2v12h2zM13 15l-1.5-1.5L14 11H6V9h8l-2.5-2.5L13 5l5 5-5 5z" fill="currentColor"/></svg></button>
+      <h2 class="tw-chat__title">Stream chat</h2>
+      <div><button type="button" class="tw-iconbtn" aria-label="Users in Chat" title="Users in Chat"><svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M7 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm6 9.5c2.8.4 5 2 5 4.5v2h-3v-2c0-1.8-.8-3.3-2-4.5zM13 2.1a4 4 0 0 1 0 7.8A6 6 0 0 0 13 2.1zM1 16c0-2.8 2.7-5 6-5s6 2.2 6 5v2H1v-2z" fill="currentColor"/></svg></button></div>
+    </div>
+    <div class="chat-scrollable-area__message-container" id="lines" role="log" aria-live="polite"></div>
+    <button type="button" class="tw-paused" id="paused" hidden>Chat paused due to scroll</button>
+    <div class="chat-input">
+      <div class="chat-input__textarea">
+        <div class="chat-wysiwyg-input__editor" data-a-target="chat-input" contenteditable="true" role="textbox" aria-label="Send a message" data-placeholder="Send a message"></div>
+        <div class="tw-chat__inputbtns">
+          <button type="button" class="tw-iconbtn" data-a-target="bits-button" aria-label="Bits" title="Bits"><svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M3 12l7-10 7 10-7 6-7-6zm7 3.4L13.9 12 10 6.4 6.1 12 10 15.4z" fill="currentColor"/></svg></button>
+          <button type="button" class="tw-iconbtn" data-a-target="emote-picker-button" aria-label="Emote picker" title="Emotes"><svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M7 11a3 3 0 0 0 6 0h2a5 5 0 0 1-10 0h2zm-1-4a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm8 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2zM10 0a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16z" fill="currentColor"/></svg></button>
+        </div>
+      </div>
+      <div class="chat-input__buttons-container">
+        <div class="tw-chat__points" title="Channel points">
+          <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M10 6a4 4 0 0 1 4 4h-2a2 2 0 0 0-2-2V6zM2 10a8 8 0 1 0 16 0 8 8 0 0 0-16 0zm2 0a6 6 0 1 1 12 0 6 6 0 0 1-12 0z" fill="currentColor"/></svg> 1.2K
+        </div>
+        <button type="button" class="tw-chatbtn" data-a-target="chat-send-button" id="send">Chat</button>
+      </div>
+    </div>
+  </div>
+  <script src="chat.js"></script>
+  <!-- StreamSpace's chat scripts, in the extension's own order (its manifest.json). -->
+  <script src="ext/backup.js"></script>
+  <script src="ext/settings.js"></script>
+  <script src="ext/lookup.js"></script>
+  <script src="ext/people.js"></script>
+  <script src="ext/myname.js"></script>
+  <script src="ext/phrases.js"></script>
+  <script src="ext/hub.js"></script>
+  <script src="ext/flag.js"></script>
+  <script src="ext/chatnotes.js"></script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 // in this page (demo/hub.js), never the real one.
 
 // The same address play.html uses (with its ?v=), so a browser never runs an old copy.
-import { Socket, resetRelay, pretendTwitch } from "../demo/hub.js?v=128";
+import { Socket, resetRelay, pretendTwitch } from "../demo/hub.js?v=129";
 
 export { pretendTwitch };
 export const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -103,6 +103,8 @@ const ADDRESS = {
   obs: (login, extra) => `../?dev=${login}&livechat&ownchat&mock&lightms=6000&sandbox${extra}`,
   ext: (login, extra) => `../?dev=${login}&embed=ext&watch=streamer&modfor=streamer&sandbox${extra}`,
   page: (login, extra) => `../?dev=${login}&sandbox${extra}`,
+  // The playground's pretend Twitch chat, as mod1 sees it with StreamSpace (login is ignored).
+  twitch: () => "../demo/twitch/chat.html",
 };
 
 export async function panel(login, kind = "ext", extra = "") {
@@ -127,7 +129,7 @@ export async function panel(login, kind = "ext", extra = "") {
     close: () => frame.remove(),
   };
   opened.push(p);
-  await until(() => p.doc?.readyState === "complete" && p.doc.getElementById("main"), `${login}'s panel to load`, 10000);
+  await until(() => p.doc?.readyState === "complete" && p.doc.getElementById(kind === "twitch" ? "lines" : "main"), `${login}'s panel to load`, 10000);
   p.win.addEventListener("error", (e) => p.errors.push(String(e.message)));
   p.win.addEventListener("unhandledrejection", (e) => p.errors.push(String(e.reason?.message || e.reason)));
   return p;
