@@ -680,9 +680,20 @@
   html.bare .screen__label, html.bare .menu, html.bare #allControls, html.bare .callout, html.bare .clickhint, html.bare .screen::before { display: none !important; }
   html.bare [data-tip]::after { display: none !important; }
   html.bare .demo { padding: 16px 0; }
-  html.bare .stage { margin-top: 0; gap: 24px; }
+  html.bare .stage { margin-top: 0; gap: 20px; grid-template-columns: minmax(150px, 210px) minmax(0, 420px) minmax(0, 420px) minmax(150px, 210px); grid-template-rows: auto; align-items: start; }
   html.bare .stage .screen { display: block; grid-row: auto; }
+  html.bare .stage .screen:last-child { order: 0; } /* the mod's panel on the left here, by the mod's buttons */
   html.bare .stage iframe { height: calc(100vh - 32px); min-height: 480px; }
+  /* Every demo control, plainly: the mod's on the far left, the streamer's on the far right. */
+  .pg { display: flex; flex-direction: column; gap: 4px; max-height: calc(100vh - 32px); overflow-y: auto; font-size: 12.5px; }
+  .pg__head { margin: 0 0 4px; font-size: 13px; font-weight: 800; color: #fff; }
+  .pg--mod .pg__head { color: #3fc98e; }
+  .pg--streamer .pg__head { color: #b48cff; }
+  .pg__cap { margin: 10px 0 2px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #77777f; }
+  .pg .chip, .pg select { display: flex; justify-content: flex-start; width: 100%; height: auto; padding: 6px 10px; font: inherit; font-size: 12.5px; font-weight: 600; text-align: left; color: #e4e4ea; background: #141418; border: 1px solid #2a2a30; border-radius: 4px; box-shadow: none; }
+  .pg .chip:hover { background: #1f1f25; border-color: #44444c; }
+  .pg .chip.on { border-color: #3fc98e; }
+  .pg__said { margin-top: 12px; font-size: 11.5px; line-height: 1.4; color: #9a9aa5; }
 </style>
 </head>
 <body>
@@ -823,10 +834,53 @@
       </details>
     </div>
   </section>
+<script>
+  // The Testing Playground (?bare): every demo control as a plain list, the mod's beside the
+  // mod's panel on the left and the streamer's beside the streamer's dock on the right. The
+  // buttons are the same ones (moved, not copied), so they do exactly what they do in the demo.
+  if (document.documentElement.classList.contains("bare")) {
+    const stage = document.querySelector(".stage");
+    const column = (kind, title, groups) => {
+      const col = document.createElement("div");
+      col.className = `pg pg--${kind}`;
+      col.append(Object.assign(document.createElement("div"), { className: "pg__head", textContent: title }));
+      for (const [caption, ids] of groups) {
+        col.append(Object.assign(document.createElement("div"), { className: "pg__cap", textContent: caption }));
+        for (const id of ids) {
+          const control = document.getElementById(id);
+          if (control) col.append(control);
+        }
+      }
+      return col;
+    };
+    const mod = column("mod", "Mod (mod1)", [
+      ["To the streamer", ["modAsk", "modSay", "modNote", "modVanish"]],
+      ["Escalate", ["modNudge", "modWarn"]],
+      ["In chat", ["modFlag", "modChatNote"]],
+      ["A mod in chat", ["chatter", "cJoin", "cSay", "cPart"]],
+    ]);
+    const said = document.getElementById("said");
+    if (said) {
+      said.className = "pg__said";
+      mod.append(said);
+    }
+    const streamer = column("streamer", "Streamer", [
+      ["To your mods", ["streamerAsk"]],
+      ["Twitch events", ["tRaid", "tFirst", "tGift", "tStreak", "tSub", "tCheer", "tBadge", "tRedeem", "tHighlight", "tAnnounce", "tPin", "tHype", "tPoll", "tPred"]],
+      ["Chat", ["tCmd", "feed"]],
+      ["The playground", ["auto", "reload"]],
+    ]);
+    stage.prepend(mod);
+    stage.append(streamer);
+  }
+</script>
 <script type="module">
   import { Socket, pretendTwitch } from "./hub.js?v=125"; // the number: bump it when hub.js changes, so browsers fetch the new one
 
-  const said = (text) => (document.getElementById("said").textContent = text);
+  // In the playground (?bare) the panels swap sides (the mod's on the left), so "left" and
+  // "right" in these notes swap too.
+  const BARE = document.documentElement.classList.contains("bare");
+  const said = (text) => (document.getElementById("said").textContent = BARE ? text.replace(/\b(left|right)\b/g, (w) => (w === "left" ? "right" : "left")) : text);
   const pick = (list) => list[Math.floor(Math.random() * list.length)];
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
