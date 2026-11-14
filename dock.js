@@ -196,6 +196,35 @@
   let redeeming = false; // a pending invite has been sent on this connection
   let inviteLink = ""; // the invite link you made last, shown under Connections
   let inviteWait = false;
+
+  // ===== Problem reports and feedback (the relay explains them) ============================
+  // An error in this page's own code is reported to the relay: the error and where in the
+  // code, never anything anyone typed. Each kind once per page load, and five at most.
+  const oopsWaiting = []; // reports made before the relay was there
+  const oopsSent = new Set();
+  const PAGE_MODE = LIVECHAT ? "obs" : EMBED ? "panel" : "page";
+  function reportOops(msg, where) {
+    msg = String(msg || "").slice(0, 300);
+    where = String(where || "").replace(/https?:\/\/[^/ ]+\//g, "").replace(/\?[^:\s)]*/g, "").trim().slice(0, 200);
+    const key = `${msg}|${where}`;
+    if (!msg || DEMO || oopsSent.has(key) || oopsSent.size >= 5) return;
+    oopsSent.add(key);
+    const m = { t: "oops", msg, where, mode: PAGE_MODE, build: window.DOCK_VERSION || "" };
+    try {
+      if (socket?.readyState === 1 && ready) return void socket.send(JSON.stringify(m));
+    } catch {} // an error before the relay part of this file has even run
+    oopsWaiting.push(m);
+  }
+  const ownFile = (f) => /\/(dock|ownchat|config)\.js/.test(String(f || ""));
+  addEventListener("error", (e) => ownFile(e.filename) && reportOops(e.message, `${String(e.filename).split("/").pop()}:${e.lineno}:${e.colno}`));
+  addEventListener("unhandledrejection", (e) => {
+    const stack = String(e.reason?.stack || "");
+    const line = stack.split("\n").find((l) => ownFile(l));
+    if (line) reportOops(e.reason?.message || e.reason, line.replace(/^\s*at\s+/, ""));
+  });
+  let reportsNew = 0; // the owner's: feedback and new kinds of error since they last looked
+  let reportsOpen = false;
+  let reportsData = null;
   // The side panel opens on Mod (the sword): the stream you're on.
   const HOME_VIEW = DECK ? "deck" : EMBED ? "mod" : "cards";
   let view = POPOUT && /^(ask|people|person|chat|stats)$/.test(params.get("view")) ? params.get("view") : HOME_VIEW; // "cards" | "deck" | "ask" | "people" | "person" | "chat" | "stats"
@@ -781,11 +810,17 @@
       if (m.t === "state") {
         gotState(m);
         useInvite();
+        while (oopsWaiting.length && socket?.readyState === 1) socket.send(JSON.stringify(oopsWaiting.shift()));
       }
       else if (m.t === "q") gotQuestion(m.q);
       else if (m.t === "invite") gotInvite(m.code);
       else if (m.t === "redeemed") gotRedeemed(m.from);
       else if (m.t === "invited") gotInvited(m.login);
+      else if (m.t === "thanks") feedbackThanks?.();
+      else if (m.t === "reports") {
+        reportsData = m;
+        render();
+      }
       else if (m.t === "msg") gotMessage(m.m);
       else if (m.t === "flash") gotFlash(m.f);
       else if (m.t === "unflash") {
@@ -842,6 +877,7 @@
     if ("owner" in m) owner = m.owner || null;
     allowed = m.allowed || null;
     asking = m.asking || [];
+    reportsNew = m.reports || 0;
     limit = m.limit || null;
     if (first) setTimeout(spinPresence, 400);
     connections = m.connections || [];
@@ -1164,6 +1200,54 @@
     inviteLink = `${location.origin}${location.pathname}?invite=${code}`;
     render();
   }
+  // Feedback: a few lines to the StreamSpace team, from Settings or Connections.
+  let feedbackThanks = null;
+  function openFeedback() {
+    document.querySelector(".top8")?.remove();
+    const shade = el("div", "top8 feedbackbox");
+    const box = el("form", "top8__box");
+    box.setAttribute("role", "dialog");
+    box.setAttribute("aria-label", "Send feedback");
+    const close = () => {
+      shade.remove();
+      feedbackThanks = null;
+      removeEventListener("keydown", onKey);
+    };
+    const onKey = (e) => e.key === "Escape" && close();
+    addEventListener("keydown", onKey);
+    shade.addEventListener("click", (e) => e.target === shade && close());
+    const text = el("textarea", "feedback__text");
+    text.rows = 5;
+    text.maxLength = 1500;
+    text.placeholder = "What's working, what isn't, or what you wish it did…";
+    const note = el("p", "cx__note");
+    box.append(el("div", "top8__head", "Send feedback"), el("p", "top8__words", "It goes to the StreamSpace team, with your Twitch name so we can follow up."), text, note);
+    const row = el("div", "top8__btns");
+    const cancel = el("button", "cx__btn", "Cancel");
+    cancel.type = "button";
+    cancel.addEventListener("click", close);
+    const send = el("button", "cx__btn cx__btn--blue", "Send");
+    send.type = "submit";
+    row.append(cancel, send);
+    box.append(row);
+    box.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const said = text.value.trim();
+      if (!said) return void (note.textContent = "Write something first.");
+      note.textContent = "";
+      if (!relay({ t: "feedback", text: said, mode: PAGE_MODE, build: window.DOCK_VERSION || "" })) return void (note.textContent = "Not connected right now. Try again in a moment.");
+      send.disabled = true;
+      send.textContent = "Sending…";
+      feedbackThanks = () => {
+        box.replaceChildren(el("div", "top8__head", "Thanks!"), el("p", "top8__words", "We read every one."));
+        setTimeout(close, 2500);
+      };
+    });
+    shade.append(box);
+    document.body.append(shade);
+    text.focus();
+  }
+
   // The invite's result, in the same box as the Top 8 note (Tom says hi when it worked).
   function showInviteNote(head, words, tom = false) {
     document.querySelector(".top8")?.remove();
@@ -1793,6 +1877,14 @@
       shareView();
     }));
     parts.push(el("p", "set__note", "Your connections see it at the top of their Chrome side panel."));
+    const fb = el("button", "set__feedback", "Send feedback");
+    fb.type = "button";
+    fb.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openSettings(false);
+      openFeedback();
+    });
+    if (me) parts.push(fb);
     const brand = el("div", "set__brand");
     const mark = el("img", "set__brandmark");
     mark.src = "icons/ts-mark.svg";
@@ -4022,6 +4114,7 @@
     }
     panel.append(addCard);
     if (allowed) panel.append(allowCard());
+    if (me && owner && me.login === owner) panel.append(reportsCard());
 
     // ----- Groups (your tags)
     const able = connections.filter((c) => c.mutual).map((c) => c.login);
@@ -4201,7 +4294,10 @@
     const out = el("button", "panel__signout", `Sign out of ${me.login}`);
     out.type = "button";
     out.addEventListener("click", signOut);
-    foot.append(sound, out, el("p", "cx__build", `Build ${window.DOCK_VERSION || "?"}`));
+    const fb = el("button", "panel__signout cx__feedback", "Send feedback");
+    fb.type = "button";
+    fb.addEventListener("click", openFeedback);
+    foot.append(sound, fb, out, el("p", "cx__build", `Build ${window.DOCK_VERSION || "?"}`));
     panel.append(foot);
     return panel;
   }
@@ -4227,6 +4323,39 @@
   // straight away (you're their first connection); taking them off signs them out.
   let allowOpen = false;
   let allowOff = ""; // asked "are you sure?" about taking this one off
+  // The owner's feedback and problem reports (only the owner's page gets them).
+  function reportsCard() {
+    const card = el("section", "cx__card cx__reports");
+    const head = el("button", "cx__allowhead");
+    head.type = "button";
+    head.append(el("span", "cx__label", "Feedback & problems"), el("span", "cx__allowtoggle", reportsOpen ? "Hide" : "Show"));
+    if (reportsNew) head.querySelector(".cx__label").after(el("span", "cx__askcount", `${reportsNew} new`));
+    head.addEventListener("click", () => {
+      reportsOpen = !reportsOpen;
+      if (reportsOpen) relay({ t: "reports" });
+      render();
+    });
+    card.append(head);
+    if (!reportsOpen) return card;
+    if (!reportsData) return card.append(el("p", "cx__hint", "Loading…")), card;
+    const { feedback = [], oops = [] } = reportsData;
+    card.append(el("div", "cx__label", `Feedback · ${feedback.length}`));
+    if (!feedback.length) card.append(el("p", "cx__hint", "None yet."));
+    for (const f of feedback) {
+      const row = el("div", "rep");
+      row.append(el("div", "rep__who", `${f.from} · ${ago(f.at)}${f.mode ? ` · ${f.mode}` : ""}`), el("div", "rep__text", f.text));
+      card.append(row);
+    }
+    card.append(el("div", "cx__label", `Problems · ${oops.length}`));
+    if (!oops.length) card.append(el("p", "cx__hint", "Nothing has broken lately."));
+    for (const o of oops) {
+      const row = el("div", "rep rep--oops");
+      row.append(el("div", "rep__text", o.msg), el("div", "rep__who", `${o.where || "?"} · ${o.count}× · last ${ago(o.last)} · build ${o.build || "?"} · ${o.logins.join(", ")}`));
+      card.append(row);
+    }
+    return card;
+  }
+
   function allowCard() {
     const card = el("section", "cx__card cx__allowlist");
     const head = el("button", "cx__sechead cx__allowhead");

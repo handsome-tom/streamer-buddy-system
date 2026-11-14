@@ -225,4 +225,55 @@ export const tests = {
     h.check(/full/.test(full.detail), `expected a "list is full" message, got: ${full.detail}`);
     h.check(!streamer.connectedTo("late"), "late shouldn't be connected past the Top 8");
   }),
+
+  // ----- Feedback and problem reports -------------------------------------------------------
+
+  "feedback sent from Settings reaches the owner, and only the owner": withAllowList(async (h) => {
+    const tom = h.person("tom");
+    await tom.ready;
+    tom.send({ t: "allow", login: "streamer", on: true });
+    await tom.next("state", (m) => (m.allowed || []).some((a) => (a.login || a) === "streamer"));
+    const dock = await h.panel("streamer", "ext");
+    (await h.until(() => dock.$("#settingsBtn"), "the Settings button")).click();
+    (await h.until(() => dock.$(".set__feedback"), "Send feedback in Settings")).click();
+    const box = await h.until(() => dock.$(".feedback__text"), "the feedback box");
+    box.value = "The nudge sound is too quiet";
+    box.form.requestSubmit();
+    await h.until(() => dock.has("Thanks!"), "the thank-you");
+    await h.until(() => tom.state.reports === 1, "the owner to see 1 new report");
+    tom.send({ t: "reports" });
+    const { feedback } = await tom.next("reports");
+    h.check(feedback[0]?.text === "The nudge sound is too quiet" && feedback[0]?.from === "streamer", `unexpected feedback: ${JSON.stringify(feedback[0])}`);
+    // Someone else asking for the reports gets nothing.
+    const streamer = h.person("streamer");
+    await streamer.ready;
+    streamer.send({ t: "reports" });
+    await h.wait(400);
+    h.check(!streamer.seen("reports"), "only the owner should get the reports");
+    // And the owner's own Connections shows it.
+    const tomsPanel = await h.panel("tom", "ext");
+    (await h.until(() => tomsPanel.$("#peopleBtn:not([hidden])"), "the owner's Connections button")).click();
+    (await h.until(() => tomsPanel.$(".cx__reports .cx__allowhead"), "the Feedback & problems card")).click();
+    await h.until(() => tomsPanel.has("The nudge sound is too quiet"), "the feedback in the owner's panel");
+    noErrors(dock, tomsPanel);
+  }),
+
+  "an error in the dock is reported to the owner once, without what anyone typed": withAllowList(async (h) => {
+    const tom = h.person("tom");
+    await tom.ready;
+    tom.send({ t: "allow", login: "streamer", on: true });
+    await tom.next("state", (m) => (m.allowed || []).some((a) => (a.login || a) === "streamer"));
+    const dock = await h.panel("streamer", "obs");
+    await h.until(() => dock.$("#quickAsk"), "the dock to be ready");
+    await h.wait(300);
+    const boom = () => dock.win.dispatchEvent(new dock.win.ErrorEvent("error", { message: "TypeError: test boom", filename: "https://example.com/dock.js?v=341", lineno: 12, colno: 34 }));
+    boom();
+    boom(); // the same error again: reported once
+    dock.win.dispatchEvent(new dock.win.ErrorEvent("error", { message: "someone else's script", filename: "https://example.com/other.js", lineno: 1, colno: 1 }));
+    await h.until(() => tom.state.reports >= 1, "the owner to see a new problem");
+    tom.send({ t: "reports" });
+    const { oops } = await tom.next("reports");
+    h.check(oops.length === 1, `expected 1 kind of problem, got ${oops.length}: ${JSON.stringify(oops)}`);
+    h.check(oops[0].msg === "TypeError: test boom" && oops[0].where === "dock.js:12:34" && oops[0].count === 1 && oops[0].logins.join() === "streamer", `unexpected report: ${JSON.stringify(oops[0])}`);
+  }),
 };

@@ -23,7 +23,7 @@
 <main>
   <header><img src="icons/ts-wordmark.svg" alt="StreamSpace"></header>
   <h1>Privacy policy</h1>
-  <p class="date">For the StreamSpace Chrome extension and Streamer Buddy System. Last updated November 12, 2026.</p>
+  <p class="date">For the StreamSpace Chrome extension and Streamer Buddy System. Last updated November 14, 2026.</p>
 
   <div class="card">
     <p><b>Short version:</b> StreamSpace keeps what you save inside your own browser. It doesn't sell anything, show ads, or track you. The only things that leave your browser are for Streamer Buddy System, if you sign in to it (your connections and the messages you choose to send to them), and the names of channels whose public details a feature looks up.</p>
@@ -43,6 +43,7 @@
     <li><b>Public channel lookups.</b> A few features need public facts from Twitch: pinned channels (pictures, who's live, viewer counts, when they were last live), your chat name color, and when a stream or video started, for video markers. These are asked through the Streamer Buddy System relay, which asks Twitch's official API. Only the channel names or video number go with the request, never your sign-in, and Cloudflare sees your IP address as with any website. The relay keeps the answers in memory for up to an hour so it doesn't ask Twitch again, and doesn't log who asked.</li>
     <li><b>Streamer Buddy System</b> (optional). If you sign in with Twitch in the side panel, your Twitch username and a sign-in token go to the Streamer Buddy System relay (a small server on Cloudflare run by the developer). The relay keeps the list of people you've connected with, and passes your questions, answers, notes and flagged chat lines to them. Messages are deleted after a week at most. Chat notes (a note a mod leaves on a line of a channel's chat, live or on a VOD) are kept with that moment of the stream for up to 60 days, so they show on the VOD, and only the writer's mutual connections can see them (plus the channel's streamer and their mutual connections, when the writer is connected with that streamer both ways). If a streamer turns on stream stats sharing, daily viewer numbers are kept for 40 days and monthly totals for 13 months. Sign-in asks Twitch for your channel's mods and the channels you mod, to fill the "Your mods" and "Channels I mod" lists. Nothing else is requested.</li>
     <li><b>Who can see your messages.</b> Messages are encrypted on their way to and from the relay, but they aren't end-to-end encrypted. While they're kept on the relay, the developer who runs it (and Cloudflare, which hosts it) could technically see them. They aren't read, used or shared for anything except passing them on, unless the law requires it (see below).</li>
+    <li><b>Feedback and problem reports (Streamer Buddy System).</b> Feedback you send with "Send feedback" goes to the relay with your Twitch username, for the developer to read; the newest 300 are kept. If something in the Streamer Buddy System page breaks, the page tells the relay what went wrong and where in its code, with your Twitch username and the version you're on. It never includes your messages or anything you typed. A problem report is deleted a month after that problem last happened.</li>
     <li><b>The side panel</b> loads its page from handsome-tom.github.io, where Streamer Buddy System is hosted.</li>
   </ul>
 

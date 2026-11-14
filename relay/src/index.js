@@ -35,6 +35,12 @@
 // their page keeps the link and uses it once they're allowed. Kept as "inv:<code>":
 // { from, at, used: { by, at } | null }, and each person's codes as their user's "invites".
 //
+// Feedback and problem reports: anyone signed in can send feedback (a few lines), and pages
+// report their own errors: what broke and where in the code, never anything anyone typed.
+// Feedback is kept as "fb:<time>" (newest MAX_REPORTS); errors as "oops:<hash>", one per
+// kind of error, counting how often and for whom, until a month after it last happened.
+// Only the owner can read them (reports), and the owner's state says how many are new.
+//
 // Connections: each person's list of who they've added. Two people can ask
 // each other only once both have added each other ("mutual"); until then the
 // other side sees the request. Whether someone's online is only shared
@@ -91,6 +97,9 @@
 //   auth { token, invite }  connect { login }        disconnect { login }
 //   invite {}               make an invite link; answered with invite { code, expires }
 //   redeem { code }         use someone's invite link; answered with redeemed { from }
+//   feedback { text }       feedback for the owner; answered with thanks {}
+//   oops { msg, where, mode, build }  an error on this page (what broke and where)
+//   reports {}              the owner only: answered with reports { feedback, oops }
 //   ask { to, text, options, note, online }  answer { id, code, text }  dismiss { id }
 //     (online, with "*" or a "#tag": only those online right now)
 //   withdraw { id }         take back your own question or message before it's answered
@@ -134,6 +143,8 @@
 //   invite { code, expires } your new invite link's code
 //   redeemed { from }       you used from's invite: you're connected both ways
 //   invited { login }       someone used your invite link
+//   thanks {}               your feedback arrived
+//   reports { feedback, oops } the owner's feedback and problem reports, newest first
 //   error { why }           why "invite" has detail: what was wrong with the link
 // A plain "ping" gets "pong" without waking the hub (keeps idle pages cheap).
 //
@@ -155,6 +166,15 @@ const INVITE_MS = 7 * 24 * 60 * 60 * 1000; // how long an invite link works
 const MAX_OPEN_INVITES = 20; // unused invite links one person can have at a time
 const INVITE_LETTERS = "abcdefghjkmnpqrstuvwxyz23456789"; // no 0/o, 1/l/i: easy to read out
 const INVITE_RE = /^[a-hj-km-np-z2-9]{10}$/;
+const MAX_REPORTS = 300; // feedback kept, and kinds of error kept
+const MAX_FEEDBACK_LEN = 1500;
+const OOPS_KEEP_MS = 30 * 24 * 60 * 60 * 1000;
+const OOPS_PER_HOUR = 20; // error reports one person's pages can send an hour
+const hashOf = (text) => {
+  let h = 5381;
+  for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+};
 const inviteCode = () => [...crypto.getRandomValues(new Uint8Array(10))].map((b) => INVITE_LETTERS[b % INVITE_LETTERS.length]).join("");
 const MAX_FLAGGED_LEN = 500; // a whole Twitch chat message
 const PIN_MS = 5 * 60 * 1000;
@@ -247,6 +267,9 @@ export class Hub {
       else if (m.t === "modfor") await this.setModFor(who.login, m.list);
       else if (m.t === "invite") await this.makeInvite(ws, who);
       else if (m.t === "redeem") await this.redeem(ws, who, m.code);
+      else if (m.t === "feedback") await this.feedback(ws, who, m);
+      else if (m.t === "oops") await this.oops(who, m);
+      else if (m.t === "reports") await this.reports(ws, who);
       else if (m.t === "seen") await this.update(ws, who, m.id, (q) => !q.seenAt && ((q.from === who.login && q.answer) || (q.to === who.login && q.note && !q.answer && !q.dismissed)), (q) => (q.seenAt = Date.now()));
     } catch (e) {
       this.send(ws, { t: "error", why: "Something went wrong on the relay" });
@@ -525,7 +548,8 @@ export class Hub {
       asking = Object.entries(a.asks || {}).map(([l, x]) => ({ login: l, at: x.at, first: x.first, tries: x.tries, by: x.by || "" })).sort((x, y) => y.at - x.at);
     }
     const limit = owner && login !== owner ? this.limitOf(login, await this.allowList()) : null;
-    this.sendTo(login, { t: "state", me: login, owner, allowed, asking, limit, status: users[login]?.status || "modding", since: users[login]?.onlineAt || 0, connections, requests, tags: users[login]?.tags || {}, questions, pins, rooms, chat, statsOn: !!users[login]?.statsOn, stats, views });
+    const reports = owner && login === owner ? (await this.ctx.storage.get("reportsNew")) || 0 : undefined;
+    this.sendTo(login, { t: "state", me: login, owner, allowed, asking, limit, reports, status: users[login]?.status || "modding", since: users[login]?.onlineAt || 0, connections, requests, tags: users[login]?.tags || {}, questions, pins, rooms, chat, statsOn: !!users[login]?.statsOn, stats, views });
   }
 
   // A room's latest messages. Anything over a week old is deleted, even if nobody
@@ -612,6 +636,64 @@ export class Hub {
     if (users[login]?.status === "offline") v = null;
     for (const l of users[login]?.list || []) {
       if (users[l]?.list.includes(login)) this.sendTo(l, { t: "view", owner: login, v });
+    }
+  }
+
+  // ===== Feedback and problem reports ========================================================
+
+  async feedback(ws, who, m) {
+    const text = String(m.text || "").replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, " ").trim().slice(0, MAX_FEEDBACK_LEN);
+    if (!text) return;
+    const at = Date.now();
+    await this.ctx.storage.put(`fb:${String(at).padStart(15, "0")}${Math.random().toString(36).slice(2, 6)}`, { from: who.login, text, at, mode: String(m.mode || "").slice(0, 10), build: String(m.build || "").slice(0, 12) });
+    const all = await this.ctx.storage.list({ prefix: "fb:" });
+    if (all.size > MAX_REPORTS) await this.ctx.storage.delete([...all.keys()].slice(0, all.size - MAX_REPORTS));
+    this.send(ws, { t: "thanks" });
+    await this.newReport();
+  }
+
+  async oops(who, m) {
+    const now = Date.now();
+    this.oopsRate ||= new Map(); // kept in memory: a rough limit is enough
+    const r = this.oopsRate.get(who.login);
+    if (r && now - r.from < 3600000 && r.n >= OOPS_PER_HOUR) return;
+    this.oopsRate.set(who.login, r && now - r.from < 3600000 ? { from: r.from, n: r.n + 1 } : { from: now, n: 1 });
+    const msg = String(m.msg || "").slice(0, 300);
+    const where = String(m.where || "").slice(0, 200);
+    if (!msg) return;
+    const key = `oops:${hashOf(`${msg}|${where}`)}`;
+    const was = await this.ctx.storage.get(key);
+    const o = was || { msg, where, first: now, count: 0, logins: [] };
+    o.count++;
+    o.last = now;
+    o.mode = String(m.mode || "").slice(0, 10);
+    o.build = String(m.build || "").slice(0, 12);
+    if (!o.logins.includes(who.login)) o.logins = [...o.logins, who.login].slice(-10);
+    await this.ctx.storage.put(key, o);
+    // A month after it last happened, an error is forgotten; and only so many kinds are kept.
+    const all = [...(await this.ctx.storage.list({ prefix: "oops:" })).entries()];
+    const old = all.filter(([, v]) => now - v.last > OOPS_KEEP_MS).map(([k]) => k);
+    const extra = all.filter(([, v]) => now - v.last <= OOPS_KEEP_MS).sort((a, b) => a[1].last - b[1].last).slice(0, Math.max(0, all.length - old.length - MAX_REPORTS)).map(([k]) => k);
+    if (old.length + extra.length) await this.ctx.storage.delete([...old, ...extra]);
+    if (!was) await this.newReport(); // a new kind of error; the same one again isn't news
+  }
+
+  async newReport() {
+    const owner = this.owner();
+    if (!owner) return;
+    await this.ctx.storage.put("reportsNew", ((await this.ctx.storage.get("reportsNew")) || 0) + 1);
+    if (this.isOnline(owner)) await this.sendState(owner);
+  }
+
+  async reports(ws, who) {
+    const owner = this.owner();
+    if (!owner || who.login !== owner) return;
+    const feedback = [...(await this.ctx.storage.list({ prefix: "fb:", reverse: true, limit: 100 })).values()];
+    const oops = [...(await this.ctx.storage.list({ prefix: "oops:" })).values()].sort((a, b) => b.last - a.last).slice(0, 100);
+    this.send(ws, { t: "reports", feedback, oops });
+    if ((await this.ctx.storage.get("reportsNew")) || 0) {
+      await this.ctx.storage.put("reportsNew", 0);
+      await this.sendState(owner);
     }
   }
 
