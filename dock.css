@@ -4968,28 +4968,49 @@ main.main--msgs { position: relative; z-index: 1; min-height: calc(100vh - 43px)
 main.main--msgs .panel__head { color: var(--msg-text); }
 main.main--msgs .panel__sub { color: var(--msg-muted); }
 
-/* Messages: groups, then one-on-one chats. */
-.msgs__label { margin: 12px 0 4px; color: var(--honey); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
-.msgs__row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; color: var(--msg-text); text-align: left; background: none; border: 0; border-radius: 8px; }
-.msgs__row:hover { background: rgba(255, 255, 255, 0.04); }
-.msgs__row--new { background: rgba(242, 144, 40, 0.05); }
-.msgs__words { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.msgs__name { font-weight: 700; }
-.msgs__last { overflow: hidden; color: var(--msg-muted); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
-.msgs__row--new .msgs__last { color: var(--msg-text); }
-.msgs__side { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex: none; }
-.msgs__ago { color: var(--msg-muted); font-size: 11px; }
-.msgs__count { min-width: 18px; padding: 1px 5px; color: var(--honey-ink); font-size: 11px; font-weight: 800; text-align: center; background: var(--honey); border-radius: 9px; }
-.msgs__stack { display: flex; flex: none; }
-.msgs__stack .people__pic { box-shadow: 0 0 0 2px #04050a; }
-.msgs__stack .people__pic + .people__pic { margin-left: -12px; }
-.msgs__open { margin-top: 8px; color: var(--msg-text); background: rgba(0, 0, 0, 0.4); border-color: rgba(242, 144, 40, 0.25); }
-.msgs__open:hover { background: rgba(0, 0, 0, 0.6); }
-/* The one-on-one section: a block of its own, dark black on the left fading out to the right, each person sectioned off. */
-.msgs__private { margin-top: 14px; padding: 4px 8px 6px; background: linear-gradient(90deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.45) 55%, rgba(0, 0, 0, 0.12) 100%); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 10px; }
-.msgs__private .msgs__label { margin-top: 8px; }
-.msgs__private .msgs__row { border-radius: 0; }
-.msgs__private .msgs__row + .msgs__row { border-top: 1px solid rgba(255, 255, 255, 0.05); }
+/* Messages, like a messaging app: Online now (a row of faces), then Group chats and Direct
+   messages, each a named section with its conversations in one soft block. */
+.msgs__top { display: flex; align-items: center; justify-content: space-between; }
+.msgs__sechead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 14px 2px 6px; }
+.msgs__label { color: var(--honey); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.msgs__new { flex: none; height: 22px; padding: 0 10px; color: var(--honey); font: inherit; font-size: 11.5px; font-weight: 700; background: rgba(242, 144, 40, 0.08); border: 1px solid rgba(242, 144, 40, 0.3); border-radius: 11px; cursor: pointer; }
+.msgs__new:hover, .msgs__new--on { color: var(--honey-ink); background: var(--honey); border-color: var(--honey); }
+
+/* Online now: faces in a row (scrolls sideways if there are lots). */
+.msgs__online { display: flex; gap: 6px; margin: 0 -2px; padding: 2px 2px 6px; overflow-x: auto; scrollbar-width: none; }
+.msgs__online::-webkit-scrollbar { display: none; }
+.msgs__face { display: flex; flex-direction: column; align-items: center; gap: 5px; flex: none; width: 58px; padding: 6px 2px 4px; color: var(--msg-text); font: inherit; background: none; border: 0; border-radius: 10px; cursor: pointer; }
+.msgs__face:hover { background: rgba(255, 255, 255, 0.05); }
+.msgs__face .people__pic { position: relative; overflow: visible; width: 40px; height: 40px; }
+.msgs__face .people__pic img { border-radius: 50%; }
+.msgs__facename { max-width: 100%; overflow: hidden; font-size: 11px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+.msgs__facecount { position: absolute; top: -4px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; color: var(--honey-ink); font-size: 10px; font-weight: 800; line-height: 16px; text-align: center; background: var(--honey); border: 2px solid #04050a; border-radius: 9px; box-sizing: content-box; }
+
+/* A section's conversations: one soft block, a hairline between each. */
+.msgs__list { padding: 2px 6px; background: linear-gradient(90deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.35) 60%, rgba(0, 0, 0, 0.12) 100%); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; }
+.msgs__row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 4px; color: var(--msg-text); font: inherit; text-align: left; background: none; border: 0; border-radius: 0; cursor: pointer; }
+.msgs__row + .msgs__row { border-top: 1px solid rgba(255, 255, 255, 0.05); }
+.msgs__row:hover { background: rgba(255, 255, 255, 0.035); }
+.msgs__row--new { background: rgba(242, 144, 40, 0.06); }
+.msgs__row > .people__pic { width: 36px; height: 36px; }
+.msgs__words { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.msgs__nameline, .msgs__lastline { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.msgs__name { flex: 0 1 auto; min-width: 0; overflow: hidden; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; }
+.msgs__by { flex: 0 1 auto; min-width: 0; overflow: hidden; color: var(--msg-muted); font-size: 11.5px; white-space: nowrap; text-overflow: ellipsis; }
+.msgs__ago { flex: none; margin-left: auto; color: var(--msg-muted); font-size: 11px; }
+.msgs__row--new .msgs__ago { color: var(--honey); font-weight: 700; }
+.msgs__last { flex: 1; min-width: 0; overflow: hidden; color: var(--msg-muted); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.msgs__row--new .msgs__last { color: var(--msg-text); font-weight: 600; }
+.msgs__seen--on { color: var(--good); }
+.msgs__seen--idle { color: var(--amber); }
+.msgs__count { flex: none; min-width: 18px; padding: 1px 5px; color: var(--honey-ink); font-size: 11px; font-weight: 800; text-align: center; background: var(--honey); border-radius: 9px; }
+.msgs__stack { display: flex; flex: none; width: 36px; }
+.msgs__stack .people__pic { width: 26px; height: 26px; box-shadow: 0 0 0 2px #04050a; }
+.msgs__stack .people__pic + .people__pic { margin-left: -16px; margin-top: 10px; }
+.msgs__grouppic { width: 36px !important; height: 36px !important; color: var(--honey-ink); font-weight: 800; background: var(--honey); }
+.msgs__empty { margin: 0; padding: 10px 4px; color: var(--msg-muted); font-size: 12px; line-height: 1.45; }
+.msgs__empty p { margin: 0 0 8px; }
+.msgs__picker { margin: 0 0 8px; }
 
 /* Streamers bar: the camera (and, for a streamer who's also your mod, their sword or
    hammer beside it) in the picture's bottom-right corner. */
@@ -5555,3 +5576,19 @@ body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; 
 .oc-notice--raid .oc-raid__facts { margin-top: 0; }
 .oc-notice--raid .oc-raid__bio { font-size: 12px; line-height: 1.4; }
 .oc-raid__note { margin-top: 3px; font-size: 10.5px; line-height: 1.35; color: var(--muted, #a3a3ad); opacity: 0.8; }
+
+/* Connections: people first. "Add people" heads its own card further down; the group chats
+   other people started are listed by name; a speech bubble by each name you can message. */
+.cx__card .cx__addlabel { margin-top: 2px; }
+.cx__roomslabel { margin: 6px 4px 0; }
+.cx__roombtn { gap: 6px; }
+.cx__roomname { font-weight: 700; color: #fff; }
+.cx__roomby { color: #8b93ad; font-weight: 600; }
+.people__go { flex: none; display: grid; place-items: center; margin-left: auto; color: #7db0ef; opacity: 0.45; transition: opacity 0.15s; }
+.people__who--chat:hover .people__go, .people__who--chat:focus-visible .people__go { opacity: 1; }
+/* Side panel chats: a run of messages from one person reads as one block (name at the top,
+   time at the bottom, the bubbles close together). */
+.chat--dm .chat__msg--cont { margin-top: -3px; }
+.chat--dm .chat__msg--cont .chat__from, .chat--dm .chat__msg--more .chat__time { display: none; }
+.chat--dm .chat__msg--theirs.chat__msg--more .chat__text { border-bottom-left-radius: 14px; }
+.chat--dm .chat__msg--mine.chat__msg--more .chat__text { border-bottom-right-radius: 14px; }

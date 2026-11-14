@@ -1507,6 +1507,9 @@
       send(login, { t: "say", owner: "streamer", text });
       await wait(60);
     }
+    // And a private message between the two mods, so Messages has a direct chat going too.
+    send("mod2", { t: "say", owner: "@mod1+mod2", text: "I'll take timeouts tonight if you watch for the raid" });
+    await wait(60);
     document.getElementById("mod").src = "../?dev=mod1&embed=ext&watch=streamer&modfor=streamer,streamer2&sandbox";
     document.getElementById("obs").src = "../?dev=streamer&livechat&ownchat&mock&lightms=6000&mods=mod1,mod2&sandbox";
     const twitchChat = document.getElementById("twitch"); // the playground's pretend Twitch chat

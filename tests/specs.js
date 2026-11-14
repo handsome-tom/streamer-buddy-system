@@ -139,6 +139,41 @@ export const tests = {
     h.check(!c.seen("msg", (m) => m.m.text === "thanks for tonight"), "mod2 shouldn't see mod1's private chat");
   },
 
+  async "Messages calls each group chat by its group's name, and lists who's online first"(h) {
+    const streamer = h.person("streamer");
+    const mod1 = h.person("mod1");
+    const mod2 = h.person("mod2");
+    const mod3 = h.person("mod3");
+    await h.friends(streamer, mod1);
+    await h.friends(mod1, mod2);
+    await h.friends(mod1, mod3);
+    // The streamer's group chat for their "Mod squad", with mod1 in it.
+    streamer.send({ t: "tag", tag: "Mod squad", login: "mod1", on: true });
+    await streamer.next("state", (m) => m.tags?.["Mod squad"]?.includes("mod1"));
+    streamer.send({ t: "room", tag: "Mod squad" });
+    await mod1.next("state", (m) => (m.rooms || []).some((r) => !r.direct && r.tag === "Mod squad"));
+    mod3.close(); // mod3 goes offline
+    await mod1.next("state", (m) => m.connections?.some((c) => c.login === "mod3" && !c.online));
+
+    const panel = await h.panel("mod1", "ext");
+    (await h.until(() => panel.$("#msgBtn:not([hidden])"), "the Messages button")).click();
+    const group = await h.until(() => panel.$$(".msgs__row").find((r) => r.textContent.includes("Mod squad")), "the Mod squad group chat");
+    const groupName = group.querySelector(".msgs__name")?.textContent;
+    h.check(groupName === "Mod squad", `the group chat should be called Mod squad, not "${groupName}"`);
+    h.check(!/room/i.test(panel.$("#main").innerText), "Messages shouldn't say 'room' anywhere");
+    const online = panel.$$(".msgs__facename").map((n) => n.textContent);
+    h.check(online.includes("mod2") && online.includes("streamer") && !online.includes("mod3"), `Online now should be streamer and mod2, got: ${online}`);
+    const direct = [...panel.$$(".msgs__list")[1].querySelectorAll(".msgs__name")].map((n) => n.firstChild.textContent);
+    h.check(direct.length === 3 && direct.at(-1) === "mod3", `offline mod3 should come last in Direct messages, got: ${direct}`);
+
+    // Connections: the people (online first) come before groups and adding people.
+    panel.$("#peopleBtn").click();
+    const first = await h.until(() => panel.$(".cx .cx__section .cx__label"), "the first section in Connections");
+    h.check(first.textContent === "Online · 2", `Connections should open with who's online, got: ${first.textContent}`);
+    h.check(first.compareDocumentPosition(panel.$(".cx__add")) & Node.DOCUMENT_POSITION_FOLLOWING, "Add people should come after the people");
+    noErrors(panel);
+  },
+
   async "someone who's only added one way can't ask yet, and shows as a request"(h) {
     const stranger = h.person("viewer9");
     const streamer = h.person("streamer");
