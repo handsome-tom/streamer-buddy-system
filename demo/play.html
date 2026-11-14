@@ -20,6 +20,9 @@
   if (new URLSearchParams(location.search).get("story") === "mod") document.documentElement.classList.add("story-mod");
   // ?plain: the Testing Playground. Black, with nothing around the panels and the tour.
   if (new URLSearchParams(location.search).has("plain")) document.documentElement.classList.add("plain");
+  // ?bare: the Testing Playground (test.streamspace.tv): only the two panels, side by side, on
+  // black. No tour, labels, buttons or tooltips; the chat feed still starts by itself.
+  if (new URLSearchParams(location.search).has("bare")) document.documentElement.classList.add("bare");
 </script>
 <style>
   /* ===== Twitch Space: the public site, with the live demo in the middle ===== */
@@ -671,6 +674,15 @@
   html.plain, html.plain body { background: #000; }
   html.plain #space, html.plain .sides, html.plain .introfeats, html.plain .guide::before, html.plain .guide::after { display: none; }
   html.plain .guide { background: #0c0c0f; border-color: rgba(255, 255, 255, 0.12); box-shadow: none; }
+  /* ===== ?bare (the Testing Playground): only the two panels, side by side, on black ===== */
+  html.bare, html.bare body { background: #000; }
+  html.bare #space, html.bare .sides, html.bare .introfeats, html.bare .demo__head, html.bare #tour, html.bare .demo__bar,
+  html.bare .screen__label, html.bare .menu, html.bare #allControls, html.bare .callout, html.bare .clickhint, html.bare .screen::before { display: none !important; }
+  html.bare [data-tip]::after { display: none !important; }
+  html.bare .demo { padding: 16px 0; }
+  html.bare .stage { margin-top: 0; gap: 24px; }
+  html.bare .stage .screen { display: block; grid-row: auto; }
+  html.bare .stage iframe { height: calc(100vh - 32px); min-height: 480px; }
 </style>
 </head>
 <body>
@@ -1432,8 +1444,9 @@
     document.getElementById("mod").src = "../?dev=mod1&embed=ext&watch=streamer&modfor=streamer,streamer2&sandbox";
     document.getElementById("obs").src = "../?dev=streamer&livechat&ownchat&mock&lightms=6000&mods=mod1,mod2&sandbox";
     // Chat comes alive on its own once the streamer's dock is up, so the screens are never empty;
-    // the guide then walks through the mod features one at a time.
-    tour.show(0);
+    // the guide then walks through the mod features one at a time (not in the playground).
+    if (document.documentElement.classList.contains("bare")) document.getElementById("tour").hidden = true;
+    else tour.show(0);
     document.getElementById("obs").addEventListener("load", () => setTimeout(() => {
       if (feeding) return;
       document.getElementById("feed").click();

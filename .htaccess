@@ -19,8 +19,15 @@ RewriteRule ^ - [F,L]
 RewriteRule ^(\.git|\.githooks|dev|tests)(/|$) - [F,L]
 RewriteRule ^(README\.md|\.gitignore|relay/wrangler\.toml)$ - [F,L]
 
+# The test site (test.streamspace.tv) opens on the Testing Playground (the demo's two panels,
+# nothing else), and its copy of the website's front page is at test.streamspace.tv/demo/.
+RewriteCond %{HTTP_HOST} ^test\. [NC]
+RewriteCond %{QUERY_STRING} ^$
+RewriteRule ^$ demo/playground.html [L]
+
 # The demo is the front page: streamspace.tv/ shows demo/index.html.
-# Typed or linked /demo/ goes to / so there's one address for it.
+# Typed or linked /demo/ goes to / so there's one address for it (not on the test site).
+RewriteCond %{HTTP_HOST} !^test\. [NC]
 RewriteCond %{THE_REQUEST} \s/demo/(index\.html)?[\s?]
 RewriteRule ^demo/(index\.html)?$ / [R=301,L]
 # Front page with nothing after it = the demo. With ?something (?livechat, ?deck,
