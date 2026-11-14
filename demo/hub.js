@@ -172,8 +172,8 @@ const twitch = (() => {
   const say = (s, type, payload, sub) => s._receive(JSON.stringify({ metadata: { message_type: type, subscription_type: sub }, payload }));
   const event = (type, ev) => eventsubSockets.forEach((s) => say(s, "notification", { subscription: { type }, event: ev }, type));
 
-  const CHATTERS = ["pixelpanda", "NightOwl_88", "crumbsnacker", "LuckyLlama", "vortexvic", "mossy_rocks", "TheRealDanny", "sleepycat42",
-    "Glitchwave", "maplesyrup_eh", "BigTimeTurtle", "quietlurker", "zoomzoom_k", "ferntastic", "captain_crunchy", "OliveBranch"];
+  const CHATTERS = ["hellofoxy", "MacAndCheeseMan", "SneakySneaky", "LuckyLlama", "MiloMunch", "LeonTears", "KidCutter", "sleepycat42",
+    "Glitchwave", "BadDog15", "HoneyBuddy", "quietlurker", "zoomzoom_k", "ferntastic", "Captain_Fruit", "OliveBranch"];
   const SHORT = ["lol", "W", "nice", "LETS GO", "oof", "gg", "true", "hi chat", "no way", "clean", "rip", "o7", "yo", "hahaha", "first try?"];
   const MEDIUM = [
     "that was actually so clean", "how is the mic so good today", "wait what just happened", "chat is moving fast tonight",
@@ -356,7 +356,7 @@ const twitch = (() => {
         const expires = new Date(Date.now() + 60000).toISOString();
         event(`channel.hype_train.${stage}`, {
           id, broadcaster_user_id: "1", level, total: level * 1500 + progress, progress, goal: goal(), expires_at: expires, started_at: new Date().toISOString(),
-          top_contributions: [{ user_name: "BigTimeTurtle", type: "bits", total: 900 }, { user_name: "OliveBranch", type: "subscription", total: 500 }],
+          top_contributions: [{ user_name: "MacAndCheeseMan", type: "bits", total: 900 }, { user_name: "OliveBranch", type: "subscription", total: 500 }],
         });
       };
       send("begin");

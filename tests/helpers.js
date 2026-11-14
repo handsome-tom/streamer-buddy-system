@@ -3,7 +3,7 @@
 // in this page (demo/hub.js), never the real one.
 
 // The same address play.html uses (with its ?v=), so a browser never runs an old copy.
-import { Socket, resetRelay, pretendTwitch } from "../demo/hub.js?v=125";
+import { Socket, resetRelay, pretendTwitch } from "../demo/hub.js?v=126";
 
 export { pretendTwitch };
 export const wait = (ms) => new Promise((r) => setTimeout(r, ms));
