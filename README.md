@@ -19,6 +19,16 @@ the asker's side.
 Always say the full name, **Streamer Buddy System**. This project shares no code
 with Twitch Space; only the whisper format is shared.
 
+## Automatic tests
+
+`node tests/run.mjs` runs them in a hidden Chrome (nothing to install) in a few seconds:
+the real dock, as the streamer's OBS dock and mods' side panels, on the demo's pretend relay
+(the real relay code) and pretend Twitch. They also run by themselves before every
+`git push` (`.githooks/pre-push`; turn that on in a new copy with
+`git config core.hooksPath .githooks`). `node tests/run.mjs nudge` runs only the tests with
+"nudge" in their name. To watch them, serve the folder and open `tests/harness.html`.
+Tests live in `tests/specs.js`, one entry per thing people rely on.
+
 ## For the streamer: adding it to OBS
 
 1. In OBS, open **Docks → Custom Browser Docks…**

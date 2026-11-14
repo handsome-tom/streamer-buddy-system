@@ -1,0 +1,9 @@
+#!/bin/sh
+# Runs the automatic tests before anything is pushed (and so before it reaches the test
+# site or the live site). Turned on with: git config core.hooksPath .githooks
+# Skip once, in an emergency: git push --no-verify
+echo "Running the automatic tests before pushing…"
+node tests/run.mjs || {
+  echo "Tests failed, so nothing was pushed. Fix them, or push with --no-verify to skip."
+  exit 1
+}

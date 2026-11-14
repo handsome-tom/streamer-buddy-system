@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Streamer Buddy System · tests</title>
+<!--
+  The automatic tests' page. It runs the pretend relay and Twitch from the demo (demo/hub.js,
+  which runs the real relay code) and opens the real dock as several pretend people, each in
+  a frame of its own, exactly as the demo does. Nothing here reaches the real relay or Twitch.
+
+  Run them all from Terminal:   node tests/run.mjs
+  Or open this page in a browser (python3 -m http.server 8787, then
+  http://localhost:8787/tests/harness.html) and watch them run.
+-->
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 16px; background: #000; color: #eee; font: 13px/1.5 ui-monospace, Menlo, monospace; }
+  #log { white-space: pre-wrap; }
+  .pass { color: #3fc98e; } .fail { color: #ff6a5f; }
+  #frames { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  #frames iframe { width: 420px; height: 640px; border: 1px solid #333; background: #111; }
+</style>
+</head>
+<body>
+<div id="log">Starting…</div>
+<div id="frames"></div>
+<script type="module">
+  import "../demo/hub.js"; // sets window.SANDBOX: the pretend relay and Twitch
+  import { tests } from "./specs.js";
+  import * as h from "./helpers.js";
+
+  const log = document.getElementById("log");
+  const line = (text, cls) => {
+    const s = document.createElement("div");
+    if (cls) s.className = cls;
+    s.textContent = text;
+    log.append(s);
+  };
+
+  // Runs every test (or the ones whose name has ?only=… in it); the results end up on
+  // window.testResults for tests/run.mjs to read.
+  async function runAll() {
+    log.textContent = "";
+    const only = new URLSearchParams(location.search).get("only");
+    const results = [];
+    for (const [name, fn] of Object.entries(tests)) {
+      if (only && !name.toLowerCase().includes(only.toLowerCase())) continue;
+      const started = performance.now();
+      try {
+        await h.reset();
+        await fn(h);
+        results.push({ name, ok: true, ms: Math.round(performance.now() - started) });
+        line(`✓ ${name}`, "pass");
+      } catch (e) {
+        results.push({ name, ok: false, error: String(e?.stack || e) });
+        line(`✗ ${name}\n    ${String(e?.message || e)}`, "fail");
+      }
+    }
+    const failed = results.filter((r) => !r.ok).length;
+    line(`\n${results.length - failed} passed, ${failed} failed`, failed ? "fail" : "pass");
+    return results;
+  }
+  window.testsDone = runAll().then((r) => (window.testResults = r));
+</script>
+</body>
+</html>

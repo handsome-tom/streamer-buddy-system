@@ -16,7 +16,7 @@ RewriteRule ^ - [F,L]
 
 # Not part of the website: the Git folder, dev tools, notes.
 # (relay/src stays reachable: the demo runs the relay's code in the page.)
-RewriteRule ^(\.git|dev)(/|$) - [F,L]
+RewriteRule ^(\.git|\.githooks|dev|tests)(/|$) - [F,L]
 RewriteRule ^(README\.md|\.gitignore|relay/wrangler\.toml)$ - [F,L]
 
 # The demo is the front page: streamspace.tv/ shows demo/index.html.

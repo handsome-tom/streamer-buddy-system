@@ -110,7 +110,8 @@ const relay = (() => {
     getWebSockets: () => [...open],
     setWebSocketAutoResponse: () => {},
   };
-  const hub = new Hub(ctx, { DEV_AUTH: "1", TWITCH_CLIENT_ID: "sandbox" });
+  const ENV = { DEV_AUTH: "1", TWITCH_CLIENT_ID: "sandbox" };
+  let hub = new Hub(ctx, ENV);
   // The Hub's validator only takes "dev:<login>" tokens with DEV_AUTH, and wants its client
   // id to match: dev sign-ins carry the env's own id, so this matches.
 
@@ -148,7 +149,15 @@ const relay = (() => {
       },
     };
   }
-  return { connect };
+  // The automatic tests (tests/) start each test on an empty relay: everyone signed out,
+  // nothing stored, a fresh hub.
+  function reset() {
+    for (const server of [...open]) server.close(1000);
+    open.clear();
+    store.clear();
+    hub = new Hub(ctx, ENV);
+  }
+  return { connect, reset };
 })();
 
 // ===== The pretend Twitch =====================================================================
@@ -665,3 +674,4 @@ function seed(login) {
 
 window.SANDBOX = { Socket, fetch: (url, init) => twitch.api(url, init), seed };
 export const pretendTwitch = twitch.controls;
+export const resetRelay = () => relay.reset();
