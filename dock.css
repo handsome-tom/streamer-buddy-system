@@ -5105,14 +5105,6 @@ body.has-space .msg-btn.pill--on, .msg-btn.pill--on { box-shadow: none; }
 .space { animation: space-breathe 18s ease-in-out infinite alternate, space-glitch 270s steps(1) infinite; }
 @keyframes space-glitch { 0%, 99.84% { transform: none; } 99.88% { transform: translate(3px, 0); } 99.92% { transform: translate(-2px, 1px); } 99.96% { transform: translate(1px, -1px); } }
 
-/* "Online Now!" beside your dot, once a day (dock.js, onlineNow): an orange pixel person
-   and bold white pixel-edged words, 4 seconds, then it fades. */
-.presence__now { position: absolute; right: 100%; top: 50%; margin-right: 2px; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; pointer-events: none;
-  font: 700 14px/1 "Pixelify Sans", "Plus Jakarta Sans", sans-serif; color: #fff; text-decoration: none;
-  text-shadow: 0 1px 0 #000, 0 2px 4px #000; animation: presenceNow 4.7s linear forwards; }
-.presence__now svg { flex: none; width: 16px; height: 16px; color: var(--honey); filter: drop-shadow(0 1px 0 #6b2a00); }
-@keyframes presenceNow { 0% { opacity: 0; } 4% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
-
 /* ===== Your status in the side panel's bar: a pixel person, not a dot ===== */
 /* Available mod: green, with a pixel sword beside it. Online: the Messages orange.
    Idle: a soft yellow. Invisible (offline to others): gray. The same little people mark the choices in its menu. */

@@ -819,7 +819,7 @@
     allowed = m.allowed || null;
     asking = m.asking || [];
     limit = m.limit || null;
-    if (first) setTimeout(() => onlineNow() || spinPresence(), 400);
+    if (first) setTimeout(spinPresence, 400);
     connections = m.connections || [];
     requests = m.requests || [];
     tags = m.tags || {};
@@ -2157,7 +2157,7 @@
     const now = STATUS[myStatus] || STATUS.modding;
     presenceBtn.className = `presence presence--bar presence--${myStatus}${presenceMenu.hidden ? "" : " presence--open"}`;
     // Just the dot (saves room in the bar); the words are in its tooltip and menu.
-    if (!presenceBtn.querySelector(".presence__spin, .presence__now")) presenceBtn.textContent = "";
+    if (!presenceBtn.querySelector(".presence__spin")) presenceBtn.textContent = "";
     presenceBtn.ariaLabel = now.label;
     presenceBtn.title = `${now.label}${myStatus !== "offline" && mySince ? ` since ${clock(mySince)}` : ""}. ${now.says} Click to change.`;
     presenceBtn.setAttribute("aria-haspopup", "menu");
@@ -2177,19 +2177,6 @@
     setTimeout(() => ring.remove(), 2700);
   }
   setInterval(spinPresence, SPIN_AGAIN_MS);
-  // The first time you open the panel in 24 hours: what you are, in bold white pixel-edged
-  // words beside your little person ("Available mod", or "Online Now!"), instead of the
-  // spin, for 4 seconds, then it fades.
-  function onlineNow() {
-    if (!EMBED || presenceBtn.hidden || !["modding", "online"].includes(myStatus) || Date.now() - get("onlineNowAt", 0) < 24 * 3600 * 1000) return false;
-    put("onlineNowAt", Date.now());
-    const tag = el("span", "presence__now", myStatus === "modding" ? "Available mod" : "Online Now!");
-    tag.setAttribute("aria-hidden", "true");
-    presenceBtn.append(tag);
-    setTimeout(() => tag.remove(), 4700);
-    return true;
-  }
-
   function openPresence(open) {
     presenceMenu.hidden = !open;
     if (open) {
