@@ -682,9 +682,9 @@
   html.bare .demo { padding: 16px 0; }
   html.bare .stage { margin-top: 0; gap: 20px; grid-template-columns: minmax(150px, 210px) minmax(0, 420px) minmax(0, 420px) minmax(150px, 210px); grid-template-rows: auto; align-items: start; }
   html.bare .stage .screen { display: block; grid-row: auto; }
-  html.bare .stage .screen:last-child { order: 0; } /* the mod's panel on the left here, by the mod's buttons */
   html.bare .stage iframe { height: calc(100vh - 32px); min-height: 480px; }
-  /* Every demo control, plainly: the mod's on the far left, the streamer's on the far right. */
+  /* Every demo control, plainly: the streamer's on the far left, the mod's on the far right,
+     each beside its own panel (streamer on the left, mods on the right, as everywhere). */
   .pg { display: flex; flex-direction: column; gap: 4px; max-height: calc(100vh - 32px); overflow-y: auto; font-size: 12.5px; }
   .pg__head { margin: 0 0 4px; font-size: 13px; font-weight: 800; color: #fff; }
   .pg--mod .pg__head { color: #3fc98e; }
@@ -835,9 +835,10 @@
     </div>
   </section>
 <script>
-  // The Testing Playground (?bare): every demo control as a plain list, the mod's beside the
-  // mod's panel on the left and the streamer's beside the streamer's dock on the right. The
-  // buttons are the same ones (moved, not copied), so they do exactly what they do in the demo.
+  // The Testing Playground (?bare): every demo control as a plain list, the streamer's beside
+  // the streamer's dock on the far left and the mod's beside the mod's panel on the far right
+  // (streamer on the left, mods on the right, as everywhere). The buttons are the same ones
+  // (moved, not copied), so they do exactly what they do in the demo.
   if (document.documentElement.classList.contains("bare")) {
     const stage = document.querySelector(".stage");
     const column = (kind, title, groups) => {
@@ -870,17 +871,17 @@
       ["Chat", ["tCmd", "feed"]],
       ["The playground", ["auto", "reload"]],
     ]);
-    stage.prepend(mod);
-    stage.append(streamer);
+    stage.append(streamer, mod);
+    // Left to right: streamer's buttons, streamer's dock, mod's panel, mod's buttons. (Set
+    // here: the page's own rule for this looks for the last panel, which is now a list.)
+    streamer.style.order = "-2";
+    document.getElementById("obs").closest(".screen").style.order = "-1";
   }
 </script>
 <script type="module">
   import { Socket, pretendTwitch } from "./hub.js?v=125"; // the number: bump it when hub.js changes, so browsers fetch the new one
 
-  // In the playground (?bare) the panels swap sides (the mod's on the left), so "left" and
-  // "right" in these notes swap too.
-  const BARE = document.documentElement.classList.contains("bare");
-  const said = (text) => (document.getElementById("said").textContent = BARE ? text.replace(/\b(left|right)\b/g, (w) => (w === "left" ? "right" : "left")) : text);
+  const said = (text) => (document.getElementById("said").textContent = text);
   const pick = (list) => list[Math.floor(Math.random() * list.length)];
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
