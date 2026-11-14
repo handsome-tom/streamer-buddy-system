@@ -541,10 +541,14 @@
   .sides__word { transform: translateY(-50%) rotate(var(--r)); }
   @keyframes wordFloat { from { transform: translateY(calc(-50% - 18px)) rotate(var(--r)); } to { transform: translateY(calc(-50% + 18px)) rotate(var(--r)); } }
   /* A few of the side's features, just the icon and the headline, drifting slowly. */
-  .sides__feats { position: absolute; top: 12%; bottom: 12%; width: 200px; margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; justify-content: space-around; }
-  .sides__half--streamer .sides__feats { right: 478px; left: auto; align-items: flex-end; }
-  .sides__half--mod .sides__feats { left: 478px; right: auto; align-items: flex-start; }
-  /* No box: just the icon and words floating behind the panels. Each one wanders on its own
+  .demo__intro { position: relative; isolation: isolate; }
+  .introfeats { position: absolute; z-index: -1; inset: -10px 0 -10px; pointer-events: none; }
+  .introfeats__side--streamer { --c: 169, 112, 255; }
+  .introfeats__side--mod { --c: 63, 201, 142; }
+  .sides__feats { position: absolute; top: 0; bottom: 0; width: 220px; margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; justify-content: space-around; }
+  .introfeats__side--streamer .sides__feats { right: calc(50% + 360px); align-items: flex-end; }
+  .introfeats__side--mod .sides__feats { left: calc(50% + 360px); align-items: flex-start; }
+  /* No box: just the icon and words floating beside the intro. Each one wanders on its own
      slow loop: drifting about, coming nearer (bigger, sharper, brighter) and going further off
      (smaller, softer, dimmer), so they never pull focus from the panels. */
   .sides__feat { --s: 13px; --dx: 0px; display: flex; align-items: center; gap: 0.6em; max-width: 220px; padding: 0; font-size: var(--s); font-weight: 700; line-height: 1.25; color: #e8e8ee; background: none; border: 0; box-shadow: none; text-shadow: 0 0 18px rgba(var(--c), 0.35); will-change: transform, filter, opacity; animation: var(--loop) var(--t) ease-in-out infinite alternate; animation-delay: var(--d); }
@@ -552,12 +556,12 @@
   .sides__feat:nth-child(2) { --s: 12px; --dx: 46px; --loop: depthB; --t: 21s; --d: -11s; }
   .sides__feat:nth-child(3) { --s: 16px; --dx: -6px; --loop: depthC; --t: 19s; --d: -7s; }
   .sides__feat:nth-child(4) { --s: 12.5px; --dx: 30px; --loop: depthB; --t: 24s; --d: -16s; }
-  .sides__half--mod .sides__feat:nth-child(1) { --loop: depthC; --t: 20s; --d: -9s; }
-  .sides__half--mod .sides__feat:nth-child(2) { --loop: depthA; --t: 18s; --d: -2s; }
-  .sides__half--mod .sides__feat:nth-child(3) { --loop: depthB; --t: 23s; --d: -14s; }
-  .sides__half--mod .sides__feat:nth-child(4) { --loop: depthA; --t: 26s; --d: -6s; }
-  .sides__half--streamer .sides__feat { margin-right: var(--dx); transform-origin: right center; }
-  .sides__half--mod .sides__feat { margin-left: var(--dx); transform-origin: left center; }
+  .introfeats__side--mod .sides__feat:nth-child(1) { --loop: depthC; --t: 20s; --d: -9s; }
+  .introfeats__side--mod .sides__feat:nth-child(2) { --loop: depthA; --t: 18s; --d: -2s; }
+  .introfeats__side--mod .sides__feat:nth-child(3) { --loop: depthB; --t: 23s; --d: -14s; }
+  .introfeats__side--mod .sides__feat:nth-child(4) { --loop: depthA; --t: 26s; --d: -6s; }
+  .introfeats__side--streamer .sides__feat { margin-right: var(--dx); transform-origin: right center; }
+  .introfeats__side--mod .sides__feat { margin-left: var(--dx); transform-origin: left center; }
   .sides__feat svg { flex: none; width: 1.4em; height: 1.4em; color: rgb(var(--c)); }
   .sides__feat svg .pix { fill: currentColor; stroke: none; }
   /* Blur never goes past about 1px, so the words stay readable even at their softest. */
@@ -577,7 +581,7 @@
     65%  { transform: translate(16px, 6px) scale(0.85);  filter: blur(1px);  opacity: 0.34; }
     100% { transform: translate(0, 12px) scale(0.98);    filter: blur(0.3px); opacity: 0.52; } }
   /* Only where there's room beside the panels; stacked panels (one column) skip it all. */
-  @media (max-width: 1379px) { .sides__feats { display: none; } }
+  @media (max-width: 1219px) { .introfeats { display: none; } }
   @media (max-width: 1079px) { .sides__word { display: none; } }
   @media (max-width: 920px) { .sides { display: none; } }
   @media (prefers-reduced-motion: reduce) { .sides__feat, .sides__word { animation: none; } .sides__feat { opacity: 0.5; } }
@@ -667,6 +671,12 @@
   <div id="space" aria-hidden="true"><div class="planet"><i class="planet__globe"></i></div></div>
   <section class="demo" id="demo">
     <div class="wrap">
+      <div class="demo__intro">
+        <!-- A few of each side's features, floating either side of the intro and the tour box. -->
+        <div class="introfeats" aria-hidden="true">
+          <div class="introfeats__side introfeats__side--streamer"><ul class="sides__feats"><li class="sides__feat" style="--i:0"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M2 1h12v1h-12zM1 2h14v1h-14zM1 3h2v1h-2zM13 3h2v1h-2zM1 4h2v1h-2zM13 4h2v1h-2zM1 5h2v1h-2zM13 5h2v1h-2zM1 6h2v1h-2zM13 6h2v1h-2zM1 7h2v1h-2zM13 7h2v1h-2zM1 8h2v1h-2zM13 8h2v1h-2zM1 9h2v1h-2zM13 9h2v1h-2zM1 10h2v1h-2zM13 10h2v1h-2zM1 11h13v1h-13zM1 12h4v1h-4zM1 13h3v1h-3z"/></svg><span>Chat and your mods, one dock</span></li><li class="sides__feat" style="--i:1"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M13 3h1v1h-1zM12 4h2v1h-2zM11 5h2v1h-2zM10 6h2v1h-2zM2 7h1v1h-1zM9 7h2v1h-2zM2 8h2v1h-2zM8 8h2v1h-2zM3 9h2v1h-2zM7 9h2v1h-2zM4 10h4v1h-4zM5 11h2v1h-2z"/></svg><span>Answer in one tap</span></li><li class="sides__feat" style="--i:2"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M5 2h2v1h-2zM5 3h2v1h-2zM4 4h4v1h-4zM4 5h4v1h-4zM4 6h1v1h-1zM7 6h1v1h-1zM1 7h4v1h-4zM7 7h2v1h-2zM12 7h3v1h-3zM1 8h3v1h-3zM7 8h2v1h-2zM11 8h4v1h-4zM8 9h1v1h-1zM11 9h1v1h-1zM8 10h4v1h-4zM8 11h4v1h-4zM9 12h2v1h-2zM9 13h2v1h-2z"/></svg><span>Only loud when it matters</span></li><li class="sides__feat" style="--i:3"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M7 1h2v1h-2zM7 2h2v1h-2zM6 3h4v1h-4zM6 4h4v1h-4zM6 5h1v1h-1zM9 5h1v1h-1zM3 6h4v1h-4zM9 6h4v1h-4zM1 7h4v1h-4zM11 7h4v1h-4zM1 8h4v1h-4zM11 8h4v1h-4zM3 9h4v1h-4zM9 9h4v1h-4zM6 10h1v1h-1zM9 10h1v1h-1zM6 11h4v1h-4zM6 12h4v1h-4zM7 13h2v1h-2zM7 14h2v1h-2z"/></svg><span>Every event at a glance</span></li></ul></div>
+          <div class="introfeats__side introfeats__side--mod"><ul class="sides__feats"><li class="sides__feat" style="--i:0"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M5 3h6v1h-6zM3 4h3v1h-3zM10 4h3v1h-3zM2 5h2v1h-2zM7 5h2v1h-2zM12 5h2v1h-2zM1 6h2v1h-2zM6 6h4v1h-4zM13 6h2v1h-2zM1 7h1v1h-1zM5 7h2v1h-2zM9 7h2v1h-2zM13 7h2v1h-2zM1 8h2v1h-2zM5 8h2v1h-2zM9 8h2v1h-2zM14 8h1v1h-1zM1 9h2v1h-2zM6 9h4v1h-4zM13 9h2v1h-2zM2 10h2v1h-2zM7 10h2v1h-2zM12 10h2v1h-2zM3 11h3v1h-3zM10 11h3v1h-3zM5 12h6v1h-6z"/></svg><span>See what they see</span></li><li class="sides__feat" style="--i:1"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M12 1h3v1h-3zM9 2h6v1h-6zM6 3h9v1h-9zM3 4h5v1h-5zM10 4h4v1h-4zM1 5h4v1h-4zM9 5h5v1h-5zM1 6h3v1h-3zM8 6h3v1h-3zM12 6h2v1h-2zM3 7h7v1h-7zM12 7h1v1h-1zM5 8h4v1h-4zM11 8h2v1h-2zM7 9h2v1h-2zM11 9h2v1h-2zM7 10h2v1h-2zM11 10h1v1h-1zM8 11h1v1h-1zM10 11h2v1h-2zM8 12h4v1h-4zM9 13h2v1h-2zM9 14h2v1h-2z"/></svg><span>Ask without cluttering chat</span></li><li class="sides__feat" style="--i:2"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M5 1h6v1h-6zM4 2h2v1h-2zM10 2h2v1h-2zM4 3h1v1h-1zM11 3h1v1h-1zM3 4h2v1h-2zM11 4h2v1h-2zM3 5h2v1h-2zM11 5h2v1h-2zM3 6h2v1h-2zM11 6h2v1h-2zM3 7h2v1h-2zM11 7h2v1h-2zM3 8h1v1h-1zM12 8h1v1h-1zM2 9h2v1h-2zM12 9h2v1h-2zM2 10h2v1h-2zM12 10h2v1h-2zM1 11h14v1h-14zM6 13h1v1h-1zM9 13h1v1h-1zM6 14h4v1h-4z"/></svg><span>Nudge, or hit the panic button</span></li><li class="sides__feat" style="--i:3"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M2 1h7v1h-7zM13 1h1v1h-1zM2 2h2v1h-2zM7 2h7v1h-7zM2 3h1v1h-1zM13 3h1v1h-1zM2 4h1v1h-1zM13 4h1v1h-1zM2 5h1v1h-1zM13 5h1v1h-1zM2 6h1v1h-1zM13 6h1v1h-1zM2 7h1v1h-1zM13 7h1v1h-1zM2 8h1v1h-1zM13 8h1v1h-1zM2 9h7v1h-7zM12 9h2v1h-2zM2 10h2v1h-2zM7 10h7v1h-7zM2 11h1v1h-1zM2 12h1v1h-1zM2 13h1v1h-1zM2 14h1v1h-1z"/></svg><span>Flag a line, or leave a note on it</span></li></ul></div>
+        </div>
       <div class="demo__head">
         <div>
           <p class="eyebrow">Live demo</p>
@@ -685,6 +695,7 @@
           <button type="button" class="guide__link" id="tourSkip">Skip the tour</button>
         </div>
       </div>
+      </div>
       <div class="demo__bar">
         <div class="console__said" id="said" aria-live="polite"></div>
         <div class="demo__run">
@@ -695,10 +706,10 @@
       <div class="stage">
         <!-- Behind the two panels: two sides of one coin. Each panel's side glows in its own
              color (half of one big ellipse), with a hard cut down the middle, a thin light on
-             the cut, the side's name large and faint, and a few of its features floating. -->
+             the cut, and the side's name large and faint. -->
         <div class="sides" aria-hidden="true">
-          <div class="sides__half sides__half--streamer"><span class="sides__word" data-w="streamer"></span><ul class="sides__feats"><li class="sides__feat" style="--i:0"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M2 1h12v1h-12zM1 2h14v1h-14zM1 3h2v1h-2zM13 3h2v1h-2zM1 4h2v1h-2zM13 4h2v1h-2zM1 5h2v1h-2zM13 5h2v1h-2zM1 6h2v1h-2zM13 6h2v1h-2zM1 7h2v1h-2zM13 7h2v1h-2zM1 8h2v1h-2zM13 8h2v1h-2zM1 9h2v1h-2zM13 9h2v1h-2zM1 10h2v1h-2zM13 10h2v1h-2zM1 11h13v1h-13zM1 12h4v1h-4zM1 13h3v1h-3z"/></svg><span>Chat and your mods, one dock</span></li><li class="sides__feat" style="--i:1"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M13 3h1v1h-1zM12 4h2v1h-2zM11 5h2v1h-2zM10 6h2v1h-2zM2 7h1v1h-1zM9 7h2v1h-2zM2 8h2v1h-2zM8 8h2v1h-2zM3 9h2v1h-2zM7 9h2v1h-2zM4 10h4v1h-4zM5 11h2v1h-2z"/></svg><span>Answer in one tap</span></li><li class="sides__feat" style="--i:2"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M5 2h2v1h-2zM5 3h2v1h-2zM4 4h4v1h-4zM4 5h4v1h-4zM4 6h1v1h-1zM7 6h1v1h-1zM1 7h4v1h-4zM7 7h2v1h-2zM12 7h3v1h-3zM1 8h3v1h-3zM7 8h2v1h-2zM11 8h4v1h-4zM8 9h1v1h-1zM11 9h1v1h-1zM8 10h4v1h-4zM8 11h4v1h-4zM9 12h2v1h-2zM9 13h2v1h-2z"/></svg><span>Only loud when it matters</span></li><li class="sides__feat" style="--i:3"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M7 1h2v1h-2zM7 2h2v1h-2zM6 3h4v1h-4zM6 4h4v1h-4zM6 5h1v1h-1zM9 5h1v1h-1zM3 6h4v1h-4zM9 6h4v1h-4zM1 7h4v1h-4zM11 7h4v1h-4zM1 8h4v1h-4zM11 8h4v1h-4zM3 9h4v1h-4zM9 9h4v1h-4zM6 10h1v1h-1zM9 10h1v1h-1zM6 11h4v1h-4zM6 12h4v1h-4zM7 13h2v1h-2zM7 14h2v1h-2z"/></svg><span>Every event at a glance</span></li></ul></div>
-          <div class="sides__half sides__half--mod"><span class="sides__word" data-w="mod"></span><ul class="sides__feats"><li class="sides__feat" style="--i:0"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M5 3h6v1h-6zM3 4h3v1h-3zM10 4h3v1h-3zM2 5h2v1h-2zM7 5h2v1h-2zM12 5h2v1h-2zM1 6h2v1h-2zM6 6h4v1h-4zM13 6h2v1h-2zM1 7h1v1h-1zM5 7h2v1h-2zM9 7h2v1h-2zM13 7h2v1h-2zM1 8h2v1h-2zM5 8h2v1h-2zM9 8h2v1h-2zM14 8h1v1h-1zM1 9h2v1h-2zM6 9h4v1h-4zM13 9h2v1h-2zM2 10h2v1h-2zM7 10h2v1h-2zM12 10h2v1h-2zM3 11h3v1h-3zM10 11h3v1h-3zM5 12h6v1h-6z"/></svg><span>See what they see</span></li><li class="sides__feat" style="--i:1"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M12 1h3v1h-3zM9 2h6v1h-6zM6 3h9v1h-9zM3 4h5v1h-5zM10 4h4v1h-4zM1 5h4v1h-4zM9 5h5v1h-5zM1 6h3v1h-3zM8 6h3v1h-3zM12 6h2v1h-2zM3 7h7v1h-7zM12 7h1v1h-1zM5 8h4v1h-4zM11 8h2v1h-2zM7 9h2v1h-2zM11 9h2v1h-2zM7 10h2v1h-2zM11 10h1v1h-1zM8 11h1v1h-1zM10 11h2v1h-2zM8 12h4v1h-4zM9 13h2v1h-2zM9 14h2v1h-2z"/></svg><span>Ask without cluttering chat</span></li><li class="sides__feat" style="--i:2"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M5 1h6v1h-6zM4 2h2v1h-2zM10 2h2v1h-2zM4 3h1v1h-1zM11 3h1v1h-1zM3 4h2v1h-2zM11 4h2v1h-2zM3 5h2v1h-2zM11 5h2v1h-2zM3 6h2v1h-2zM11 6h2v1h-2zM3 7h2v1h-2zM11 7h2v1h-2zM3 8h1v1h-1zM12 8h1v1h-1zM2 9h2v1h-2zM12 9h2v1h-2zM2 10h2v1h-2zM12 10h2v1h-2zM1 11h14v1h-14zM6 13h1v1h-1zM9 13h1v1h-1zM6 14h4v1h-4z"/></svg><span>Nudge, or hit the panic button</span></li><li class="sides__feat" style="--i:3"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path class="pix" d="M2 1h7v1h-7zM13 1h1v1h-1zM2 2h2v1h-2zM7 2h7v1h-7zM2 3h1v1h-1zM13 3h1v1h-1zM2 4h1v1h-1zM13 4h1v1h-1zM2 5h1v1h-1zM13 5h1v1h-1zM2 6h1v1h-1zM13 6h1v1h-1zM2 7h1v1h-1zM13 7h1v1h-1zM2 8h1v1h-1zM13 8h1v1h-1zM2 9h7v1h-7zM12 9h2v1h-2zM2 10h2v1h-2zM7 10h7v1h-7zM2 11h1v1h-1zM2 12h1v1h-1zM2 13h1v1h-1zM2 14h1v1h-1z"/></svg><span>Flag a line, or leave a note on it</span></li></ul></div>
+          <div class="sides__half sides__half--streamer"><span class="sides__word" data-w="streamer"></span></div>
+          <div class="sides__half sides__half--mod"><span class="sides__word" data-w="mod"></span></div>
           <i class="sides__line"></i>
         </div>
         <div class="screen">
