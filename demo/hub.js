@@ -273,6 +273,10 @@ const twitch = (() => {
   let pollTimer = 0;
   let predTimer = 0;
   const controls = {
+    // The tests: the pretend sign-in's permissions (null: all of them).
+    scopes(list) {
+      scopesOverride = list;
+    },
     feed() {
       clearTimeout(feedTimer);
       feedOnce();
@@ -578,13 +582,17 @@ const twitch = (() => {
     socket._peer = { got() {}, gone: () => chatSockets.delete(socket) };
   }
 
+  // What the pretend sign-in may do; the tests take one away (controls.scopes) to check the
+  // dock behaves the way it must with real Twitch.
+  let scopesOverride = null;
+  const scopesNow = () => scopesOverride || SCOPES;
   const SCOPES = ["user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod", "moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions", "user:manage:whispers", "channel:read:redemptions"];
   const json = (status, body) => new Response(status === 204 ? null : JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
   async function api(url, init = {}) {
     const u = new URL(url);
     const path = u.pathname.slice(u.pathname.indexOf("/mock/"));
     const body = typeof init.body === "string" ? init.body : "";
-    if (path.startsWith("/mock/validate")) return json(200, { login: "streamer", user_id: "1", scopes: SCOPES, expires_in: 5000000 });
+    if (path.startsWith("/mock/validate")) return json(200, { login: "streamer", user_id: "1", scopes: scopesNow(), expires_in: 5000000 });
     if (path.startsWith("/mock/history")) return json(200, { messages: [] });
     const route = path.replace("/mock/helix", "");
     if (route === "/eventsub/subscriptions") return json(202, { data: [{}] });
@@ -607,6 +615,8 @@ const twitch = (() => {
         return json(200, { data: [], total: person(bid === "1" ? "streamer" : bid.replace(/^u-/, "")).followers });
       }
       const p = person(u.searchParams.get("user_id").replace(/^u-/, ""));
+      // Like Twitch: without moderator:read:followers, an empty list (not an error).
+      if (!scopesNow().includes("moderator:read:followers")) return json(200, { data: [], total: 1 });
       return json(200, { data: p.followedAt ? [{ user_id: p.id, user_login: p.login, user_name: p.display_name, followed_at: p.followedAt }] : [], total: 1 });
     }
     if (route === "/channels") {

@@ -5554,3 +5554,4 @@ body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; 
 .oc-raid__when { font-weight: 500; color: var(--muted, #a3a3ad); }
 .oc-notice--raid .oc-raid__facts { margin-top: 0; }
 .oc-notice--raid .oc-raid__bio { font-size: 12px; line-height: 1.4; }
+.oc-raid__note { margin-top: 3px; font-size: 10.5px; line-height: 1.35; color: var(--muted, #a3a3ad); opacity: 0.8; }

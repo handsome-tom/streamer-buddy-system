@@ -1113,6 +1113,7 @@
     // Twitch's full list, when this sign-in allows it (a mod's list of everyone here). Kept
     // fresh in the background, so at a raid the list from just before it is ready.
     let canListChatters = false;
+    let granted = []; // the permissions this sign-in has (from Twitch's validate)
     async function listChatters() {
       if (!canListChatters || !isMod || stopped) return;
       try {
@@ -1135,6 +1136,7 @@
         const r = await fetch(urls.validate, { headers: { Authorization: `OAuth ${host.token()}` } });
         if (!r.ok) return;
         const scopes = (await r.json()).scopes || [];
+        granted = scopes;
         canListChatters = EXTRA_SCOPES.every((sc) => scopes.includes(sc));
         if (canListChatters) {
           listChatters();
@@ -1304,15 +1306,23 @@
         return r;
       };
       const ago = (t) => (Date.now() - t < 86400000 ? "today" : `${howLong(t)} ago`);
+      // From Twitch: do they follow you (left out when this sign-in can't see follows).
       if (a.follow) you.push(row(true, "Follows you", howLong(a.follow.followed_at)));
       else if (a.follow === false) you.push(row(false, "Doesn't follow you yet"));
+      // From this computer's memory of the channel: only what custom chat saw while it was
+      // open, from the day it started remembering (Twitch keeps no raid or chat history for
+      // apps), so the card says since when.
       if (before) {
-        you.push(before.raid ? row(true, `Raided you ${before.raid[0]}× before`, `last ${ago(before.raid[1])}`) : row(false, "First raid on you"));
-        you.push(before.chat ? row(true, `Chatted here ${plural(before.chat[2], "time", "times")}`, `last ${ago(before.chat[1])}`) : row(false, "Hasn't chatted here yet"));
+        you.push(before.raid ? row(true, `Raided you ${before.raid[0]}×`, `last ${ago(before.raid[1])}`) : row(false, "No raids from them before"));
+        you.push(before.chat ? row(true, "Chatted here", `${plural(before.chat[2], "message", "messages")} · last ${ago(before.chat[1])}`) : row(false, "Hasn't chatted here"));
       }
       if (you.length) {
         const sec = el("div", "oc-raid__sec");
         sec.append(el("div", "oc-raid__label", "You two"), ...you);
+        if (before?.since) {
+          const note = el("div", "oc-raid__note", `Raids and chat counted since ${longDate(before.since)}, while custom chat was open.`);
+          sec.append(note);
+        }
         card.about.append(sec);
       }
 
@@ -1893,7 +1903,13 @@
         quiet(`/channels/followers?broadcaster_id=${broadcasterId}&user_id=${encodeURIComponent(uid)}`),
         quiet(`/channels?broadcaster_id=${encodeURIComponent(uid)}`),
       ]);
-      const about = { at: Date.now(), user: u?.data?.[0] || null, follow: f ? f.data?.[0] || false : null, channel: c?.data?.[0] || null };
+      // Twitch answers a follow check it won't allow (no permission, or not a mod here) with an
+      // empty list rather than an error, so an empty list only means "not following" when this
+      // sign-in may see follows: its own channel or one it mods, with moderator:read:followers.
+      // Otherwise it's unknown (null) and nothing is said either way.
+      const canSeeFollows = granted.includes("moderator:read:followers") && (isMod || channel === me.login);
+      const follow = f?.data?.[0] || (f && canSeeFollows ? false : null);
+      const about = { at: Date.now(), user: u?.data?.[0] || null, follow, channel: c?.data?.[0] || null };
       people.set(uid, about);
       return about;
     }

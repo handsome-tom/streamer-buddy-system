@@ -291,9 +291,23 @@ export const tests = {
     h.check(/Minecraft/.test(card.querySelector(".oc-raid__sub").textContent), "what they stream, under the name");
     const labels = [...card.querySelectorAll(".oc-raid__label")].map((l) => l.textContent);
     h.check(labels.join() === "You two,In common", `sections in order, got: ${labels.join(", ")}`);
-    h.check(/Follows you/.test(card.textContent) && /Raided you 2× before/.test(card.textContent), "you two: follows and raided before");
+    h.check(/Follows you/.test(card.textContent) && /Raided you 2×/.test(card.textContent) && card.textContent.includes("Chatted here · 14 messages"), "you two: follows, raided and chatted before");
+    h.check(/Raids and chat counted since .+, while custom chat was open\./.test(card.querySelector(".oc-raid__note")?.textContent || ""), "the card should say since when raids and chat were counted");
     const parts = [...card.querySelector(".oc-raid__about").children].map((c) => c.className);
     h.check(parts.at(-1) === "oc-raid__bio", `the bio should come last, got: ${parts.join(", ")}`);
     noErrors(dock);
+  },
+
+  async "without the follower permission, the raid card says nothing about following (never a wrong no)"(h) {
+    h.pretendTwitch.scopes(["user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod"]);
+    const dock = await h.panel("streamer", "obs");
+    await h.until(() => dock.$(".oc-line"), "custom chat to start");
+    await h.wait(800);
+    h.pretendTwitch.raid();
+    const card = await h.until(() => dock.$(".oc-notice--raid"), "the raid card");
+    await h.until(() => card.querySelector(".oc-raid__label"), "the card to fill in");
+    await h.wait(300);
+    h.check(!/follow you|Follows you/.test(card.textContent), `it shouldn't say anything about following: ${card.querySelector(".oc-raid__about")?.textContent}`);
+    h.check(/followers/.test(card.querySelector(".oc-raid__sub")?.textContent || ""), "the follower count still shows (it needs no permission)");
   },
 };

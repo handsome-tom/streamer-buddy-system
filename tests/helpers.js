@@ -3,7 +3,7 @@
 // in this page (demo/hub.js), never the real one.
 
 // The same address play.html uses (with its ?v=), so a browser never runs an old copy.
-import { Socket, resetRelay, pretendTwitch } from "../demo/hub.js?v=127";
+import { Socket, resetRelay, pretendTwitch } from "../demo/hub.js?v=128";
 
 export { pretendTwitch };
 export const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -37,6 +37,7 @@ export async function reset(relaySettings) {
   opened = [];
   document.getElementById("frames").replaceChildren();
   resetRelay(relaySettings);
+  pretendTwitch.scopes(null); // every permission again
   await wait(30);
 }
 
