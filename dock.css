@@ -3197,7 +3197,7 @@ body.no-modicons .oc-modicons { display: none; }
 /* Mod icons a little tighter together; a little more room between chat lines */
 .oc-modicons { gap: 0; margin-right: 3px; }
 .oc-modicon { width: 16px; height: 18px; }
-.oc-line { padding-top: 4px; padding-bottom: 4px; }
+.oc-line { padding-top: 5px; padding-bottom: 5px; }
 /* Flatter: solid cards with a colored edge and a black shadow, no glow */
 .oc-event, .oc-event--bomb { margin: 5px 6px; padding: 8px 10px; background: color-mix(in srgb, var(--ev) 13%, #1f1f23); border-radius: 6px; box-shadow: inset 3px 0 0 var(--ev), 0 2px 6px rgba(0, 0, 0, 0.7); }
 .oc-event__icon { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }

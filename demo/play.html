@@ -604,6 +604,28 @@
   .callout__point--left { clip-path: polygon(100% 30%, 45% 30%, 45% 0, 0 50%, 45% 100%, 45% 70%, 100% 70%); animation-name: pointLeft; }
   .story-mod .callout__point, .story-mod .stage .screen.spot .screen__label::after { background: #3fc98e; }
   @media (prefers-reduced-motion: reduce) { #tourDo.btn--main, #tourDo.btn--main::before, #tourDo.btn--main::after, .callout__point, .stage .screen.spot .screen__label::after { animation: none; } }
+  /* "Click here to ..." next to the arrows: white words on a dark, fuzzy-edged glow, so
+     there's no doubt where to click. */
+  .clickhint { --hint: 125, 176, 239; position: absolute; z-index: 60; isolation: isolate; white-space: nowrap; pointer-events: none; font-size: 13px; font-weight: 800; letter-spacing: 0.01em; line-height: 1.2; color: #fff;
+    text-shadow: 0 1px 0 #000, 0 2px 3px rgba(0, 0, 0, 0.95), 0 0 10px rgba(var(--hint), 0.95), 0 0 24px rgba(var(--hint), 0.7); animation: hintIn 0.3s ease-out; }
+  .clickhint::before { content: ""; position: absolute; inset: -9px -18px; z-index: -1; border-radius: 50%; background: rgba(0, 0, 0, 0.82); box-shadow: 0 0 18px 8px rgba(0, 0, 0, 0.6), 0 0 34px 6px rgba(var(--hint), 0.22); filter: blur(7px); }
+  .clickhint:empty { display: none; }
+  .story-mod .clickhint { --hint: 63, 201, 142; }
+  @keyframes hintIn { from { opacity: 0; transform: translateY(3px); } }
+  /* Under the guide's button. */
+  .tourdo { position: relative; display: inline-flex; }
+  .guide__actions:has(.clickhint--under:not(:empty)) { padding-bottom: 34px; }
+  .clickhint--under { left: 50%; top: calc(100% + 16px); translate: -50% 0; }
+  /* Over a panel's bouncing arrow: what to do in that panel. */
+  .stage .screen.spot .screen__label[data-hint]::before { content: attr(data-hint); left: calc(50% + 22px); top: -34px; font-family: "Plus Jakarta Sans", system-ui, sans-serif; letter-spacing: 0.01em; text-transform: none; -webkit-font-smoothing: auto; }
+  .stage .screen__label { position: relative; }
+  .stage .screen.spot .screen__label[data-hint]::before { position: absolute; z-index: 60; white-space: nowrap; pointer-events: none; font-size: 13px; font-weight: 800; color: #fff; padding: 6px 16px; border-radius: 999px;
+    background: radial-gradient(closest-side, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.6) 60%, transparent);
+    text-shadow: 0 1px 0 #000, 0 2px 3px rgba(0, 0, 0, 0.95), 0 0 10px rgba(125, 176, 239, 0.95), 0 0 24px rgba(125, 176, 239, 0.7); }
+  .story-mod .stage .screen.spot .screen__label[data-hint]::before { text-shadow: 0 1px 0 #000, 0 2px 3px rgba(0, 0, 0, 0.95), 0 0 10px rgba(63, 201, 142, 0.95), 0 0 24px rgba(63, 201, 142, 0.7); }
+  /* Beside the callout's ring while the tour waits for a click there. */
+  .callout__hint { translate: -50% 0; }
+  @media (prefers-reduced-motion: reduce) { .clickhint { animation: none; } }
 
   /* ===== The tour box: a little window into space, so the eye keeps coming back to it ===== */
   .demo__head { margin-bottom: 36px; }
@@ -659,7 +681,7 @@
         <p id="tourText"></p>
         <div class="guide__actions">
           <button type="button" class="guide__link" id="tourBack">← Back</button>
-          <button type="button" class="btn btn--main" id="tourDo"></button>
+          <span class="tourdo"><button type="button" class="btn btn--main" id="tourDo"></button><span class="clickhint clickhint--under" id="tourHint" aria-hidden="true"></span></span>
           <button type="button" class="guide__link" id="tourSkip">Skip the tour</button>
         </div>
       </div>
@@ -1075,29 +1097,29 @@
   // pressed a moment later.
   // The mod walkthrough: a shift as the mod, from first look to a little kindness.
   const MOD_STEPS = [
-    { title: "You're on the crew tonight", text: "You're BlazeMod420, modding for your friend RomansEmpire.TV. Streamer View at the top of your panel shows what's on their screen right now, so you never ask twice.", button: "Start my shift", look: "mod",
+    { title: "You're on the crew tonight", text: "You're BlazeMod420, modding for your friend RomansEmpire.TV. Streamer View at the top of your panel shows what's on their screen right now, so you never ask twice.", hint: "Click here to start your shift", button: "Start my shift", look: "mod",
       run: () => { const doc = panelDoc("mod"), el = doc?.querySelector(".sv") || doc?.querySelector(".panel"); if (el) showCallout("mod", el, "This is Streamer View: what's on RomansEmpire.TV's screen right now.", "guide"); said("Your shift has started. Chat is live on the left."); } },
-    { title: "Ask, don't spam chat", text: "Something to check with them? Ask quietly instead of typing in chat: it waits under their bar, never on stream, and their answer comes back to you.", button: "Ask them something", look: "obs", click: "modAsk" },
-    { title: "No answer? Nudge", text: "They're mid-fight and haven't seen it. A nudge moves your question up a color and warms their outline. It's limited, so it never turns into spam.", button: "Nudge them", look: "obs", click: "modNudge" },
-    { title: "Spot trouble in chat", text: "Someone's stirring things up. Flag the line in your color, then leave a note on it for the team. The streamer and mods see both; viewers never do.", button: "Flag it and leave a note", look: "obs", click: "modFlag", after: "modChatNote" },
-    { title: "When it can't wait", text: "A hate raid, or something private showing on stream? The panic button flashes their dock red with a chime until they look.", button: "Hit the panic button", look: "obs", click: "modWarn" },
-    { title: "Cheer them on", text: "Modding isn't only trouble. A !vanish note pops a little kindness onto their bar for 30 seconds, then fades away.", button: "Send a !vanish note", look: "obs", click: "modVanish" },
-    { title: "They ask you back", text: "Now your friend needs a hand. RomansEmpire.TV asks you something, and it lands in your panel on the right.", button: "RomansEmpire.TV asks you", look: "mod", click: "streamerAsk",
+    { title: "Ask, don't spam chat", text: "Something to check with them? Ask quietly instead of typing in chat: it waits under their bar, never on stream, and their answer comes back to you.", hint: "Click here to ask them", button: "Ask them something", look: "obs", click: "modAsk" },
+    { title: "No answer? Nudge", text: "They're mid-fight and haven't seen it. A nudge moves your question up a color and warms their outline. It's limited, so it never turns into spam.", hint: "Click here to nudge them", button: "Nudge them", look: "obs", click: "modNudge" },
+    { title: "Spot trouble in chat", text: "Someone's stirring things up. Flag the line in your color, then leave a note on it for the team. The streamer and mods see both; viewers never do.", hint: "Click here to flag the line", button: "Flag it and leave a note", look: "obs", click: "modFlag", after: "modChatNote" },
+    { title: "When it can't wait", text: "A hate raid, or something private showing on stream? The panic button flashes their dock red with a chime until they look.", hint: "Click here to hit the panic button", button: "Hit the panic button", look: "obs", click: "modWarn" },
+    { title: "Cheer them on", text: "Modding isn't only trouble. A !vanish note pops a little kindness onto their bar for 30 seconds, then fades away.", hint: "Click here to send a !vanish note", button: "Send a !vanish note", look: "obs", click: "modVanish" },
+    { title: "They ask you back", text: "Now your friend needs a hand. RomansEmpire.TV asks you something, and it lands in your panel on the right.", hint: "Click here to get their question", button: "RomansEmpire.TV asks you", look: "mod", click: "streamerAsk",
       waitFor: "modAnswer", then: "Your turn: answer it in your panel on the right. One tap is enough." },
-    { title: "That's a shift", text: "Quiet questions, nudges, flags and notes, a panic button for real trouble, and a little kindness. That's looking out for each other.", button: "Done", look: "", done: true },
+    { title: "That's a shift", text: "Quiet questions, nudges, flags and notes, a panic button for real trouble, and a little kindness. That's looking out for each other.", hint: "Click here to finish the tour", button: "Done", look: "", done: true },
   ];
   // The main demo: a night on stream, as the streamer, with your crew on the other side.
   const STEPS = STORY ? MOD_STEPS : [
-    { title: "Friday night, going live", text: "You're RomansEmpire.TV, and chat is filling up on the left. Your crew is here too: mod1 is watching from their panel on the right.", button: "Let's go", look: "obs",
+    { title: "Friday night, going live", text: "You're RomansEmpire.TV, and chat is filling up on the left. Your crew is here too: mod1 is watching from their panel on the right.", hint: "Click here to go live", button: "Let's go", look: "obs",
       run: () => said("You're live. Chat is running on the left; mod1's panel is on the right.") },
-    { title: "A question, not chat spam", text: "mod1 has a quick question. Instead of asking in chat, they ask you quietly. It waits under your bar, never on stream.", button: "mod1 asks you", look: "obs", click: "modAsk",
+    { title: "A question, not chat spam", text: "mod1 has a quick question. Instead of asking in chat, they ask you quietly. It waits under your bar, never on stream.", hint: "Click here to get mod1's question", button: "mod1 asks you", look: "obs", click: "modAsk",
       waitFor: "answer", then: "Your turn: answer it on the left with ♥ ✓ ✗ or ?. Your answer pops up in their panel on the right." },
-    { title: "A friend raids you", text: "Lump is raiding! The raid card remembers them: they've raided before and chatted here plenty, so you can welcome a friend, not a stranger.", button: "Start the raid", look: "obs", click: "tRaid" },
-    { title: "Trouble in the rush", text: "In the raid rush, mod1 spots a bad line. They flag it in their color and leave a note for the crew. Viewers never see either.", button: "Flag it and leave a note", look: "obs", click: "modFlag", after: "modChatNote" },
-    { title: "You need a hand too", text: "It works both ways. Ask mod1 something from your dock, and it lands in their side panel on the right.", button: "Ask mod1", look: "mod", click: "streamerAsk",
+    { title: "A friend raids you", text: "Lump is raiding! The raid card remembers them: they've raided before and chatted here plenty, so you can welcome a friend, not a stranger.", hint: "Click here to start the raid", button: "Start the raid", look: "obs", click: "tRaid" },
+    { title: "Trouble in the rush", text: "In the raid rush, mod1 spots a bad line. They flag it in their color and leave a note for the crew. Viewers never see either.", hint: "Click here to flag the bad line", button: "Flag it and leave a note", look: "obs", click: "modFlag", after: "modChatNote" },
+    { title: "You need a hand too", text: "It works both ways. Ask mod1 something from your dock, and it lands in their side panel on the right.", hint: "Click here to ask mod1", button: "Ask mod1", look: "mod", click: "streamerAsk",
       waitFor: "modAnswer", then: "Now be the mod: answer it in the panel on the right. One tap is enough." },
-    { title: "When it really can't wait", text: "Most nights it stays quiet. But if something serious shows on stream, a mod can hit the panic button: your dock flashes red until you look.", button: "Hit the panic button", look: "obs", click: "modWarn" },
-    { title: "That's your crew", text: "Quiet questions, a raid you remember, trouble handled and help when it counts. Play with anything under the screens, or see a mod's whole shift below.", button: "Done", look: "", done: true },
+    { title: "When it really can't wait", text: "Most nights it stays quiet. But if something serious shows on stream, a mod can hit the panic button: your dock flashes red until you look.", hint: "Click here to hit the panic button", button: "Hit the panic button", look: "obs", click: "modWarn" },
+    { title: "That's your crew", text: "Quiet questions, a raid you remember, trouble handled and help when it counts. Play with anything under the screens, or see a mod's whole shift below.", hint: "Click here to finish the tour", button: "Done", look: "", done: true },
   ];
   const tour = {
     at: 0,
@@ -1114,6 +1136,9 @@
       const go = document.getElementById("tourDo");
       go.textContent = asMe(st.button);
       go.className = "btn btn--main";
+      document.getElementById("tourHint").textContent = asMe(st.hint || "");
+      for (const id of ["mod", "obs"]) document.getElementById(id).closest(".screen").querySelector(".screen__label").removeAttribute("data-hint");
+      if (st.look) document.getElementById(st.look).closest(".screen").querySelector(".screen__label").dataset.hint = "Watch this side";
       document.getElementById("tourBack").hidden = this.at === 0;
       document.getElementById("tourSkip").hidden = !!st.done;
       for (const id of ["mod", "obs"]) document.getElementById(id).closest(".screen").classList.toggle("spot", st.look === id);
@@ -1138,7 +1163,13 @@
       const go = document.getElementById("tourDo");
       go.textContent = "Skip this →";
       go.className = "guide__link";
-      for (const id of ["mod", "obs"]) document.getElementById(id).closest(".screen").classList.toggle("spot", (st.waitFor === "answer" ? "obs" : "mod") === id);
+      document.getElementById("tourHint").textContent = "";
+      const where = st.waitFor === "answer" ? "obs" : "mod";
+      for (const id of ["mod", "obs"]) {
+        const scr = document.getElementById(id).closest(".screen");
+        scr.classList.toggle("spot", where === id);
+        scr.querySelector(".screen__label").dataset.hint = "Answer in this panel";
+      }
     },
     // Called when a question gets answered: the visitor did their part, so move on.
     answered(kind) {
@@ -1148,6 +1179,8 @@
     },
     end() {
       document.getElementById("tour").hidden = true;
+      document.getElementById("tourHint").textContent = "";
+      for (const id of ["mod", "obs"]) document.getElementById(id).closest(".screen").querySelector(".screen__label").removeAttribute("data-hint");
       for (const id of ["mod", "obs"]) document.getElementById(id).closest(".screen").classList.remove("spot");
       document.querySelector(".stage").classList.remove("stage--focus");
       if (callout?.classList.contains("callout--stay")) callout.remove();
@@ -1223,6 +1256,9 @@
     box.innerHTML = `<span class="callout__ring"></span><span class="callout__point"></span><p class="callout__text"><span class="callout__head"><span class="callout__pic"><img src="${pic}" alt=""></span><b class="callout__who"></b></span><span class="callout__say"></span></p>`;
     box.querySelector(".callout__who").textContent = who;
     box.querySelector(".callout__say").textContent = text;
+    // The tour is waiting for a click right here (answering): say so beside the ring.
+    const waitingHere = typeof tour !== "undefined" && tour.waiting && (tour.waiting === "answer" ? on === "obs" : on === "mod");
+    if (waitingHere) box.insertAdjacentHTML("beforeend", `<span class="clickhint callout__hint">Click here to answer</span>`);
     document.body.append(box);
     callout = box;
     const place = () => {
@@ -1246,6 +1282,9 @@
       Object.assign(note.style, { width: `${w}px`, left: `${x + left}px`, top: below ? `${y + t.bottom + 12}px` : `${y + t.top - 12 - note.offsetHeight}px` });
       note.style.setProperty("--ax", `${ax}px`);
       note.classList.toggle("callout__text--above", !below);
+      // "Click here to answer" on the ring's other side from the note.
+      const hint = box.querySelector(".callout__hint");
+      if (hint) Object.assign(hint.style, { left: `${x + t.left + t.width / 2}px`, top: below ? `${y + t.top - 36}px` : `${y + t.bottom + 18}px` });
       requestAnimationFrame(place);
     };
     place();
