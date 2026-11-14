@@ -276,4 +276,24 @@ export const tests = {
     h.check(oops.length === 1, `expected 1 kind of problem, got ${oops.length}: ${JSON.stringify(oops)}`);
     h.check(oops[0].msg === "TypeError: test boom" && oops[0].where === "dock.js:12:34" && oops[0].count === 1 && oops[0].logins.join() === "streamer", `unexpected report: ${JSON.stringify(oops[0])}`);
   }),
+
+  // ----- Custom chat ------------------------------------------------------------------------
+
+  async "a raid card shows who and how many first, then followers, you two, in common and their bio"(h) {
+    const dock = await h.panel("streamer", "obs");
+    await h.until(() => dock.$(".oc-line"), "custom chat to start");
+    await h.wait(500);
+    const { from, count } = h.pretendTwitch.raid();
+    const card = await h.until(() => dock.$(".oc-notice--raid"), "the raid card");
+    h.check(card.querySelector(".oc-raid__name")?.textContent === from, "the raider's name");
+    h.check(card.querySelector(".oc-raid__count b")?.textContent === count.toLocaleString(), "the raider count, big");
+    await h.until(() => /12\.4K followers/.test(card.querySelector(".oc-raid__sub")?.textContent || ""), "the follower count under the name");
+    h.check(/Minecraft/.test(card.querySelector(".oc-raid__sub").textContent), "what they stream, under the name");
+    const labels = [...card.querySelectorAll(".oc-raid__label")].map((l) => l.textContent);
+    h.check(labels.join() === "You two,In common", `sections in order, got: ${labels.join(", ")}`);
+    h.check(/Follows you/.test(card.textContent) && /Raided you 2× before/.test(card.textContent), "you two: follows and raided before");
+    const parts = [...card.querySelector(".oc-raid__about").children].map((c) => c.className);
+    h.check(parts.at(-1) === "oc-raid__bio", `the bio should come last, got: ${parts.join(", ")}`);
+    noErrors(dock);
+  },
 };

@@ -511,6 +511,7 @@ const twitch = (() => {
       created_at: new Date(Date.now() - age).toISOString(),
       followedAt: follows ? new Date(Date.now() - Math.min(age - day, (5 + (h % 700)) * day)).toISOString() : "",
       game: name === "Lump" || name === "streamer" ? "Minecraft" : GAMES[(h >> 3) % GAMES.length],
+      followers: name === "Lump" ? 12437 : 40 + (h % 4800), // the raid card's follower count
       // Tags for the raid card's "you share" (the pretend streamer and Lump overlap a little).
       tags: name === "Lump" ? ["English", "Cozy", "Building", "Wholesome"] : name === "streamer" ? ["English", "Cozy", "Chatting"] : [],
     };
@@ -599,6 +600,12 @@ const twitch = (() => {
     if (route === "/users" && u.searchParams.get("id")) return json(200, { data: [person(u.searchParams.get("id").replace(/^u-/, ""))] });
     if (route === "/users") return json(200, { data: [{ id: `u-${u.searchParams.get("login")}`, display_name: u.searchParams.get("login") }] });
     if (route === "/channels/followers") {
+      // Without user_id: how many follow a channel (the raid card's follower count). Twitch
+      // gives the total to anyone signed in, with an empty list.
+      if (!u.searchParams.get("user_id")) {
+        const bid = u.searchParams.get("broadcaster_id") || "";
+        return json(200, { data: [], total: person(bid === "1" ? "streamer" : bid.replace(/^u-/, "")).followers });
+      }
       const p = person(u.searchParams.get("user_id").replace(/^u-/, ""));
       return json(200, { data: p.followedAt ? [{ user_id: p.id, user_login: p.login, user_name: p.display_name, followed_at: p.followedAt }] : [], total: 1 });
     }

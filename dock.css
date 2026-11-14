@@ -5529,3 +5529,28 @@ body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; 
 .rep__who { font-size: 11px; color: var(--muted); }
 .rep__text { margin: 2px 0; font-size: 12.5px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
 .rep--oops .rep__text { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; color: #ffb4ad; }
+
+/* ===== The raid card: who and how many first, then you two, in common, and their bio ===== */
+.oc-notice--raid .oc-raid { align-items: center; gap: 10px; }
+.oc-notice--raid .oc-raid__words { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; line-height: 1.25; }
+.oc-notice--raid .oc-raid__words .oc-raid__title { font-size: 10.5px; line-height: 1.2; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--raid, #ff6a00) 70%, #fff); }
+.oc-notice--raid .oc-raid__name { overflow: hidden; font-size: 17px; line-height: 1.2; white-space: nowrap; text-overflow: ellipsis; }
+.oc-raid__sub { display: flex; flex-wrap: wrap; align-items: center; gap: 0 5px; font-size: 12px; font-weight: 600; color: var(--muted, #a3a3ad); }
+.oc-raid__sub[hidden] { display: none; }
+.oc-raid__sub > span:first-child { color: var(--text, #efeff1); }
+.oc-raid__dot { opacity: 0.6; }
+.oc-raid__count { flex: none; display: flex; flex-direction: column; align-items: flex-end; line-height: 1; }
+.oc-raid__count b { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; color: color-mix(in srgb, var(--raid, #ff6a00) 70%, #fff); }
+.oc-raid__count span { margin-top: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted, #a3a3ad); }
+.oc-notice--raid .oc-raid__about { display: flex; flex-direction: column; gap: 8px; margin-top: 9px; padding-top: 8px; border-top: 1px solid color-mix(in srgb, var(--raid, #ff6a00) 30%, transparent); }
+.oc-notice--raid .oc-raid__about[hidden] { display: none; }
+.oc-raid__sec { display: flex; flex-direction: column; gap: 2px; }
+.oc-raid__label { margin-bottom: 1px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted, #a3a3ad); }
+.oc-raid__rel { position: relative; padding-left: 14px; font-size: 12.5px; line-height: 1.4; color: var(--muted, #a3a3ad); }
+.oc-raid__rel::before { content: ""; position: absolute; left: 2px; top: 0.55em; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.45; }
+.oc-raid__rel b { font-weight: 700; }
+.oc-raid__rel--yes { color: var(--text, #efeff1); }
+.oc-raid__rel--yes::before { background: #3fc98e; opacity: 1; box-shadow: 0 0 6px rgba(63, 201, 142, 0.6); }
+.oc-raid__when { font-weight: 500; color: var(--muted, #a3a3ad); }
+.oc-notice--raid .oc-raid__facts { margin-top: 0; }
+.oc-notice--raid .oc-raid__bio { font-size: 12px; line-height: 1.4; }

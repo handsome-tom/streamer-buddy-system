@@ -1267,31 +1267,72 @@
       out = out.trim() || t;
       return out.length > 130 ? `${out.slice(0, 127).replace(/\s+\S*$/, "")}…` : out;
     }
-    async function raidAbout(uid, box, before) {
-      const [a, mine] = await Promise.all([aboutPerson(uid), myChannel()]);
-      const bits = [];
-      // From this channel's memory first: raids and chatting here.
-      if (before) {
-        const ago = (t) => (Date.now() - t < 86400000 ? "today" : `${howLong(t)} ago`);
-        bits.push(before.raid ? `Raided you before: ${before.raid[0]}× · last ${ago(before.raid[1])}` : "First raid on you");
-        bits.push(before.chat ? `Chatted here ${plural(before.chat[2], "time", "times")} · last ${ago(before.chat[1])}` : "Hasn't chatted here yet");
-      }
-      const bio = simpleBio(a.user?.description);
-      if (bio) box.append(el("div", "oc-raid__bio", bio));
+    // How many follow a channel: Twitch gives anyone signed in the total (not the list).
+    async function followerCount(uid) {
+      const f = await quiet(`/channels/followers?broadcaster_id=${encodeURIComponent(uid)}&first=1`);
+      return typeof f?.total === "number" ? f.total : null;
+    }
+    // 950, 1.2K, 12.4K, 124K, 1.2M (the exact number is in the tooltip).
+    const compact = (n) => (n < 1000 ? String(n) : n < 999500 ? `${(n / 1000).toFixed(n < 1e5 ? 1 : 0).replace(/\.0$/, "")}K` : `${(n / 1e6).toFixed(1).replace(/\.0$/, "")}M`);
+
+    // The raid card, filled in a moment after it shows, in order of what a streamer needs:
+    // how big they are and what they stream (under the name), then you two (do they follow
+    // you, have they raided or chatted here before), then what you have in common, then their
+    // bio. (Twitch only lets an app see the follows of whoever is signed in, so channels you
+    // both follow can't be shown.)
+    async function raidAbout(uid, card, before) {
+      const [a, mine, followers] = await Promise.all([aboutPerson(uid), myChannel(), followerCount(uid)]);
       const theirs = a.channel || {};
       const same = (x, y) => x && y && String(x).toLowerCase() === String(y).toLowerCase();
-      if (theirs.game_name) bits.push(same(theirs.game_name, mine?.game_name) ? `Also streams ${theirs.game_name}, like you` : `Streams ${theirs.game_name}`);
-      const myTags = new Set((mine?.tags || []).map((x) => String(x).toLowerCase()));
-      const shared = (theirs.tags || []).filter((x) => myTags.has(String(x).toLowerCase())).slice(0, 3);
-      if (shared.length) bits.push(`You share: ${shared.join(", ")}`);
-      if (a.follow) bits.push(`Follows you · ${howLong(a.follow.followed_at)}`);
-      else if (a.follow === false) bits.push("Doesn't follow you yet");
-      if (bits.length) {
-        const row = el("div", "oc-raid__facts");
-        for (const b of bits) row.append(el("span", "oc-raid__fact", b));
-        box.append(row);
+
+      // Under the name: followers, and what they stream.
+      const sub = [];
+      if (followers !== null) sub.push(`${compact(followers)} ${followers === 1 ? "follower" : "followers"}`);
+      if (theirs.game_name) sub.push(theirs.game_name);
+      if (sub.length) {
+        card.sub.replaceChildren(...sub.flatMap((t, i) => (i ? [el("span", "oc-raid__dot", "·"), el("span", null, t)] : [el("span", null, t)])));
+        if (followers !== null) card.sub.firstChild.title = `${followers.toLocaleString()} ${followers === 1 ? "follower" : "followers"}`;
+        card.sub.hidden = false;
       }
-      box.hidden = !box.childElementCount;
+
+      // You two: good news in green, firsts quietly.
+      const you = [];
+      const row = (good, strong, rest = "") => {
+        const r = el("div", `oc-raid__rel${good ? " oc-raid__rel--yes" : ""}`);
+        r.append(el("b", null, strong));
+        if (rest) r.append(el("span", "oc-raid__when", ` · ${rest}`));
+        return r;
+      };
+      const ago = (t) => (Date.now() - t < 86400000 ? "today" : `${howLong(t)} ago`);
+      if (a.follow) you.push(row(true, "Follows you", howLong(a.follow.followed_at)));
+      else if (a.follow === false) you.push(row(false, "Doesn't follow you yet"));
+      if (before) {
+        you.push(before.raid ? row(true, `Raided you ${before.raid[0]}× before`, `last ${ago(before.raid[1])}`) : row(false, "First raid on you"));
+        you.push(before.chat ? row(true, `Chatted here ${plural(before.chat[2], "time", "times")}`, `last ${ago(before.chat[1])}`) : row(false, "Hasn't chatted here yet"));
+      }
+      if (you.length) {
+        const sec = el("div", "oc-raid__sec");
+        sec.append(el("div", "oc-raid__label", "You two"), ...you);
+        card.about.append(sec);
+      }
+
+      // In common: the same game, and tags you share.
+      const common = [];
+      if (same(theirs.game_name, mine?.game_name)) common.push(`Also streams ${theirs.game_name}`);
+      const myTags = new Set((mine?.tags || []).map((x) => String(x).toLowerCase()));
+      common.push(...(theirs.tags || []).filter((x) => myTags.has(String(x).toLowerCase())).slice(0, 3));
+      if (common.length) {
+        const sec = el("div", "oc-raid__sec");
+        const chips = el("div", "oc-raid__facts");
+        for (const c of common) chips.append(el("span", "oc-raid__fact", c));
+        sec.append(el("div", "oc-raid__label", "In common"), chips);
+        card.about.append(sec);
+      }
+
+      // Last, in their words.
+      const bio = simpleBio(a.user?.description);
+      if (bio) card.about.append(el("div", "oc-raid__bio", bio));
+      card.about.hidden = !card.about.childElementCount;
     }
 
     function noticeLine(e) {
@@ -1323,26 +1364,29 @@
         badge.innerHTML = glyph("raid", 9);
         picWrap.append(badge);
         head.append(picWrap);
+        // Who, and how many: the name (with followers and what they stream under it, once
+        // Twitch answers) and the raider count, big, on the right.
         const words = el("div", "oc-raid__words");
         const name = el("a", "oc-raid__name", r.user_name || r.user_login);
         name.href = `https://www.twitch.tv/${encodeURIComponent(r.user_login || "")}`;
         name.target = "_blank";
         name.rel = "noopener noreferrer";
         const n = Number(r.viewer_count) || 0;
-        words.append(el("div", "oc-raid__title", "Raid!"), name, ` is raiding with ${n.toLocaleString()} ${n === 1 ? "viewer" : "viewers"}`);
-        if (fromChannel) words.append(` (to ${fromChannel})`);
-        // About them, filled in a moment later from Twitch: a short, cleaned-up line from their
-        // bio, what they stream next to what you stream, tags you share, and whether they
-        // follow you. (Twitch only lets an app see the follows of whoever is signed in, so
-        // channels you both follow can't be shown.)
+        const sub = el("div", "oc-raid__sub");
+        sub.hidden = true;
+        words.append(el("div", "oc-raid__title", fromChannel ? `Raid · to ${fromChannel}` : "Raid"), name, sub);
+        const count = el("div", "oc-raid__count");
+        count.append(el("b", null, n.toLocaleString()), el("span", null, n === 1 ? "raider" : "raiders"));
+        head.append(words, count);
+        line.setAttribute("aria-label", `${r.user_name || r.user_login} is raiding with ${n.toLocaleString()} ${n === 1 ? "viewer" : "viewers"}`);
+        line.append(head);
+        // About them, filled in a moment later from Twitch and this channel's memory.
         if (r.user_id && !fromChannel) {
           const about = el("div", "oc-raid__about");
           about.hidden = true;
-          words.append(about);
-          raidAbout(r.user_id, about, memRaid(r.user_id, n));
+          line.append(about);
+          raidAbout(r.user_id, { sub, about }, memRaid(r.user_id, n));
         }
-        head.append(words);
-        line.append(head);
         return line;
       }
       if (kind === "community_sub_gift" && e.community_sub_gift) giftCard(e);
