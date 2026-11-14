@@ -18,6 +18,8 @@
   // ?story=mod: the mod walkthrough (the front page's second demo): the same pretend world,
   // told from the mod's side, in green.
   if (new URLSearchParams(location.search).get("story") === "mod") document.documentElement.classList.add("story-mod");
+  // ?plain: the Testing Playground. Black, with nothing around the panels and the tour.
+  if (new URLSearchParams(location.search).has("plain")) document.documentElement.classList.add("plain");
 </script>
 <style>
   /* ===== Twitch Space: the public site, with the live demo in the middle ===== */
@@ -665,6 +667,10 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 80px rgba(63, 201, 142, 0.22); }
   @media (max-width: 600px) { .guide { padding: 22px 18px; border-radius: 22px; } }
   @media (prefers-reduced-motion: reduce) { .guide::before { animation: none; } }
+  /* ===== ?plain (the Testing Playground): just black, the tour and the two panels ===== */
+  html.plain, html.plain body { background: #000; }
+  html.plain #space, html.plain .sides, html.plain .introfeats, html.plain .guide::before, html.plain .guide::after { display: none; }
+  html.plain .guide { background: #0c0c0f; border-color: rgba(255, 255, 255, 0.12); box-shadow: none; }
 </style>
 </head>
 <body>
