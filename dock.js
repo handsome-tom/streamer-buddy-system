@@ -179,6 +179,23 @@
   let chatFrom = ""; // "messages" when a chat was opened from Messages (its back button goes there)
 
   let me = null; // { login, id }
+
+  // ===== Invite links (the relay explains them) ============================================
+  // Opening someone's invite link (?invite=…) keeps it on this device until you're signed
+  // in (Twitch's sign-in leaves the page), then uses it: you and whoever sent it are added to
+  // each other in one go.
+  const INVITE_RE = /^[a-hj-km-np-z2-9]{10}$/;
+  {
+    const code = (params.get("invite") || "").toLowerCase();
+    if (INVITE_RE.test(code)) localStorage.setItem("pendingInvite", code);
+  }
+  const pendingInvite = () => {
+    const code = localStorage.getItem("pendingInvite") || "";
+    return INVITE_RE.test(code) ? code : "";
+  };
+  let redeeming = false; // a pending invite has been sent on this connection
+  let inviteLink = ""; // the invite link you made last, shown under Connections
+  let inviteWait = false;
   // The side panel opens on Mod (the sword): the stream you're on.
   const HOME_VIEW = DECK ? "deck" : EMBED ? "mod" : "cards";
   let view = POPOUT && /^(ask|people|person|chat|stats)$/.test(params.get("view")) ? params.get("view") : HOME_VIEW; // "cards" | "deck" | "ask" | "people" | "person" | "chat" | "stats"
@@ -751,7 +768,7 @@
     if (!RELAY_URL) return setStatus("Relay not set up yet", "bad");
     const ws = new WebSocket(RELAY_URL);
     socket = ws;
-    ws.onopen = () => ws.send(JSON.stringify({ t: "auth", token: DEV ? `dev:${DEV}` : get("token") }));
+    ws.onopen = () => ws.send(JSON.stringify({ t: "auth", token: DEV ? `dev:${DEV}` : get("token"), ...(pendingInvite() ? { invite: pendingInvite() } : {}) }));
     ws.onmessage = (e) => {
       if (e.data === "pong") return;
       let m;
@@ -761,8 +778,14 @@
         return;
       }
       retryMs = 1000;
-      if (m.t === "state") gotState(m);
+      if (m.t === "state") {
+        gotState(m);
+        useInvite();
+      }
       else if (m.t === "q") gotQuestion(m.q);
+      else if (m.t === "invite") gotInvite(m.code);
+      else if (m.t === "redeemed") gotRedeemed(m.from);
+      else if (m.t === "invited") gotInvited(m.login);
       else if (m.t === "msg") gotMessage(m.m);
       else if (m.t === "flash") gotFlash(m.f);
       else if (m.t === "unflash") {
@@ -783,6 +806,7 @@
     ws.onclose = (e) => {
       if (ws !== socket) return;
       socket = null;
+      redeeming = inviteWait = false;
       if (e.code === 4003) {
         showSignedOut(`StreamSpace is invite-only for now, and you're not on the list yet.${notAllowedBy ? ` Your request to join was sent to ${notAllowedBy}. Once they allow you, sign in again.` : ""}`);
         return;
@@ -1112,12 +1136,80 @@
     document.body.append(shade);
     ok.focus();
   }
+  function useInvite() {
+    const code = pendingInvite();
+    if (code && !redeeming && relay({ t: "redeem", code })) redeeming = true;
+  }
+  function forgetInvite() {
+    localStorage.removeItem("pendingInvite");
+    redeeming = false;
+    const url = new URL(location.href);
+    if (url.searchParams.has("invite")) {
+      url.searchParams.delete("invite");
+      history.replaceState(history.state, "", url);
+    }
+  }
+  function gotRedeemed(from) {
+    forgetInvite();
+    const where = EMBED || LIVECHAT ? "" : " Mods: keep this next to Twitch with StreamSpace for Chrome. Streamers: add this page to OBS (Docks → Custom Browser Docks).";
+    showInviteNote(`You're connected to ${from}!`, `You've both been added, so you can ask each other things right away.${where}`, true);
+  }
+  function gotInvited(login) {
+    setStatus(`${login} used your invite link: you're connected`, "ok");
+    setTimeout(() => ready && setStatus("Online", "ok"), 8000);
+  }
+  function gotInvite(code) {
+    inviteWait = false;
+    if (!INVITE_RE.test(code || "")) return render();
+    inviteLink = `${location.origin}${location.pathname}?invite=${code}`;
+    render();
+  }
+  // The invite's result, in the same box as the Top 8 note (Tom says hi when it worked).
+  function showInviteNote(head, words, tom = false) {
+    document.querySelector(".top8")?.remove();
+    const shade = el("div", "top8 invitenote");
+    const box = el("div", "top8__box");
+    box.setAttribute("role", "dialog");
+    box.setAttribute("aria-label", head);
+    const close = () => {
+      shade.remove();
+      removeEventListener("keydown", onKey);
+    };
+    const onKey = (e) => e.key === "Escape" && close();
+    addEventListener("keydown", onKey);
+    shade.addEventListener("click", (e) => e.target === shade && close());
+    if (tom) {
+      const face = el("img", "top8__tom");
+      face.src = "icons/tom.png";
+      face.alt = "";
+      box.append(face);
+    }
+    box.append(el("div", "top8__head", head), el("p", "top8__words", words));
+    const row = el("div", "top8__btns");
+    const ok = el("button", "cx__btn cx__btn--blue", "OK");
+    ok.type = "button";
+    ok.addEventListener("click", close);
+    row.append(ok);
+    box.append(row);
+    shade.append(box);
+    document.body.append(shade);
+    ok.focus();
+  }
+
   function gotError(m) {
     for (const k of Object.keys(pending)) delete pending[k];
     nudging.clear();
     if (m.why === "signin") return; // the socket closing next deals with it
     if (m.why === "notallowed") return void (notAllowedBy = m.owner || ""); // closing next, too
-    if (m.why === "topeight") return showTopEight(m.limit || limit || 8);
+    if (m.why === "invite") {
+      forgetInvite();
+      return showInviteNote("That invite link didn't work", m.detail || "Ask for a new one.");
+    }
+    if (m.why === "topeight") {
+      if (redeeming) forgetInvite(); // a full list: that link can't be used
+      return showTopEight(m.limit || limit || 8);
+    }
+    inviteWait = false;
     askDraft.note = `${m.why}.`;
     setStatus(m.why, "bad");
     setTimeout(() => ready && setStatus("Online", "ok"), 6000);
@@ -3890,6 +3982,40 @@
       }
     }
     addCard.append(el("p", "cx__hint", "You can reach each other once you've both added each other."));
+    // Or send a link: whoever opens it and signs in is added to you both ways at once.
+    const invite = el("div", "cx__invite");
+    invite.append(el("div", "cx__label", "Or send an invite link"), el("p", "cx__hint", "When they open it and sign in with Twitch, you're added to each other in one go. Each link works once, for a week."));
+    if (inviteLink) {
+      const row = el("div", "cx__inviterow");
+      const field = el("input", "cx__invitelink");
+      field.readOnly = true;
+      field.value = inviteLink;
+      field.setAttribute("aria-label", "Your invite link");
+      field.addEventListener("focus", () => field.select());
+      const copy = el("button", "cx__btn", "Copy");
+      copy.type = "button";
+      copy.addEventListener("click", () => {
+        const fallback = () => {
+          field.select();
+          copy.textContent = "Press Ctrl+C";
+        };
+        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(inviteLink).then(() => (copy.textContent = "Copied!"), fallback);
+        else fallback();
+      });
+      row.append(field, copy);
+      invite.append(row);
+    }
+    const make = el("button", "cx__btn cx__btn--blue cx__invitego", inviteWait ? "Making a link…" : inviteLink ? "Make another link" : "Make an invite link");
+    make.type = "button";
+    make.disabled = inviteWait;
+    make.addEventListener("click", () => {
+      if (relay({ t: "invite" })) {
+        inviteWait = true;
+        render();
+      }
+    });
+    invite.append(make);
+    addCard.append(invite);
     if (limit) {
       const used = connections.filter((c) => c.login !== owner).length;
       addCard.append(el("p", `cx__spots${used >= limit ? " cx__spots--full" : ""}`, limit === 8 ? `Top 8 · ${used} of 8 spots used` : `${used} of ${limit} spots used`));
@@ -4125,7 +4251,7 @@
         const words = el("span", "people__words");
         const name = el("span", "people__name", q.login);
         if (colorOf(q.login)) name.style.color = colorOf(q.login);
-        words.append(name, el("span", "people__state", `tried ${ago(q.at)}${q.tries > 1 ? ` · ${q.tries} times` : ""}`));
+        words.append(name, el("span", "people__state", `tried ${ago(q.at)}${q.tries > 1 ? ` · ${q.tries} times` : ""}${q.by ? ` · invited by ${q.by}` : ""}`));
         who.append(personPic(q.login), words);
         const yes = el("button", "cx__btn cx__btn--blue", "Allow");
         yes.type = "button";
@@ -4315,6 +4441,7 @@
     mark.alt = "";
     box.append(mark, el("div", "signin__head", "Streamer Buddy System"), el("p", "signin__sub", "Quick questions between you and the people you've connected with."), el("p", "signin__by", "Part of StreamSpace"));
     if (message) box.append(el("p", "signin__error", message));
+    if (pendingInvite()) box.append(el("p", "signin__sub signin__invite", "You've been sent an invite link. Sign in with Twitch and you'll be connected to whoever sent it."));
     const b = el("button", "signin__btn", "Sign in with Twitch");
     b.type = "button";
     b.addEventListener("click", signIn);

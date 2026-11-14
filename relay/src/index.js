@@ -27,6 +27,14 @@
 // asks: { login: { at, first, tries } } }.
 // Without OWNER_LOGIN (the demo, local testing) anyone can sign in, as before.
 //
+// Invite links: anyone can make a link (invite) that connects whoever opens it and signs in
+// to them, both ways at once, so they can ask each other straight away instead of each
+// adding the other by name. A link works once, for a week; up to MAX_OPEN_INVITES unused at
+// a time. Top 8 still counts on both sides. With an owner, the person invited still needs to
+// be on the allow list: if they aren't, their ask to join says who invited them ("by"), and
+// their page keeps the link and uses it once they're allowed. Kept as "inv:<code>":
+// { from, at, used: { by, at } | null }, and each person's codes as their user's "invites".
+//
 // Connections: each person's list of who they've added. Two people can ask
 // each other only once both have added each other ("mutual"); until then the
 // other side sees the request. Whether someone's online is only shared
@@ -80,7 +88,9 @@
 // your mutual connections get them as each connection's "since" and "last".
 //
 // Messages from a page:
-//   auth { token }          connect { login }        disconnect { login }
+//   auth { token, invite }  connect { login }        disconnect { login }
+//   invite {}               make an invite link; answered with invite { code, expires }
+//   redeem { code }         use someone's invite link; answered with redeemed { from }
 //   ask { to, text, options, note, online }  answer { id, code, text }  dismiss { id }
 //     (online, with "*" or a "#tag": only those online right now)
 //   withdraw { id }         take back your own question or message before it's answered
@@ -121,7 +131,10 @@
 //   flashed { kind, reached }  how many people yours reached
 //   stats { owner, s }      someone's worked-out stats changed
 //   view { owner, v }       what a connection's OBS dock shows now (v null: it closed)
-//   error { why }
+//   invite { code, expires } your new invite link's code
+//   redeemed { from }       you used from's invite: you're connected both ways
+//   invited { login }       someone used your invite link
+//   error { why }           why "invite" has detail: what was wrong with the link
 // A plain "ping" gets "pong" without waking the hub (keeps idle pages cheap).
 //
 // Streamer View: a streamer's OBS dock sends a summary of what it shows whenever that
@@ -138,6 +151,11 @@ const MAX_LIMIT = 100;
 const MAX_ASKS = 50; // people turned away, kept for the owner to allow
 const MAX_MOD_FOR = 300; // channels someone mods, as shared with their connections
 const MAX_LEN = 200;
+const INVITE_MS = 7 * 24 * 60 * 60 * 1000; // how long an invite link works
+const MAX_OPEN_INVITES = 20; // unused invite links one person can have at a time
+const INVITE_LETTERS = "abcdefghjkmnpqrstuvwxyz23456789"; // no 0/o, 1/l/i: easy to read out
+const INVITE_RE = /^[a-hj-km-np-z2-9]{10}$/;
+const inviteCode = () => [...crypto.getRandomValues(new Uint8Array(10))].map((b) => INVITE_LETTERS[b % INVITE_LETTERS.length]).join("");
 const MAX_FLAGGED_LEN = 500; // a whole Twitch chat message
 const PIN_MS = 5 * 60 * 1000;
 const SENT_FLASH_MS = 3 * 60 * 1000; // how long a quick note or !vanish can be taken back
@@ -200,7 +218,7 @@ export class Hub {
       return;
     }
     const who = ws.deserializeAttachment() || {};
-    if (m.t === "auth") return this.auth(ws, m.token);
+    if (m.t === "auth") return this.auth(ws, m.token, m.invite);
     if (!who.login) return this.send(ws, { t: "error", why: "Not signed in" });
     try {
       if (m.t === "connect") await this.setConnection(who.login, m.login, true);
@@ -227,6 +245,8 @@ export class Hub {
       else if (m.t === "nudge") await this.nudge(ws, who, m.id, !!m.warn);
       else if (m.t === "allow") await this.setAllowed(who.login, m);
       else if (m.t === "modfor") await this.setModFor(who.login, m.list);
+      else if (m.t === "invite") await this.makeInvite(ws, who);
+      else if (m.t === "redeem") await this.redeem(ws, who, m.code);
       else if (m.t === "seen") await this.update(ws, who, m.id, (q) => !q.seenAt && ((q.from === who.login && q.answer) || (q.to === who.login && q.note && !q.answer && !q.dismissed)), (q) => (q.seenAt = Date.now()));
     } catch (e) {
       this.send(ws, { t: "error", why: "Something went wrong on the relay" });
@@ -243,7 +263,7 @@ export class Hub {
 
   // ===== Who's who ===========================================================================
 
-  async auth(ws, token) {
+  async auth(ws, token, invite) {
     let j = null;
     // Local testing only (`wrangler dev --var DEV_AUTH:1`): "dev:<login>" signs in as anyone.
     // Never set DEV_AUTH on the deployed relay.
@@ -260,7 +280,7 @@ export class Hub {
     const allow = await this.allowList();
     const owner = this.owner();
     if (allow && j.login !== owner && !allow.logins.includes(j.login)) {
-      await this.askToJoin(j.login);
+      await this.askToJoin(j.login, await this.inviter(invite));
       this.send(ws, { t: "error", why: "notallowed", owner, asked: true });
       return ws.close(4003, "not on the allow list");
     }
@@ -331,10 +351,11 @@ export class Hub {
   }
 
   // Someone turned away: remembered as asking to join, and the owner's panel hears now.
-  async askToJoin(login) {
+  // by: who invited them, when they came with an invite link.
+  async askToJoin(login, by = "") {
     const a = await this.allowList();
     const was = a.asks?.[login];
-    a.asks = { ...a.asks, [login]: { at: Date.now(), first: was?.first || Date.now(), tries: (was?.tries || 0) + 1 } };
+    a.asks = { ...a.asks, [login]: { at: Date.now(), first: was?.first || Date.now(), tries: (was?.tries || 0) + 1, ...((by || was?.by) ? { by: by || was.by } : {}) } };
     const all = Object.entries(a.asks).sort((x, y) => y[1].at - x[1].at);
     if (all.length > MAX_ASKS) a.asks = Object.fromEntries(all.slice(0, MAX_ASKS));
     await this.ctx.storage.put("allow", a);
@@ -501,7 +522,7 @@ export class Hub {
       // joined: they've signed in at least once.
       // used: how many people they've added (not counting the owner), of limit.
       allowed = a.logins.map((l) => ({ login: l, added: a.added?.[l] || 0, joined: !!users[l]?.at, used: (users[l]?.list || []).filter((x) => x !== owner).length, limit: this.limitOf(l, a) }));
-      asking = Object.entries(a.asks || {}).map(([l, x]) => ({ login: l, at: x.at, first: x.first, tries: x.tries })).sort((x, y) => y.at - x.at);
+      asking = Object.entries(a.asks || {}).map(([l, x]) => ({ login: l, at: x.at, first: x.first, tries: x.tries, by: x.by || "" })).sort((x, y) => y.at - x.at);
     }
     const limit = owner && login !== owner ? this.limitOf(login, await this.allowList()) : null;
     this.sendTo(login, { t: "state", me: login, owner, allowed, asking, limit, status: users[login]?.status || "modding", since: users[login]?.onlineAt || 0, connections, requests, tags: users[login]?.tags || {}, questions, pins, rooms, chat, statsOn: !!users[login]?.statsOn, stats, views });
@@ -592,6 +613,59 @@ export class Hub {
     for (const l of users[login]?.list || []) {
       if (users[l]?.list.includes(login)) this.sendTo(l, { t: "view", owner: login, v });
     }
+  }
+
+  // ===== Invite links ========================================================================
+
+  async makeInvite(ws, who) {
+    const user = (await this.ctx.storage.get(`u:${who.login}`)) || { list: [] };
+    const now = Date.now();
+    const keep = []; // links still within their week (used or not)
+    let open = 0;
+    for (const code of user.invites || []) {
+      const inv = await this.ctx.storage.get(`inv:${code}`);
+      if (inv && now - inv.at < INVITE_MS) {
+        keep.push(code);
+        if (!inv.used) open++;
+      } else await this.ctx.storage.delete(`inv:${code}`);
+    }
+    if (open >= MAX_OPEN_INVITES) return this.send(ws, { t: "error", why: `You have ${MAX_OPEN_INVITES} invite links nobody has used yet. Each one runs out after a week` });
+    let code = inviteCode();
+    while (await this.ctx.storage.get(`inv:${code}`)) code = inviteCode();
+    await this.ctx.storage.put(`inv:${code}`, { from: who.login, at: now, used: null });
+    user.invites = [...keep, code];
+    await this.ctx.storage.put(`u:${who.login}`, user);
+    this.send(ws, { t: "invite", code, expires: now + INVITE_MS });
+  }
+
+  // Who made an invite link, while it can still be used ("" if it can't).
+  async inviter(code) {
+    code = String(code || "").toLowerCase();
+    if (!INVITE_RE.test(code)) return "";
+    const inv = await this.ctx.storage.get(`inv:${code}`);
+    return inv && !inv.used && Date.now() - inv.at < INVITE_MS ? inv.from : "";
+  }
+
+  async redeem(ws, who, code) {
+    const fail = (detail) => this.send(ws, { t: "error", why: "invite", detail });
+    code = String(code || "").toLowerCase();
+    const inv = INVITE_RE.test(code) ? await this.ctx.storage.get(`inv:${code}`) : null;
+    if (!inv || Date.now() - inv.at >= INVITE_MS) return fail("That invite link has run out, or isn't quite right. Ask for a new one.");
+    if (inv.used) return inv.used.by === who.login ? this.send(ws, { t: "redeemed", from: inv.from }) : fail("That invite link has already been used. Ask for a new one.");
+    if (inv.from === who.login) return fail("That's your own invite link. Send it to the person you want to connect with.");
+    // Top 8, on both sides, before anything changes.
+    const owner = this.owner();
+    const a = await this.allowList();
+    const [me, them] = await Promise.all([this.ctx.storage.get(`u:${who.login}`), this.ctx.storage.get(`u:${inv.from}`)]);
+    const full = (login, u, other) => !!owner && login !== owner && !(u?.list || []).includes(other) && (u?.list || []).filter((l) => l !== owner).length >= this.limitOf(login, a);
+    if (full(who.login, me, inv.from)) return this.send(ws, { t: "error", why: "topeight", limit: this.limitOf(who.login, a), owner });
+    if (full(inv.from, them, who.login)) return fail(`${inv.from}'s list is full, so they can't add anyone else right now.`);
+    inv.used = { by: who.login, at: Date.now() };
+    await this.ctx.storage.put(`inv:${code}`, inv);
+    await this.setConnection(who.login, inv.from, true);
+    await this.setConnection(inv.from, who.login, true);
+    this.send(ws, { t: "redeemed", from: inv.from });
+    this.sendTo(inv.from, { t: "invited", login: who.login });
   }
 
   async setConnection(login, other, on) {

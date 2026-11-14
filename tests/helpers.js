@@ -2,7 +2,8 @@
 // connections, and waiting for something to happen. Everything talks to the pretend relay
 // in this page (demo/hub.js), never the real one.
 
-import { Socket, resetRelay, pretendTwitch } from "../demo/hub.js";
+// The same address play.html uses (with its ?v=), so a browser never runs an old copy.
+import { Socket, resetRelay, pretendTwitch } from "../demo/hub.js?v=124";
 
 export { pretendTwitch };
 export const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -30,16 +31,18 @@ export function check(ok, what) {
 let opened = [];
 
 // A fresh start for each test: no panels, no pretend people, an empty relay.
-export async function reset() {
+// relaySettings: e.g. { OWNER_LOGIN: "tom" } for the allow list, as on the real relay.
+export async function reset(relaySettings) {
   for (const o of opened) o.close();
   opened = [];
   document.getElementById("frames").replaceChildren();
-  resetRelay();
+  resetRelay(relaySettings);
   await wait(30);
 }
 
 // ----- Pretend people: a raw relay connection each, signed in as dev:<login> --------------
-export function person(login) {
+// invite: sign in carrying an invite link's code, as a page opened from one does.
+export function person(login, { invite } = {}) {
   const ws = new Socket("wss://sandbox.invalid/ws");
   const got = [];
   const p = {
@@ -59,7 +62,8 @@ export function person(login) {
     seen: (t, match = () => true) => got.find((m) => m.t === t && match(m)),
     close: () => ws.close(),
   };
-  ws.onopen = () => ws.send(JSON.stringify({ t: "auth", token: `dev:${login}` }));
+  ws.onopen = () => ws.send(JSON.stringify({ t: "auth", token: `dev:${login}`, ...(invite ? { invite } : {}) }));
+  ws.onclose = (e) => (p.closedWith = e.code);
   ws.onmessage = (e) => {
     if (e.data === "pong") return;
     let m;
@@ -75,8 +79,11 @@ export function person(login) {
     }
     if (m.t === "q") p.questions[m.q.id] = m.q;
   };
+  // Is `other` connected to this person both ways?
+  p.connectedTo = (other) => !!p.state?.connections?.some((c) => c.login === other && c.mutual);
   opened.push(p);
   p.ready = until(() => p.state, `${login} to sign in`);
+  p.ready.catch(() => {}); // someone turned away never signs in: the test says if that matters
   return p;
 }
 

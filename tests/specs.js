@@ -24,6 +24,14 @@ const noErrors = (...panels) => {
   if (errors.length) throw new Error(`page errors: ${errors.join("; ")}`);
 };
 
+// With the allow list on, as on the real relay: "tom" is the owner.
+const withAllowList = (fn) => Object.assign(fn, { relaySettings: { OWNER_LOGIN: "tom" } });
+async function makeInvite(p) {
+  await p.ready;
+  p.send({ t: "invite" });
+  return (await p.next("invite")).code;
+}
+
 export const tests = {
   async "the streamer's OBS dock and a mod's side panel both load and sign in"(h) {
     const { streamer, mod } = await streamerAndMod(h);
@@ -141,4 +149,80 @@ export const tests = {
     await stranger.next("error");
     h.check(!streamer.seen("q", (m) => m.q.text === "hello?"), "the streamer shouldn't get a question from someone they haven't added");
   },
+
+  // ----- Invite links -----------------------------------------------------------------------
+
+  async "opening an invite link and signing in connects both people at once"(h) {
+    const streamer = h.person("streamer");
+    const code = await makeInvite(streamer);
+    const newMod = await h.panel("newmod", "page", `invite=${code}`);
+    await h.until(() => newMod.has("You're connected to streamer!"), "the welcome on the new mod's page");
+    await h.until(() => streamer.connectedTo("newmod"), "the streamer to have newmod, both ways");
+    await h.until(() => streamer.seen("invited", (m) => m.login === "newmod"), "the streamer to hear the link was used");
+    h.check(!newMod.win.location.search.includes("invite="), "the link's code should leave the address once used");
+    noErrors(newMod);
+  },
+
+  async "Connections makes an invite link to copy"(h) {
+    const dock = await h.panel("streamer", "ext");
+    (await h.until(() => dock.$("#peopleBtn:not([hidden])"), "the Connections button")).click();
+    (await h.until(() => dock.$(".cx__invitego"), "the invite button")).click();
+    const field = await h.until(() => dock.$(".cx__invitelink"), "the invite link");
+    h.check(/\?invite=[a-z2-9]{10}$/.test(field.value), `odd invite link: ${field.value}`);
+    noErrors(dock);
+  },
+
+  async "an invite link works only once, and not on yourself"(h) {
+    const streamer = h.person("streamer");
+    const code = await makeInvite(streamer);
+    streamer.send({ t: "redeem", code });
+    const own = await streamer.next("error", (m) => m.why === "invite");
+    h.check(/your own/.test(own.detail), `expected the "own link" message, got: ${own.detail}`);
+    const first = h.person("mod1");
+    await first.ready;
+    first.send({ t: "redeem", code });
+    await first.next("redeemed", (m) => m.from === "streamer");
+    const second = h.person("mod2");
+    await second.ready;
+    second.send({ t: "redeem", code });
+    const used = await second.next("error", (m) => m.why === "invite");
+    h.check(/already been used/.test(used.detail), `expected "already been used", got: ${used.detail}`);
+    h.check(!streamer.connectedTo("mod2"), "mod2 shouldn't be connected");
+  },
+
+  "with the allow list on, someone invited waits for the owner, then the link still works": withAllowList(async (h) => {
+    const tom = h.person("tom");
+    await tom.ready;
+    tom.send({ t: "allow", login: "streamer", on: true });
+    await tom.next("state", (m) => (m.allowed || []).some((a) => (a.login || a) === "streamer"));
+    const streamer = h.person("streamer");
+    const code = await makeInvite(streamer);
+    const turnedAway = h.person("newbie", { invite: code });
+    await h.until(() => turnedAway.closedWith === 4003, "newbie to be turned away (not on the allow list)");
+    await h.until(() => (tom.state.asking || []).some((a) => a.login === "newbie" && a.by === "streamer"), "the owner to see newbie, invited by streamer");
+    tom.send({ t: "allow", login: "newbie", on: true });
+    const newbie = h.person("newbie", { invite: code });
+    await newbie.ready;
+    newbie.send({ t: "redeem", code });
+    await newbie.next("redeemed");
+    await h.until(() => streamer.connectedTo("newbie"), "streamer and newbie to be connected");
+  }),
+
+  "an invite link can't go past a full Top 8": withAllowList(async (h) => {
+    const tom = h.person("tom");
+    await tom.ready;
+    const logins = ["streamer", "late", ...Array.from({ length: 8 }, (_, i) => `mod${i + 1}`)];
+    for (const l of logins) tom.send({ t: "allow", login: l, on: true });
+    await tom.next("state", (m) => (m.allowed || []).length >= logins.length);
+    const streamer = h.person("streamer");
+    const mods = Array.from({ length: 8 }, (_, i) => h.person(`mod${i + 1}`));
+    for (const m of mods) await h.friends(streamer, m);
+    const code = await makeInvite(streamer);
+    const late = h.person("late");
+    await late.ready;
+    late.send({ t: "redeem", code });
+    const full = await late.next("error", (m) => m.why === "invite");
+    h.check(/full/.test(full.detail), `expected a "list is full" message, got: ${full.detail}`);
+    h.check(!streamer.connectedTo("late"), "late shouldn't be connected past the Top 8");
+  }),
 };

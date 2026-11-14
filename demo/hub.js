@@ -11,7 +11,7 @@
 // window.SANDBOX is what the two panels use (demo/sandbox.js): Socket, fetch and seed.
 // The demo page's own buttons use the same sockets, as the pretend people.
 
-import { Hub } from "../relay/src/index.js?v=315"; // the number: bump it when the relay changes, so browsers fetch the new one (and bump hub.js?v= in play.html)
+import { Hub } from "../relay/src/index.js?v=316"; // the number: bump it when the relay changes, so browsers fetch the new one (and bump hub.js?v= in play.html)
 
 // ===== Sockets ================================================================================
 // One object per connection, on the page's side, shaped like a browser WebSocket (on*
@@ -151,11 +151,12 @@ const relay = (() => {
   }
   // The automatic tests (tests/) start each test on an empty relay: everyone signed out,
   // nothing stored, a fresh hub.
-  function reset() {
+  // extra: more settings for the hub, e.g. { OWNER_LOGIN } to switch the allow list on.
+  function reset(extra = {}) {
     for (const server of [...open]) server.close(1000);
     open.clear();
     store.clear();
-    hub = new Hub(ctx, ENV);
+    hub = new Hub(ctx, { ...ENV, ...extra });
   }
   return { connect, reset };
 })();
@@ -674,4 +675,4 @@ function seed(login) {
 
 window.SANDBOX = { Socket, fetch: (url, init) => twitch.api(url, init), seed };
 export const pretendTwitch = twitch.controls;
-export const resetRelay = () => relay.reset();
+export const resetRelay = (extra) => relay.reset(extra);

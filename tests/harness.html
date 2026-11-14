@@ -25,9 +25,8 @@
 <div id="log">Starting…</div>
 <div id="frames"></div>
 <script type="module">
-  import "../demo/hub.js"; // sets window.SANDBOX: the pretend relay and Twitch
   import { tests } from "./specs.js";
-  import * as h from "./helpers.js";
+  import * as h from "./helpers.js"; // also starts the pretend relay and Twitch (demo/hub.js)
 
   const log = document.getElementById("log");
   const line = (text, cls) => {
@@ -47,7 +46,7 @@
       if (only && !name.toLowerCase().includes(only.toLowerCase())) continue;
       const started = performance.now();
       try {
-        await h.reset();
+        await h.reset(fn.relaySettings);
         await fn(h);
         results.push({ name, ok: true, ms: Math.round(performance.now() - started) });
         line(`✓ ${name}`, "pass");
