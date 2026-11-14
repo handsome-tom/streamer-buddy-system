@@ -8,6 +8,12 @@ RewriteBase /
 RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
 RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
 
+# The test site (test.streamspace.tv, the "staging" branch) lives in public_html/test.
+# It is only reachable at its own address, never as streamspace.tv/test/.
+RewriteCond %{HTTP_HOST} !^test\. [NC]
+RewriteCond %{REQUEST_FILENAME} /public_html/test(/|$)
+RewriteRule ^ - [F,L]
+
 # Not part of the website: the Git folder, dev tools, notes.
 # (relay/src stays reachable: the demo runs the relay's code in the page.)
 RewriteRule ^(\.git|dev)(/|$) - [F,L]
@@ -35,6 +41,12 @@ AddType font/woff2 .woff2
 AddType font/ttf .ttf
 AddType image/webp .webp
 AddType text/javascript .js
+
+# Search engines leave the test site alone.
+SetEnvIfNoCase Host ^test\. STAGING_SITE
+<IfModule mod_headers.c>
+  Header set X-Robots-Tag "noindex, nofollow" env=STAGING_SITE
+</IfModule>
 
 # Pages and scripts check for a newer copy every time, so a push shows up right away.
 <IfModule mod_headers.c>
