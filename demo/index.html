@@ -653,6 +653,12 @@
   /* The planet and its moon on their own layers too. */
   .hero-planet__globe, .hero-moon { will-change: transform; }
   @media (prefers-reduced-motion: reduce) { #space, #space::before, #space::after, .hero__art::before, .hero__swathes { animation: none !important; } }
+  /* ===== One space, top to bottom: no lines between sections, and the space only turns to
+     black at the very end, under the thank-yous. ===== */
+  .top { border-bottom: 0; }
+  .getit { background: none; }
+  .thanks { background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.45) 40%, #000 100%); }
+  .thanks .wrap, .thanks__fine, .credits { border-top: 0; }
 </style>
 </head>
 <body>
