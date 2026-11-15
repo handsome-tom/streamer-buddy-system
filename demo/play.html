@@ -1527,8 +1527,23 @@
     const place = () => {
       if (!box.isConnected) return;
       const f = frame.getBoundingClientRect();
-      const t = target.isConnected ? target.getBoundingClientRect() : null;
-      if (!t || !t.width) return box.remove();
+      const raw = target.isConnected ? target.getBoundingClientRect() : null;
+      if (!raw || !raw.width) return box.remove();
+      // Only the part of the target that can be seen: inside the panel and inside any scrolling
+      // box it sits in (chat). Once it's scrolled out of sight (chat moved on), the note goes,
+      // so the highlight never floats over nothing.
+      let vTop = Math.max(raw.top, 0), vBottom = Math.min(raw.bottom, f.height), vLeft = Math.max(raw.left, 0), vRight = Math.min(raw.right, f.width);
+      for (let el = target.parentElement; el && el !== el.ownerDocument.body; el = el.parentElement) {
+        const cs = el.ownerDocument.defaultView.getComputedStyle(el);
+        if (!/(auto|scroll|hidden|clip)/.test(cs.overflowY + cs.overflowX)) continue;
+        const r = el.getBoundingClientRect();
+        vTop = Math.max(vTop, r.top); vBottom = Math.min(vBottom, r.bottom); vLeft = Math.max(vLeft, r.left); vRight = Math.min(vRight, r.right);
+      }
+      if (vBottom - vTop < Math.min(24, raw.height / 2) || vRight - vLeft < 8) {
+        if (!box.classList.contains("callout--out")) { box.classList.add("callout--out"); setTimeout(() => box.remove(), 500); }
+        return requestAnimationFrame(place);
+      }
+      const t = { top: vTop, bottom: vBottom, left: vLeft, right: vRight, width: vRight - vLeft, height: vBottom - vTop };
       const ring = box.querySelector(".callout__ring");
       const x = f.left + scrollX, y = f.top + scrollY;
       Object.assign(ring.style, { left: `${x + t.left - 4}px`, top: `${y + t.top - 4}px`, width: `${t.width + 8}px`, height: `${t.height + 8}px` });
@@ -1555,6 +1570,24 @@
     if (typeof tour !== "undefined" && tour.waiting) return box.classList.add("callout--stay");
     setTimeout(() => box.classList.add("callout--out"), 6500);
     setTimeout(() => box.remove(), 7000);
+    if (COLS) holdChat(target, box);
+  }
+  // While a note points at something in the streamer's chat, chat holds still (the dock's own
+  // "you clicked in chat" pause), so a raid's crowd can't push the card away mid-read. If the
+  // card had already slid partly up, chat scrolls back to it, and to the newest line after.
+  function holdChat(target, box) {
+    const list = target.closest?.(".oc-list");
+    if (!list) return;
+    const hold = () => list.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    hold();
+    const above = target.getBoundingClientRect().top - list.getBoundingClientRect().top - 8;
+    const moved = above < 0;
+    if (moved) list.scrollTop += above;
+    const timer = setInterval(() => {
+      if (box.isConnected && !box.classList.contains("callout--out")) return hold();
+      clearInterval(timer);
+      if (moved) list.scrollTop = list.scrollHeight;
+    }, 1000);
   }
   function calloutFor(id) {
     if (!firstTime(id)) return;
