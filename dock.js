@@ -2437,6 +2437,9 @@
     presenceMenu.hidden = !open;
     if (open) {
       presenceMenu.style.left = `${Math.max(4, Math.min(presenceBtn.offsetLeft, innerWidth - 228))}px`; // under the button
+      // Right under the button too, not under the whole bar (in the side panel the bar has
+      // two rows, and your status is on the top one).
+      presenceMenu.style.top = `${presenceBtn.offsetTop + presenceBtn.offsetHeight + 4}px`;
       presenceMenu.replaceChildren(...Object.entries(STATUS).map(([status, { label, says }]) => {
         const item = el("button", `presence__item${status === myStatus ? " presence__item--on" : ""}`);
         item.type = "button";
