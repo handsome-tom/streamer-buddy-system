@@ -1854,23 +1854,80 @@
     }
 
     // The pinned message: Twitch only tells mods, and has no event for it, so it's looked
-    // up every so often.
+    // up every so often. Its card has what Twitch's has: a chevron to fold it to one line,
+    // and for mods a ⋯ menu to change how long it stays pinned or unpin it (plus jump to
+    // the message). The × hides it on this screen only.
     let pinHidden = "";
+    let pinFolded = false;
+    let pinDrawn = ""; // what's on the card, so the 10-second check doesn't redraw it (and close its menu)
     async function checkPin() {
       if (!isMod || stopped) return;
       const j = await quiet(`/chat/pins?${modQuery()}`);
       if (!j) return;
       const p = j.data?.[0];
       if (!p || p.message_id === pinHidden) {
-        if (!p) dropTop("pin");
+        if (!p) {
+          dropTop("pin");
+          pinDrawn = "";
+        }
         return;
       }
+      const drawn = `${p.message_id}|${p.ends_at || ""}|${p.pinned_by_user_name || ""}`;
+      if (drawn === pinDrawn && tops.has("pin")) return;
+      pinDrawn = drawn;
+      drawPin(p);
+    }
+    function drawPin(p) {
       const c = topCard("pin", "pin");
-      topHead(c, "pin", `Pinned by ${p.pinned_by_user_name || "a moderator"}`, p.ends_at, () => (pinHidden = p.message_id), "pin");
+      c.classList.toggle("oc-topcard--folded", pinFolded);
+      topHead(c, "pin", `Pinned by ${p.pinned_by_user_name || "a moderator"}`, p.ends_at, () => {
+        pinHidden = p.message_id;
+        pinDrawn = "";
+      }, "pin");
+      const head = c.querySelector(".oc-topcard__head");
+      const x = head.querySelector(".oc-topcard__x");
+      // Fold to one line, or open it back up.
+      const fold = button("oc-topcard__fold", "", () => {
+        pinFolded = !pinFolded;
+        c.classList.toggle("oc-topcard--folded", pinFolded);
+        fold.title = fold.ariaLabel = pinFolded ? "Show all of it" : "Fold to one line";
+      }, pinFolded ? "Show all of it" : "Fold to one line");
+      fold.innerHTML = '<svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      head.insertBefore(fold, x);
+      // A mod's options: change how long, unpin, jump to it.
+      if (isMod) {
+        const menu = el("div", "oc-pinopts");
+        menu.hidden = true;
+        const more = iconButton("oc-topcard__more", "more", () => {
+          menu.hidden = !menu.hidden;
+        }, "Pin options");
+        head.insertBefore(more, x);
+        const left = p.ends_at ? new Date(p.ends_at).getTime() - Date.now() : 0;
+        menu.append(el("div", "oc-pinopts__cap", "Keep it pinned for"));
+        for (const [label, seconds] of PIN_LENGTHS) {
+          const on = seconds ? Math.abs(left - seconds * 1000) < 15000 : !p.ends_at;
+          const b = button(`oc-pinopts__item${on ? " oc-pinopts__item--on" : ""}`, label, () => {
+            menu.hidden = true;
+            repin(p.message_id, seconds);
+          }, seconds ? `Pinned for ${label} from now` : "Pinned until the stream ends");
+          menu.append(b);
+        }
+        menu.append(el("div", "oc-pinopts__sep"));
+        const line = byId.get(p.message_id);
+        if (line?.isConnected) menu.append(button("oc-pinopts__item", "Jump to the message", () => {
+          menu.hidden = true;
+          jumpTo(line);
+        }));
+        menu.append(button("oc-pinopts__item oc-pinopts__item--danger", "Unpin", () => {
+          menu.hidden = true;
+          unpin(p.message_id);
+        }, "Unpin it for everyone"));
+        c.append(menu);
+      }
       const body = el("div", "oc-topcard__body oc-topcard__pinned");
-      const sender = el("b", "oc-topcard__sender", p.sender_user_name);
-      // Their chat color, from a line of theirs if there is one.
+      // Their name opens their card, as on Twitch, when a line of theirs is in chat.
       const theirs = [...list.querySelectorAll(".oc-line[data-uid]")].reverse().find((l) => l.dataset.uid === p.sender_user_id);
+      const sender = theirs ? button("oc-topcard__sender", p.sender_user_name, () => openCard(theirs)) : el("b", "oc-topcard__sender", p.sender_user_name);
       const color = safeColor(theirs?.dataset.color);
       if (color) sender.style.color = color;
       body.append(sender, ": ");
@@ -1878,7 +1935,6 @@
       drawMessage(words, p.message?.fragments, p.message?.text || "");
       body.append(words);
       c.append(body);
-      if (isMod) c.append(button("oc-act oc-topcard__unpin", "Unpin", () => unpin(p.message_id), "Unpin it for everyone"));
     }
     timers.push(setInterval(checkPin, 10 * 1000));
 
@@ -2333,11 +2389,26 @@
         note("Couldn't reach Twitch. Try again.");
       }
     }
+    // A new length for what's pinned: Twitch takes the same pin again with the new time.
+    async function repin(id, seconds) {
+      const q = `${modQuery()}&message_id=${encodeURIComponent(id)}${seconds ? `&duration_seconds=${seconds}` : ""}`;
+      try {
+        const r = await fetch(`${urls.helix}/chat/pins?${q}`, { method: "PUT", headers: { Authorization: `Bearer ${host.token()}`, "Client-Id": host.clientId } });
+        if (r.ok) {
+          pinDrawn = "";
+          checkPin();
+        } else note(await why(r, "Twitch wouldn't change that pin."));
+      } catch {
+        note("Couldn't reach Twitch. Try again.");
+      }
+    }
     async function unpin(id) {
       try {
         const r = await fetch(`${urls.helix}/chat/pins?${modQuery()}&message_id=${encodeURIComponent(id)}`, { method: "DELETE", headers: { Authorization: `Bearer ${host.token()}`, "Client-Id": host.clientId } });
-        if (r.ok) dropTop("pin");
-        else note(await why(r, "Twitch wouldn't unpin that."));
+        if (r.ok) {
+          dropTop("pin");
+          pinDrawn = "";
+        } else note(await why(r, "Twitch wouldn't unpin that."));
       } catch {
         note("Couldn't reach Twitch. Try again.");
       }

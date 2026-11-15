@@ -649,6 +649,14 @@ const twitch = (() => {
       // Pinning a message from the chat: the pretend Twitch remembers it, like Twitch does.
       if (method === "PUT") {
         const id = u.searchParams.get("message_id");
+        // The same message again: just a new length, as Twitch does.
+        if (pinned?.message_id === id) {
+          const secs = Number(u.searchParams.get("duration_seconds")) || 0;
+          pinned = { ...pinned, ends_at: secs ? new Date(Date.now() + secs * 1000).toISOString() : null, updated_at: new Date().toISOString() };
+          clearTimeout(pinTimer);
+          if (secs) pinTimer = setTimeout(() => (pinned = null), secs * 1000);
+          return json(204, {});
+        }
         const said = sentText[id] || {};
         const secs = Number(u.searchParams.get("duration_seconds")) || 0;
         pinned = {
