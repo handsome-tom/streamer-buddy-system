@@ -698,20 +698,56 @@
   .pg .chip, .pg select { display: flex; justify-content: flex-start; width: 100%; height: auto; padding: 6px 10px; font: inherit; font-size: 12.5px; font-weight: 600; text-align: left; color: #e4e4ea; background: #141418; border: 1px solid #2a2a30; border-radius: 4px; box-shadow: none; }
   .pg .chip:hover { background: #1f1f25; border-color: #44444c; }
   .pg .chip.on { border-color: #3fc98e; }
-  /* Above the far-right chat: pretend, or a popular streamer's real chat to watch. */
-  .twsw__ch { flex: 1; min-width: 50px; height: 26px; padding: 0 10px; font: inherit; color: #efeff1; background: #141418; border: 1px solid #2a2a30; border-radius: 8px; outline: none; }
-  .twsw__ch:focus { border-color: #9147ff; }
-  .twsw { display: flex; align-items: center; gap: 4px; height: 30px; margin-bottom: 6px; font-size: 12px; }
-  .twsw__opt { flex: none; white-space: nowrap; height: 26px; padding: 0 12px; font: inherit; font-weight: 600; color: #b9b9c3; background: #141418; border: 1px solid #2a2a30; border-radius: 9999px; cursor: pointer; }
-  .twsw__opt:hover { color: #fff; border-color: #44444c; }
-  .twsw__opt--on { color: #fff; background: #9147ff; border-color: #9147ff; }
-  .twsw__note { margin-left: auto; white-space: nowrap; color: #77777f; font-weight: 600; }
-  html.bare .stage .twbox { position: relative; height: calc(100vh - 32px - 36px); min-height: 444px; overflow: hidden; }
+  /* Far right: on top, "On plain Twitch", a picture of what Twitch's own chat shows for the
+     last streamer-side button pressed; under it, the pretend Twitch chat. */
+  html.bare .stage .tcol { display: flex; flex-direction: column; gap: 10px; height: calc(100vh - 32px); min-height: 480px; }
+  html.bare .stage .twbox { position: relative; flex: 1; min-height: 240px; overflow: hidden; }
   html.bare .stage .twbox #twitch { height: 100%; min-height: 0; }
-  /* Watch only: Twitch's chat is drawn 150px taller than the box, so its bottom (message box,
-     Bits, points) sits out of sight, and nothing in it takes a click or a key. */
-  html.bare .stage .twbox--live #twitch { height: calc(100% + 150px); pointer-events: none; }
-  .twbox--live::after { content: ""; position: absolute; inset: 0; }
+  .nt { flex: none; max-height: 48%; overflow-y: auto; padding: 10px 0 12px; color: #efeff1; background: #18181b; border-radius: 10px; font: 13px/20px Inter, "Helvetica Neue", Helvetica, Arial, sans-serif; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); }
+  .nt__head { display: flex; align-items: baseline; gap: 6px; padding: 0 14px 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #9147ff; }
+  .nt-what { color: #efeff1; letter-spacing: 0; text-transform: none; font-size: 12.5px; }
+  .nt__hint { padding: 4px 14px; color: #77777f; }
+  .nt-shot { display: block; width: 100%; height: auto; }
+  .nt-chat { padding: 0 4px; }
+  .nt-line { padding: 5px 12px; overflow-wrap: anywhere; }
+  .nt-badge { display: inline-grid; place-items: center; width: 18px; height: 18px; margin: 0 4px 1px 0; vertical-align: middle; border-radius: 3px; font-size: 11px; color: #fff; }
+  .nt svg { flex: none; vertical-align: middle; }
+  .nt-notice { margin: 4px 0; padding: 6px 12px 7px 10px; background: #1f1f23; border-left: 4px solid var(--bar); }
+  .nt-notice__sys { display: flex; gap: 6px; align-items: flex-start; }
+  .nt-notice__sys svg { margin-top: 2px; }
+  .nt-notice .nt-line { padding: 4px 0 0 22px; }
+  .nt-more { padding: 2px 12px; color: #adadb8; font-style: italic; }
+  .nt-first { margin: 4px 0; padding: 4px 0 2px; background: rgba(145, 71, 255, 0.12); border-left: 4px solid #9147ff; }
+  .nt-first__label { display: flex; gap: 5px; align-items: center; padding: 0 12px; font-size: 12px; font-weight: 600; color: #bf94ff; }
+  .nt-cheer { display: inline-flex; align-items: center; gap: 1px; }
+  .nt-redeem { padding: 5px 12px; color: #adadb8; }
+  .nt-redeem b { color: #efeff1; }
+  .nt-cost { display: inline-flex; align-items: center; gap: 2px; color: #efeff1; }
+  .nt-redeemwords { margin: 4px 0; padding: 4px 0; background: #1f1f23; border-left: 4px solid #00c7ac; }
+  .nt-redeemwords__head { padding: 0 12px; font-size: 12px; color: #adadb8; }
+  .nt-hl { margin: 4px 8px; padding: 4px 0; background: #755ebc; border-radius: 4px; }
+  .nt-hl__head { display: flex; align-items: center; gap: 4px; padding: 0 12px; font-size: 12px; font-weight: 600; }
+  .nt-ann { margin: 4px 0; padding: 6px 0 2px; background: linear-gradient(#1f1f23, #1f1f23) padding-box, linear-gradient(180deg, var(--a1), var(--a2)) border-box; border-left: 4px solid transparent; }
+  .nt-ann__head { display: flex; align-items: center; gap: 6px; padding: 0 12px; font-size: 12px; font-weight: 600; color: #adadb8; }
+  .nt-top { margin: 0 8px; padding: 10px 12px; background: #1f1f23; border-radius: 6px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); }
+  .nt-pin__head { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; font-size: 12px; color: #adadb8; }
+  .nt-hype { color: #fff; }
+  .nt-hype__row { display: flex; align-items: center; gap: 6px; }
+  .nt-hype__lvl { padding: 0 6px; font-size: 11px; font-weight: 700; background: #9147ff; border-radius: 3px; }
+  .nt-hype__time { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .nt-small { font-size: 12px; color: #adadb8; }
+  .nt-bar { height: 8px; margin: 6px 0; background: #35353b; border-radius: 4px; overflow: hidden; }
+  .nt-bar i { display: block; height: 100%; background: linear-gradient(90deg, #9147ff, #00c7ac); }
+  .nt-poll__q { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+  .nt-poll__q span { color: #adadb8; white-space: nowrap; }
+  .nt-opt { position: relative; display: flex; justify-content: space-between; margin-top: 4px; padding: 4px 8px; background: #2a2a30; border-radius: 4px; overflow: hidden; }
+  .nt-opt i { position: absolute; inset: 0 auto 0 0; background: rgba(145, 71, 255, 0.45); }
+  .nt-opt span, .nt-opt b { position: relative; }
+  .nt-pred__sides { display: flex; gap: 6px; }
+  .nt-side { flex: 1; display: flex; flex-direction: column; padding: 6px 8px; border-radius: 4px; font-size: 12px; }
+  .nt-side span { display: inline-flex; align-items: center; gap: 3px; }
+  .nt-side--blue { background: #387aff; }
+  .nt-side--pink { background: #f5009b; }
   .pg__said { margin-top: 12px; font-size: 11.5px; line-height: 1.4; color: #9a9aa5; }
 </style>
 </head>
@@ -853,6 +889,7 @@
       </details>
     </div>
   </section>
+<script src="twitch/native.js?v=1"></script>
 <script>
   // The Testing Playground (?bare): every demo control as a plain list, the streamer's beside
   // the streamer's dock on the far left and the mod's beside the mod's panel on the far right
@@ -904,36 +941,22 @@
     chat.id = "twitch";
     chat.title = "Twitch chat (pretend), as the mod sees it with StreamSpace";
     chat.dataset.src = "twitch/chat.html";
-    // Above it: the pretend chat (StreamSpace runs on it, the buttons drive it), or a
-    // watch-only window onto a popular streamer's real Twitch chat (pick the channel), to see
-    // real chat going by. Watch-only for real: the bottom of Twitch's chat (the message box,
-    // Bits, channel points) is cut off out of sight, and the whole window ignores clicks and
-    // keys, so nothing in it can be typed or spent, whatever Twitch account is signed in.
-    const sw = document.createElement("div");
-    sw.className = "twsw";
-    sw.innerHTML = '<button type="button" class="twsw__opt twsw__opt--on" data-mode="pretend">Pretend</button>' +
-      '<button type="button" class="twsw__opt" data-mode="live">Live</button>' +
-      '<input class="twsw__ch" value="xqc" aria-label="Popular Twitch channel to watch" spellcheck="false">' +
-      '<span class="twsw__note" hidden>Watch only</span>';
     const box = document.createElement("div");
     box.className = "twbox";
     box.append(chat);
-    const opts = sw.querySelectorAll(".twsw__opt");
-    const channelBox = sw.querySelector(".twsw__ch");
-    const setMode = (mode) => {
-      const ch = channelBox.value.trim().replace(/^@/, "").toLowerCase();
-      if (mode === "live" && !/^[a-z0-9_]{2,25}$/.test(ch)) return channelBox.focus();
-      const live = mode === "live";
-      chat.src = live ? `https://www.twitch.tv/embed/${ch}/chat?parent=${location.hostname}&darkpopout` : chat.dataset.src;
-      chat.title = live ? `${ch}'s live Twitch chat (watch only)` : "Twitch chat (pretend), as the mod sees it with StreamSpace";
-      chat.tabIndex = live ? -1 : 0;
-      box.classList.toggle("twbox--live", live);
-      sw.querySelector(".twsw__note").hidden = !live;
-      opts.forEach((o) => o.classList.toggle("twsw__opt--on", o.dataset.mode === mode));
-    };
-    opts.forEach((o) => o.addEventListener("click", () => setMode(o.dataset.mode)));
-    channelBox.addEventListener("keydown", (e) => e.key === "Enter" && setMode("live"));
-    twitch.append(sw, box);
+    // On top: "On plain Twitch", what Twitch's own chat shows for the last streamer-side
+    // button pressed (twitch/native.js), to set beside StreamSpace's version.
+    const native = document.createElement("div");
+    native.className = "nt";
+    native.setAttribute("aria-live", "polite");
+    native.innerHTML = '<div class="nt__head">On plain Twitch <span class="nt-what"></span></div>' +
+      '<div class="nt-body"><div class="nt__hint">Press a streamer button (Sub, Raid, Poll…) to see how Twitch\'s own chat shows it.</div></div>';
+    streamer.addEventListener("click", (e) => {
+      const id = e.target.closest("button")?.id;
+      if (id && window.twitchNative?.has(id)) window.twitchNative.show(native, id);
+    });
+    twitch.classList.add("tcol");
+    twitch.append(native, box);
     stage.append(twitch);
   }
 </script>
