@@ -78,7 +78,7 @@ function chat(text, opts = {}) {
 
 // The feed's pretend chatters. Each gets a random colour once, and keeps it.
 const CHATTERS = ["hellofoxy", "MacAndCheeseMan", "SneakySneaky", "LuckyLlama", "MiloMunch", "LeonTears", "KidCutter", "sleepycat42",
-  "Glitchwave", "BadDog15", "HoneyBuddy", "quietlurker", "zoomzoom_k", "ferntastic", "Captain_Fruit", "OliveBranch"];
+  "Glitchwave", "BigDog15", "HoneyBuddy", "quietlurker", "zoomzoom_k", "ferntastic", "CaptainSausage", "OliveBranch"];
 const chatterColor = {};
 const randomColor = () => `hsl(${Math.floor(Math.random() * 360)}, ${65 + Math.floor(Math.random() * 30)}%, ${55 + Math.floor(Math.random() * 15)}%)`;
 const hex = (hsl) => {
