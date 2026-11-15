@@ -1748,32 +1748,31 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   color: #efeff1;
   cursor: pointer;
 }
-/* In the top bar, right of your profile picture: just the white mark, small, with no
+/* In the top bar, right of your profile picture: just the mark in a soft off-white, small, with no
    background or border. */
 .tbc-hubtop-wrap {
-  margin-left: 6px;
+  margin: 0 14px 0 12px;
 }
 .tbc-hubtop {
   width: 24px;
   height: 24px;
   border-radius: 9999px;
   background: none;
-  color: #fff;
-  opacity: 0.9;
+  color: #dcdce2;
 }
 .tbc-hubtop svg {
   width: 18px;
   height: 18px;
 }
 .tbc-hubtop:hover {
-  opacity: 1;
+  color: #fff;
 }
 /* In the chat header: smaller and quiet until you point at it. */
 .tbc-hubchat-wrap {
   margin-right: 2px;
 }
 .tbc-hubchat {
-  color: #fff;
+  color: #dcdce2;
   width: 26px;
   height: 26px;
   border-radius: 9999px;

@@ -879,7 +879,6 @@
     asking = m.asking || [];
     reportsNew = m.reports || 0;
     limit = m.limit || null;
-    if (first) setTimeout(spinPresence, 400);
     connections = m.connections || [];
     requests = m.requests || [];
     tags = m.tags || {};
@@ -2348,26 +2347,12 @@
     const now = STATUS[myStatus] || STATUS.modding;
     presenceBtn.className = `presence presence--bar presence--${myStatus}${presenceMenu.hidden ? "" : " presence--open"}`;
     // Just the dot (saves room in the bar); the words are in its tooltip and menu.
-    if (!presenceBtn.querySelector(".presence__spin")) presenceBtn.textContent = "";
+    presenceBtn.textContent = "";
     presenceBtn.ariaLabel = now.label;
     presenceBtn.title = `${now.label}${myStatus !== "offline" && mySince ? ` since ${clock(mySince)}` : ""}. ${now.says} Click to change.`;
     presenceBtn.setAttribute("aria-haspopup", "menu");
     presenceBtn.setAttribute("aria-expanded", String(!presenceMenu.hidden));
   }
-  // Opening the panel: "online" written in a tilted ring round your dot, like a planet's, orbits for a few seconds and fades.
-  // It plays when the panel opens, then once every 10 minutes while it stays open.
-  const SPIN_AGAIN_MS = 10 * 60 * 1000;
-  function spinPresence() {
-    if (!EMBED || presenceBtn.hidden || myStatus === "offline") return;
-    if (presenceBtn.querySelector(".presence__spin")) return;
-    const word = myStatus === "idle" ? "idle" : "online"; // Modding is online too
-    const ring = el("span", "presence__spin");
-    ring.setAttribute("aria-hidden", "true");
-    ring.innerHTML = `<svg viewBox="0 0 40 40"><defs><path id="presenceArc" d="M20 20 m-13 0 a13 13 0 1 1 26 0 a13 13 0 1 1 -26 0"/></defs><text><textPath href="#presenceArc" textLength="80" lengthAdjust="spacing">${word} · ${word} ·</textPath></text></svg>`;
-    presenceBtn.append(ring);
-    setTimeout(() => ring.remove(), 2700);
-  }
-  setInterval(spinPresence, SPIN_AGAIN_MS);
   function openPresence(open) {
     presenceMenu.hidden = !open;
     if (open) {

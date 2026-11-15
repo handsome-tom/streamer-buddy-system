@@ -11,7 +11,7 @@
 whenOn("hub", "Streamer Buddy System (StreamSpace button)", () => {
   if ((window.top !== window && !window.TWITCH_ME)) return;
 
-  // The StreamSpace mark (the speech bubble and the people from Alex's logo), in white.
+  // The StreamSpace mark (the speech bubble and the people from Alex's logo), in a soft off-white (styles.css).
   const ICON = '<svg width="20" height="20" viewBox="70 45 760 760" fill="currentColor" aria-hidden="true"><path d="M125,50l-50,125v475h150v100h100l100-100h125l175-175V50H125ZM650,450l-100,100h-150l-100,100v-100h-125V125h475v325Z"/><path d="M429.87,215.86c0-28.14,23-50.96,51.36-50.96s51.36,22.81,51.36,50.96-23,50.97-51.36,50.97-51.36-22.82-51.36-50.97ZM481.22,279.02c-18.07,0-34.54,6.62-47.21,17.5-7.41-20.96-27.47-36.01-51.13-36.01-14.51,0-27.66,5.69-37.38,14.9-4.9-15.1-19.16-26.04-36.02-26.04-20.89,0-37.83,16.8-37.83,37.54h-.12v65.06h56.98v55.55h80.24v67.42h144.73v-124.23c0-39.59-32.35-71.69-72.25-71.69ZM382.89,251.36c21.29,0,38.54-17.12,38.54-38.25s-17.25-38.24-38.54-38.24-38.53,17.12-38.53,38.24c0,21.13,17.26,38.25,38.53,38.25ZM309.49,242.98c14.85,0,26.9-11.94,26.9-26.69s-12.04-26.69-26.9-26.69-26.89,11.94-26.89,26.69c0,14.74,12.04,26.69,26.89,26.69Z"/></svg>';
 
   function button(extra) {
