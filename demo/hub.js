@@ -205,7 +205,7 @@ const twitch = (() => {
     const fragments = bits ? [{ type: "cheermote", text: `Cheer${bits}` }, { type: "text", text: ` ${text}` }] : [{ type: "text", text }];
     event("channel.chat.message", {
       broadcaster_user_id: "1", chatter_user_id: `u-${who}`, chatter_user_login: who.toLowerCase(), chatter_user_name: who,
-      message_id: id, message: { text: bits ? `Cheer${bits} ${text}` : text, fragments }, message_type: kind, badges: badges.length ? badges : subBadge(who), color: colorOf[who], reply: null,
+      message_id: id, message: { text: bits ? `Cheer${bits} ${text}` : text, fragments }, message_type: kind, badges: badges.length ? badges : who === "streamer" ? [{ set_id: "broadcaster", id: "1" }] : subBadge(who), color: colorOf[who], reply: null,
       cheer: bits ? { bits } : null,
       channel_points_custom_reward_id: reward ? "rw-demo" : null,
     });
@@ -527,34 +527,29 @@ const twitch = (() => {
       tags: name === "Lump" ? ["English", "Cozy", "Building", "Wholesome"] : name === "streamer" ? ["English", "Cozy", "Chatting"] : [],
     };
   }
-  // Badge pictures, drawn here (Twitch's own are its artwork): a shaded tile in the badge's
-  // color with a clean line icon (Lucide, ISC license) on it.
-  const MARKS = {
-    star: ['<path fill="#fff" d="M12 2.5l2.94 5.96 6.56.95-4.75 4.63 1.12 6.54L12 17.5l-5.87 3.08 1.12-6.54L2.5 9.41l6.56-.95z"/>'],
-    sword: ['<path d="M14.5 17.5 3 6V3h3l11.5 11.5"/>', '<path d="m13 19 6-6"/>', '<path d="m16 16 4 4"/>', '<path d="m19 21 2-2"/>'],
-    gem: ['<path d="M6 3h12l4 6-10 13L2 9Z"/>', '<path d="M11 3 8 9l4 13 4-13-3-6"/>', '<path d="M2 9h20"/>'],
-    crown: ['<path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/>', '<path d="M5 21h14"/>'],
-    gift: ['<rect x="3" y="8" width="18" height="4" rx="1"/>', '<path d="M12 8v13"/>', '<path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/>', '<path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/>'],
-    train: ['<path d="M8 3.1V7a4 4 0 0 0 8 0V3.1"/>', '<path d="m9 15-1-1"/>', '<path d="m15 15 1-1"/>', '<path d="M9 19c-2.8 0-5-2.2-5-5v-4a8 8 0 0 1 16 0v4c0 2.8-2.2 5-5 5Z"/>', '<path d="m8 19-2 3"/>', '<path d="m16 19 2 3"/>'],
-    check: ['<path d="M20 6 9 17l-5-5"/>'],
-    hammer: ['<path d="m15 12-8.4 8.4a2 2 0 0 1-2.8-2.8L12.2 9.2"/>', '<path d="m9.6 6.4 8 8"/>', '<path d="M14 3.5 20.5 10l-3 3L11 6.5z"/>'],
-  };
-  const tile = (bg, mark) => {
-    const id = `g${bg.slice(1)}`;
-    return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="${bg}" stop-opacity="1"/><stop offset="1" stop-color="${bg}"/></linearGradient><linearGradient id="${id}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".3"/></linearGradient></defs><rect width="36" height="36" rx="6" fill="url(#${id})"/><rect width="36" height="36" rx="6" fill="url(#${id}s)"/><rect x=".75" y=".75" width="34.5" height="34.5" rx="5.4" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="1.5"/><g transform="translate(7.2 7.2) scale(.9)" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${MARKS[mark].join("")}</g></svg>`)}`;
-  };
-  const badge = (set_id, id, title, bg, mark) => ({ set_id, versions: [{ id, title, image_url_1x: tile(bg, mark), image_url_2x: tile(bg, mark), image_url_4x: tile(bg, mark) }] });
+  // Badge pictures: Twitch's own global badges, from Twitch's image server, at the addresses
+  // Twitch's chat and its API give for them (the real dock gets the same ones from Twitch).
+  // A channel's own subscriber badges are its art, so the pretend channel wears Twitch's
+  // standard purple star, as a channel without custom badges does. Twitch's Lead Moderator
+  // badge wasn't at hand, so lead mods wear the Moderator badge here.
+  const TWITCH_BADGE = (uuid) => ({ image_url_1x: `https://static-cdn.jtvnw.net/badges/v1/${uuid}/1`, image_url_2x: `https://static-cdn.jtvnw.net/badges/v1/${uuid}/2`, image_url_4x: `https://static-cdn.jtvnw.net/badges/v1/${uuid}/3` });
+  const badge = (set_id, id, title, uuid) => ({ set_id, versions: [{ id, title, ...TWITCH_BADGE(uuid) }] });
+  const SUB_STAR = "5d9f2208-5dd8-11e7-8513-2ff4adfae661";
   const BADGES = [
-    { set_id: "subscriber", versions: [["0", "Subscriber", "#8a4dff"], ["2000", "Tier 2 Subscriber", "#5c16c5"], ["3000", "Tier 3 Subscriber", "#d4282a"]].map(([id, title, bg]) => ({ id, title, image_url_1x: tile(bg, "star"), image_url_2x: tile(bg, "star"), image_url_4x: tile(bg, "star") })) },
-    badge("moderator", "1", "Moderator", "#1f9d3a", "sword"),
-    badge("lead_moderator", "1", "Lead Moderator", "#1f9d3a", "hammer"),
-    badge("bits", "1000", "cheer 1000", "#7b52e0", "gem"),
-    badge("premium", "1", "Prime Gaming", "#1188c4", "crown"),
-    badge("sub-gifter", "10", "10 Gift Subs", "#c99418", "gift"),
-    badge("hype-train", "1", "Hype Train conductor", "#e5631a", "train"),
-    badge("glhf-pledge", "1", "GLHF Pledge", "#2a8f62", "check"),
+    { set_id: "subscriber", versions: [["0", "Subscriber"], ["2000", "Tier 2 Subscriber"], ["3000", "Tier 3 Subscriber"]].map(([id, title]) => ({ id, title, ...TWITCH_BADGE(SUB_STAR) })) },
+    badge("broadcaster", "1", "Broadcaster", "5527c58c-fb7d-422d-b71b-f309dcb85cc1"),
+    badge("moderator", "1", "Moderator", "3267646d-33f0-4b17-b3df-f923a41db1d0"),
+    badge("lead_moderator", "1", "Lead Moderator", "3267646d-33f0-4b17-b3df-f923a41db1d0"),
+    badge("vip", "1", "VIP", "b817aba4-fad8-49e2-b88a-7cc744dfa6ec"),
+    badge("founder", "0", "Founder", "511b78a9-ab37-472f-9569-457753bbe7d3"),
+    { set_id: "bits", versions: [{ id: "100", title: "cheer 100", ...TWITCH_BADGE("7695da2c-7e42-4652-9b94-a3f695b0ebfc") }, { id: "1000", title: "cheer 1000", ...TWITCH_BADGE("8e443882-eba2-40ed-aee2-8f66995a4205") }] },
+    badge("premium", "1", "Prime Gaming", "bbbe0db0-a598-423e-86d0-f9fb98ca1933"),
+    badge("turbo", "1", "Turbo", "bd444ec6-8f34-4bf9-91f4-af1e3428d80f"),
+    badge("sub-gifter", "1", "Sub Gifter", "a5ef6c17-2e5b-4d8f-9b80-2779fd722414"),
+    badge("hype-train", "1", "Current Hype Train Conductor", "fae4086c-3190-44d4-83c8-8ef0cbe1a515"),
+    badge("glhf-pledge", "1", "GLHF Pledge", "3158e758-3cb4-43c5-94b3-7639810451c5"),
   ];
-  const EXTRA_BADGES = ["bits/1000", "premium/1", "sub-gifter/10", "hype-train/1", "glhf-pledge/1"];
+  const EXTRA_BADGES = ["bits/1000", "premium/1", "sub-gifter/1", "bits/100", "turbo/1", "glhf-pledge/1", "hype-train/1"];
   // Some regulars are subscribed (the badge says which tier and how many months) and wear
   // a couple of other badges.
   const subBadge = (who) => {

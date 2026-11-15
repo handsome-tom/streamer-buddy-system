@@ -753,6 +753,31 @@
     html.cols .twosides, html.cols .stage { grid-template-columns: minmax(0, 420px); }
     html.cols .stage { grid-template-areas: "obs" "sbtn" "mod" "mbtn"; }
   }
+  /* The third window, under the two: Twitch's own chat with StreamSpace in it, as the mod
+     sees it on twitch.tv. What it's for on the left, the chat in the middle, its buttons on
+     the right (on the mods' side, like the mod's panel above it). */
+  .twrow { display: none; }
+  html.cols .twrow { display: grid; grid-template-columns: minmax(0, 1fr) 400px minmax(150px, 190px); grid-template-areas: "twnote tw twbtn"; gap: 28px; align-items: start; max-width: 1080px; margin: 64px auto 0; }
+  html.cols .twrow .twnote { grid-area: twnote; align-self: center; justify-self: end; max-width: 400px; text-align: right; }
+  html.cols .twrow .scr-tw { grid-area: tw; }
+  html.cols .twrow .pg--tw { grid-area: twbtn; }
+  .twnote .eyebrow { color: #bf94ff; }
+  .twnote h3 { margin: 6px 0 8px; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; color: #fff; }
+  .twnote p { margin: 0; font-size: 14px; line-height: 1.55; color: #c6c6d0; }
+  .twnote p + p { margin-top: 10px; font-size: 13px; color: #8d8d97; }
+  html.cols .scr-tw .screen__label { color: #bf94ff; }
+  html.cols .scr-tw iframe { height: 560px; min-height: 0; border: 0; border-radius: 10px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(145, 71, 255, 0.25); }
+  html.cols .pg--tw .pg__head { color: #bf94ff; }
+  html.cols .pg--tw .chip:hover { box-shadow: 0 8px 26px 6px rgba(0, 0, 0, 0.8), 0 0 14px rgba(145, 71, 255, 0.4); }
+  html.cols .pg--tw [data-tip]::after { left: auto; right: 0; transform: translate(0, -3px); }
+  html.cols .pg--tw [data-tip]:hover::after, html.cols .pg--tw [data-tip]:focus-visible::after { transform: translate(0, 0); }
+  @media (max-width: 1239px) {
+    html.cols .twrow { grid-template-columns: repeat(2, minmax(0, 420px)); grid-template-areas: "twnote tw" "twnote twbtn"; justify-content: center; row-gap: 18px; }
+  }
+  @media (max-width: 920px) {
+    html.cols .twrow { grid-template-columns: minmax(0, 420px); grid-template-areas: "twnote" "tw" "twbtn"; }
+    html.cols .twrow .twnote { justify-self: start; text-align: left; }
+  }
   /* Far right: on top, "On plain Twitch", a picture of what Twitch's own chat shows for the
      last streamer-side button pressed; under it, the pretend Twitch chat. */
   html.bare .stage .tcol { display: flex; flex-direction: column; gap: 10px; height: calc(100vh - 32px); min-height: 480px; }
@@ -1001,6 +1026,135 @@
       mod.append(said);
     }
     stage.append(streamer, mod);
+    twitchRow(stage);
+  }
+  // The third window: Twitch's own chat on twitch.tv, as the mod sees it with StreamSpace,
+  // run by the extension's real chat scripts (twitch/chat.html). Its buttons do each thing the
+  // way a person would there: point at a line, right-click a name, type in the chat box.
+  function twitchRow(stage) {
+    const row = document.createElement("div");
+    row.className = "twrow";
+    row.innerHTML = `<div class="twnote"><p class="eyebrow">And on Twitch itself</p><h3>The tools come along into Twitch's chat.</h3>
+      <p>This is Twitch's own chat on twitch.tv, as BlazeMod420 sees it with StreamSpace. Point at a line to flag it or leave a note on it, right-click a name to remember who they are, and anything you flag lights up in the streamer's chat above.</p>
+      <p>Viewers get these too: notes on people, quick phrases, and your name boxed so you never miss a mention.</p></div>
+      <div class="screen scr-tw"><div class="screen__label">Twitch chat <small>on twitch.tv, with StreamSpace</small></div></div>`;
+    const chat = document.createElement("iframe");
+    chat.id = "twitch";
+    chat.title = "Twitch chat (pretend), as the mod sees it with StreamSpace";
+    chat.dataset.src = "twitch/chat.html";
+    row.querySelector(".scr-tw").append(chat);
+    const make = (label, tip, run) => {
+      const b = Object.assign(document.createElement("button"), { type: "button", className: "chip", textContent: label });
+      b.dataset.tip = tip;
+      b.addEventListener("click", () => run().catch(() => twSay("Give the chat a moment to load, then try again.")));
+      return b;
+    };
+    const col = document.createElement("div");
+    col.className = "pg pg--tw";
+    const group = (cap, buttons) => {
+      col.append(Object.assign(document.createElement("div"), { className: "pg__cap", textContent: cap }));
+      const box = Object.assign(document.createElement("div"), { className: "pg__btns" });
+      box.append(...buttons);
+      col.append(box);
+    };
+    col.append(Object.assign(document.createElement("div"), { className: "pg__head", textContent: "Try it in Twitch chat" }));
+    group("On a line", [
+      make("Flag a line", "Point at a line and a flag appears. Flag it, and it glows in the streamer's chat in your color.", twFlag),
+      make("Note on a line", "A note above the line, for the streamer and the mods you're connected with. Viewers never see it.", twNote),
+    ]);
+    group("On a person", [make("Note on a person", "Right-click a name: where you know them from, their pronouns and a note, shown in every channel's chat.", twPerson)]);
+    group("Talking", [
+      make("Someone says your name", "Your name gets a box in your chat color wherever it shows up, so a mention never slips by.", twMention),
+      make("Reply in chat", "Type in Twitch's chat box as usual; your own lines get the same box.", twReply),
+      make("Quick phrases", "The speech-bubble button in the chat box: things you say a lot, one click away.", twPhrases),
+    ]);
+    const note = Object.assign(document.createElement("div"), { className: "pg__said", id: "twSaid" });
+    col.append(note);
+    row.append(col);
+    stage.after(row);
+  }
+  const twSay = (text) => { const n = document.getElementById("twSaid"); if (n) n.textContent = text; };
+  const twPause = (ms) => new Promise((r) => setTimeout(r, ms));
+  function twFrame() {
+    const f = document.getElementById("twitch");
+    const doc = f?.contentDocument, win = f?.contentWindow;
+    if (!doc?.querySelector(".chat-line__message")) throw new Error("not ready");
+    return { doc, win };
+  }
+  // The newest line from a viewer (not the mods or bots), and who said it.
+  function twNewest(doc) {
+    const lines = [...doc.querySelectorAll(".chat-line__message")].filter((l) => !["mod1", "mod2", "streamer", "streamelements"].includes(l.dataset.aUser));
+    const line = lines.pop();
+    if (!line) throw new Error("no lines");
+    line.scrollIntoView({ block: "nearest" });
+    return { line, who: line.querySelector(".chat-author__display-name")?.textContent || line.dataset.aUser };
+  }
+  async function twUntil(test, ms = 2000) {
+    for (let t = 0; t < ms; t += 50) {
+      const v = test();
+      if (v) return v;
+      await twPause(50);
+    }
+    throw new Error("timed out");
+  }
+  async function twFlag() {
+    const { doc, win } = twFrame();
+    const { line, who } = twNewest(doc);
+    line.dispatchEvent(new win.MouseEvent("mouseover", { bubbles: true }));
+    (await twUntil(() => line.querySelector(".tbc-flagbtn"))).click();
+    twSay(`You flagged ${who}'s line. It glows in the streamer's chat above, in your color.`);
+  }
+  async function twNote() {
+    const { doc, win } = twFrame();
+    doc.querySelector(".tbc-people__close")?.click(); // a name card left open would cover the line
+    // Chat holds still while the pointer is on it (as Twitch's does), so the line stays put
+    // for the moment it takes the note dot to show; it carries on once the note is sent.
+    const list = doc.getElementById("lines");
+    list.scrollTop = Math.max(0, list.scrollTop - 2);
+    list.dispatchEvent(new win.Event("scroll"));
+    const { line, who } = twNewest(doc);
+    let dot = null;
+    for (let tries = 0; tries < 3 && !dot; tries++) {
+      const r = line.getBoundingClientRect();
+      line.dispatchEvent(new win.MouseEvent("mousemove", { bubbles: true, clientX: r.left + r.width * 0.9, clientY: r.top + Math.min(r.height, 32) / 2 }));
+      dot = await twUntil(() => line.querySelector(".tbc-notedot.tbc-notedot--on"), 1200).catch(() => null);
+    }
+    if (!dot) throw new Error("no dot");
+    dot.click();
+    const box = await twUntil(() => doc.querySelector(".tbc-notebox textarea"));
+    box.value = "keep an eye on this one";
+    box.dispatchEvent(new win.Event("input", { bubbles: true }));
+    await twPause(400);
+    doc.querySelector(".tbc-notebox__send")?.click();
+    twSay(`Your note sits above ${who}'s line here and in the streamer's chat. Only your circle sees it.`);
+    setTimeout(() => doc.getElementById("paused")?.click(), 4000); // back to the newest lines
+  }
+  async function twPerson() {
+    const { doc, win } = twFrame();
+    const { line, who } = twNewest(doc);
+    const name = line.querySelector('[data-a-target="chat-message-username"], .chat-line__username');
+    const r = name.getBoundingClientRect();
+    name.dispatchEvent(new win.MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: r.left + 4, clientY: r.bottom - 2 }));
+    twSay(`Notes on ${who}: where you know them from, pronouns and a note. They show next to their name in every chat.`);
+  }
+  async function twMention() {
+    twFrame();
+    const who = ["hellofoxy", "Glitchwave", "MacAndCheeseMan", "sleepycat42"][Math.floor(Math.random() * 4)];
+    window.SANDBOX?.say(who, "@BlazeMod420 thanks for the help earlier!");
+    twSay(`${who} said your name: it's boxed in your chat color, so it jumps out.`);
+  }
+  async function twReply() {
+    const { doc, win } = twFrame();
+    const input = doc.querySelector('[data-a-target="chat-input"]');
+    input.focus();
+    input.textContent = "on it o7";
+    input.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    twSay("You said it in chat as BlazeMod420, and your own line gets the box too.");
+  }
+  async function twPhrases() {
+    const { doc } = twFrame();
+    (await twUntil(() => doc.querySelector(".tbc-phrases-btn"))).click();
+    twSay("Quick phrases: click one to put it in the chat box. Add your own at the bottom.");
   }
   if (document.documentElement.classList.contains("bare")) {
     const stage = document.querySelector(".stage");
@@ -1056,7 +1210,7 @@
   }
 </script>
 <script type="module">
-  import { Socket, pretendTwitch } from "./hub.js?v=133"; // the number: bump it when hub.js changes, so browsers fetch the new one
+  import { Socket, pretendTwitch } from "./hub.js?v=134"; // the number: bump it when hub.js changes, so browsers fetch the new one
 
   const said = (text) => (document.getElementById("said").textContent = text);
   const pick = (list) => list[Math.floor(Math.random() * list.length)];
