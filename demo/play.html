@@ -705,7 +705,13 @@
   /* ===== The public demo ("cols"): what each side is for, then each panel with its own
      buttons beside it, like the playground: streamer's on the far left, mod's on the far right ===== */
   .twosides { display: none; }
-  html.cols .twosides { display: grid; grid-template-columns: repeat(2, minmax(0, 420px)); justify-content: center; gap: 28px 56px; margin: 0 auto 10px; }
+  /* Inside the purple-and-green section, each above its own panel and back to back across
+     the center line: the streamer's right-aligned, the mod's left-aligned. (The script moves
+     them into the stage; display: contents lets each one take its own place in its grid.) */
+  html.cols .twosides { display: contents; }
+  html.cols .twosides__side { max-width: 400px; padding-bottom: 6px; }
+  html.cols .twosides__side--streamer { grid-area: tss; justify-self: end; text-align: right; }
+  html.cols .twosides__side--mod { grid-area: tsm; justify-self: start; text-align: left; }
   .twosides h3 { margin: 0 0 6px; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; }
   .twosides p { margin: 0; font-size: 14px; line-height: 1.55; color: #c6c6d0; }
   .twosides p + p { margin-top: 8px; }
@@ -717,7 +723,7 @@
   html.cols #tour, html.cols .introfeats, html.cols .demo__bar, html.cols .stage .menu, html.cols #allControls, html.cols .sides__word { display: none !important; }
   html.cols .demo__head { margin-bottom: 22px; }
   html.cols .demo .wrap { max-width: 1340px; }
-  html.cols .stage { grid-template-columns: minmax(150px, 190px) minmax(0, 420px) minmax(0, 420px) minmax(150px, 190px); grid-template-rows: auto; grid-template-areas: "sbtn obs mod mbtn"; gap: 28px; align-items: start; justify-content: center; }
+  html.cols .stage { grid-template-columns: minmax(150px, 190px) minmax(0, 420px) minmax(0, 420px) minmax(150px, 190px); grid-template-rows: auto; grid-template-areas: ". tss tsm ." "sbtn obs mod mbtn"; gap: 28px; row-gap: 30px; align-items: start; justify-content: center; }
   html.cols .stage .screen { display: flex; flex-direction: column; gap: 10px; grid-row: auto; }
   html.cols .stage .scr-obs { grid-area: obs; }
   html.cols .stage .scr-mod { grid-area: mod; }
@@ -745,38 +751,50 @@
   /* Not enough room for four columns: the panels side by side, each one's buttons under it,
      in rows. One panel wide: each panel, then its buttons. */
   @media (max-width: 1239px) {
-    html.cols .stage { grid-template-columns: repeat(2, minmax(0, 420px)); grid-template-areas: "obs mod" "sbtn mbtn"; row-gap: 18px; }
+    html.cols .stage { grid-template-columns: repeat(2, minmax(0, 420px)); grid-template-areas: "tss tsm" "obs mod" "sbtn mbtn"; row-gap: 18px; }
     html.cols .pg__btns { flex-direction: row; flex-wrap: wrap; }
     html.cols .pg .chip, html.cols .pg select { width: auto; }
   }
   @media (max-width: 920px) {
-    html.cols .twosides, html.cols .stage { grid-template-columns: minmax(0, 420px); }
-    html.cols .stage { grid-template-areas: "obs" "sbtn" "mod" "mbtn"; }
+    html.cols .stage { grid-template-columns: minmax(0, 420px); grid-template-areas: "tss" "obs" "sbtn" "tsm" "mod" "mbtn"; }
+    html.cols .twosides__side--streamer { justify-self: start; text-align: left; }
   }
   /* The third window, under the two: Twitch's own chat with StreamSpace in it, as the mod
      sees it on twitch.tv. What it's for on the left, the chat in the middle, its buttons on
      the right (on the mods' side, like the mod's panel above it). */
   .twrow { display: none; }
-  html.cols .twrow { display: grid; grid-template-columns: minmax(0, 1fr) 400px minmax(150px, 190px); grid-template-areas: "twnote tw twbtn"; gap: 28px; align-items: start; max-width: 1080px; margin: 64px auto 0; }
-  html.cols .twrow .twnote { grid-area: twnote; align-self: center; justify-self: end; max-width: 400px; text-align: right; }
+  /* The same columns as the demo above (streamer's buttons, dock, mod's panel, mod's buttons):
+     what it's for across the top, then a live Twitch stream across the two left columns, the
+     pretend Twitch chat where the mod's panel is (same size), and its buttons beside it. */
+  html.cols .twrow { display: grid; grid-template-columns: minmax(150px, 190px) minmax(0, 420px) minmax(0, 420px) minmax(150px, 190px); grid-template-areas: "twnote twnote twnote twnote" "live live tw twbtn"; column-gap: 28px; row-gap: 26px; align-items: start; justify-content: center; margin: var(--section-gap, 240px) auto 0; }
+  @media (max-width: 920px) { html.cols .twrow { --section-gap: 155px; } }
+  html.cols .twrow .twnote { grid-area: twnote; justify-self: center; max-width: 640px; text-align: center; }
   html.cols .twrow .scr-tw { grid-area: tw; }
+  html.cols .twrow .twlive { grid-area: live; }
   html.cols .twrow .pg--tw { grid-area: twbtn; }
+  /* A real, live Twitch stream: watch-only (muted, can't be clicked into, nothing to type in). */
+  .twlive { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .twlive .screen__label { color: #bf94ff; }
+  .twlive__box { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; background: #000; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(145, 71, 255, 0.25); }
+  .twlive__box iframe, .twlive__player { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; border: 0; border-radius: 0; box-shadow: none; pointer-events: none; }
+  .twlive__cover { position: absolute; inset: 0; z-index: 2; cursor: default; }
+  .twlive__wait { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; color: #8d8d97; }
+  .twlive__note { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: #8d8d97; }
   .twnote .eyebrow { color: #bf94ff; }
   .twnote h3 { margin: 6px 0 8px; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; color: #fff; }
   .twnote p { margin: 0; font-size: 14px; line-height: 1.55; color: #c6c6d0; }
   .twnote p + p { margin-top: 10px; font-size: 13px; color: #8d8d97; }
   html.cols .scr-tw .screen__label { color: #bf94ff; }
-  html.cols .scr-tw iframe { height: 560px; min-height: 0; border: 0; border-radius: 10px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(145, 71, 255, 0.25); }
+  html.cols .scr-tw iframe { border: 0; border-radius: 10px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(145, 71, 255, 0.25); } /* the same height as the panels above */
   html.cols .pg--tw .pg__head { color: #bf94ff; }
   html.cols .pg--tw .chip:hover { box-shadow: 0 8px 26px 6px rgba(0, 0, 0, 0.8), 0 0 14px rgba(145, 71, 255, 0.4); }
   html.cols .pg--tw [data-tip]::after { left: auto; right: 0; transform: translate(0, -3px); }
   html.cols .pg--tw [data-tip]:hover::after, html.cols .pg--tw [data-tip]:focus-visible::after { transform: translate(0, 0); }
   @media (max-width: 1239px) {
-    html.cols .twrow { grid-template-columns: repeat(2, minmax(0, 420px)); grid-template-areas: "twnote tw" "twnote twbtn"; justify-content: center; row-gap: 18px; }
+    html.cols .twrow { grid-template-columns: repeat(2, minmax(0, 420px)); grid-template-areas: "twnote twnote" "live tw" ". twbtn"; row-gap: 18px; }
   }
   @media (max-width: 920px) {
-    html.cols .twrow { grid-template-columns: minmax(0, 420px); grid-template-areas: "twnote" "tw" "twbtn"; }
-    html.cols .twrow .twnote { justify-self: start; text-align: left; }
+    html.cols .twrow { grid-template-columns: minmax(0, 420px); grid-template-areas: "twnote" "live" "tw" "twbtn"; }
   }
   /* Far right: on top, "On plain Twitch", a picture of what Twitch's own chat shows for the
      last streamer-side button pressed; under it, the pretend Twitch chat. */
@@ -1007,6 +1025,8 @@
   // placed by name (grid areas), so the order in the page doesn't matter.
   if (document.documentElement.classList.contains("cols")) {
     const stage = document.querySelector(".stage");
+    const intro = document.querySelector(".twosides");
+    if (intro) stage.prepend(intro); // into the purple-and-green section, above the panels
     document.getElementById("obs").closest(".screen").classList.add("scr-obs");
     document.getElementById("mod").closest(".screen").classList.add("scr-mod");
     const streamer = pgColumn("streamer", "Try the streamer's side", [
@@ -1037,6 +1057,9 @@
     row.innerHTML = `<div class="twnote"><p class="eyebrow">And on Twitch itself</p><h3>The tools come along into Twitch's chat.</h3>
       <p>This is Twitch's own chat on twitch.tv, as BlazeMod420 sees it with StreamSpace. Point at a line to flag it or leave a note on it, right-click a name to remember who they are, and anything you flag lights up in the streamer's chat above.</p>
       <p>Viewers get these too: notes on people, quick phrases, and your name boxed so you never miss a mention.</p></div>
+      <div class="twlive"><div class="screen__label">Live on Twitch <small class="twlive__who">a popular stream, right now</small></div>
+        <div class="twlive__box"><div class="twlive__player"></div><p class="twlive__wait">Finding someone live…</p><div class="twlive__cover" aria-hidden="true"></div></div>
+        <p class="twlive__note">A real stream, live right now and muted, to show where the chat lives. The chat beside it is the demo's own: everyone in it is pretend.</p></div>
       <div class="screen scr-tw"><div class="screen__label">Twitch chat <small>on twitch.tv, with StreamSpace</small></div></div>`;
     const chat = document.createElement("iframe");
     chat.id = "twitch";
@@ -1072,6 +1095,50 @@
     col.append(note);
     row.append(col);
     stage.after(row);
+    // The stream loads once the section is near, so it never slows the demo's start.
+    const box = row.querySelector(".twlive__box");
+    if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) { io.disconnect(); twLive(box); } }, { rootMargin: "600px 0px" });
+      io.observe(box);
+    } else twLive(box);
+  }
+  // A real live stream through Twitch's own embed player, watch-only: muted, clicks land on a
+  // cover over it, and nothing in it can type, cheer or spend. Big channels, in order, until one
+  // is live (Twitch's player says when a channel is offline).
+  const LIVE_CHANNELS = ["xqc", "kaicenat", "jynxzi", "caseoh_", "ishowspeed", "zackrawrr", "hasanabi", "summit1g", "tarik", "lirik", "sodapoppin", "shroud", "ludwig", "pokimane", "tfue"];
+  function twLive(box) {
+    const who = box.parentElement.querySelector(".twlive__who");
+    const wait = box.querySelector(".twlive__wait");
+    const s = document.createElement("script");
+    s.src = "https://player.twitch.tv/js/embed/v1.js";
+    s.onload = () => {
+      const T = window.Twitch;
+      if (!T?.Player) return (wait.textContent = "Twitch's player didn't load.");
+      let i = 0, tries = 0, timer = 0;
+      const player = new T.Player(box.querySelector(".twlive__player"), { channel: LIVE_CHANNELS[0], width: "100%", height: "100%", parent: [location.hostname], muted: true, autoplay: true });
+      const lock = () => box.querySelectorAll("iframe").forEach((f) => { f.tabIndex = -1; f.setAttribute("aria-hidden", "true"); });
+      const next = () => {
+        clearTimeout(timer);
+        if (++tries >= LIVE_CHANNELS.length) return (wait.textContent = "None of the big streams are live right now.");
+        i = (i + 1) % LIVE_CHANNELS.length;
+        player.setChannel(LIVE_CHANNELS[i]);
+        timer = setTimeout(next, 9000);
+      };
+      const live = () => {
+        clearTimeout(timer);
+        wait.hidden = true;
+        who.textContent = `${LIVE_CHANNELS[i]}, live right now`;
+        player.setMuted(true);
+        lock();
+      };
+      player.addEventListener(T.Player.ONLINE, live);
+      player.addEventListener(T.Player.PLAYING, live);
+      player.addEventListener(T.Player.OFFLINE, next);
+      timer = setTimeout(next, 9000);
+      lock();
+    };
+    s.onerror = () => (wait.textContent = "Twitch's player didn't load.");
+    document.head.append(s);
   }
   const twSay = (text) => { const n = document.getElementById("twSaid"); if (n) n.textContent = text; };
   const twPause = (ms) => new Promise((r) => setTimeout(r, ms));

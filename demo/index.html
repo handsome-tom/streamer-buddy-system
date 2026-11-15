@@ -666,6 +666,22 @@
   .getit { background: none; }
   .thanks { background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.45) 40%, #000 100%); }
   .thanks .wrap, .thanks__fine, .credits { border-top: 0; }
+
+  /* ===== Room between sections ===== */
+  /* About the same open air between every section as between the hero and the live demo
+     (~240px of empty space on wide screens, less on phones). Each margin tops up what the
+     section already had, so the gap from one section's last line to the next one's first
+     line comes out about even. */
+  .duo { margin-top: 136px; }
+  section.viewer { margin-top: 106px; }
+  .getit { margin-top: 20px; }
+  .thanks { margin-top: 60px; }
+  @media (max-width: 860px) {
+    .duo { margin-top: 20px; }
+    section.viewer { margin-top: 50px; }
+    .getit { margin-top: 0; }
+    .thanks { margin-top: 0; }
+  }
 </style>
 </head>
 <body>
