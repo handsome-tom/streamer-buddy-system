@@ -203,9 +203,9 @@
   #retro .r-box td:first-child { width: 90px; color: #369; font-weight: bold; background: #dbe8f5; }
   #retro .r-network { padding: 12px; font: bold 18px Arial, sans-serif; text-align: center; border: 1px solid #ccc; }
   #retro .r-blog { padding: 6px; }
-  #retro .r-friends { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 8px; text-align: center; }
+  #retro .r-friends { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px; text-align: center; }
   #retro .r-friend b { display: block; margin-bottom: 3px; color: #039; text-decoration: underline; font-size: 10px; }
-  #retro .r-friend i { display: block; width: 62px; height: 62px; margin: 0 auto; background: var(--f); border: 1px solid #999; }
+  #retro .r-friend i { display: block; width: 62px; height: 62px; margin: 0 auto; background: var(--f) center / cover; border: 1px solid #999; }
   #retro .r-player { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 5px; color: #fff; background: linear-gradient(#444, #111); border: 1px solid #000; font-size: 10px; }
   #retro .r-player span:first-child { display: inline-block; width: 0; height: 0; border-left: 8px solid #6f6; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
   #retro .r-marquee { overflow: hidden; white-space: nowrap; }
@@ -397,6 +397,8 @@
   .demo { z-index: 1; }
   /* The demo frame is see-through, so a drop shadow on it showed through as a dark band under the hero. */
   #demoFrame { box-shadow: none; }
+  /* The demo's live Twitch stream, laid over its spot in the demo (see the script below). */
+  .demo__live { position: absolute; z-index: 2; border-radius: 10px; overflow: hidden; }
   /* The ring is drawn on two canvases (script at the bottom): the far half behind the globe, the near
      half in front. Light-blue bands with gaps, seen at an angle, turning, with drifting specks. */
   .hero-ring { position: absolute; left: -60%; top: -60%; width: 220%; height: 220%; pointer-events: none; }
@@ -695,7 +697,7 @@
         <div>
           <h2>Tom</h2>
           <div class="r-pic"><img src="brand/tom.png" alt="">
-            <div><p>"looking out for u"</p><p>Male<br>31 years old<br>Somewhere, Twitch</p><p class="r-online">&#9679; Online Now!</p><p>Last Login: 11/6/2006</p></div></div>
+            <div><p>"it's time for something new"</p><p>Male<br>31 years old<br>Somewhere, Twitch</p><p class="r-online">&#9679; Online Now!</p><p>Last Login: 11/6/2006</p></div></div>
           <p style="margin:8px 0 0">Mood: watching chat 😎<br>View My: <a class="r-link">Pics</a> | <a class="r-link">Videos</a></p>
           <div class="r-box"><h3>Contacting Tom</h3><ul style="list-style:none;padding-left:5px"><li><a>✉ Send Message</a> &nbsp; <a>＋ Add to Friends</a></li><li><a>💬 Instant Message</a> &nbsp; <a>⭐ Add to Favorites</a></li></ul></div>
           <div class="r-box"><h3>Tom's Interests</h3><table><tr><td>General</td><td>streams, emotes, chat, raids, not spamming</td></tr><tr><td>Music</td><td>whatever's on stream</td></tr><tr><td>Heroes</td><td>mods</td></tr></table></div>
@@ -705,14 +707,15 @@
           <div class="r-network">Tom is in your extended network</div>
           <div class="r-box r-box--orange"><h3>Tom's Latest Blog Entry</h3><div class="r-blog">new extension, who dis <a class="r-link">(view more)</a><br>my mods can ask me stuff now without spamming chat <a class="r-link">(view more)</a></div></div>
           <div class="r-box r-box--orange"><h3>Tom's Friend Space</h3>
-            <div class="r-blog"><b>Tom has <span style="color:#c00">8</span> friends.</b></div>
+            <div class="r-blog"><b>Tom has <span style="color:#c00">9</span> friends.</b></div>
             <div class="r-friends">
-              <div class="r-friend"><b>BlazeMod420</b><i style="--f:linear-gradient(135deg,#3fc98e,#1a6)"></i></div>
-              <div class="r-friend"><b>DrCoolMod67</b><i style="--f:linear-gradient(135deg,#5a8de8,#235)"></i></div>
-              <div class="r-friend"><b>Lump</b><i style="--f:linear-gradient(135deg,#8fd14f,#350)"></i></div>
+              <div class="r-friend"><b>RomanEmpireTV</b><i style="--f:url(pics/streamer.webp)"></i></div>
+              <div class="r-friend"><b>BlazeMod420</b><i style="--f:url(pics/mod1.webp)"></i></div>
+              <div class="r-friend"><b>DrCoolMod67</b><i style="--f:url(pics/mod2.webp)"></i></div>
+              <div class="r-friend"><b>Lump</b><i style="--f:url(pics/raider.webp)"></i></div>
               <div class="r-friend"><b>quietlurker</b><i style="--f:linear-gradient(135deg,#ccc,#555)"></i></div>
-              <div class="r-friend"><b>sleepycat42</b><i style="--f:linear-gradient(135deg,#e2568f,#612)"></i></div>
-              <div class="r-friend"><b>OliveBranch</b><i style="--f:linear-gradient(135deg,#a9cf45,#340)"></i></div>
+              <div class="r-friend"><b>CaptainSausage</b><i style="--f:linear-gradient(135deg,#e2568f,#612)"></i></div>
+              <div class="r-friend"><b>MiloMunch</b><i style="--f:linear-gradient(135deg,#a9cf45,#340)"></i></div>
               <div class="r-friend"><b>hellofoxy</b><i style="--f:linear-gradient(135deg,#c788e8,#425)"></i></div>
               <div class="r-friend"><b>HoneyBuddy</b><i style="--f:linear-gradient(135deg,#e0a53a,#530)"></i></div>
             </div></div>
@@ -783,6 +786,25 @@
       if (e.source !== frame.contentWindow || e.origin !== location.origin || e.data?.t !== "demo-height") return;
       frame.style.height = `${Math.ceil(e.data.h)}px`;
       document.getElementById("demoWait").hidden = true;
+    });
+    // The live stream in the demo's Twitch section plays here, laid exactly over its spot in
+    // the demo (the demo says where): Twitch only autoplays a player at most one frame deep.
+    let live = null, liveSaid = null;
+    addEventListener("message", (e) => {
+      if (e.source !== frame.contentWindow || e.origin !== location.origin || e.data?.t !== "twlive-slot") return;
+      const tell = (m) => { liveSaid = m; frame.contentWindow?.postMessage({ t: "twlive-status", ...m }, location.origin); };
+      if (!live) {
+        live = document.createElement("div");
+        live.className = "demo__live";
+        frame.after(live);
+        const s = document.createElement("script");
+        s.src = "twlive.js?v=1";
+        s.onload = () => window.ssLive(live, tell);
+        s.onerror = () => tell({ state: "error" });
+        document.head.append(s);
+      } else if (liveSaid) tell(liveSaid); // the demo was started over: it asks again
+      const { x, y, w, h } = e.data;
+      Object.assign(live.style, { left: `${frame.offsetLeft + x}px`, top: `${frame.offsetTop + y}px`, width: `${w}px`, height: `${h}px` });
     });
     let started = false;
     const start = () => {

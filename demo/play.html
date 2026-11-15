@@ -777,13 +777,8 @@
   .twlive .screen__label { color: #bf94ff; }
   .twlive__box { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; background: #000; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(145, 71, 255, 0.25); }
   .twlive__box iframe, .twlive__player { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; border: 0; border-radius: 0; box-shadow: none; pointer-events: none; }
-  .twlive__cover { position: absolute; inset: 0; z-index: 2; cursor: default; }
   .twlive__wait { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; color: #8d8d97; }
   .twlive__wait[hidden] { display: none; }
-  /* The player stays invisible until a stream is actually playing, so a paused or age-gated
-     channel never shows while the next one is tried. */
-  .twlive__player { opacity: 0; transition: opacity 0.5s ease; }
-  .twlive__box.is-live .twlive__player { opacity: 1; }
   .twlive__note { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: #8d8d97; }
   .twnote .eyebrow { color: #bf94ff; }
   .twnote h3 { margin: 6px 0 8px; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; color: #fff; }
@@ -1063,7 +1058,7 @@
       <p>This is Twitch's own chat on twitch.tv, as BlazeMod420 sees it with StreamSpace. Point at a line to flag it or leave a note on it, right-click a name to remember who they are, and anything you flag lights up in the streamer's chat above.</p>
       <p>Viewers get these too: notes on people, quick phrases, and your name boxed so you never miss a mention.</p></div>
       <div class="twlive"><div class="screen__label">Live on Twitch <small class="twlive__who">a popular stream, right now</small></div>
-        <div class="twlive__box"><div class="twlive__player"></div><p class="twlive__wait">Finding someone live…</p><div class="twlive__cover" aria-hidden="true"></div></div>
+        <div class="twlive__box"><p class="twlive__wait">Finding someone live…</p></div>
         <p class="twlive__note">A real stream, live right now and muted, to show where the chat lives. The chat beside it is the demo's own: everyone in it is pretend.</p></div>
       <div class="screen scr-tw"><div class="screen__label">Twitch chat <small>on twitch.tv, with StreamSpace</small></div></div>`;
     const chat = document.createElement("iframe");
@@ -1107,48 +1102,37 @@
       io.observe(box);
     } else twLive(box);
   }
-  // A real live stream through Twitch's own embed player, watch-only: muted, clicks land on a
-  // cover over it, and nothing in it can type, cheer or spend. Big channels, in order, until one
-  // is live (Twitch's player says when a channel is offline).
-  const LIVE_CHANNELS = ["kaicenat", "ishowspeed", "ludwig", "pokimane", "zackrawrr", "hasanabi", "caseoh_", "lirik", "sodapoppin", "tarik", "jynxzi", "xqc", "summit1g", "shroud", "tfue"];
+  // A real live stream, watch-only, through Twitch's own embed player (twlive.js says how).
+  // Twitch only autoplays a player at most one frame deep, so inside the front page's frame
+  // the front page plays it, laid exactly over this box: this says where the box is, and
+  // shows who's live when the front page says so. Opened on its own, it plays right here.
   function twLive(box) {
     const who = box.parentElement.querySelector(".twlive__who");
     const wait = box.querySelector(".twlive__wait");
-    const s = document.createElement("script");
-    s.src = "https://player.twitch.tv/js/embed/v1.js";
-    s.onload = () => {
-      const T = window.Twitch;
-      if (!T?.Player) return (wait.textContent = "Twitch's player didn't load.");
-      let i = 0, tries = 0, timer = 0;
-      const player = new T.Player(box.querySelector(".twlive__player"), { channel: LIVE_CHANNELS[0], width: "100%", height: "100%", parent: [location.hostname], muted: true, autoplay: true });
-      const lock = () => box.querySelectorAll("iframe").forEach((f) => { f.tabIndex = -1; f.setAttribute("aria-hidden", "true"); });
-      const next = () => {
-        clearTimeout(timer);
-        box.classList.remove("is-live");
-        wait.hidden = false;
-        who.textContent = "";
-        if (++tries >= LIVE_CHANNELS.length) return (wait.textContent = "None of the big streams are live right now.");
-        i = (i + 1) % LIVE_CHANNELS.length;
-        player.setChannel(LIVE_CHANNELS[i]);
-        timer = setTimeout(next, 10000);
-      };
-      // Only a stream that's really playing counts. "Online" isn't enough: a channel behind
-      // Twitch's "intended for certain audiences" screen is online but sits paused and
-      // blurred, waiting for a click the cover (rightly) never lets through. Those get skipped.
-      const live = () => {
-        clearTimeout(timer);
-        wait.hidden = true;
-        box.classList.add("is-live");
-        who.textContent = `${LIVE_CHANNELS[i]}, live right now`;
-        player.setMuted(true);
-        lock();
-      };
-      player.addEventListener(T.Player.PLAYING, live);
-      player.addEventListener(T.Player.OFFLINE, next);
-      timer = setTimeout(next, 10000);
-      lock();
+    const show = (m) => {
+      const on = m.state === "live";
+      who.textContent = on ? `${m.channel}, live right now` : "";
+      wait.hidden = on;
+      wait.textContent = m.state === "none" ? "None of the big streams are live right now." : m.state === "error" ? "Twitch's player didn't load." : "Finding someone live…";
     };
-    s.onerror = () => (wait.textContent = "Twitch's player didn't load.");
+    if (window.parent !== window && document.documentElement.classList.contains("embedded")) {
+      addEventListener("message", (e) => {
+        if (e.source === parent && e.origin === location.origin && e.data?.t === "twlive-status") show(e.data);
+      });
+      const send = () => {
+        const r = box.getBoundingClientRect();
+        parent.postMessage({ t: "twlive-slot", x: r.left + scrollX, y: r.top + scrollY, w: r.width, h: r.height }, location.origin);
+      };
+      const ro = new ResizeObserver(send);
+      ro.observe(document.body);
+      ro.observe(box);
+      send();
+      return;
+    }
+    const s = document.createElement("script");
+    s.src = "twlive.js?v=1";
+    s.onload = () => window.ssLive(box, show);
+    s.onerror = () => show({ state: "error" });
     document.head.append(s);
   }
   const twSay = (text) => { const n = document.getElementById("twSaid"); if (n) n.textContent = text; };
