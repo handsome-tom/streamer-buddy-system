@@ -5837,3 +5837,10 @@ body.livechat .slot__count {
   text-align: center;
   pointer-events: none;
 }
+
+/* The mod side's streamers strip mirrors the streamer side's mods strip exactly: the camera
+   sits at the same spot by the stripe, as strong as the sword, and the shade runs only as
+   wide as the pictures and fades out just after them. Your status and buttons stay right. */
+.dots--mod { position: relative; flex: 0 1 auto; padding-right: 56px; }
+.dots--mod .dots__label { left: 3px; opacity: 0.7; color: #b48cff; }
+body.embed .bar:has(.dots--mod) #presenceBtn { margin-left: auto; }
