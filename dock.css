@@ -5856,3 +5856,11 @@ body.embed .bar:has(.dots--mod) #presenceBtn { margin-left: auto; }
 }
 .bar:has(.dots--mods) { --edge: 0, 173, 3; }
 .bar:has(.dots--mod) { --edge: 157, 107, 255; }
+/* (The chat dock's starfield also lives on the bar's ::before; here the edge wins.) */
+body .bar:has(.dots--mod)::before, body.livechat .bar:has(.dots--mods)::before {
+  width: 120px;
+  opacity: 1;
+  animation: none;
+  background: linear-gradient(90deg, rgba(var(--edge), 0.42) 0%, rgba(var(--edge), 0.16) 38%, rgba(var(--edge), 0) 100%);
+  box-shadow: inset 3px 0 0 rgb(var(--edge));
+}
