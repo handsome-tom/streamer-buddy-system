@@ -900,7 +900,10 @@
       questions[q.id] = q;
       noticeSeen(before[q.id], q); // while we were reconnecting
       if (!first && !had.has(q.id)) questionToChat(q);
-      else if (!first && q.answer && !before[q.id]?.answer) ownChat?.modAnswer?.(q.id, said(q.answer));
+      else if (!first && before[q.id]) settleInChat(before[q.id], q);
+      // The chat dock has no bar for questions any more: ones still waiting on you when it
+      // opens go into chat (and stick at the top) too.
+      else if (first && LIVECHAT && ownChat && q.to === me.login && !settled(q)) questionToChat(q);
     }
     ready = true;
     setStatus("Online", "ok");
@@ -925,10 +928,22 @@
       ownChat?.modLine({ ...m, pic: pics[m.from] || "", color: m.color || colorOf(m.from) });
     } catch {}
   }
+  const STICK_MS = 5 * 60 * 1000; // a question to you sticks at the top of chat this long
+  // How a question ended, for its line in chat.
+  const settled = (q) => (q.answer ? said(q.answer) : q.dismissed ? "Dismissed" : q.withdrawn ? "Taken back" : q.note && q.seenAt ? "Seen" : "");
   function questionToChat(q) {
     if (q.to !== me.login && q.from !== me.login) return;
     const mine = q.from === me.login;
+    // A question to you, still open: its answer buttons (heart, check, X, ?) and a dismiss,
+    // on the line in chat. A plain message gets a Seen.
+    const open = !mine && !settled(q);
+    const actions = !open ? null : q.note
+      ? [{ label: "Seen", kind: "seen", html: svg(ANSWERS.y.icon, 14) + "<span>Seen</span>", run: () => ack(q.id) }]
+      : [...answerChoices(q).map((a) => ({ label: a.label, kind: a.code, html: svg(ANSWERS[a.code].icon, 14), run: () => answer(q.id, a.code) })),
+        { label: "Dismiss", kind: "dismiss", html: svg(`<path d="M6 6l8 8M14 6l-8 8" ${LINE} stroke-width="2"/>`, 12), run: () => dismiss(q.id) }];
     toChat({
+      actions,
+      stickUntil: open && !q.note ? (q.at || Date.now()) + STICK_MS : 0,
       id: q.id,
       kind: mine ? "asked" : q.note ? "say" : "ask",
       from: q.from,
@@ -936,8 +951,13 @@
       tag: mine ? (q.note ? "message to" : "asked") : q.note ? "message" : "asks",
       toName: mine ? q.to : "",
       text: q.text,
-      answer: q.answer ? said(q.answer) : "",
+      answer: mine || !open ? settled(q) : "",
     });
+  }
+  function settleInChat(old, q) {
+    const was = settled(old);
+    const now = settled(q);
+    if (now && now !== was) ownChat?.modAnswer?.(q.id, now);
   }
 
   function gotQuestion(q) {
@@ -947,7 +967,7 @@
     nudging.delete(q.id);
     noticeSeen(old, q);
     if (!old) questionToChat(q);
-    else if (q.answer && !old.answer) ownChat?.modAnswer?.(q.id, said(q.answer));
+    else settleInChat(old, q);
     // Something new for you: a question to you, or an answer to yours.
     if ((!old && q.to === me.login && !PINGS_HERE) || (q.from === me.login && q.answer && !old?.answer)) arrived();
     if (!old && q.from === me.login) {
@@ -5867,6 +5887,8 @@
         onBadges: noteLead,
         pretend: SANDBOX, // the public demo: links to Twitch say what they'd do instead
       });
+      // Questions already waiting on you go into the new chat (oldest first).
+      for (const q of Object.values(questions).sort((x, y) => (x.at || 0) - (y.at || 0))) if (q.to === me.login && !settled(q)) questionToChat(q);
       if (location.hostname === "localhost") window.__ownChat = ownChat;
       setTimeout(askNotes, 2000); // after the first lines are in, so the notes find them
       for (const login of liveChatters) ownChat.here?.(login); // who was already here

@@ -5991,3 +5991,32 @@ body .bar:has(.dots--mod)::before, body.livechat .bar:has(.dots--mods)::before {
 :is(body, body.has-space.has-space) .oc-line.oc-line--highlight:hover { background: #7550cc; }
 :is(body, body.has-space.has-space) .oc-line--highlight .oc-body { color: #fff; }
 .oc-hl__head { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; font-size: 11.5px; font-weight: 600; color: rgba(255, 255, 255, 0.82); }
+
+/* ===== No notification bar in the chat dock =====
+   Questions, messages, quick info and !vanish notes all flow into chat now (ownchat.js
+   modLine), so the strip under the mods' pictures that used to show them is gone. */
+body.livechat .slotwrap { display: none !important; }
+
+/* A question to you, in chat: its answer buttons on the right. Answered, the buttons go
+   and the answer is added to the line. */
+.oc-mod { align-items: center; }
+.oc-mod__body { flex: 1; min-width: 0; }
+.oc-mod__acts { display: flex; flex: none; gap: 3px; margin-left: 4px; }
+.oc-mod__act { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 28px; height: 26px; padding: 0 6px; font: inherit; font-size: 12px; font-weight: 700; color: #fff; background: color-mix(in srgb, var(--mc) 30%, #222228); border: 0; border-radius: 6px; cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); }
+.oc-mod__act:hover { background: color-mix(in srgb, var(--mc) 55%, #222228); }
+.oc-mod__act:disabled { opacity: 0.45; cursor: default; }
+.oc-mod__act--t { color: #ff5c8a; }
+.oc-mod__act--y { color: #3fc98e; }
+.oc-mod__act--n { color: #ff6b5c; }
+.oc-mod__act--dismiss { min-width: 22px; padding: 0 4px; color: #adadb8; background: transparent; box-shadow: none; }
+.oc-mod__act--dismiss:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
+.oc-mod--ask:not(.oc-mod--done) { background: linear-gradient(90deg, color-mix(in srgb, var(--mc) 30%, transparent), color-mix(in srgb, var(--mc) 8%, transparent) 90%); box-shadow: inset 3px 0 0 var(--mc); }
+
+/* Questions waiting on you that have scrolled up out of sight: stuck at the top of chat
+   until answered (or 5 minutes), each with its buttons. A click on the words jumps back
+   to the line. */
+.oc-stuck { display: grid; gap: 3px; flex: none; max-height: 40%; overflow-y: auto; padding: 4px 6px; box-shadow: 0 8px 14px -8px rgba(0, 0, 0, 0.8); position: relative; z-index: 2; }
+.oc-stuck[hidden] { display: none; }
+.oc-mod--stuck { margin: 0; border-radius: 4px; background: color-mix(in srgb, var(--mc) 22%, #19191e) !important; animation: oc-stuck-in 0.25s ease-out; }
+.oc-mod--stuck .oc-mod__body { cursor: pointer; }
+@keyframes oc-stuck-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }

@@ -202,7 +202,10 @@
     // Warn takes a reason, which the person sees: asked for here, above the message box.
     const warnEl = el("form", "oc-warnbox");
     warnEl.hidden = true;
-    root.append(bar, heldEl, topEl, listWrap, noteEl, warnEl, replyEl, picker, composer);
+    // Mods' questions still waiting, once they've scrolled up out of sight (modLine below).
+    const stuckEl = el("div", "oc-stuck");
+    stuckEl.hidden = true;
+    root.append(bar, heldEl, topEl, stuckEl, listWrap, noteEl, warnEl, replyEl, picker, composer);
     host.box.append(root);
 
     function setStatus(text, kind) {
@@ -895,7 +898,91 @@
     function addLine(line) {
       queue.push(line);
     }
-    const modLines = new Map(); // a mod's question or note's id -> its line (modLine below)
+    const modLines = new Map(); // a mod's question or note's id -> { m, line, copy } (modLine below)
+    function buildModLine(m, copy = false) {
+      const line = el("div", `oc-line oc-mod oc-mod--${m.kind}${copy ? " oc-mod--stuck" : ""}`);
+      line.dataset.mod = m.id;
+      if (m.color) line.style.setProperty("--mc", m.color);
+      const pic = el("span", "oc-mod__pic");
+      if (m.pic) {
+        const img = el("img");
+        img.src = m.pic;
+        img.alt = "";
+        pic.append(img);
+      } else pic.textContent = String(m.fromName || m.from || "?").slice(0, 1).toUpperCase();
+      const body = el("span", "oc-mod__body");
+      body.append(el("b", "oc-mod__who", m.fromName || m.from), " ", el("span", "oc-mod__tag", m.tag || ""), " ");
+      if (m.toName) body.append(el("b", "oc-mod__to", m.toName), " ");
+      body.append(el("span", "oc-mod__text", m.text || ""));
+      const ans = el("span", "oc-mod__answer");
+      ans.hidden = true;
+      body.append(ans);
+      line.append(pic, body);
+      if (m.actions?.length) {
+        const acts = el("span", "oc-mod__acts");
+        for (const a of m.actions) {
+          const b = button(`oc-mod__act${a.kind ? ` oc-mod__act--${a.kind}` : ""}`, "", () => {
+            for (const x of document.querySelectorAll(`.oc-mod[data-mod="${CSS.escape(m.id)}"] .oc-mod__act`)) x.disabled = true;
+            a.run();
+          }, a.label);
+          b.innerHTML = a.html || "";
+          if (!a.html) b.textContent = a.label;
+          b.setAttribute("aria-label", a.label);
+          acts.append(b);
+        }
+        line.append(acts);
+      }
+      // The stuck copy at the top: a click on its words jumps to the line in chat.
+      if (copy) body.addEventListener("click", () => modLines.get(m.id)?.line.scrollIntoView({ block: "center", behavior: "smooth" }));
+      return line;
+    }
+    function settleMod(id, text) {
+      const rec = modLines.get(id);
+      if (!rec) return;
+      rec.m.answer = text || rec.m.answer || "";
+      rec.m.actions = null;
+      for (const line of [rec.line, rec.copy]) {
+        if (!line) continue;
+        line.querySelector(".oc-mod__acts")?.remove();
+        line.classList.add("oc-mod--done");
+        const ans = line.querySelector(".oc-mod__answer");
+        if (ans && text) {
+          ans.textContent = `→ ${text}`;
+          ans.hidden = false;
+        }
+      }
+      unstick(id);
+    }
+    // Questions waiting on you that have scrolled up out of sight stick at the top of chat.
+    const stickies = new Map(); // id -> { until, above }
+    const stickWatch = new IntersectionObserver((seen) => {
+      for (const e of seen) {
+        const id = e.target.dataset.mod;
+        const st = stickies.get(id);
+        if (!st || !e.target.isConnected || !e.boundingClientRect.height) continue;
+        st.above = !e.isIntersecting && e.boundingClientRect.bottom <= (e.rootBounds?.top ?? 0) + 1;
+      }
+      drawStuck();
+    }, { root: list });
+    function unstick(id) {
+      const rec = modLines.get(id);
+      if (rec?.line) stickWatch.unobserve(rec.line);
+      if (rec) rec.copy = null;
+      if (stickies.delete(id)) drawStuck();
+    }
+    function drawStuck() {
+      const now = Date.now();
+      for (const [id, st] of [...stickies]) if (now > st.until || !modLines.get(id)?.line.isConnected) unstick(id);
+      const shown = [...stickies].filter(([, st]) => st.above).map(([id]) => {
+        const rec = modLines.get(id);
+        rec.copy ||= buildModLine(rec.m, true);
+        return rec.copy;
+      });
+      // Only when what's stuck changes, so they don't flicker.
+      if (shown.length !== stuckEl.children.length || shown.some((c, i) => stuckEl.children[i] !== c)) stuckEl.replaceChildren(...shown);
+      stuckEl.hidden = !shown.length;
+    }
+    timers.push(setInterval(() => stickies.size && drawStuck(), 5000));
 
     // ----- Chat notes ------------------------------------------------------------------
     // Mods' notes on lines of chat (noteLine below). Found by who said it and what they said.
@@ -2546,42 +2633,31 @@
         }
       },
       // StreamSpace between the streamer and their mods (dock.js): questions, messages,
-      // quick info and !vanish notes flow into chat as lines of their own, as well as
-      // showing at the top. The mod's picture, their name in their color, what kind it is,
-      // and the words; an answer is added to the line once there is one.
+      // quick info and !vanish notes flow into chat as lines of their own. The mod's
+      // picture, their name in their color, what kind it is, and the words. A question
+      // to you carries its answer buttons; once it scrolls up out of sight it sticks at
+      // the top of chat until it's answered or m.stickUntil passes (5 minutes).
       modLine(m) {
         if (!m?.id || modLines.has(m.id)) return false;
-        const line = el("div", `oc-line oc-mod oc-mod--${m.kind}`);
-        line.dataset.mod = m.id;
-        if (m.color) line.style.setProperty("--mc", m.color);
-        const pic = el("span", "oc-mod__pic");
-        if (m.pic) {
-          const img = el("img");
-          img.src = m.pic;
-          img.alt = "";
-          pic.append(img);
-        } else pic.textContent = String(m.fromName || m.from || "?").slice(0, 1).toUpperCase();
-        const body = el("span", "oc-mod__body");
-        const who = el("b", "oc-mod__who", m.fromName || m.from);
-        const tag = el("span", "oc-mod__tag", m.tag || "");
-        body.append(who, " ", tag, " ");
-        if (m.toName) body.append(el("b", "oc-mod__to", m.toName), " ");
-        body.append(el("span", "oc-mod__text", m.text || ""));
-        const ans = el("span", "oc-mod__answer");
-        ans.hidden = true;
-        body.append(ans);
-        line.append(pic, body);
-        modLines.set(m.id, line);
-        if (modLines.size > 100) modLines.delete(modLines.keys().next().value);
+        const line = buildModLine(m);
+        modLines.set(m.id, { m, line, copy: null });
+        if (modLines.size > 100) {
+          const [oldId] = modLines.keys();
+          unstick(oldId);
+          modLines.delete(oldId);
+        }
         addLine(line);
-        if (m.answer) this.modAnswer(m.id, m.answer);
+        if (m.answer) settleMod(m.id, m.answer);
+        else if (m.actions?.length && m.stickUntil > Date.now()) {
+          stickies.set(m.id, { until: m.stickUntil, above: false });
+          setTimeout(() => modLines.get(m.id) && stickies.has(m.id) && stickWatch.observe(line), 300);
+        }
         return true;
       },
+      // Answered, seen, dismissed or taken back: the words go on the line, the buttons go,
+      // and it stops sticking.
       modAnswer(id, text) {
-        const ans = modLines.get(id)?.querySelector(".oc-mod__answer");
-        if (!ans || !text) return;
-        ans.textContent = `→ ${text}`;
-        ans.hidden = false;
+        settleMod(id, text);
       },
       // Closes everything and hands back anything typed but not sent.
       stop() {
