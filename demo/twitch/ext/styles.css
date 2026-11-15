@@ -1807,8 +1807,9 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: #00ad03; /* Twitch's moderator green */
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.9);
+  /* Lit like the note button beside it (chatnotes.js), in Twitch's moderator green. */
+  background: radial-gradient(circle at 35% 28%, #5fe062 0%, #00ad03 55%, #007a02 100%);
+  box-shadow: 0 4px 18px rgba(0, 173, 3, 0.6), 0 0 0 2px rgba(4, 5, 11, 0.9);
   color: #fff;
   cursor: pointer;
 }
@@ -1816,8 +1817,7 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   display: flex;
 }
 .tbc-flagbtn:hover {
-  background: #14c417;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 10px rgba(0, 173, 3, 0.6);
+  box-shadow: 0 6px 26px rgba(0, 173, 3, 0.85), 0 0 0 2px rgba(4, 5, 11, 0.9);
 }
 .tbc-flagged {
   position: relative;
