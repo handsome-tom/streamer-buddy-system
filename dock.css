@@ -6179,10 +6179,10 @@ body.livechat .slotwrap { display: none !important; }
 /* Your status in the side panel: a small pixel person in your status's color, no circle,
    tucked against your picture (which already wears the sword when you're an Available mod).
    Still a button: a click opens the status menu. */
-body.embed #presenceBtn.presence--bar { width: 16px; min-width: 16px; height: 28px; margin-right: -3px; padding: 0; justify-content: center; border-radius: 4px; background: none; text-shadow: none; }
+body.embed #presenceBtn.presence--bar { width: auto; min-width: 16px; height: 28px; padding: 0 2px; justify-content: center; border-radius: 4px; background: none; text-shadow: none; }
 body.embed #presenceBtn.presence--bar::after { display: none; }
 body.embed #presenceBtn.presence--bar:hover, body.embed #presenceBtn.presence--bar.presence--open { background: none; text-decoration: none; filter: brightness(1.35); }
-body.embed #presenceBtn.presence--bar::before, body.embed #presenceBtn.presence--bar.presence--modding::before {
+body.embed #presenceBtn.presence--bar:not(.presence--modding)::before {
   width: 12px; height: 12px;
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='1 2 12 12' shape-rendering='crispEdges'%3E%3Cpath d='M5 2h4v1h-4zM4 3h6v1h-6zM4 4h6v1h-6zM4 5h6v1h-6zM4 6h6v1h-6zM5 7h4v1h-4zM2 9h10v1h-10zM1 10h12v1h-12zM1 11h12v1h-12zM1 12h12v1h-12zM1 13h12v1h-12z'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='1 2 12 12' shape-rendering='crispEdges'%3E%3Cpath d='M5 2h4v1h-4zM4 3h6v1h-6zM4 4h6v1h-6zM4 5h6v1h-6zM4 6h6v1h-6zM5 7h4v1h-4zM2 9h10v1h-10zM1 10h12v1h-12zM1 11h12v1h-12zM1 12h12v1h-12zM1 13h12v1h-12z'/%3E%3C/svg%3E") center / contain no-repeat;
 }
@@ -6199,3 +6199,20 @@ body.embed #toolsBtn:not(.pill--on):hover { color: color-mix(in srgb, var(--good
 /* Connections' unread count: off the icon, in the corner (like Messages'), and gone when empty. */
 #peopleBtn .pill__count { position: absolute; top: -5px; right: -6px; margin: 0; }
 #peopleBtn .pill__count:empty { display: none; }
+
+/* As an Available mod your status person wears its little sword again (the base
+   .presence--modding mask), a touch bigger than the plain person so it reads. */
+body.embed #presenceBtn.presence--bar.presence--modding::before { width: 21px; height: 14px; }
+
+/* ===== The side panel's bar: always two rows =====
+   Top: the channels you mod, and your status at the far right. Under them, starting at the
+   left: Mod (your picture), Mod tools, Messages and Connections. Fixed this way, so how many
+   channels you mod never pushes some of the buttons down and leaves others up top. */
+body.embed .bar::after { content: ""; order: 3; flex-basis: 100%; height: 0; }
+body.embed .bar > #dots { order: 1; flex: 1 1 0; min-width: 0; } /* the room beside your status; more channels scroll sideways */
+body.embed .bar > #status { order: 1; }
+body.embed .bar > #presenceBtn { order: 2; margin-left: auto; }
+body.embed .bar > #modBtn { order: 4; }
+body.embed .bar > #toolsBtn { order: 5; }
+body.embed .bar > #msgBtn { order: 6; }
+body.embed .bar > #peopleBtn { order: 7; }
