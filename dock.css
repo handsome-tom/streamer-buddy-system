@@ -5911,3 +5911,40 @@ body .bar:has(.dots--mod)::before, body.livechat .bar:has(.dots--mods)::before {
 .oc-mod--ask .oc-mod__text, .oc-mod--asked .oc-mod__text { font-weight: 600; }
 .oc-mod__answer { margin-left: 6px; font-weight: 700; color: var(--mc); white-space: nowrap; }
 .oc-mod__to { color: #efeff1; }
+
+/* ===== Twitch's weight for subs, gifts and bits, in our colors =====
+   Twitch's chat gives every gift its own block, so a 20-sub bomb is a wall of them, and a
+   cheer stands out from chat. Here: square-cornered blocks with a bar down the left, a
+   gift line each stacked tight under the bomb, back-to-back events stacking too, and a
+   cheer that gets louder as it gets bigger. (:is(...) to outrank the theme's rules.) */
+:is(body, body.has-space.has-space) .oc-event { border-radius: 3px; }
+:is(body, body.has-space.has-space) .oc-event + .oc-event,
+:is(body, body.has-space.has-space) .oc-event + .oc-giftline,
+:is(body, body.has-space.has-space) .oc-giftline + .oc-event { margin-top: 2px; }
+
+:is(body, body.has-space.has-space) .oc-giftline { --ev: var(--k-gift, #e2568f); position: relative; display: flex; align-items: center; gap: 8px; margin: 2px 6px 0; padding: 5px 10px; font-size: 12.5px; color: #efeff1; background: linear-gradient(90deg, color-mix(in srgb, var(--ev) 26%, #1b1b20), color-mix(in srgb, var(--ev) 8%, #1b1b20)); border: 0; border-radius: 3px; box-shadow: inset 4px 0 0 var(--ev), 0 2px 6px rgba(0, 0, 0, 0.55); animation: oc-giftline-in 0.3s ease-out; }
+:is(body, body.has-space.has-space) .oc-giftline:hover { background: linear-gradient(90deg, color-mix(in srgb, var(--ev) 34%, #1b1b20), color-mix(in srgb, var(--ev) 12%, #1b1b20)); }
+.oc-giftline__icon { display: inline-grid; place-items: center; flex: none; color: var(--ev); }
+.oc-giftline__words { flex: 1; min-width: 0; }
+.oc-giftline__from { color: #fff; }
+.oc-giftline__to { color: var(--ev); }
+.oc-giftline__n { flex: none; font-family: var(--label, inherit); font-size: 10.5px; font-weight: 700; color: color-mix(in srgb, var(--ev) 55%, #8a8a95); }
+@keyframes oc-giftline-in { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+
+:is(body, body.has-space.has-space) .oc-cheerline { --ev: #9a9aa5; margin: 6px 6px; padding: 7px 10px 8px; background: linear-gradient(90deg, color-mix(in srgb, var(--ev) 24%, #1b1b20), color-mix(in srgb, var(--ev) 6%, #1b1b20)); border-radius: 3px; box-shadow: inset 4px 0 0 var(--ev), 0 2px 8px rgba(0, 0, 0, 0.6); }
+:is(body, body.has-space.has-space) .oc-cheerline--t2 { --ev: #a970ff; }
+:is(body, body.has-space.has-space) .oc-cheerline--t3 { --ev: var(--k-bits, #2bbfa4); }
+:is(body, body.has-space.has-space) .oc-cheerline--t4 { --ev: #3b9cff; }
+:is(body, body.has-space.has-space) .oc-cheerline--t5 { --ev: #ff4a3d; box-shadow: inset 4px 0 0 var(--ev), 0 0 18px color-mix(in srgb, var(--ev) 40%, transparent), 0 2px 8px rgba(0, 0, 0, 0.6); }
+.oc-cheerline__head { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.oc-cheerline__gem { display: inline-grid; place-items: center; width: 24px; height: 24px; color: #151518; background: var(--ev); border-radius: 50%; box-shadow: 0 0 10px color-mix(in srgb, var(--ev) 55%, transparent); }
+.oc-cheerline__value { font-family: var(--serif, inherit); font-size: 20px; font-weight: 800; line-height: 1; color: var(--ev); }
+.oc-cheerline__what { font-family: var(--label, inherit); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: color-mix(in srgb, var(--ev) 60%, #adadb8); }
+.oc-cheerline--t3 .oc-cheerline__value, .oc-cheerline--t4 .oc-cheerline__value { font-size: 24px; }
+.oc-cheerline--t5 .oc-cheerline__value { font-size: 28px; }
+.oc-cheerline--t5 .oc-cheerline__gem { width: 30px; height: 30px; }
+/* Subs, gift bombs, watch streaks and bits badges: the same squared block with a bar down
+   the left, filled with a fade of their color. */
+:is(body, body.has-space.has-space) .oc-line.oc-event { margin: 6px 6px; padding: 9px 12px 10px; background: linear-gradient(90deg, color-mix(in srgb, var(--ev) 26%, #1b1b20), color-mix(in srgb, var(--ev) 7%, #1b1b20)); border: 0; border-radius: 3px; box-shadow: inset 4px 0 0 var(--ev), 0 2px 8px rgba(0, 0, 0, 0.6); }
+:is(body, body.has-space.has-space) .oc-line.oc-event--bomb { background: linear-gradient(90deg, color-mix(in srgb, var(--ev) 36%, #1b1b20), color-mix(in srgb, var(--ev) 10%, #1b1b20)); box-shadow: inset 4px 0 0 var(--ev), 0 0 18px color-mix(in srgb, var(--ev) 30%, transparent), 0 2px 8px rgba(0, 0, 0, 0.6); }
+:is(body, body.has-space.has-space) .oc-line.oc-event + .oc-giftline { margin-top: 2px; }

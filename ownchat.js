@@ -1007,11 +1007,18 @@
         body.textContent = m.text;
         codeError(err);
       }
+      // A cheer is a block of its own, like Twitch's: the gem and the amount big on top, the
+      // message under it. Its color climbs with the amount, as Twitch's cheer gems do
+      // (gray, purple, green, blue, red), and the biggest ones get bigger.
       if (m.bits) {
-        const b = el("span", "oc-bits");
-        b.innerHTML = icon("gem", 13);
-        b.append(el("b", "", Number(m.bits).toLocaleString()), " bits");
-        line.append(b, " ");
+        const n = Number(m.bits) || 0;
+        const tier = n >= 10000 ? 5 : n >= 5000 ? 4 : n >= 1000 ? 3 : n >= 100 ? 2 : 1;
+        line.classList.add("oc-cheerline", `oc-cheerline--t${tier}`);
+        const head = el("div", "oc-cheerline__head");
+        const gem = el("span", "oc-cheerline__gem");
+        gem.innerHTML = icon("gem", 16);
+        head.append(gem, el("b", "oc-cheerline__value", n.toLocaleString()), el("span", "oc-cheerline__what", n === 1 ? "bit" : "bits"));
+        line.prepend(head);
       }
       // Twitch only tells the channel owner which reward it was.
       if (m.reward) line.append(el("span", "oc-reward", "Redeemed"), " ");
@@ -1432,12 +1439,11 @@
         // chat does the same).
         if (kind === "community_sub_gift" && e.community_sub_gift?.id) {
           line.classList.add("oc-event--bomb");
-          const box = el("div", "oc-giftees");
+          // Who got one stacks underneath, a line each (giftLine).
           const count = el("div", "oc-giftees__count");
-          line.append(count, box);
+          line.append(count);
           const g = gifts.get(e.community_sub_gift.id) || { landed: 0, names: [] };
-          gifts.set(e.community_sub_gift.id, Object.assign(g, { box, count, total: e.community_sub_gift.total }));
-          for (const n of g.names) box.append(giftee(n));
+          gifts.set(e.community_sub_gift.id, Object.assign(g, { count, total: e.community_sub_gift.total }));
           drawGiftCount(g);
         }
         return line;
@@ -1765,21 +1771,24 @@
       g.landed++;
       if (name) {
         g.names.push(name);
-        if (g.box) {
-          const stay = !held();
-          g.box.append(giftee(name));
-          if (stay) toBottom(); // the card grows; keep the newest in view
-        }
+        // Each gift is a line of its own, stacked under the bomb like Twitch's chat does,
+        // so twenty gifts look like twenty.
+        addLine(giftLine(g.from, name, g.landed));
       }
       gifts.set(id, g);
       drawGiftCount(g);
       if (g.total && g.from) drawGift(id);
     }
-    function giftee(name) {
-      const chip = el("span", "oc-giftee");
-      chip.innerHTML = icon("giftfill", 12);
-      chip.append(name);
-      return chip;
+    function giftLine(from, name, n) {
+      const line = el("div", "oc-line oc-giftline");
+      const art = el("span", "oc-giftline__icon");
+      art.innerHTML = icon("giftfill", 13);
+      const words = el("span", "oc-giftline__words");
+      if (from) words.append(el("b", "oc-giftline__from", from), " gifted a sub to ");
+      else words.append("A sub went to ");
+      words.append(el("b", "oc-giftline__to", name));
+      line.append(art, words, el("span", "oc-giftline__n", `#${n}`));
+      return line;
     }
     function drawGiftCount(g) {
       if (g.count) g.count.textContent = `${Math.min(g.landed, g.total || g.landed)} of ${g.total || "?"} gifted${g.landed < g.total ? "…" : ""}`;
