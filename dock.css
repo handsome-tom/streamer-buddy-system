@@ -6091,3 +6091,7 @@ body.livechat .slotwrap { display: none !important; }
 :is(body, body.has-space.has-space) .oc-top .oc-topcard--pin { min-width: 0; }
 :is(body, body.has-space.has-space) .oc-topcard--pin .oc-topcard__head { min-width: 0; }
 :is(body, body.has-space.has-space) .oc-topcard--pin .oc-topcard__label { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+/* The pin menu over everything else at the top of chat (the prediction, hype train and
+   poll cards come after it, so they'd otherwise cover it). */
+:is(body, body.has-space.has-space) .oc-top .oc-topcard--pin:has(.oc-pinopts:not([hidden])) { z-index: 30; }
+:is(body, body.has-space.has-space) .oc-top .oc-pinopts { z-index: 31; }
