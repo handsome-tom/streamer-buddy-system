@@ -3415,6 +3415,9 @@ body.no-modicons .oc-modicons { display: none; }
   text-transform: uppercase; letter-spacing: 0.05em;
 }
 .oc-event__what { font-size: 13px; }
+/* A small tag under the big line, in the event's own color: "Resub". */
+.oc-event__label { display: inline-block; margin-top: 3px; padding: 1px 7px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #fff; background: color-mix(in srgb, var(--ev) 70%, transparent); border-radius: 4px; }
+.oc-event__label + .oc-event__who { margin-top: 3px; }
 .oc-topcard__label, .oc-topcard--pin .oc-topcard__label { font-size: 12px; }
 .oc-event__icon::after { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.55), 0 6px 14px rgba(0, 0, 0, 0.85), 0 2px 4px rgba(0, 0, 0, 0.9); }
 .oc-event__icon::before { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8); }

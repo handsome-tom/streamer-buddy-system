@@ -1292,7 +1292,7 @@
       }
       return 0.15;
     }
-    // How a notice is drawn: { icon, tone, value (big), what, who (the smaller line) }.
+    // How a notice is drawn: { icon, tone, value (big), what, label (a small tag), who (the smaller line) }.
     function eventLook(kind, e) {
       const name = e.chatter_is_anonymous ? "Anonymous" : e.chatter_user_name || "Someone";
       const sys = e.system_message || "";
@@ -1309,7 +1309,7 @@
         const r = e.resub || {};
         const months = r.cumulative_months || Number(sys.match(/(\d+) months/)?.[1]) || 0;
         const streak = r.streak_months > 1 ? ` · ${r.streak_months}-month streak` : "";
-        return { icon: r.is_prime ? "crown" : "star", tone: "sub", value: months ? String(months) : "", what: months ? `${months === 1 ? "month" : "months"} subscribed` : "Resubscribed", who: `${name} · ${tierName(r.sub_tier, r.is_prime)}${streak}` };
+        return { icon: r.is_prime ? "crown" : "star", tone: "sub", value: months ? String(months) : "", what: months ? `${months === 1 ? "month" : "months"} subscribed` : "Resubscribed", label: months ? "Resub" : "", who: `${name} · ${tierName(r.sub_tier, r.is_prime)}${streak}` };
       }
       if (kind === "sub_gift") {
         const g = e.sub_gift || {};
@@ -1552,7 +1552,10 @@
         const big = el("div", "oc-event__big");
         if (ev.value) big.append(el("span", "oc-event__value", ev.value), " ");
         big.append(el("span", "oc-event__what", ev.what));
-        words.append(big, el("div", "oc-event__who", ev.who));
+        words.append(big);
+        // A small tag under the big line when the number alone doesn't say what it is (Resub).
+        if (ev.label) words.append(el("div", "oc-event__label", ev.label));
+        words.append(el("div", "oc-event__who", ev.who));
         if (e.message?.text) {
           const body = el("div", "oc-body oc-event__msg");
           drawMessage(body, e.message.fragments, e.message.text);

@@ -530,17 +530,18 @@
 
   /* ===== Two sides of one coin, behind the panels ===== */
   .stage { position: relative; isolation: isolate; }
-  .sides { position: absolute; z-index: -1; top: -70px; bottom: -40px; left: calc(50% - 50vw); width: 100vw; overflow: hidden; pointer-events: none;
-    -webkit-mask-image: linear-gradient(180deg, transparent, #000 22%, #000 78%, transparent); mask-image: linear-gradient(180deg, transparent, #000 22%, #000 78%, transparent); }
+  .sides { position: absolute; z-index: -1; top: -70px; bottom: -40px; left: calc(50% - 50vw); width: 100vw; overflow: hidden; pointer-events: none; }
   .sides__half { position: absolute; top: 0; bottom: 0; width: 50%; }
   /* Streamer on the left and mods on the right, the same as everywhere else on the site. */
   .sides__half--streamer { left: 0; --c: 169, 112, 255; --side: right; }
   .sides__half--mod { left: 50%; --c: 63, 201, 142; --side: left; }
-  /* Half an ellipse each, centered on the cut, glowing all the way out to the edge. */
-  .sides__half--streamer { background: radial-gradient(ellipse 100% 62% at 100% 50%, rgba(var(--c), 0.46), rgba(var(--c), 0.2) 42%, rgba(var(--c), 0.08) 75%, rgba(var(--c), 0.05) 100%); }
-  .sides__half--mod { background: radial-gradient(ellipse 100% 62% at 0% 50%, rgba(var(--c), 0.42), rgba(var(--c), 0.18) 42%, rgba(var(--c), 0.08) 75%, rgba(var(--c), 0.05) 100%); }
+  /* Half an ellipse each, centered on the cut: brightest there, then a long, soft falloff that
+     is fully clear before it reaches the top, bottom or outer edge (nothing gets cut off). */
+  .sides__half { --glow: rgba(var(--c), 0.62), rgba(var(--c), 0.52) 20%, rgba(var(--c), 0.4) 40%, rgba(var(--c), 0.27) 58%, rgba(var(--c), 0.14) 76%, rgba(var(--c), 0.04) 91%, rgba(var(--c), 0) 100%; }
+  .sides__half--streamer { background: radial-gradient(ellipse 96% 46% at 100% 50%, var(--glow)); }
+  .sides__half--mod { background: radial-gradient(ellipse 96% 46% at 0% 50%, var(--glow)); }
   /* The cut: a thin, bright ellipse dead center between the panels. */
-  .sides__line { position: absolute; left: 50%; top: 8%; bottom: 8%; width: 4px; margin-left: -2px; border-radius: 50%; background: radial-gradient(ellipse 50% 50% at 50% 50%, #fff, rgba(255, 255, 255, 0.75) 35%, rgba(255, 255, 255, 0.15) 75%, transparent); box-shadow: 0 0 24px 5px rgba(255, 255, 255, 0.16); }
+  .sides__line { position: absolute; left: 50%; top: 14%; bottom: 14%; width: 4px; margin-left: -2px; border-radius: 50%; background: radial-gradient(ellipse 50% 50% at 50% 50%, #fff, rgba(255, 255, 255, 0.75) 35%, rgba(255, 255, 255, 0.15) 75%, transparent); box-shadow: 0 0 24px 5px rgba(255, 255, 255, 0.16); }
   /* The side's name, big and faint, running down the outer edge. */
   .sides__word { position: absolute; top: 50%; font-family: "Silkscreen", "Pixelify Sans", monospace; font-size: clamp(54px, 6.4vw, 128px); line-height: 1; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(var(--c), 0.1); writing-mode: vertical-rl; white-space: nowrap; filter: blur(2.5px); will-change: transform; }
   .sides__word::before { content: attr(data-w); } /* from an attribute, so the demo's name swap leaves it alone */
@@ -711,6 +712,8 @@
   .twosides__side--streamer h3 { color: #b48cff; }
   .twosides__side--mod h3 { color: #3fc98e; }
   .twosides .twosides__try { font-size: 13px; color: #8d8d97; }
+  /* No dark haze behind the panels here, so the two-color glow shows around them. */
+  html.cols .screen::before { display: none; }
   html.cols #tour, html.cols .introfeats, html.cols .demo__bar, html.cols .stage .menu, html.cols #allControls, html.cols .sides__word { display: none !important; }
   html.cols .demo__head { margin-bottom: 22px; }
   html.cols .demo .wrap { max-width: 1340px; }
@@ -938,7 +941,7 @@
         <button id="tFirst" type="button" class="chip" data-k style="--k:#3fc98e" data-tip="Someone chats in the channel for the very first time.">First-time chatter</button>
         <button id="tGift" type="button" class="chip" data-k style="--k:#9d6bf0" data-tip="20 gifted subs: a progress card on top, and a card listing everyone who got one.">Gift bomb</button>
         <button id="tStreak" type="button" class="chip" data-k style="--k:#ee7a2f" data-tip="A viewer shares their watch streak.">Watch streak</button>
-        <button id="tSub" type="button" class="chip" data-k style="--k:#9d6bf0" data-tip="A resub, with their months and message.">Sub</button>
+        <button id="tSub" type="button" class="chip" data-k style="--k:#9d6bf0" data-tip="A resub, with their months and message.">Resub</button>
         <button id="tCheer" type="button" class="chip" data-k style="--k:#2bbfa4" data-tip="A viewer cheers bits.">Cheer</button>
         <button id="tBadge" type="button" class="chip" data-k style="--k:#2bbfa4" data-tip="A viewer unlocks a new bits badge.">Bits badge</button>
         <button id="tRedeem" type="button" class="chip" data-k style="--k:#3aa9db" data-tip="A channel points reward is redeemed.">Redemption</button>
