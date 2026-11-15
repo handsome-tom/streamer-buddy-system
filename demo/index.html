@@ -397,8 +397,7 @@
   .demo { z-index: 1; }
   /* The demo frame is see-through, so a drop shadow on it showed through as a dark band under the hero. */
   #demoFrame { box-shadow: none; }
-  /* The demo's live Twitch stream, laid over its spot in the demo (see the script below). */
-  .demo__live { position: absolute; z-index: 2; border-radius: 10px; overflow: hidden; }
+
   /* The ring is drawn on two canvases (script at the bottom): the far half behind the globe, the near
      half in front. Light-blue bands with gaps, seen at an angle, turning, with drifting specks. */
   .hero-ring { position: absolute; left: -60%; top: -60%; width: 220%; height: 220%; pointer-events: none; }
@@ -685,6 +684,7 @@
     .thanks { margin-top: 0; }
   }
 </style>
+<script src="/tester-gate.js"></script>
 </head>
 <body>
   <div id="space" aria-hidden="true"><div class="planet"><i class="planet__globe"></i></div></div>
@@ -788,23 +788,31 @@
       document.getElementById("demoWait").hidden = true;
     });
     // The live stream in the demo's Twitch section plays here, laid exactly over its spot in
-    // the demo (the demo says where): Twitch only autoplays a player at most one frame deep.
-    let live = null, liveSaid = null;
+    // the demo (the demo says where; twlive.js says why it can't play inside the frame).
+    let place = null, spot = null, liveSaid = null;
+    const tell = (m) => { liveSaid = m; frame.contentWindow?.postMessage({ t: "twlive-status", ...m }, location.origin); };
+    const where = () => {
+      if (!spot) return null;
+      const f = frame.getBoundingClientRect();
+      return { x: f.left + scrollX + spot.x, y: f.top + scrollY + spot.y, w: spot.w, h: spot.h };
+    };
     addEventListener("message", (e) => {
       if (e.source !== frame.contentWindow || e.origin !== location.origin || e.data?.t !== "twlive-slot") return;
-      const tell = (m) => { liveSaid = m; frame.contentWindow?.postMessage({ t: "twlive-status", ...m }, location.origin); };
-      if (!live) {
-        live = document.createElement("div");
-        live.className = "demo__live";
-        frame.after(live);
-        const s = document.createElement("script");
-        s.src = "twlive.js?v=1";
-        s.onload = () => window.ssLive(live, tell);
-        s.onerror = () => tell({ state: "error" });
-        document.head.append(s);
-      } else if (liveSaid) tell(liveSaid); // the demo was started over: it asks again
-      const { x, y, w, h } = e.data;
-      Object.assign(live.style, { left: `${frame.offsetLeft + x}px`, top: `${frame.offsetTop + y}px`, width: `${w}px`, height: `${h}px` });
+      spot = e.data;
+      if (place) {
+        place();
+        if (liveSaid) tell(liveSaid); // the demo was started over: it asks again
+        return;
+      }
+      place = () => {};
+      const s = document.createElement("script");
+      s.src = "twlive.js?v=2";
+      s.onload = () => {
+        place = window.ssLiveOver(where, tell, { under: document.querySelector("header.top")?.offsetHeight || 0 });
+        new ResizeObserver(() => place()).observe(document.body);
+      };
+      s.onerror = () => tell({ state: "error" });
+      document.head.append(s);
     });
     let started = false;
     const start = () => {

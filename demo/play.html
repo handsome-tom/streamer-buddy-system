@@ -848,6 +848,7 @@
   .nt-side--pink { background: #f5009b; }
   .pg__said { margin-top: 12px; font-size: 11.5px; line-height: 1.4; color: #9a9aa5; }
 </style>
+<script src="/tester-gate.js"></script>
 </head>
 <body>
   <div id="space" aria-hidden="true"><div class="planet"><i class="planet__globe"></i></div></div>
@@ -1102,10 +1103,11 @@
       io.observe(box);
     } else twLive(box);
   }
-  // A real live stream, watch-only, through Twitch's own embed player (twlive.js says how).
-  // Twitch only autoplays a player at most one frame deep, so inside the front page's frame
-  // the front page plays it, laid exactly over this box: this says where the box is, and
-  // shows who's live when the front page says so. Opened on its own, it plays right here.
+  // A real live stream, watch-only, through Twitch's own embed player (twlive.js says how
+  // and why). Twitch won't start a player it can't see whole, so it plays on a layer of its
+  // own on top of the page, lined up over this box: in the front page's frame, the front
+  // page plays it (this says where the box is, and shows who's live when told); opened on
+  // its own, this page does.
   function twLive(box) {
     const who = box.parentElement.querySelector(".twlive__who");
     const wait = box.querySelector(".twlive__wait");
@@ -1130,8 +1132,14 @@
       return;
     }
     const s = document.createElement("script");
-    s.src = "twlive.js?v=1";
-    s.onload = () => window.ssLive(box, show);
+    s.src = "twlive.js?v=2";
+    s.onload = () => {
+      const place = window.ssLiveOver(() => {
+        const r = box.getBoundingClientRect();
+        return { x: r.left + scrollX, y: r.top + scrollY, w: r.width, h: r.height };
+      }, show);
+      new ResizeObserver(() => place()).observe(document.body);
+    };
     s.onerror = () => show({ state: "error" });
     document.head.append(s);
   }
