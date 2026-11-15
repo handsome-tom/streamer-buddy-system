@@ -1115,7 +1115,7 @@
       const on = m.state === "live";
       who.textContent = on ? `${m.channel}, live right now` : "";
       wait.hidden = on;
-      wait.textContent = m.state === "none" ? "None of the big streams are live right now." : m.state === "error" ? "Twitch's player didn't load." : "Finding someone live…";
+      wait.textContent = m.state === "none" ? "No live stream to show right now." : m.state === "error" ? "Twitch's player didn't load." : "Finding someone live…";
     };
     if (window.parent !== window && document.documentElement.classList.contains("embedded")) {
       addEventListener("message", (e) => {
