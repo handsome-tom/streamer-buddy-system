@@ -23,6 +23,9 @@
   // ?bare: the Testing Playground (test.streamspace.tv): only the two panels, side by side, on
   // black. No tour, labels, buttons or tooltips; the chat feed still starts by itself.
   if (new URLSearchParams(location.search).has("bare")) document.documentElement.classList.add("bare");
+  // The public demo (not the playground or the mod walkthrough): no step-by-step tour. What the
+  // two sides are for, up top, and the playground's buttons beside each panel ("cols").
+  if (!/[?&](bare|story=mod)\b/.test(location.search)) document.documentElement.classList.add("cols");
 </script>
 <style>
   /* ===== Twitch Space: the public site, with the live demo in the middle ===== */
@@ -698,6 +701,51 @@
   .pg .chip, .pg select { display: flex; justify-content: flex-start; width: 100%; height: auto; padding: 6px 10px; font: inherit; font-size: 12.5px; font-weight: 600; text-align: left; color: #e4e4ea; background: #141418; border: 1px solid #2a2a30; border-radius: 4px; box-shadow: none; }
   .pg .chip:hover { background: #1f1f25; border-color: #44444c; }
   .pg .chip.on { border-color: #3fc98e; }
+  /* ===== The public demo ("cols"): what each side is for, then each panel with its own
+     buttons beside it, like the playground: streamer's on the far left, mod's on the far right ===== */
+  .twosides { display: none; }
+  html.cols .twosides { display: grid; grid-template-columns: repeat(2, minmax(0, 420px)); justify-content: center; gap: 28px 56px; margin: 0 auto 10px; }
+  .twosides h3 { margin: 0 0 6px; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; }
+  .twosides p { margin: 0; font-size: 14px; line-height: 1.55; color: #c6c6d0; }
+  .twosides p + p { margin-top: 8px; }
+  .twosides__side--streamer h3 { color: #b48cff; }
+  .twosides__side--mod h3 { color: #3fc98e; }
+  .twosides .twosides__try { font-size: 13px; color: #8d8d97; }
+  html.cols #tour, html.cols .introfeats, html.cols .demo__bar, html.cols .stage .menu, html.cols #allControls, html.cols .sides__word { display: none !important; }
+  html.cols .demo__head { margin-bottom: 22px; }
+  html.cols .demo .wrap { max-width: 1340px; }
+  html.cols .stage { grid-template-columns: minmax(150px, 190px) minmax(0, 420px) minmax(0, 420px) minmax(150px, 190px); grid-template-rows: auto; grid-template-areas: "sbtn obs mod mbtn"; gap: 28px; align-items: start; justify-content: center; }
+  html.cols .stage .screen { display: flex; flex-direction: column; gap: 10px; grid-row: auto; }
+  html.cols .stage .scr-obs { grid-area: obs; }
+  html.cols .stage .scr-mod { grid-area: mod; }
+  html.cols .stage .pg--streamer { grid-area: sbtn; }
+  html.cols .stage .pg--mod { grid-area: mbtn; }
+  html.cols .pg { max-height: none; overflow: visible; gap: 0; padding-top: 2px; }
+  html.cols .pg__head { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; }
+  html.cols .pg__btns { display: flex; flex-direction: column; gap: 6px; }
+  html.cols .pg .chip, html.cols .pg select { display: flex; align-items: center; gap: 7px; width: 100%; min-height: 32px; padding: 6px 12px; font: inherit; font-size: 12.5px; font-weight: 600; text-align: left; color: #e4e4ea; background: rgba(255, 255, 255, 0.06); border: 0; border-radius: 10px; box-shadow: 0 6px 22px 4px rgba(0, 0, 0, 0.6); transition: background 0.15s, box-shadow 0.15s; }
+  html.cols .pg .chip:hover { background: rgba(255, 255, 255, 0.12); }
+  html.cols .pg--streamer .chip:hover { box-shadow: 0 8px 26px 6px rgba(0, 0, 0, 0.8), 0 0 14px rgba(169, 112, 255, 0.35); }
+  html.cols .pg--mod .chip:hover { box-shadow: 0 8px 26px 6px rgba(0, 0, 0, 0.8), 0 0 14px rgba(63, 201, 142, 0.35); }
+  html.cols .pg .chip.on { color: #fff; background: rgba(125, 176, 239, 0.18); box-shadow: 0 6px 22px 4px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--brand-light); }
+  html.cols .pg .pg__said { margin-top: 14px; }
+  /* Tooltips open toward the page's middle edge of the column, not off the side. */
+  html.cols .pg--streamer [data-tip]::after { left: 0; transform: translate(0, -3px); }
+  html.cols .pg--streamer [data-tip]:hover::after, html.cols .pg--streamer [data-tip]:focus-visible::after { transform: translate(0, 0); }
+  html.cols .pg--mod [data-tip]::after { left: auto; right: 0; transform: translate(0, -3px); }
+  html.cols .pg--mod [data-tip]:hover::after, html.cols .pg--mod [data-tip]:focus-visible::after { transform: translate(0, 0); }
+  /* Not enough room for four columns: the panels side by side, each one's buttons under it,
+     in rows. One panel wide: each panel, then its buttons. */
+  @media (max-width: 1239px) {
+    html.cols .stage { grid-template-columns: repeat(2, minmax(0, 420px)); grid-template-areas: "obs mod" "sbtn mbtn"; row-gap: 18px; }
+    html.cols .pg__btns { flex-direction: row; flex-wrap: wrap; }
+    html.cols .pg .chip, html.cols .pg select { width: auto; }
+    .twosides__arrow { display: none; }
+  }
+  @media (max-width: 920px) {
+    html.cols .twosides, html.cols .stage { grid-template-columns: minmax(0, 420px); }
+    html.cols .stage { grid-template-areas: "obs" "sbtn" "mod" "mbtn"; }
+  }
   /* Far right: on top, "On plain Twitch", a picture of what Twitch's own chat shows for the
      last streamer-side button pressed; under it, the pretend Twitch chat. */
   html.bare .stage .tcol { display: flex; flex-direction: column; gap: 10px; height: calc(100vh - 32px); min-height: 480px; }
@@ -766,6 +814,19 @@
           <p class="eyebrow">Live demo</p>
           <h2>Try it: you're both sides at once.</h2>
           <p>On the left, the streamer's OBS dock with chat. On the right, a mod's side panel in Chrome. Say hi to the crew: everyone here is pretend, and nothing is sent anywhere.</p>
+        </div>
+      </div>
+      <!-- The public demo: what each side is for, streamer on the left, mods on the right. -->
+      <div class="twosides">
+        <div class="twosides__side twosides__side--streamer">
+          <h3>The streamer's OBS dock</h3>
+          <p>Lives inside OBS. Chat, Twitch's events and the mods' questions in one place, and it stays quiet until someone actually needs the streamer. Answering takes one tap.</p>
+          <p class="twosides__try"><span class="twosides__arrow">← </span>The buttons next to it set off a raid, a gift bomb, a poll and more, so you can see how each one shows up.</p>
+        </div>
+        <div class="twosides__side twosides__side--mod">
+          <h3>A mod's side panel</h3>
+          <p>Sits next to Twitch in Chrome. Mods see what's on the streamer's dock, ask quietly instead of in chat, nudge, flag a line, or hit the panic button when it can't wait.</p>
+          <p class="twosides__try">The buttons next to it do what a mod would, and you watch it land on the streamer's side.<span class="twosides__arrow"> →</span></p>
         </div>
       </div>
 
@@ -895,21 +956,48 @@
   // the streamer's dock on the far left and the mod's beside the mod's panel on the far right
   // (streamer on the left, mods on the right, as everywhere). The buttons are the same ones
   // (moved, not copied), so they do exactly what they do in the demo.
+  const pgColumn = (kind, title, groups, wrap) => {
+    const col = document.createElement("div");
+    col.className = `pg pg--${kind}`;
+    col.append(Object.assign(document.createElement("div"), { className: "pg__head", textContent: title }));
+    for (const [caption, ids] of groups) {
+      col.append(Object.assign(document.createElement("div"), { className: "pg__cap", textContent: caption }));
+      const box = wrap ? Object.assign(document.createElement("div"), { className: "pg__btns" }) : col;
+      for (const id of ids) {
+        const control = document.getElementById(id);
+        if (control) box.append(control);
+      }
+      if (wrap) col.append(box);
+    }
+    return col;
+  };
+  // The public demo (cols): the same buttons, a few less, beside each panel. The panels are
+  // placed by name (grid areas), so the order in the page doesn't matter.
+  if (document.documentElement.classList.contains("cols")) {
+    const stage = document.querySelector(".stage");
+    document.getElementById("obs").closest(".screen").classList.add("scr-obs");
+    document.getElementById("mod").closest(".screen").classList.add("scr-mod");
+    const streamer = pgColumn("streamer", "Try the streamer's side", [
+      ["To the mods", ["streamerAsk"]],
+      ["Twitch events", ["tRaid", "tFirst", "tGift", "tSub", "tCheer", "tStreak", "tHype", "tPoll", "tPred", "tPin"]],
+      ["Chat", ["feed"]],
+      ["The demo", ["reload"]],
+    ], true);
+    const mod = pgColumn("mod", "Try the mod's side", [
+      ["To the streamer", ["modAsk", "modSay", "modNote", "modVanish"]],
+      ["Escalate", ["modNudge", "modWarn"]],
+      ["In chat", ["modFlag", "modChatNote"]],
+    ], true);
+    const said = document.getElementById("said");
+    if (said) {
+      said.className = "pg__said";
+      mod.append(said);
+    }
+    stage.append(streamer, mod);
+  }
   if (document.documentElement.classList.contains("bare")) {
     const stage = document.querySelector(".stage");
-    const column = (kind, title, groups) => {
-      const col = document.createElement("div");
-      col.className = `pg pg--${kind}`;
-      col.append(Object.assign(document.createElement("div"), { className: "pg__head", textContent: title }));
-      for (const [caption, ids] of groups) {
-        col.append(Object.assign(document.createElement("div"), { className: "pg__cap", textContent: caption }));
-        for (const id of ids) {
-          const control = document.getElementById(id);
-          if (control) col.append(control);
-        }
-      }
-      return col;
-    };
+    const column = pgColumn;
     const mod = column("mod", "Mod (mod1)", [
       ["To the streamer", ["modAsk", "modSay", "modNote", "modVanish"]],
       ["Escalate", ["modNudge", "modWarn"]],
@@ -1232,7 +1320,7 @@
   // mod2 on purpose: mod2 is the one who pins and announces there).
   function relabel() {
     const swap = (t) => t.replace(/mod[12]|BlazeMod420|DrCoolMod67/g, (n) => ({ mod1: "mod2", mod2: "mod1", BlazeMod420: "DrCoolMod67", DrCoolMod67: "BlazeMod420" })[n]);
-    for (const box of document.querySelectorAll(".stage .screen__label, .stage .menu, #paneMods, #auto")) {
+    for (const box of document.querySelectorAll(".stage .screen__label, .stage .menu, #paneMods, .pg--mod, .pg--streamer #streamerAsk, #auto")) {
       for (const el of [box, ...box.querySelectorAll("*")]) {
         for (const a of ["data-tip", "aria-label"]) if (el.hasAttribute(a)) el.setAttribute(a, swap(el.getAttribute(a)));
       }
@@ -1587,7 +1675,7 @@
     if (twitchChat) twitchChat.src = twitchChat.dataset.src;
     // Chat comes alive on its own once the streamer's dock is up, so the screens are never empty;
     // the guide then walks through the mod features one at a time (not in the playground).
-    if (document.documentElement.classList.contains("bare")) document.getElementById("tour").hidden = true;
+    if (document.documentElement.classList.contains("bare") || document.documentElement.classList.contains("cols")) document.getElementById("tour").hidden = true;
     else tour.show(0);
     document.getElementById("obs").addEventListener("load", () => setTimeout(() => {
       if (feeding) return;
@@ -1601,7 +1689,9 @@
 <script>
   // In the front page's frame: tell it how tall this is, whenever that changes.
   if (document.documentElement.classList.contains("embedded") && window.parent !== window) {
-    const tell = () => parent.postMessage({ t: "demo-height", h: document.documentElement.scrollHeight }, location.origin);
+    // The body's height, not the page's: the page is never shorter than the frame, so the
+    // frame could grow but never shrink back (it starts at 1400px).
+    const tell = () => parent.postMessage({ t: "demo-height", h: document.body.scrollHeight }, location.origin);
     new ResizeObserver(tell).observe(document.body);
     addEventListener("load", tell);
     tell();

@@ -813,28 +813,9 @@
     </div>
   </section>
 
-  <!-- The mod walkthrough: the same pretend world as the live demo, told from the mod's side
-       (play.html?story=mod). Loads only as someone scrolls toward it. -->
-  <section class="moddemo" id="mod-walkthrough" aria-label="Mod walkthrough">
-    <iframe id="modFrame" class="demo__frame moddemo__frame" data-src="play.html?embed&amp;story=mod" title="Mod walkthrough"></iframe>
-    <p class="demo__wait moddemo__wait" id="modWait" aria-hidden="true">Loading the mod walkthrough…</p>
-  </section>
-<script>
-  (() => {
-    const frame = document.getElementById("modFrame");
-    addEventListener("message", (e) => {
-      if (e.source !== frame.contentWindow || e.origin !== location.origin || e.data?.t !== "demo-height") return;
-      frame.style.height = `${Math.ceil(e.data.h)}px`;
-      document.getElementById("modWait").hidden = true;
-    });
-    const start = () => { if (!frame.src) frame.src = frame.dataset.src; };
-    if (location.hash === "#mod-walkthrough") start();
-    if ("IntersectionObserver" in window) {
-      const io = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) { io.disconnect(); start(); } }, { rootMargin: "900px 0px" });
-      io.observe(frame);
-    } else start();
-  })();
-</script>
+  <!-- (The step-by-step mod walkthrough, play.html?story=mod, used to sit here. It's off the
+       page now that the demo above has a mod's buttons beside the mod's panel; the story
+       still works if it's ever wanted back.) -->
 
   <section class="viewer" id="viewers">
     <div class="wrap">
@@ -982,10 +963,10 @@
   })();
 </script>
 <script>
-  // The backdrop planet shows up once the middle of the screen is past the middle of the mod
-  // walkthrough, and goes again above that (the hero has its own planet up top).
+  // The backdrop planet shows up once the middle of the screen is past the middle of the
+  // viewers section, and goes again above that (the hero has its own planet up top).
   (() => {
-    const mod = document.getElementById("mod-walkthrough");
+    const mod = document.getElementById("viewers");
     if (!mod) return;
     let ticking = false;
     const check = () => {
