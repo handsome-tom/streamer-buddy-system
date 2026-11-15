@@ -98,46 +98,44 @@
     });
     stepTimer = setTimeout(next, STEP_MS);
 
-    // The visible player, on a channel the scout found online.
+    // The visible player, on a channel the scout found online: a fresh one for each try,
+    // because a player that never started stays paused when switched to another channel.
+    const drop = () => { mainEl?.remove(); mainEl = null; main = null; };
     const show = (channel) => {
       live = false;
-      if (!main) {
-        mainEl = document.createElement("div");
-        mainEl.className = "twlive__player";
-        mainEl.style.cssText = "position:absolute;inset:0;width:100%;height:100%";
-        slot.append(mainEl);
-        lock(mainEl);
-        main = new T.Player(mainEl, { channel, width: "100%", height: "100%", parent: [location.hostname], muted: true, autoplay: true });
-        lock(mainEl);
-        main.addEventListener(T.Player.PLAYING, () => {
-          clearTimeout(playTimer);
-          if (live) return;
-          live = true;
-          main.setMuted(true);
-          lock(mainEl);
-          tell({ state: "live", channel: CHANNELS[i] });
-        });
-        // The stream ended: find the next one.
-        main.addEventListener(T.Player.OFFLINE, () => {
-          if (!live) return;
-          live = false;
-          mainEl.style.visibility = "hidden";
-          tell({ state: "searching" });
-          tries = 0;
-          next();
-        });
-      } else {
-        mainEl.style.visibility = "";
-        main.setChannel(channel);
-      }
+      drop();
+      const el = (mainEl = document.createElement("div"));
+      el.className = "twlive__player";
+      el.style.cssText = "position:absolute;inset:0;width:100%;height:100%";
+      slot.append(el);
+      lock(el);
+      const p = (main = new T.Player(el, { channel, width: "100%", height: "100%", parent: [location.hostname], muted: true, autoplay: true }));
+      lock(el);
+      p.addEventListener(T.Player.PLAYING, () => {
+        if (main !== p || live) return;
+        clearTimeout(playTimer);
+        live = true;
+        p.setMuted(true);
+        lock(el);
+        tell({ state: "live", channel });
+      });
+      // The stream ended: find the next one.
+      p.addEventListener(T.Player.OFFLINE, () => {
+        if (main !== p || !live) return;
+        live = false;
+        drop();
+        tell({ state: "searching" });
+        tries = 0;
+        next();
+      });
       // Online but it never starts: an age-gated stream ("intended for certain audiences")
       // waits for a click it never gets. Skip it. Scrolled partly away instead? Try again
       // once it's back in full view.
       clearTimeout(playTimer);
       playTimer = setTimeout(() => {
-        if (live) return;
+        if (main !== p || live) return;
         if (!seen) return whenSeen(() => show(channel));
-        mainEl.style.visibility = "hidden"; // out of sight while the scout looks again
+        drop(); // out of sight while the scout looks again
         tell({ state: "searching" });
         next();
       }, PLAY_MS);
