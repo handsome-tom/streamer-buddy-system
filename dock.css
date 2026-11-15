@@ -6216,3 +6216,19 @@ body.embed .bar > #modBtn { order: 4; }
 body.embed .bar > #toolsBtn { order: 5; }
 body.embed .bar > #msgBtn { order: 6; }
 body.embed .bar > #peopleBtn { order: 7; }
+
+/* ===== Flagged lines, the same as in Twitch's chat with StreamSpace (the extension's
+   .tbc-flagged): an outline in the flagger's color with a soft glow, rounded corners, and
+   the flagger's picture at the end of the line, with room kept for it. ===== */
+.oc-line--flagged, body.has-space.has-space .oc-line--flagged {
+  position: relative;
+  margin: 3px 6px;
+  padding: 6px 34px 6px 10px;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--flag), 0 0 12px var(--flag);
+  animation: ocFlagLand 1.2s ease-out;
+}
+@keyframes ocFlagLand { 0% { box-shadow: inset 0 0 0 2px var(--flag), 0 0 26px var(--flag); } }
+.oc-flagpic { position: absolute; right: 8px; bottom: 5px; width: 20px; height: 20px; border-radius: 50%; object-fit: cover; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .oc-line--flagged { animation: none; } }

@@ -2830,13 +2830,23 @@
       },
       // A mod flagged this chatter's line (dock.js): it glows in their color from now on.
       // The newest line from them that matches; says whether it found one.
-      glowLine({ chatter, text, color }) {
+      // With who flagged it (from, pic): their picture at the end of the line, as in
+      // Twitch's chat with StreamSpace.
+      glowLine({ chatter, text, color, from, pic }) {
         const login = String(chatter || "").toLowerCase();
         const lines = [...list.querySelectorAll(".oc-line[data-login]")].filter((l) => l.dataset.login === login);
         const line = lines.reverse().find((l) => !text || l.dataset.text === text || text.startsWith(l.dataset.text) || l.dataset.text.startsWith(text)) || null;
         if (!line) return false;
         if (color) line.style.setProperty("--flag", color);
         line.classList.add("oc-line--flagged");
+        if (from) line.title = `Flagged by ${from}`;
+        line.querySelector(":scope > .oc-flagpic")?.remove();
+        if (pic) {
+          const img = el("img", "oc-flagpic");
+          img.src = pic;
+          img.alt = "";
+          line.append(img);
+        }
         return true;
       },
       // A mod's chat note (StreamSpace's chat notes, from the relay through dock.js): a

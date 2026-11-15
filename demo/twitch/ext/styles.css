@@ -1824,6 +1824,12 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   border-radius: 6px;
   box-shadow: inset 0 0 0 2px var(--tbc-flag), 0 0 12px var(--tbc-flag);
 }
+/* Room at the end for the flagger's picture, so it never sits on the words (the streamer's
+   dock keeps the same room: dock.css .oc-line--flagged). */
+.chat-line__message.tbc-flagged {
+  padding-right: 34px !important;
+  border-radius: 6px;
+}
 /* While a line glows, the flagger's small picture sits at its right end; pointing at the
    line swaps the flag button for an X (same place, same circle) that clears it. */
 .chat-line__message.tbc-flagged .tbc-flagbtn {

@@ -1073,7 +1073,8 @@
     }
     if (f.kind === "chat" && LIVECHAT && f.channel === liveChannel) {
       try {
-        ownChat?.glowLine?.({ chatter: f.chatter, text: f.text, color: f.color || colorOf(f.from) });
+        ownChat?.glowLine?.({ chatter: f.chatter, text: f.text, color: f.color || colorOf(f.from), from: f.from, pic: pics[f.from] || "" });
+        if (!pics[f.from]) lookUp(f.from).then(() => pics[f.from] && ownChat?.glowLine?.({ chatter: f.chatter, text: f.text, color: f.color || colorOf(f.from), from: f.from, pic: pics[f.from] })).catch(() => {});
       } catch {}
       if (late > PIN_STICK_MS) return; // brought back by a reload: its moment at the top has passed
     }
