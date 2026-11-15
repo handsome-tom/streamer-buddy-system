@@ -6162,3 +6162,33 @@ body.livechat .slotwrap { display: none !important; }
 .tools__mode--on .tools__switch::after { transform: translateX(13px); }
 .tools__modename { flex: 1; font-weight: 600; }
 .tools__modedetail { font-size: 11.5px; color: var(--muted); }
+
+/* ===== The top bars, tidied (both sides) =====
+   Every round button in a bar is the same 28px circle with a 16px icon, all on one line; the
+   view you're in shows by color (lit up), not by size. In the mod's side panel each one is a
+   dark circle with its icon in its own color, like Mod tools' green sword: your status in its
+   status color, Messages orange, Connections blue. */
+#modBtn, #modBtn.bar-btn--here, #peopleBtn, #peopleBtn.bar-btn--here, #msgBtn, #toolsBtn, #dndBtn, #settingsBtn, #homeChatBtn {
+  width: 28px; height: 28px; min-width: 28px; padding: 0; border-radius: 50%; justify-content: center;
+}
+#peopleBtn svg, #peopleBtn.bar-btn--here svg, #msgBtn svg, #toolsBtn svg { width: 16px; height: 16px; }
+#modBtn .mod-btn__badge, #modBtn.bar-btn--here .mod-btn__badge { width: 14px; height: 14px; right: -5px; bottom: -5px; }
+#modBtn .mod-btn__badge svg, #modBtn.bar-btn--here .mod-btn__badge svg { width: 9px; height: 9px; }
+
+/* The side panel: dark circles, colored icons. */
+body.embed #presenceBtn.presence--bar { width: 28px; height: 28px; min-width: 28px; padding: 0; justify-content: center; border-radius: 50%; background: #2f2f35; text-shadow: none; }
+body.embed #presenceBtn.presence--bar::after { display: none; }
+body.embed #presenceBtn.presence--bar:hover, body.embed #presenceBtn.presence--bar.presence--open { background: #3a3a44; text-decoration: none; }
+body.embed #presenceBtn.presence--bar::before { width: 13px; height: 15px; }
+body.embed #presenceBtn.presence--bar.presence--modding::before { width: 21px; }
+body.embed .msg-btn, body.has-space.embed .msg-btn { color: var(--honey); background: #2f2f35; border-color: transparent; }
+body.embed .msg-btn:hover, body.has-space.embed .msg-btn:hover { color: var(--honey-hi); background: #3a3a44; border-color: transparent; }
+body.embed .msg-btn.pill--on, body.has-space.embed .msg-btn.pill--on, body.embed .msg-btn.pill--on:hover { color: #fff; background: color-mix(in srgb, var(--honey) 70%, #1a1a1d); border-color: transparent; box-shadow: 0 0 10px color-mix(in srgb, var(--honey) 45%, transparent); }
+body.embed .msg-btn .pill__count { color: var(--honey-ink); background: var(--honey); }
+body.embed #peopleBtn { color: #7db0ef; background: #2f2f35; }
+body.embed #peopleBtn:hover:not(:disabled) { color: #a6c8f5; background: #3a3a44; }
+body.embed #peopleBtn.pill--on, body.has-space.embed #peopleBtn.pill--on, body.embed #peopleBtn.pill--on:hover:not(:disabled) { color: #fff; background: color-mix(in srgb, #3f7dd8 80%, #1a1a1d); box-shadow: 0 0 10px rgba(63, 125, 216, 0.45); }
+body.embed #toolsBtn:not(.pill--on):hover { color: color-mix(in srgb, var(--good) 75%, #fff); background: #3a3a44; }
+/* Connections' unread count: off the icon, in the corner (like Messages'), and gone when empty. */
+#peopleBtn .pill__count { position: absolute; top: -5px; right: -6px; margin: 0; }
+#peopleBtn .pill__count:empty { display: none; }
