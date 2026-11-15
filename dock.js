@@ -227,7 +227,7 @@
   let reportsData = null;
   // The side panel opens on Mod (the sword): the stream you're on.
   const HOME_VIEW = DECK ? "deck" : EMBED ? "mod" : "cards";
-  let view = POPOUT && /^(ask|people|person|chat|stats)$/.test(params.get("view")) ? params.get("view") : HOME_VIEW; // "cards" | "deck" | "ask" | "people" | "person" | "chat" | "stats"
+  let view = POPOUT && /^(ask|people|person|chat|stats|group)$/.test(params.get("view")) ? params.get("view") : HOME_VIEW; // "cards" | "deck" | "ask" | "people" | "person" | "chat" | "stats"
   const drafts = {}; // question id -> reply being typed (kept if things redraw)
   // The Ask box: who to, what's being typed, and what kind ("ask" | "info" | "love").
   // Every question offers the streamer's three answers: heart, check and X.
@@ -1980,7 +1980,7 @@
   // bar, over the top of the chat, with a Close at the top. The bar's own buttons close it
   // too, by pressing them again.
   let showAll = false; // the chat dock's full list of what's waiting, opened from "+2" or a picture
-  const INLINE_TITLES = { cards: "Waiting for you", ask: "Ask", people: "Connections", chat: "Chat", stats: "Stats" };
+  const INLINE_TITLES = { cards: "Waiting for you", ask: "Ask", people: "Connections", chat: "Chat", stats: "Stats", group: "Group" };
   function inlineHead() {
     const head = el("div", "inline__head");
     head.append(el("span", "inline__title", view === "person" ? askDraft.to : INLINE_TITLES[view] || ""));
@@ -2000,6 +2000,11 @@
     if (next === "chat" && to) chatDraft.owner = to;
     if (next !== "chat") chatFrom = next === "messages" ? "messages" : "";
     if (next === "stats" && to) statsDraft.who = to;
+    if (next === "group") {
+      if (to && to !== groupDraft.tag) groupAdding = false;
+      groupDraft.tag = to || groupDraft.tag;
+      groupDeleting = "";
+    }
     if (next === "ask" || next === "person") {
       askDraft.to = to || askDraft.to;
       askDraft.note = "";
@@ -2007,7 +2012,7 @@
     if (next !== "cards" && short() && popOut(next, to)) return;
     showAll = false;
     const was = view;
-    view = view === next && next !== "person" ? HOME_VIEW : next;
+    view = view === next && next !== "person" && next !== "group" ? HOME_VIEW : next;
     render();
     if (view !== was || next === "chat") main.scrollTop = 0; // a new page starts at its top
   }
@@ -2020,8 +2025,8 @@
     pingCheck();
     // Keep typing where it was if things are redrawn under you.
     const typingIn = document.activeElement?.dataset?.key;
-    main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : view === "deck" ? deckPanel() : view === "mod" ? modPanel() : view === "messages" ? messagesPanel() : view === "extsettings" ? extSettingsPanel() : cardList());
-    main.classList.toggle("main--msgs", view === "messages" || (view === "chat" && EMBED)); // the dark Messages sheet
+    main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : view === "deck" ? deckPanel() : view === "mod" ? modPanel() : view === "messages" ? messagesPanel() : view === "group" ? groupPanel() : view === "extsettings" ? extSettingsPanel() : cardList());
+    main.classList.toggle("main--msgs", view === "messages" || ((view === "chat" || view === "group") && EMBED)); // the dark Messages sheet
     if (LIVECHAT && (view !== "cards" || showAll) && main.firstElementChild?.childElementCount !== 0) main.prepend(inlineHead());
     drawDots();
     drawPeek();
@@ -2041,7 +2046,7 @@
     const unreadChat = rooms.reduce((sum, r) => sum + unread(r.owner), 0);
     peopleBtn.title = [requests.length ? `${requests.length} waiting for you to add them back` : "", asking.length ? `${asking.length} asking to join` : "", unreadChat ? `${unreadChat} unread in chat` : ""].filter(Boolean).join(", ");
     peopleBtn.title = peopleBtn.title ? `Connections and chat (${peopleBtn.title})` : "Connections and chat";
-    peopleBtn.classList.toggle("pill--on", view === "people" || view === "chat");
+    peopleBtn.classList.toggle("pill--on", view === "people" || view === "chat" || (view === "group" && !EMBED));
     askBtn.textContent = DECK ? "Deck" : view === "ask" ? "Cancel" : "Ask";
     modBtn.hidden = !EMBED || !me;
     const modLive = modRinged();
@@ -2069,7 +2074,7 @@
     modBtn.classList.toggle("mod-btn--off", !modLive);
     // The bar's right side: the button for the view you're in is the bigger one.
     modBtn.classList.toggle("bar-btn--here", view === "mod");
-    peopleBtn.classList.toggle("bar-btn--here", view === "people" || view === "chat");
+    peopleBtn.classList.toggle("bar-btn--here", view === "people" || view === "chat" || (view === "group" && !EMBED));
     modBtn.dataset.status = myStatus; // its ring takes your status's color (dock.css)
     modBtn.title = modBtn.ariaLabel = `${lead ? "Lead mod" : "Mod"}${modOwner() ? ` · ${modOwner()}` : ""}${modLive ? " · you're an Available mod (ready to mod)" : " · click to become an Available mod"}`;
     drawQuickAsk();
@@ -2081,7 +2086,7 @@
     chatBtn.hidden = true;
     // The side panel's Messages tab carries the unread count; elsewhere it's on Connections.
     msgBtn.hidden = !EMBED || !me;
-    msgBtn.classList.toggle("pill--on", view === "messages" || (view === "chat" && chatFrom === "messages"));
+    msgBtn.classList.toggle("pill--on", view === "messages" || (view === "chat" && chatFrom === "messages") || (view === "group" && EMBED));
     extGear?.classList.toggle("ext-gear--on", view === "extsettings");
     msgCount.textContent = !msgBtn.hidden && unreadChat ? String(unreadChat) : "";
     chatCount.textContent = msgBtn.hidden && unreadChat ? String(unreadChat) : "";
@@ -3791,10 +3796,11 @@
 
   // Messages (the side panel's honey tab), laid out like a messaging app, top to bottom:
   //   Online now: the people you can message who are on right now, one tap from a chat;
-  //   Group chats: each called by its group's name ("Mod squad"), whose it is beside it;
+  //   Groups: your groups (Mods, Lead mods, Tech…) and the group chats you're in, each by its
+  //     group's name. One opens its chat, or (no chat yet) its page, where you start one;
   //   Direct messages: one per connection. Anything unread first, then whoever's online,
   //     then everyone else; the newest conversation first within each.
-  let msgNewGroup = false; // Messages: the "start a group chat" picker is open
+  // Every list here is the same kind of list: a picture, a name, a quieter line under it.
   // "now", "5m", "2h", "3d": when something was said, short enough for a list.
   function agoShort(t) {
     const m = Math.round((Date.now() - t) / 60000);
@@ -3805,55 +3811,368 @@
   }
   // Someone's name in its own little box, so it can be swapped or colored on its own.
   const nameBit = (login, cls = null) => el("span", cls, login);
+  // "on", "idle" or "off": how someone is right now.
+  const stateOf = (login) => {
+    const c = conn(login);
+    return c?.online ? (c.idle ? "idle" : "on") : "off";
+  };
+  const STATE_ORDER = { on: 0, idle: 1, off: 2 };
+  const lastAtOf = (r) => (r ? chat[r.owner]?.at(-1)?.at || 0 : 0);
+  // Someone's picture, ringed green (online) or amber (idle).
+  function ringedPic(login) {
+    const pic = personPic(login);
+    pic.classList.add(`cx__pic--${stateOf(login)}`);
+    return pic;
+  }
+  // How someone is, in words: online, idle, or when they were last on.
+  function seenWords(login) {
+    const state = stateOf(login);
+    return el("span", `msgs__seen msgs__seen--${state}`, state === "on" ? "online" : state === "idle" ? "idle" : whenWords(conn(login) || {}) || "offline");
+  }
+  // A section's heading: small honey capitals, with an optional button on the right.
+  function msgsHead(text, extra = null) {
+    const h = el("div", "msgs__sechead");
+    h.append(el("span", "msgs__label", text));
+    if (extra) h.append(extra);
+    return h;
+  }
+  // One line in a list: a picture, a name line (with when it last moved), a quieter line
+  // under it, and what's unread. Clickable unless it has nothing to do (then a plain row);
+  // `end` puts a small control after it (a ×, an Add), beside the row rather than inside it.
+  function listRow({ pic, name, sub = "", at = 0, count = 0, onClick = null, end = null, cls = "" }) {
+    const row = el(onClick ? "button" : "div", `msgs__row${onClick ? "" : " msgs__row--static"}${count ? " msgs__row--new" : ""}${cls ? ` ${cls}` : ""}`);
+    if (onClick) {
+      row.type = "button";
+      row.addEventListener("click", onClick);
+    }
+    const words = el("span", "msgs__words");
+    const top = el("span", "msgs__nameline");
+    top.append(...[].concat(name));
+    if (at) top.append(el("span", "msgs__ago", agoShort(at)));
+    const bottom = el("span", "msgs__lastline");
+    const said = el("span", "msgs__last");
+    said.append(...[].concat(sub));
+    bottom.append(said);
+    if (count) bottom.append(el("span", "msgs__count", String(count)));
+    words.append(top, bottom);
+    row.append(pic, words);
+    if (!end) return row;
+    const item = el("div", "msgs__item");
+    item.append(row, end);
+    return item;
+  }
+  // A conversation's quiet line: the last thing said ("You: …", or who said it in a group).
+  function lastSaid(r, quiet) {
+    const last = chat[r.owner]?.at(-1);
+    if (!last) return quiet;
+    if (last.from === me.login) return ["You: ", last.text];
+    if (!r.direct) return [nameBit(last.from), ": ", last.text];
+    return last.text;
+  }
+  // A round icon in place of a picture, for things you can do on a group's page.
+  function rowIcon(glyph, quiet = false) {
+    const i = el("span", `msgs__icon${quiet ? " msgs__icon--quiet" : ""}`);
+    if (glyph === "chat") i.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="M2 2h12v1h-12zM1 3h14v7h-14zM2 10h12v1h-12zM4 11h3v1h-3zM4 12h2v1h-2zM4 13h1v1h-1z"/></svg>';
+    else i.textContent = glyph;
+    return i;
+  }
+  // Open a chat from Messages (or a group's page): its back button leads to Messages.
+  function openChat(owner) {
+    chatFrom = EMBED ? "messages" : "";
+    show("chat", owner);
+  }
+
+  // ----- Groups ------------------------------------------------------------------------------
+  // Your groups: the two Twitch fills first (when Twitch lists anyone for them), then your
+  // own, A to Z. Only you see your groups; a group chat is how the people in one talk.
+  let newGroup = null; // the New group form ({ name, picked }) while it's open
+  const groupDraft = { tag: (POPOUT && params.get("view") === "group" && params.get("to")) || "" };
+  let groupAdding = false; // a group's page: the "add people" list is open
+  let groupDeleting = ""; // a group's page: Delete pressed once (press again to delete)
+  function groupNames() {
+    const auto = Object.entries(AUTO_GROUPS).filter(([key, tag]) => tags[tag] || modLists?.[key]?.length).map(([, tag]) => tag);
+    return [...auto, ...Object.keys(tags).filter((t) => !isAutoGroup(t)).sort()];
+  }
+  // Who's in a group, and (for a Twitch one) who Twitch lists that isn't connected here yet.
+  function groupPeople(g) {
+    const autoKey = Object.keys(AUTO_GROUPS).find((k) => AUTO_GROUPS[k] === g) || null;
+    const members = tags[g] || [];
+    const known = new Set(connections.map((c) => c.login));
+    const notYet = autoKey && modLists ? (modLists[autoKey] || []).filter((l) => !known.has(l) && l !== me.login && !requests.includes(l)) : [];
+    return { autoKey, members, notYet };
+  }
+  // A group's picture: up to three of its people, online first, overlapping.
+  function groupStack(logins, tag) {
+    const pic = el("span", "msgs__stack");
+    const faces = [...logins].sort((a, b) => STATE_ORDER[stateOf(a)] - STATE_ORDER[stateOf(b)]).slice(0, 3);
+    for (const l of faces) pic.append(personPic(l));
+    if (!faces.length) pic.append(el("span", "people__pic msgs__grouppic", (tag || "?")[0].toUpperCase()));
+    return pic;
+  }
+  const peopleWords = (n, on) => `${n} ${n === 1 ? "person" : "people"} · ${on} online`;
+
+  // The Groups list (Messages; in the OBS dock, which has no Messages, Connections): each
+  // of your groups, and each group chat someone started for a group you're in. Anything
+  // unread first, then the ones with a chat going (newest first), then the rest in order.
+  function groupsSection(panel, head = msgsHead) {
+    const names = groupNames();
+    const mine = rooms.find((r) => !r.direct && r.owner === me.login);
+    const items = names.map((g, i) => ({ g, room: mine?.tag === g ? mine : null, own: true, i }));
+    if (mine && !names.includes(mine.tag)) items.push({ g: mine.tag, room: mine, own: true, i: items.length });
+    for (const r of rooms.filter((r) => !r.direct && r.owner !== me.login)) items.push({ g: r.tag, room: r, own: false, i: items.length });
+    const rank = (x) => (x.room && unread(x.room.owner) ? 0 : x.room ? 1 : 2);
+    items.sort((a, b) => rank(a) - rank(b) || lastAtOf(b.room) - lastAtOf(a.room) || a.i - b.i);
+
+    let start = null;
+    if (connections.length) {
+      start = el("button", `msgs__new${newGroup ? " msgs__new--on" : ""}`, newGroup ? "Cancel" : "+ New");
+      start.type = "button";
+      start.title = newGroup ? "Don't make a group" : "Make a group (Mods, Lead mods, Tech…)";
+      start.addEventListener("click", () => {
+        newGroup = newGroup ? null : { name: "", picked: [] };
+        render();
+        if (newGroup) document.querySelector('[data-key="new-group"]')?.focus();
+      });
+    }
+    panel.append(head(items.length ? `Groups · ${items.length}` : "Groups", start));
+    if (newGroup) panel.append(newGroupForm());
+
+    const list = el("div", "msgs__list msgs__groups");
+    for (const { g, room, own } of items) {
+      const auto = own && isAutoGroup(g);
+      const name = [el("span", "msgs__name", g || "Group chat")];
+      if (auto) name.push(el("span", "msgs__by", "from Twitch"));
+      if (!own) {
+        const by = el("span", "msgs__by");
+        by.append("by ", nameBit(room.owner));
+        name.push(by);
+      }
+      let people, count;
+      if (own && !room) {
+        const { members, notYet } = groupPeople(g);
+        people = members;
+        count = members.length + notYet.length;
+      } else {
+        people = room.members.map((m) => m.login).filter((l) => l !== me.login);
+        count = people.length;
+      }
+      const quiet = peopleWords(count, people.filter((l) => (room ? room.members.find((m) => m.login === l)?.online : stateOf(l) !== "off")).length);
+      const row = listRow({
+        pic: groupStack(people, g),
+        name,
+        sub: room ? lastSaid(room, quiet) : quiet,
+        at: lastAtOf(room),
+        count: room ? unread(room.owner) : 0,
+        onClick: () => (room ? openChat(room.owner) : show("group", g)),
+      });
+      row.title = room ? `Open the ${g} group chat` : `${g}: who's in it, and start its group chat`;
+      list.append(row);
+    }
+    // Not allowed to see Twitch's mod lists yet (signed in before this asked): one row.
+    if (!TESTING && me && !hasModScopes()) {
+      list.append(listRow({ pic: rowIcon("+"), name: el("span", "msgs__name", "Fill in your mods from Twitch"), sub: "Allow it on Twitch, and Your mods and Channels I mod fill themselves in", onClick: signIn }));
+    }
+    if (!list.childElementCount && !newGroup) {
+      list.append(el("p", "msgs__empty", connections.length ? "No groups yet. Press + New to make one (Mods, Lead mods, Tech…), then chat with everyone in it at once. Only you see your groups." : "Once you have connections, you can put them in groups (Mods, Lead mods, Tech…) and chat with a whole group at once."));
+    }
+    if (list.childElementCount) panel.append(list);
+  }
+
+  // New group: a name, then tick who's in it (the same list as everywhere else).
+  function newGroupForm() {
+    const form = el("form", "msgs__list msgs__newgroup");
+    const name = textBox("Name it (Mods, Lead mods, Tech…)", newGroup.name);
+    name.dataset.key = "new-group";
+    name.maxLength = 20;
+    name.className = "msgs__newname";
+    name.addEventListener("input", () => (newGroup.name = name.value));
+    form.append(name, el("div", "msgs__sublabel", "Who's in it"));
+    const people = [...connections].sort((a, b) => STATE_ORDER[stateOf(a.login)] - STATE_ORDER[stateOf(b.login)] || a.login.localeCompare(b.login));
+    for (const { login } of people) {
+      const on = newGroup.picked.includes(login);
+      const row = listRow({
+        pic: ringedPic(login),
+        name: el("span", "msgs__name", login),
+        sub: seenWords(login),
+        onClick: () => {
+          newGroup.picked = on ? newGroup.picked.filter((l) => l !== login) : [...newGroup.picked, login];
+          render();
+        },
+        cls: `msgs__pickrow${on ? " msgs__pickrow--on" : ""}`,
+      });
+      row.setAttribute("aria-pressed", String(on));
+      row.append(el("span", `msgs__check${on ? " msgs__check--on" : ""}`, on ? "✓" : ""));
+      form.append(row);
+    }
+    const make = el("button", "msgs__make", newGroup.picked.length ? `Make group · ${newGroup.picked.length}` : "Make group");
+    make.type = "submit";
+    const words = el("p", "msgs__note");
+    form.append(make, words);
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const tag = clean(name.value).slice(0, 20);
+      if (!tag) return void (words.textContent = "Give the group a name.");
+      if (!newGroup.picked.length) return void (words.textContent = "Tick at least one person.");
+      for (const login of newGroup.picked) relay({ t: "tag", login, tag, on: true });
+      tags[tag] = [...new Set([...(tags[tag] || []), ...newGroup.picked])]; // until the relay says so
+      newGroup = null;
+      show("group", tag);
+    });
+    return form;
+  }
+
+  // A group's page: who's in it, its group chat, one Ask to everyone; for your own groups,
+  // adding and taking people out, and deleting it. All as lists, one thing per row.
+  function groupPanel() {
+    const g = groupDraft.tag;
+    if (!groupNames().includes(g)) {
+      // Gone (deleted, or Twitch stopped listing anyone): back to where groups are listed.
+      view = EMBED ? "messages" : "people";
+      return EMBED ? messagesPanel() : peoplePanel();
+    }
+    const panel = el("div", "panel msgs grp");
+    const back = el("button", "chat__back", EMBED ? "‹ Messages" : "‹ Connections");
+    back.type = "button";
+    back.addEventListener("click", () => show(EMBED ? "messages" : "people"));
+    panel.append(back);
+    const { autoKey, members, notYet } = groupPeople(g);
+    const count = members.length + notYet.length;
+    const onNow = members.filter((l) => stateOf(l) !== "off").length;
+
+    const top = el("div", "dm__head");
+    const who = el("div", "dm__who");
+    who.append(el("span", "dm__name", g), el("span", "dm__state", `${peopleWords(count, onNow)}${autoKey ? " · from Twitch" : ""}`));
+    top.append(groupStack(members, g), who);
+    panel.append(top);
+
+    // Its group chat, and one Ask to everyone.
+    const mine = rooms.find((r) => !r.direct && r.owner === me.login);
+    const room = mine?.tag === g ? mine : null;
+    const reach = members.filter((l) => conn(l)?.mutual);
+    const acts = el("div", "msgs__list grp__acts");
+    if (room) {
+      acts.append(listRow({ pic: rowIcon("chat"), name: el("span", "msgs__name", "Group chat"), sub: lastSaid(room, "Everyone in it talks together here"), at: lastAtOf(room), count: unread(room.owner), onClick: () => openChat(me.login) }));
+    } else {
+      const start = () => {
+        relay({ t: "room", tag: g });
+        openChat(me.login);
+      };
+      acts.append(listRow({ pic: rowIcon("chat"), name: el("span", "msgs__name", mine ? "Move your group chat here" : "Start a group chat"), sub: mine ? `It's for ${mine.tag} now. Moving it lets everyone in ${g} talk together instead.` : `Everyone in ${g} talks together in one chat`, onClick: start }));
+    }
+    acts.append(listRow({
+      pic: rowIcon("?"),
+      name: el("span", "msgs__name", "Ask everyone"),
+      sub: reach.length > 1 ? `One question to all ${reach.length}. Each answers on their own.` : reach.length ? ["One question, to ", nameBit(reach[0])] : "Nobody in it has added you back yet",
+      onClick: reach.length ? () => show("ask", `#${g}`) : null,
+      cls: reach.length ? "" : "msgs__row--off",
+    }));
+    panel.append(acts);
+
+    // Who's in it: online first. Your own groups: × takes someone out, + New adds people.
+    let addBtn = null;
+    const outside = connections.filter((c) => !members.includes(c.login));
+    if (!autoKey && outside.length) {
+      addBtn = el("button", `msgs__new${groupAdding ? " msgs__new--on" : ""}`, groupAdding ? "Done" : "+ Add");
+      addBtn.type = "button";
+      addBtn.title = groupAdding ? "Done adding people" : `Add people to ${g}`;
+      addBtn.addEventListener("click", () => {
+        groupAdding = !groupAdding;
+        render();
+      });
+    }
+    panel.append(msgsHead(`People · ${count}`, addBtn));
+    if (groupAdding && !autoKey && outside.length) {
+      const add = el("div", "msgs__list msgs__adding");
+      add.append(el("div", "msgs__sublabel", `Add to ${g}`));
+      for (const { login } of [...outside].sort((a, b) => STATE_ORDER[stateOf(a.login)] - STATE_ORDER[stateOf(b.login)] || a.login.localeCompare(b.login))) {
+        const row = listRow({
+          pic: ringedPic(login),
+          name: el("span", "msgs__name", login),
+          sub: seenWords(login),
+          onClick: () => {
+            relay({ t: "tag", login, tag: g, on: true });
+            tags[g] = [...new Set([...(tags[g] || []), login])]; // until the relay says so
+            render();
+          },
+          cls: "msgs__pickrow",
+        });
+        row.title = `Add ${login} to ${g}`;
+        row.append(el("span", "msgs__check", "+"));
+        add.append(row);
+      }
+      panel.append(add);
+    }
+    const list = el("div", "msgs__list");
+    for (const login of [...members].sort((a, b) => STATE_ORDER[stateOf(a)] - STATE_ORDER[stateOf(b)] || a.localeCompare(b))) {
+      const direct = directWith(login);
+      const name = withBadge(el("span", "msgs__name", login), login);
+      if (colorOf(login)) name.style.color = colorOf(login);
+      let end = null;
+      if (!autoKey) {
+        end = el("button", "msgs__x", "×");
+        end.type = "button";
+        end.title = end.ariaLabel = `Take ${login} out of ${g}`;
+        end.addEventListener("click", () => relay({ t: "tag", login, tag: g, on: false }));
+      }
+      const row = listRow({ pic: ringedPic(login), name, sub: conn(login)?.mutual === false ? "hasn't added you back yet" : seenWords(login), onClick: direct ? () => openChat(direct.owner) : null, end });
+      if (direct) (row.querySelector(".msgs__row") || row).title = `Message ${login}`;
+      list.append(row);
+    }
+    // From Twitch, but not connected here yet: Add sends them a request.
+    for (const login of notYet) {
+      const add = el("button", "msgs__new", "Add");
+      add.type = "button";
+      add.title = `Ask ${login} to connect`;
+      add.addEventListener("click", async () => {
+        add.disabled = true;
+        add.textContent = "Asked";
+        const user = TESTING ? { login } : await lookUp(login).catch(() => null);
+        if (user) relay({ t: "connect", login: user.login });
+      });
+      const pic = personPic(login);
+      pic.classList.add("msgs__pic--away");
+      list.append(listRow({ pic, name: el("span", "msgs__name", login), sub: "not connected here yet", end: add }));
+    }
+    if (!list.childElementCount) list.append(el("p", "msgs__empty", "Nobody in it yet."));
+    panel.append(list);
+
+    // The end of things: close its chat; delete the group (your own ones).
+    const ends = el("div", "msgs__list grp__ends");
+    if (room) {
+      ends.append(listRow({ pic: rowIcon("×", true), name: el("span", "msgs__name", "End group chat"), sub: "Closes it for everyone in it", onClick: () => relay({ t: "room", tag: null }), cls: "msgs__row--danger" }));
+    }
+    if (!autoKey) {
+      const sure = groupDeleting === g;
+      ends.append(listRow({
+        pic: rowIcon("−", true),
+        name: el("span", "msgs__name", sure ? `Press again to delete ${g}` : "Delete group"),
+        sub: room ? "Takes everyone out and ends its group chat" : "Takes everyone out. Only you see your groups, so nobody's told.",
+        onClick: () => {
+          if (!sure) {
+            groupDeleting = g;
+            return render();
+          }
+          groupDeleting = "";
+          if (room) relay({ t: "room", tag: null });
+          for (const login of members) relay({ t: "tag", login, tag: g, on: false });
+          delete tags[g]; // until the relay says so
+          show(EMBED ? "messages" : "people");
+        },
+        cls: "msgs__row--danger",
+      }));
+    } else {
+      panel.append(el("p", "msgs__empty grp__note", "This group follows Twitch's own list, so it fills itself in."));
+    }
+    if (ends.childElementCount) panel.append(ends);
+    return panel;
+  }
+
   function messagesPanel() {
     const panel = el("div", "panel msgs");
-    const lastOf = (owner) => chat[owner]?.at(-1);
-    const lastAt = (r) => lastOf(r.owner)?.at || 0;
-    const open = (owner) => {
-      chatFrom = "messages";
-      show("chat", owner);
-    };
-    const section = (text, extra = null) => {
-      const h = el("div", "msgs__sechead");
-      h.append(el("span", "msgs__label", text));
-      if (extra) h.append(extra);
-      return h;
-    };
-    // One conversation: picture, name (and whose, for a group) with when it last moved, then
-    // the last thing said (or how they are, before anything's been said) and what's unread.
-    const row = (r, pic, nameBits, quiet) => {
-      const last = lastOf(r.owner);
-      const n = unread(r.owner);
-      const b = el("button", `msgs__row${n ? " msgs__row--new" : ""}`);
-      b.type = "button";
-      const words = el("span", "msgs__words");
-      const top = el("span", "msgs__nameline");
-      top.append(...nameBits);
-      if (last) top.append(el("span", "msgs__ago", agoShort(last.at)));
-      const bottom = el("span", "msgs__lastline");
-      const said = el("span", "msgs__last");
-      if (last) {
-        if (last.from === me.login) said.append("You: ");
-        else if (!r.direct) said.append(nameBit(last.from), ": ");
-        said.append(last.text);
-      } else said.append(quiet);
-      bottom.append(said);
-      if (n) bottom.append(el("span", "msgs__count", String(n)));
-      words.append(top, bottom);
-      b.append(pic, words);
-      b.addEventListener("click", () => open(r.owner));
-      return b;
-    };
-
     const head = el("div", "msgs__top");
     head.append(el("div", "panel__head msgs__title", "Messages"));
     panel.append(head);
-
     const directs = rooms.filter((r) => r.direct);
-    const stateOf = (login) => {
-      const c = conn(login);
-      return c?.online ? (c.idle ? "idle" : "on") : "off";
-    };
 
     // ----- Online now: a row of faces, green ringed (amber when idle); tap one to message them.
     const here = directs.filter((r) => stateOf(r.with) !== "off").sort((a, b) => (stateOf(a.with) === "idle") - (stateOf(b.with) === "idle") || a.with.localeCompare(b.with));
@@ -3864,77 +4183,28 @@
         const b = el("button", "msgs__face");
         b.type = "button";
         b.title = `Message ${r.with} (${state === "idle" ? "idle" : "online"})`;
-        const pic = personPic(r.with);
-        pic.classList.add(`cx__pic--${state}`);
+        const pic = ringedPic(r.with);
         const n = unread(r.owner);
         if (n) pic.append(el("span", "msgs__facecount", String(n)));
         b.append(pic, nameBit(r.with, "msgs__facename"));
-        b.addEventListener("click", () => open(r.owner));
+        b.addEventListener("click", () => openChat(r.owner));
         strip.append(b);
       }
-      panel.append(section(`Online now · ${here.length}`), strip);
+      panel.append(msgsHead(`Online now · ${here.length}`), strip);
     }
 
-    // ----- Group chats
-    const groups = rooms.filter((r) => !r.direct).sort((a, b) => unread(b.owner) - unread(a.owner) || lastAt(b) - lastAt(a) || String(a.tag).localeCompare(String(b.tag)));
-    const haveOwn = groups.some((r) => r.owner === me.login);
-    const tagNames = Object.keys(tags);
-    let start = null;
-    if (!haveOwn) {
-      start = el("button", `msgs__new${msgNewGroup ? " msgs__new--on" : ""}`, msgNewGroup ? "Cancel" : "+ New");
-      start.type = "button";
-      start.title = tagNames.length ? "Start a group chat with one of your groups" : "Make a group in Connections first, then start its chat here";
-      start.addEventListener("click", () => {
-        if (!tagNames.length) {
-          newGroup = { name: "", picked: [] }; // straight to Connections, with New group open
-          show("people");
-          return;
-        }
-        msgNewGroup = !msgNewGroup;
-        render();
-      });
-    }
-    panel.append(section(groups.length ? `Group chats · ${groups.length}` : "Group chats", start));
-    if (msgNewGroup && !haveOwn && tagNames.length) {
-      const pick = roomPicker(null, "Start");
-      pick.classList.add("msgs__picker");
-      pick.addEventListener("submit", () => {
-        msgNewGroup = false;
-        open(me.login);
-      });
-      panel.append(pick);
-    }
-    const gList = el("div", "msgs__list");
-    for (const r of groups) {
-      const others = r.members.filter((m) => m.login !== me.login);
-      const pic = el("span", "msgs__stack");
-      for (const m of others.slice(0, 3)) pic.append(personPic(m.login));
-      if (!others.length) pic.append(el("span", "people__pic msgs__grouppic", (r.tag || "?")[0].toUpperCase()));
-      const whose = el("span", "msgs__by");
-      if (r.owner === me.login) whose.append("yours");
-      else whose.append("by ", nameBit(r.owner));
-      const on = others.filter((m) => m.online).length;
-      gList.append(row(r, pic, [el("span", "msgs__name", r.tag || "Group chat"), whose], `${r.members.length} people · ${on} online`));
-    }
-    if (!groups.length && !msgNewGroup) {
-      gList.append(el("p", "msgs__empty", tagNames.length ? "No group chats yet. Press + New to start one for one of your groups (like Mods)." : "Group chats show up here when someone starts one for a group you're in. To start your own, make a group in Connections first."));
-    }
-    panel.append(gList);
+    // ----- Groups
+    groupsSection(panel);
 
     // ----- Direct messages
-    const rank = (r) => (unread(r.owner) ? 0 : { on: 1, idle: 2, off: 3 }[stateOf(r.with)]);
-    const dms = [...directs].sort((a, b) => rank(a) - rank(b) || lastAt(b) - lastAt(a) || a.with.localeCompare(b.with));
-    panel.append(section(dms.length ? `Direct messages · ${dms.length}` : "Direct messages"));
+    const rank = (r) => (unread(r.owner) ? 0 : STATE_ORDER[stateOf(r.with)] + 1);
+    const dms = [...directs].sort((a, b) => rank(a) - rank(b) || lastAtOf(b) - lastAtOf(a) || a.with.localeCompare(b.with));
+    panel.append(msgsHead(dms.length ? `Direct messages · ${dms.length}` : "Direct messages"));
     const dList = el("div", "msgs__list");
     for (const r of dms) {
-      const c = conn(r.with) || {};
-      const state = stateOf(r.with);
-      const pic = personPic(r.with);
-      pic.classList.add(`cx__pic--${state}`);
       const name = withBadge(el("span", "msgs__name", r.with), r.with);
       if (colorOf(r.with)) name.style.color = colorOf(r.with);
-      const how = el("span", `msgs__seen msgs__seen--${state}`, state === "on" ? "online" : state === "idle" ? "idle" : whenWords(c) || "offline");
-      dList.append(row(r, pic, [name], how));
+      dList.append(listRow({ pic: ringedPic(r.with), name, sub: lastSaid(r, seenWords(r.with)), at: lastAtOf(r), count: unread(r.owner), onClick: () => openChat(r.owner) }));
     }
     if (!dms.length) {
       const empty = el("div", "msgs__empty");
@@ -3955,7 +4225,7 @@
   }
   function chatPanel() {
     const panel = el("div", "panel chat");
-    // Chat is reached from Connections, so it leads back there.
+    // Back to Messages when opened from there (or a group's page), else Connections.
     const fromMessages = chatFrom === "messages";
     const back = el("button", "chat__back", fromMessages ? "‹ Messages" : "‹ Connections");
     back.type = "button";
@@ -4023,15 +4293,31 @@
         const state = el("span", "dm__state");
         if (room.owner === me.login) state.append("Your group chat");
         else state.append(el("span", null, room.owner), "'s group chat");
-        state.append(` · ${room.members.length} ${room.members.length === 1 ? "person" : "people"} · ${room.members.filter((m) => m.online).length} online`);
+        const others = room.members.filter((m) => m.login !== me.login);
+        state.append(` · ${peopleWords(others.length, others.filter((m) => m.online).length)}`);
         words.append(el("span", "dm__name", room.tag || "Group chat"), state);
         top.append(stack, words);
       }
-      panel.append(top);
+      // Your own group's chat: its top opens the group's page (who's in it, Ask everyone, end it).
+      if (room.owner === me.login && groupNames().includes(room.tag)) {
+        const link = el("button", "dm__head dm__head--link");
+        link.type = "button";
+        link.title = `${room.tag}: who's in it, and more`;
+        link.append(...top.childNodes, el("span", "msgs__chev", "›"));
+        link.addEventListener("click", () => show("group", room.tag));
+        panel.append(link);
+      } else panel.append(top);
     }
     const head = el("div", "chat__head");
     if (EMBED) head.hidden = true;
-    head.append(el("span", "chat__title", room.direct ? `Private chat · only you and ${room.with}` : room.owner === me.login ? `${room.tag} · your group chat` : `${room.tag} · ${room.owner}'s group chat`));
+    const titleText = room.direct ? `Private chat · only you and ${room.with}` : room.owner === me.login ? `${room.tag} · your group chat` : `${room.tag} · ${room.owner}'s group chat`;
+    if (!room.direct && room.owner === me.login && groupNames().includes(room.tag)) {
+      const title = el("button", "chat__title chat__title--link", `${titleText} ›`);
+      title.type = "button";
+      title.title = `${room.tag}: who's in it, and more`;
+      title.addEventListener("click", () => show("group", room.tag));
+      head.append(title);
+    } else head.append(el("span", "chat__title", titleText));
     const who = el("span", "chat__who");
     for (const m of room.members.filter((m) => !room.direct || m.login !== me.login)) {
       const dot = withBadge(el("span", `chat__member${m.online ? " chat__member--on" : ""}`, m.login), m.login);
@@ -4084,7 +4370,6 @@
     // Ready to type, without scrolling the page down to the box (the top says where you are).
     setTimeout(() => document.activeElement === document.body && input.focus({ preventScroll: true }));
 
-    if (mine && owner === me.login) panel.append(roomPicker(mine.tag, "Switch group"));
     return panel;
   }
 
@@ -4111,15 +4396,13 @@
   }
 
   // Connections: who you can ask and who can ask you, once both have added
-  // each other; requests from people who've added you.
-  let tagOpen = ""; // Connections: whose + (add a tag) box is open
-  let newGroup = null; // Connections: the New group form ({ name, picked }) while it's open
-  // Connections: one screen, top to bottom —
-  //   the Twitch Space header; add someone, and anyone asking to connect;
-  //   Groups: each of your tags is a group, pinned here with its people and a Message
-  //     button (sending to the tag goes to everyone in it), plus its room;
-  //   who's online: online first, then idle, then offline, then those who haven't added
-  //     you back. Each person keeps their tags; + pins them into a group (new or old).
+  // each other; requests from people who've added you. One screen, top to bottom —
+  //   anyone waiting on you (added you, or asking to join);
+  //   your people: online first, then idle, then offline, then those who haven't added
+  //     you back. Clicking a name opens your chat with them;
+  //   adding people (by name, or an invite link), first instead while you have nobody.
+  // Groups live in Messages (the side panel); the OBS dock has no Messages, so there
+  // they're listed here, after your people, the same way.
   function peoplePanel() {
     const panel = el("div", "panel cx");
 
@@ -4235,166 +4518,20 @@
     if (!connections.length && !requests.length) panel.append(el("p", "cx__hint cx__empty", "Nobody yet. Add someone above."));
 
 
-    // ----- Groups (your tags)
-    const able = connections.filter((c) => c.mutual).map((c) => c.login);
-    // Your own groups, after the two Twitch fills in (when Twitch lists anyone for them).
-    const autoNames = Object.entries(AUTO_GROUPS).filter(([key, tag]) => tags[tag] || modLists?.[key]?.length).map(([, tag]) => tag);
-    const groupNames = [...autoNames, ...Object.keys(tags).filter((t) => !isAutoGroup(t)).sort()];
-    const groupsEl = el("section", "cx__section");
-    const gHead = el("div", "cx__sechead");
-    gHead.append(el("span", "cx__label", groupNames.length ? `Groups · ${groupNames.length}` : "Groups"));
-    if (connections.length) {
-      const newBtn = el("button", "cx__btn", newGroup ? "Cancel" : "+ New group");
-      newBtn.type = "button";
-      newBtn.addEventListener("click", () => {
-        newGroup = newGroup ? null : { name: "", picked: [] };
-        render();
-        if (newGroup) document.querySelector('[data-key="new-group"]')?.focus();
+    // ----- Groups: in Messages in the side panel; here in the OBS dock, which has no Messages.
+    if (!EMBED) {
+      const groupsEl = el("section", "cx__section cx__groupsec");
+      groupsSection(groupsEl, (text, extra) => {
+        const h = el("div", "cx__sechead");
+        h.append(el("span", "cx__label", text));
+        if (extra) h.append(extra);
+        return h;
       });
-      gHead.append(newBtn);
+      panel.append(groupsEl);
     }
-    groupsEl.append(gHead);
-    // New group: a name, then tick who's in it.
-    if (newGroup) {
-      const card = el("form", "cx__group cx__newgroup");
-      const name = textBox("Group name (Mods, Lead mods, Tech…)", newGroup.name);
-      name.dataset.key = "new-group";
-      name.maxLength = 20;
-      name.className = "cx__newname";
-      name.addEventListener("input", () => (newGroup.name = name.value));
-      const pickList = el("div", "cx__picklist");
-      for (const { login } of connections) {
-        const on = newGroup.picked.includes(login);
-        const b = el("button", `cx__pick${on ? " cx__pick--on" : ""}`);
-        b.type = "button";
-        b.setAttribute("aria-pressed", String(on));
-        b.append(personPic(login), el("span", null, login), el("span", "cx__tick", on ? "✓" : ""));
-        b.addEventListener("click", () => {
-          newGroup.picked = on ? newGroup.picked.filter((l) => l !== login) : [...newGroup.picked, login];
-          render();
-        });
-        pickList.append(b);
-      }
-      const make = el("button", "cx__btn cx__btn--blue", "Make group");
-      make.type = "submit";
-      const words = el("p", "cx__note");
-      card.append(name, el("div", "cx__label cx__picklabel", "Who's in it"), pickList, make, words);
-      card.addEventListener("submit", (e) => {
-        e.preventDefault();
-        const tag = clean(name.value).slice(0, 20);
-        if (!tag) return void (words.textContent = "Give the group a name.");
-        if (!newGroup.picked.length) return void (words.textContent = "Pick at least one person.");
-        for (const login of newGroup.picked) relay({ t: "tag", login, tag, on: true });
-        newGroup = null;
-        render();
-      });
-      groupsEl.append(card);
-    }
-    // Not allowed to see Twitch's mod lists yet (signed in before this asked): one button.
-    if (!TESTING && me && !hasModScopes()) {
-      const ask = el("div", "cx__group cx__allow");
-      const go = el("button", "cx__btn cx__btn--blue", "Allow on Twitch");
-      go.type = "button";
-      go.addEventListener("click", signIn);
-      ask.append(el("div", "cx__allowtext", "Fill in Your mods and Channels I mod from Twitch, so your mods are already here."), go);
-      groupsEl.append(ask);
-    }
-    if (!groupNames.length && !newGroup) {
-      groupsEl.append(el("p", "cx__hint", "Make a group (Mods, Lead mods, Tech…) with + New group, or pin someone in with the + next to their name below. Then message the whole group at once. Only you see your groups."));
-    }
-    for (const g of groupNames) {
-      const autoKey = Object.keys(AUTO_GROUPS).find((k) => AUTO_GROUPS[k] === g);
-      const members = tags[g] || [];
-      const known = new Set(connections.map((c) => c.login));
-      const notYet = autoKey && modLists ? modLists[autoKey].filter((l) => !known.has(l) && l !== me.login && !requests.includes(l)) : [];
-      const card = el("div", "cx__group");
-      const top = el("div", "cx__grouptop");
-      const label = el("div", "cx__grouplabel");
-      label.append(el("span", "cx__groupname", g), el("span", "cx__groupcount", `${members.length + notYet.length}`));
-      if (autoKey) label.append(el("span", "cx__from", "from Twitch"));
-      top.append(label);
-      const reach = members.filter((l) => able.includes(l));
-      // Ask all: one question to everyone in the group (each gets it as an Ask).
-      const msg = el("button", "cx__btn", "Ask all");
-      msg.type = "button";
-      msg.disabled = !reach.length;
-      msg.title = reach.length ? `Ask everyone in ${g} something (each gets it as an Ask)` : "Nobody in this group has added you back yet";
-      msg.addEventListener("click", () => show("ask", `#${g}`));
-      // Group chat: everyone in the group talking together. You have one group chat at a
-      // time, so for another group this opens yours, where you can switch it over.
-      const mine = rooms.find((r) => !r.direct && r.owner === me.login);
-      const room = mine?.tag === g ? mine : null;
-      const roomBtn = el("button", "cx__btn cx__btn--blue", room ? "Group chat" : "Start group chat");
-      roomBtn.type = "button";
-      roomBtn.title = room ? `The ${g} group chat: everyone in it can talk to each other` : mine ? `Your group chat is for ${mine.tag} now: open it to switch it to ${g}` : `Start a group chat for ${g}, so everyone in it can talk`;
-      if (room && unread(room.owner)) roomBtn.append(el("span", "pill__count", String(unread(room.owner))));
-      roomBtn.addEventListener("click", () => {
-        if (!mine) relay({ t: "room", tag: g });
-        show("chat", me.login);
-      });
-      const acts = el("div", "cx__groupacts");
-      acts.append(roomBtn, msg);
-      top.append(acts);
-      card.append(top);
-      const faces = el("div", "cx__faces");
-      for (const login of members) {
-        const c = conn(login) || {};
-        const face = el("span", `cx__face${c.online ? " cx__face--on" : ""}${c.idle ? " cx__face--idle" : ""}`);
-        face.title = `${login}${c.idle ? " (idle)" : c.online ? " (online)" : ""}`;
-        face.append(personPic(login), el("span", "cx__facename", login));
-        if (!autoKey) {
-          const x = el("button", "cx__facex", "×");
-          x.type = "button";
-          x.title = `Take ${login} out of ${g}`;
-          x.addEventListener("click", () => relay({ t: "tag", login, tag: g, on: false }));
-          face.append(x);
-        }
-        faces.append(face);
-      }
-      // From Twitch, but not connected here yet: Add sends them a request.
-      for (const login of notYet) {
-        const face = el("span", "cx__face cx__face--new");
-        face.title = `${login} isn't connected with you yet`;
-        const addBtn = el("button", "cx__faceadd", "Add");
-        addBtn.type = "button";
-        addBtn.title = `Ask ${login} to connect`;
-        addBtn.addEventListener("click", async () => {
-          addBtn.disabled = true;
-          const user = TESTING ? { login } : await lookUp(login).catch(() => null);
-          if (user) relay({ t: "connect", login: user.login });
-        });
-        face.append(personPic(login), el("span", "cx__facename", login), addBtn);
-        faces.append(face);
-      }
-      card.append(faces);
-      groupsEl.append(card);
-    }
-    // Group chats other people started for a group you're in, by name.
-    const theirRooms = rooms.filter((r) => !r.direct && r.owner !== me.login);
-    if (theirRooms.length) {
-      groupsEl.append(el("div", "cx__label cx__roomslabel", "Group chats you're in"));
-      const row = el("div", "cx__rooms");
-      for (const r of theirRooms) {
-        const b = el("button", "cx__btn cx__roombtn");
-        b.append(el("span", "cx__roomname", r.tag || "Group chat"), el("span", "cx__roomby", r.owner));
-        b.title = `${r.tag} · ${r.owner}'s group chat`;
-        b.type = "button";
-        if (unread(r.owner)) b.append(el("span", "pill__count", String(unread(r.owner))));
-        b.addEventListener("click", () => show("chat", r.owner));
-        row.append(b);
-      }
-      groupsEl.append(row);
-    }
-    panel.append(groupsEl);
     if (connections.length) panel.append(addCard);
     if (allowed && !asked) panel.append(allowCard());
     if (me && owner && me.login === owner) panel.append(reportsCard());
-
-    // ----- Who's online
-    const names = el("datalist");
-    names.id = "tag-names";
-    for (const t of [...new Set([...groupNames, "Mods", "Lead mods", "Tech"])]) names.append(new Option(t));
-    panel.append(names);
 
     // ----- Bottom: sound, sign out, build
     const foot = el("div", "cx__foot");
@@ -4620,59 +4757,11 @@
       who.append(go);
     }
     row.append(who);
-    const tagsEl = el("div", "people__tags");
-    for (const t of Object.keys(tags).sort().filter((t) => tags[t].includes(login))) {
-      const chip = el("span", `tagchip${isAutoGroup(t) ? " tagchip--auto" : ""}`, t);
-      // The Twitch groups follow Twitch, so there's nothing to take out by hand.
-      if (!isAutoGroup(t)) {
-        const x = el("button", "tagchip__x", "×");
-        x.type = "button";
-        x.title = `Take ${login} out of ${t}`;
-        x.addEventListener("click", () => relay({ t: "tag", login, tag: t, on: false }));
-        chip.append(x);
-      }
-      tagsEl.append(chip);
-    }
-    const plus = el("button", `people__plus${tagOpen === login ? " people__plus--on" : ""}`, "+");
-    plus.type = "button";
-    plus.title = `Pin ${login} into a group`;
-    plus.setAttribute("aria-expanded", String(tagOpen === login));
-    plus.addEventListener("click", () => {
-      tagOpen = tagOpen === login ? "" : login;
-      render();
-      if (tagOpen) document.querySelector(`[data-key="tag-${login}"]`)?.focus();
-    });
-    tagsEl.append(plus);
     // The owner and the people on their allow list stay connected: only the list ends it.
     const fixed = login === owner || (me?.login === owner && allowed?.some((a) => a.login === login));
     if (login === owner) words.append(el("span", "people__first", "Your first connection"));
-    row.append(tagsEl);
     if (!fixed) row.append(closeButton(() => relay({ t: "disconnect", login }), `Remove ${login}`));
     list.append(row);
-    if (tagOpen === login) {
-      const addTag = el("form", "tagadd");
-      const box = textBox("Group name (new or existing)");
-      box.dataset.key = `tag-${login}`;
-      box.maxLength = 20;
-      box.setAttribute("list", "tag-names");
-      box.addEventListener("keydown", (e) => {
-        if (e.key !== "Escape") return;
-        tagOpen = "";
-        render();
-      });
-      const save = el("button", "cx__btn cx__btn--blue", "Pin");
-      save.type = "submit";
-      addTag.append(box, save);
-      addTag.addEventListener("submit", (e) => {
-        e.preventDefault();
-        const tag = clean(box.value).slice(0, 20);
-        if (tag) relay({ t: "tag", login, tag, on: true });
-        box.value = "";
-        tagOpen = "";
-        render();
-      });
-      list.append(addTag);
-    }
   }
 
   function showSignedOut(message) {

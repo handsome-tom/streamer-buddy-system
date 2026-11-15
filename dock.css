@@ -5592,3 +5592,48 @@ body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; 
 .chat--dm .chat__msg--cont .chat__from, .chat--dm .chat__msg--more .chat__time { display: none; }
 .chat--dm .chat__msg--theirs.chat__msg--more .chat__text { border-bottom-left-radius: 14px; }
 .chat--dm .chat__msg--mine.chat__msg--more .chat__text { border-bottom-right-radius: 14px; }
+
+/* Groups, in Messages (and in the OBS dock's Connections), and a group's own page: the same
+   list as the conversations, one thing per row, instead of cards full of buttons. */
+.msgs__item { display: flex; align-items: center; gap: 4px; }
+.msgs__item > .msgs__row { flex: 1; min-width: 0; }
+.msgs__item + .msgs__item, .msgs__item + .msgs__row, .msgs__row + .msgs__item { border-top: 1px solid rgba(255, 255, 255, 0.05); }
+.msgs__row--static { cursor: default; }
+.msgs__row--static:hover { background: none; }
+.msgs__row--off { opacity: 0.5; cursor: default; }
+.msgs__row--off:hover { background: none; }
+.msgs__row--danger .msgs__name { color: #ff8f80; }
+.msgs__icon { display: grid; place-items: center; flex: none; width: 36px; height: 36px; color: var(--honey); font-size: 17px; font-weight: 800; line-height: 1; background: rgba(242, 144, 40, 0.12); border-radius: 50%; }
+.msgs__icon--quiet { color: var(--msg-muted); background: rgba(255, 255, 255, 0.06); }
+.msgs__x { flex: none; width: 26px; height: 26px; margin-right: 2px; padding: 0; color: var(--msg-muted); font: inherit; font-size: 16px; line-height: 1; background: none; border: 0; border-radius: 50%; cursor: pointer; }
+.msgs__x:hover, .msgs__x:focus-visible { color: var(--msg-text); background: rgba(255, 255, 255, 0.08); }
+.msgs__item > .msgs__new { margin-right: 4px; }
+.msgs__new:disabled { opacity: 0.6; cursor: default; }
+.msgs__pic--away { opacity: 0.45; filter: grayscale(1); }
+.msgs__chev { flex: none; margin-left: auto; padding-left: 8px; color: var(--msg-muted); font-size: 20px; line-height: 1; }
+/* Picking people (New group, Add): a round tick at the end of each row. */
+.msgs__check { display: grid; place-items: center; flex: none; width: 20px; height: 20px; color: var(--msg-muted); font-size: 12px; font-weight: 800; border: 1.5px solid rgba(255, 255, 255, 0.22); border-radius: 50%; }
+.msgs__check--on { color: var(--honey-ink); background: var(--honey); border-color: var(--honey); }
+.msgs__pickrow--on { background: rgba(242, 144, 40, 0.06); }
+.msgs__newgroup, .msgs__adding { margin-bottom: 8px; padding: 8px 8px 10px; }
+.msgs__newname { display: block; width: 100%; box-sizing: border-box; height: 36px; padding: 0 12px; color: var(--msg-text); font: inherit; font-size: 13px; font-weight: 600; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 9px; outline: none; }
+.msgs__newname:focus { border-color: var(--honey); }
+.msgs__sublabel { margin: 10px 4px 2px; color: var(--msg-muted); font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.msgs__adding .msgs__sublabel { margin-top: 0; }
+.msgs__make { display: block; width: 100%; height: 34px; margin-top: 8px; color: var(--honey-ink); font: inherit; font-size: 13px; font-weight: 800; background: var(--honey); border: 0; border-radius: 9px; cursor: pointer; }
+.msgs__make:hover { background: var(--honey-hi); }
+.msgs__note { margin: 6px 4px 0; color: #ff8f80; font-size: 12px; }
+.msgs__note:empty { display: none; }
+/* A group's page */
+.grp .chat__back { align-self: flex-start; padding: 2px 0; color: var(--honey); background: none; border: 0; font-size: 12px; font-weight: 700; }
+.grp .chat__back:hover { color: var(--honey-hi); text-decoration: underline; text-underline-offset: 3px; }
+.grp .dm__head { margin-bottom: 10px; }
+.grp__ends { margin-top: 14px; }
+.grp__note { padding: 12px 4px 0; }
+/* Your own group chat: its top (or title, in the OBS dock) opens the group's page. */
+.dm__head--link { width: 100%; color: inherit; font: inherit; text-align: left; background: none; border: 0; border-radius: 10px; cursor: pointer; }
+.dm__head--link:hover { background: rgba(255, 255, 255, 0.035); }
+.chat__title--link { padding: 0; color: inherit; font: inherit; text-align: left; background: none; border: 0; cursor: pointer; }
+.chat__title--link:hover { text-decoration: underline; text-underline-offset: 3px; }
+/* The OBS dock's Connections: Groups in the same list, under its blue headings. */
+.cx__groupsec .msgs__list { margin-top: 6px; }

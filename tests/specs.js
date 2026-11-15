@@ -174,6 +174,46 @@ export const tests = {
     noErrors(panel);
   },
 
+  async "groups live in Messages, not Connections: make one, open its page, start its group chat"(h) {
+    const mod1 = h.person("mod1");
+    const mod2 = h.person("mod2");
+    const mod3 = h.person("mod3");
+    await h.friends(mod1, mod2);
+    await h.friends(mod1, mod3);
+    const panel = await h.panel("mod1", "ext");
+    (await h.until(() => panel.$("#peopleBtn:not([hidden])"), "the Connections button")).click();
+    await h.until(() => panel.$(".cx .cx__section"), "Connections");
+    h.check(!panel.$(".cx__group, .cx__groupsec, .people__plus, .tagchip") && !/Groups/i.test(panel.$("#main").innerText), "the side panel's Connections shouldn't have groups in it");
+
+    // Messages: + New, a name, tick mod2, Make group.
+    (await h.until(() => panel.$("#msgBtn:not([hidden])"), "the Messages button")).click();
+    (await h.until(() => panel.$$(".msgs__new").find((b) => b.textContent === "+ New"), "+ New in Messages")).click();
+    const name = await h.until(() => panel.$('[data-key="new-group"]'), "the new group's name box");
+    name.value = "Night crew";
+    name.dispatchEvent(new Event("input"));
+    panel.$$(".msgs__pickrow").find((r) => r.textContent.includes("mod2")).click();
+    (await h.until(() => panel.$(".msgs__make"), "Make group")).click();
+    await h.until(() => mod1.state?.tags?.["Night crew"]?.includes("mod2"), "the relay to have the Night crew group");
+
+    // Its page, as a list: start its group chat, Ask everyone, who's in it.
+    const title = await h.until(() => panel.$(".grp .dm__name"), "the group's page");
+    h.check(title.textContent === "Night crew", `the group's page should be Night crew, got: ${title.textContent}`);
+    const acts = panel.$$(".grp__acts .msgs__row");
+    h.check(acts.some((r) => r.textContent.includes("Ask everyone")), "the group's page should have Ask everyone");
+    const start = acts.find((r) => r.textContent.includes("Start a group chat"));
+    h.check(start, "the group's page should offer to start its group chat");
+    start.click();
+    await h.until(() => (mod2.state?.rooms || []).some((r) => !r.direct && r.owner === "mod1" && r.tag === "Night crew"), "mod2 to be in the Night crew group chat");
+    h.check(!(mod3.state?.rooms || []).some((r) => !r.direct && r.owner === "mod1"), "mod3 isn't in Night crew, so shouldn't be in its chat");
+    await h.until(() => panel.$(".dm__head--link"), "the group chat's top, which opens the group's page");
+
+    // Back in Messages, the group's row opens its chat now.
+    panel.$("#msgBtn").click();
+    (await h.until(() => panel.$$(".msgs__groups .msgs__row").find((r) => r.textContent.includes("Night crew")), "Night crew in Messages")).click();
+    await h.until(() => panel.$(".chat__form"), "the Night crew group chat");
+    noErrors(panel);
+  },
+
   async "someone who's only added one way can't ask yet, and shows as a request"(h) {
     const stranger = h.person("viewer9");
     const streamer = h.person("streamer");
