@@ -398,7 +398,7 @@ export const tests = {
 
   // ----- Custom chat ------------------------------------------------------------------------
 
-  async "a raid card shows who and how many first, then followers, you two, in common and their bio"(h) {
+  async "a raid card shows who and how many first, then followers, connection, their bio, in common, and since when it counted"(h) {
     const dock = await h.panel("streamer", "obs");
     await h.until(() => dock.$(".oc-line"), "custom chat to start");
     await h.wait(500);
@@ -409,11 +409,11 @@ export const tests = {
     await h.until(() => /12\.4K followers/.test(card.querySelector(".oc-raid__sub")?.textContent || ""), "the follower count under the name");
     h.check(/Minecraft/.test(card.querySelector(".oc-raid__sub").textContent), "what they stream, under the name");
     const labels = [...card.querySelectorAll(".oc-raid__label")].map((l) => l.textContent);
-    h.check(labels.join() === "You two,In common", `sections in order, got: ${labels.join(", ")}`);
-    h.check(/Follows you/.test(card.textContent) && /Raided you 2×/.test(card.textContent) && card.textContent.includes("Chatted here · 14 messages"), "you two: follows, raided and chatted before");
+    h.check(labels.join() === "Connection,In common", `sections in order, got: ${labels.join(", ")}`);
+    h.check(/Follows you/.test(card.textContent) && /Raided you 2×/.test(card.textContent) && card.textContent.includes("Chatted here · 14 messages"), "connection: follows, raided and chatted before");
     h.check(/Raids and chat counted since .+, while custom chat was open\./.test(card.querySelector(".oc-raid__note")?.textContent || ""), "the card should say since when raids and chat were counted");
     const parts = [...card.querySelector(".oc-raid__about").children].map((c) => c.className);
-    h.check(parts.at(-1) === "oc-raid__bio", `the bio should come last, got: ${parts.join(", ")}`);
+    h.check(parts.join() === "oc-raid__sec,oc-raid__bio,oc-raid__sec,oc-raid__note oc-raid__note--foot", `connection, bio, in common, then the counted-since note last, got: ${parts.join(", ")}`);
     noErrors(dock);
   },
 

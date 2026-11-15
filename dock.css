@@ -6020,3 +6020,6 @@ body.livechat .slotwrap { display: none !important; }
 .oc-mod--stuck { margin: 0; border-radius: 4px; background: color-mix(in srgb, var(--mc) 22%, #19191e) !important; animation: oc-stuck-in 0.25s ease-out; }
 .oc-mod--stuck .oc-mod__body { cursor: pointer; }
 @keyframes oc-stuck-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+/* The raid card's last line: since when raids and chat have been counted, small and quiet. */
+.oc-raid__note--foot { margin-top: 8px; font-size: 9.5px; opacity: 0.65; }

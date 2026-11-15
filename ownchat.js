@@ -1414,9 +1414,9 @@
     const compact = (n) => (n < 1000 ? String(n) : n < 999500 ? `${(n / 1000).toFixed(n < 1e5 ? 1 : 0).replace(/\.0$/, "")}K` : `${(n / 1e6).toFixed(1).replace(/\.0$/, "")}M`);
 
     // The raid card, filled in a moment after it shows, in order of what a streamer needs:
-    // how big they are and what they stream (under the name), then you two (do they follow
-    // you, have they raided or chatted here before), then what you have in common, then their
-    // bio. (Twitch only lets an app see the follows of whoever is signed in, so channels you
+    // how big they are and what they stream (under the name), then your connection (do they
+    // follow you, have they raided or chatted here before), then their bio, then what you have
+    // in common, and last, small, since when raids and chat have been counted. (Twitch only lets an app see the follows of whoever is signed in, so channels you
     // both follow can't be shown.)
     async function raidAbout(uid, card, before) {
       const [a, mine, followers] = await Promise.all([aboutPerson(uid), myChannel(), followerCount(uid)]);
@@ -1454,13 +1454,13 @@
       }
       if (you.length) {
         const sec = el("div", "oc-raid__sec");
-        sec.append(el("div", "oc-raid__label", "You two"), ...you);
-        if (before?.since) {
-          const note = el("div", "oc-raid__note", `Raids and chat counted since ${longDate(before.since)}, while custom chat was open.`);
-          sec.append(note);
-        }
+        sec.append(el("div", "oc-raid__label", "Connection"), ...you);
         card.about.append(sec);
       }
+
+      // Their bio, in their words, before what you have in common.
+      const bio = simpleBio(a.user?.description);
+      if (bio) card.about.append(el("div", "oc-raid__bio", bio));
 
       // In common: the same game, and tags you share.
       const common = [];
@@ -1475,9 +1475,8 @@
         card.about.append(sec);
       }
 
-      // Last, in their words.
-      const bio = simpleBio(a.user?.description);
-      if (bio) card.about.append(el("div", "oc-raid__bio", bio));
+      // Last, small: since when this computer has been counting raids and chat.
+      if (you.length && before?.since) card.about.append(el("div", "oc-raid__note oc-raid__note--foot", `Raids and chat counted since ${longDate(before.since)}, while custom chat was open.`));
       card.about.hidden = !card.about.childElementCount;
     }
 
