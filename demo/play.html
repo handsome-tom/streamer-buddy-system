@@ -680,7 +680,12 @@
   html.bare .screen__label, html.bare .menu, html.bare #allControls, html.bare .callout, html.bare .clickhint, html.bare .screen::before { display: none !important; }
   html.bare [data-tip]::after { display: none !important; }
   html.bare .demo { padding: 16px 0; }
-  html.bare .stage { margin-top: 0; gap: 16px; padding: 0 16px; grid-template-columns: minmax(130px, 190px) minmax(280px, 420px) minmax(280px, 420px) minmax(130px, 190px) minmax(280px, 360px); grid-template-rows: auto; align-items: start; justify-content: center; }
+  /* The streamer's dock and the mod's side panel at 400px, the width of the extension's own
+     pop-out, so they look as they do for real. A desktop page: on a narrow screen it scrolls
+     sideways rather than squeezing them. */
+  html.bare { overflow-x: auto; }
+  html.bare .demo .wrap { max-width: none; }
+  html.bare .stage { margin-top: 0; gap: 16px; padding: 0 16px; grid-template-columns: minmax(130px, 190px) 400px 400px minmax(130px, 190px) minmax(280px, 360px); grid-template-rows: auto; align-items: start; justify-content: center; }
   html.bare .stage .screen { display: block; grid-row: auto; }
   html.bare .stage iframe { height: calc(100vh - 32px); min-height: 480px; }
   /* Every demo control, plainly: the streamer's on the far left, the mod's on the far right,
