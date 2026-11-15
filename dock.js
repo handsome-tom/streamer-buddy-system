@@ -4195,7 +4195,7 @@
       const on = newGroup.picked.includes(login);
       const row = listRow({
         pic: ringedPic(login),
-        name: el("span", "msgs__name", login),
+        name: el("span", "msgs__name msgs__name--user", login),
         sub: seenWords(login),
         onClick: () => {
           newGroup.picked = on ? newGroup.picked.filter((l) => l !== login) : [...newGroup.picked, login];
@@ -4291,7 +4291,7 @@
       for (const { login } of [...outside].sort((a, b) => STATE_ORDER[stateOf(a.login)] - STATE_ORDER[stateOf(b.login)] || a.login.localeCompare(b.login))) {
         const row = listRow({
           pic: ringedPic(login),
-          name: el("span", "msgs__name", login),
+          name: el("span", "msgs__name msgs__name--user", login),
           sub: seenWords(login),
           onClick: () => {
             relay({ t: "tag", login, tag: g, on: true });
@@ -4309,7 +4309,7 @@
     const list = el("div", "msgs__list");
     for (const login of [...members].sort((a, b) => STATE_ORDER[stateOf(a)] - STATE_ORDER[stateOf(b)] || a.localeCompare(b))) {
       const direct = directWith(login);
-      const name = withBadge(el("span", "msgs__name", login), login);
+      const name = withBadge(el("span", "msgs__name msgs__name--user", login), login);
       if (colorOf(login)) name.style.color = colorOf(login);
       let end = null;
       if (!autoKey) {
@@ -4335,7 +4335,7 @@
       });
       const pic = personPic(login);
       pic.classList.add("msgs__pic--away");
-      list.append(listRow({ pic, name: el("span", "msgs__name", login), sub: "not connected here yet", end: add }));
+      list.append(listRow({ pic, name: el("span", "msgs__name msgs__name--user", login), sub: "not connected here yet", end: add }));
     }
     if (!list.childElementCount) list.append(el("p", "msgs__empty", "Nobody in it yet."));
     panel.append(list);
@@ -4408,7 +4408,7 @@
     const list = el("div", "msgs__list");
     for (const m of [...others].sort((a, b) => (b.login === owner) - (a.login === owner) || b.online - a.online || a.login.localeCompare(b.login))) {
       const direct = directWith(m.login);
-      const name = [el("span", "msgs__name", m.login)];
+      const name = [el("span", "msgs__name msgs__name--user", m.login)];
       if (colorOf(m.login)) name[0].style.color = colorOf(m.login);
       if (m.login === owner) name.push(el("span", "msgs__by", "started it"));
       const pic = personPic(m.login);
@@ -4464,7 +4464,7 @@
     panel.append(msgsHead(dms.length ? `Direct messages · ${dms.length}` : "Direct messages"));
     const dList = el("div", "msgs__list");
     for (const r of dms) {
-      const name = el("span", "msgs__name", r.with);
+      const name = el("span", "msgs__name msgs__name--user", r.with);
       if (colorOf(r.with)) name.style.color = colorOf(r.with);
       const pic = ringedPic(r.with);
       const badges = roleBadges(r.with); // on the picture, as in Online now
@@ -4548,7 +4548,7 @@
       if (room.direct) {
         const c = conn(room.with) || {};
         const words = el("div", "dm__who");
-        const name = withBadge(el("span", "dm__name", room.with), room.with);
+        const name = withBadge(el("span", "dm__name dm__name--user", room.with), room.with);
         if (colorOf(room.with)) name.style.color = colorOf(room.with);
         words.append(name, el("span", `dm__state${c.online ? " dm__state--on" : ""}`, whenWords(c) || (c.online ? "online" : "offline")));
         top.append(personPic(room.with), words);

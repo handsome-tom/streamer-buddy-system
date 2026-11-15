@@ -5879,3 +5879,22 @@ body .bar:has(.dots--mod)::before, body.livechat .bar:has(.dots--mods)::before {
     linear-gradient(90deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.6) 25%, rgba(0, 0, 0, 0.45) 55%, rgba(0, 0, 0, 0) 100%);
 }
 .bar > .dots--mod, .bar > .dots--mods { background: none; }
+
+/* ===== Accent font: Chakra Petch (fonts/chakra-petch-*.woff2, SIL Open Font License:
+   fonts/chakra-petch-OFL.txt) =====
+   The pixel font (Pixelify Sans) is for usernames only now. Headings, group names, the
+   small section labels and the chat's event titles take Chakra Petch: squared-off like the
+   pixels, but easy to read small. Everything people say stays Plus Jakarta Sans. */
+@font-face { font-family: "Chakra Petch"; font-weight: 500; font-display: swap; src: url("fonts/chakra-petch-500.woff2") format("woff2"); }
+@font-face { font-family: "Chakra Petch"; font-weight: 600; font-display: swap; src: url("fonts/chakra-petch-600.woff2") format("woff2"); }
+.msgs .panel__head, .msgs__name, .dm__name, .presence__item .presence {
+  font-family: "Chakra Petch", "Plus Jakarta Sans", sans-serif; font-weight: 600; letter-spacing: 0.01em;
+}
+.msgs__name--user, .dm__name--user, .msgs__facename { font-family: "Pixelify Sans", "Plus Jakarta Sans", sans-serif; }
+.sv__title, .mod__label, .log__head > span:first-child, .oc-status, .msgs__label, .chat__day,
+.oc-firsttag, .oc-raid__title, .oc-notice--raid .oc-raid__title, .oc-topcard__label, .oc-topcard--pin .oc-topcard__label,
+.oc-notice__head, .oc-giftees__count, .oc-event__what {
+  font-family: "Chakra Petch", "Plus Jakarta Sans", sans-serif; font-weight: 600; letter-spacing: 0.06em;
+  -webkit-font-smoothing: antialiased;
+}
+.sv__title, .mod__label, .log__head > span:first-child, .oc-status, .msgs__label, .chat__day { font-size: 11px; }
