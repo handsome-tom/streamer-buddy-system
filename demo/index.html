@@ -660,6 +660,9 @@
   @keyframes swathesO { from { opacity: 0.72; } to { opacity: 1; } }
   /* The planet and its moon on their own layers too. */
   .hero-planet__globe, .hero-moon { will-change: transform; }
+  /* ===== A little pug standing on top of the planet, with a purple flag beside him ===== */
+  /* Drawn on a canvas (script at the bottom) from a tiny 3D model; his feet sink a touch into the surface. */
+  .hero-pug { position: absolute; left: 50%; top: -27%; width: 50%; height: 30%; transform: translateX(-50%); z-index: 2; pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { #space, #space::before, #space::after, .hero__art::before, .hero__swathes { animation: none !important; } }
   /* ===== One space, top to bottom: no lines between sections, and the space only turns to
      black at the very end, under the thank-yous. ===== */
@@ -766,7 +769,7 @@
           <path class="sw sw--ll" fill="url(#swLL)" d="M-640 150 Q-330 85 -145 68 Q-80 120 -40 185 Q-300 215 -640 260 Z"/>
           <path class="sw sw--lr" fill="url(#swLR)" d="M-15 210 Q20 110 75 60 Q160 42 460 25 L460 300 Z"/>
         </g>
-      </svg><div class="hero-planet"><canvas class="hero-ring hero-ring--back"></canvas><div class="hero-planet__globe"><canvas class="hero-planet__canvas"></canvas></div><canvas class="hero-ring hero-ring--front"></canvas><span class="hero-moon"><span class="hero-moon__face"><img src="brand/tom.png" alt="" width="128" height="128"></span><span class="hero-moon__face hero-moon__face--back"><img src="brand/tom.png" alt="" width="128" height="128"></span></span></div></div>
+      </svg><div class="hero-planet"><canvas class="hero-ring hero-ring--back"></canvas><div class="hero-planet__globe"><canvas class="hero-planet__canvas"></canvas></div><canvas class="hero-ring hero-ring--front"></canvas><canvas class="hero-pug" aria-hidden="true"></canvas><span class="hero-moon"><span class="hero-moon__face"><img src="brand/tom.png" alt="" width="128" height="128"></span><span class="hero-moon__face hero-moon__face--back"><img src="brand/tom.png" alt="" width="128" height="128"></span></span></div></div>
     </div>
   </section>
 
@@ -806,7 +809,7 @@
       }
       place = () => {};
       const s = document.createElement("script");
-      s.src = "twlive.js?v=2";
+      s.src = "twlive.js?v=3";
       s.onload = () => {
         place = window.ssLiveOver(where, tell, { under: document.querySelector("header.top")?.offsetHeight || 0 });
         new ResizeObserver(() => place()).observe(document.body);
@@ -1325,6 +1328,110 @@
     addEventListener("resize", () => { size(); draw(performance.now()); });
     const hero = document.querySelector(".hero");
     if (hero && "IntersectionObserver" in window) new IntersectionObserver(([e]) => go(e.isIntersecting)).observe(hero);
+  })();
+</script>
+<script>
+  // The pug on top of the planet: a real 3D model (squeezed down to about 1,800 triangles in
+  // brand/pug.bin) drawn with plain canvas, no library. He turns his body slowly one way and back,
+  // lit from the upper left like the planet. The purple flag beside him waves.
+  // pug.bin: two counts (vertices, triangles), the triangles (3 x uint16 each), then the vertices
+  // (3 x int8 each, scaled to -127..127).
+  (() => {
+    const cv = document.querySelector(".hero-pug");
+    if (!cv) return;
+    const ctx = cv.getContext("2d");
+    let V = null, F = null, NV = 0, NF = 0;
+    let W = 0, H = 0, dpr = 1;
+    function size() {
+      dpr = Math.min(devicePixelRatio || 1, 2);
+      W = cv.clientWidth; H = cv.clientHeight;
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    }
+    const L = (() => { const l = [-0.55, 0.6, 0.6], m = Math.hypot(...l); return l.map((v) => v / m); })(); // light: upper left, in front
+    const PURPLE = [169, 112, 255];
+    function flag(t) {
+      // The pole stands to the pug's right; the flag flies out to the right of it.
+      const s = H / 100, px = W / 2 + 34 * s, base = H * 0.97, top = H * 0.06;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "#cfd8ea"; ctx.lineWidth = Math.max(1.2, 1.6 * s);
+      ctx.beginPath(); ctx.moveTo(px, base); ctx.lineTo(px, top); ctx.stroke();
+      ctx.fillStyle = "#eef3ff"; ctx.beginPath(); ctx.arc(px, top, Math.max(1.4, 2.2 * s), 0, Math.PI * 2); ctx.fill();
+      const fw = 30 * s, fh = 19 * s, y0 = top + 2 * s, N = 14;
+      const wave = (u) => Math.sin(u * 5.2 - t * 4.2) * u * 2.6 * s;
+      const shade = (u) => 0.82 + 0.18 * Math.cos(u * 5.2 - t * 4.2);
+      for (let i = 0; i < N; i++) { // strips, each lit by its slope, so the fold shows
+        const u0 = i / N, u1 = (i + 1) / N, k = shade((u0 + u1) / 2);
+        ctx.fillStyle = `rgb(${PURPLE.map((c) => Math.round(c * k)).join(",")})`;
+        ctx.beginPath();
+        ctx.moveTo(px + u0 * fw, y0 + wave(u0)); ctx.lineTo(px + u1 * fw + 0.4, y0 + wave(u1));
+        ctx.lineTo(px + u1 * fw + 0.4, y0 + fh * (1 - 0.12 * u1) + wave(u1)); ctx.lineTo(px + u0 * fw, y0 + fh * (1 - 0.12 * u0) + wave(u0));
+        ctx.fill();
+      }
+    }
+    const order = [];
+    let px3 = null, depth = null;
+    function draw(ms) {
+      const t = ms / 1000;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+      if (!V) return;
+      // Model: X sideways, Y up, Z toward us (his face is at +Z).
+      const yaw = Math.sin(t * 0.35) * 0.6, cy = Math.cos(yaw), sy = Math.sin(yaw);
+      const sc = H * 0.45 / 127, ox = W / 2 - 0.2 * H, oy = H * 0.5;
+      for (let i = 0; i < NV; i++) {
+        const x = V[i * 3], y = V[i * 3 + 1], z = V[i * 3 + 2];
+        const rx = x * cy + z * sy, rz = -x * sy + z * cy;
+        px3[i * 3] = rx; px3[i * 3 + 1] = y; px3[i * 3 + 2] = rz;
+      }
+      order.length = 0;
+      for (let f = 0; f < NF; f++) {
+        const a = F[f * 3] * 3, b = F[f * 3 + 1] * 3, c = F[f * 3 + 2] * 3;
+        const ux = px3[b] - px3[a], uy = px3[b + 1] - px3[a + 1], uz = px3[b + 2] - px3[a + 2];
+        const vx = px3[c] - px3[a], vy = px3[c + 1] - px3[a + 1], vz = px3[c + 2] - px3[a + 2];
+        const nz = ux * vy - uy * vx;
+        if (nz <= 0) continue; // facing away
+        const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, m = Math.hypot(nx, ny, nz) || 1;
+        depth[f] = px3[a + 2] + px3[b + 2] + px3[c + 2];
+        const d = Math.max(0, (nx * L[0] + ny * L[1] + nz * L[2]) / m);
+        order.push(f); light[f] = 0.32 + 0.78 * d;
+      }
+      order.sort((p, q) => depth[p] - depth[q]);
+      // A soft shadow where he stands.
+      ctx.fillStyle = "rgba(4, 10, 30, 0.35)";
+      ctx.beginPath(); ctx.ellipse(ox, H * 0.96, H * 0.3, H * 0.05, 0, 0, Math.PI * 2); ctx.fill();
+      for (const f of order) {
+        const a = F[f * 3] * 3, b = F[f * 3 + 1] * 3, c = F[f * 3 + 2] * 3, k = light[f], C = dark[f] ? DARK : FAWN;
+        ctx.fillStyle = `rgb(${Math.round(C[0] * k)},${Math.round(C[1] * k)},${Math.round(C[2] * k)})`;
+        ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 0.6; // closes hairline gaps between triangles
+        ctx.beginPath();
+        ctx.moveTo(ox + px3[a] * sc, oy - px3[a + 1] * sc);
+        ctx.lineTo(ox + px3[b] * sc, oy - px3[b + 1] * sc);
+        ctx.lineTo(ox + px3[c] * sc, oy - px3[c + 1] * sc);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+      flag(t);
+    }
+    let light = null, dark = null;
+    const FAWN = [222, 184, 140], DARK = [70, 54, 46], MASK_Y = 20, MASK_Z = 60;
+    fetch("brand/pug.bin").then((r) => r.arrayBuffer()).then((buf) => {
+      const dv = new DataView(buf); NV = dv.getUint16(0, true); NF = dv.getUint16(2, true);
+      F = new Uint16Array(NF * 3); for (let i = 0; i < NF * 3; i++) F[i] = dv.getUint16(4 + i * 2, true);
+      V = new Int8Array(buf, 4 + NF * 6, NV * 3);
+      px3 = new Float32Array(NV * 3); depth = new Float32Array(NF); light = new Float32Array(NF);
+      // A pug's dark mask: the front of the face (high up, furthest forward) is drawn dark brown.
+      dark = new Uint8Array(NF);
+      for (let f = 0; f < NF; f++) {
+        let y = 0, z = 0; for (let j = 0; j < 3; j++) { y += V[F[f * 3 + j] * 3 + 1]; z += V[F[f * 3 + j] * 3 + 2]; }
+        dark[f] = y / 3 > MASK_Y && z / 3 > MASK_Z ? 1 : 0;
+      }
+      draw(performance.now());
+    }).catch(() => {});
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let running = false;
+    const frame = (ms) => { if (!running) return; draw(ms); requestAnimationFrame(frame); };
+    const go = (on) => { if (still) { draw(0); return; } if (on && !running) { running = true; requestAnimationFrame(frame); } else if (!on) running = false; };
+    size(); go(true);
+    addEventListener("resize", () => { size(); draw(performance.now()); });
+    new IntersectionObserver(([e]) => go(e.isIntersecting)).observe(cv);
   })();
 </script>
 </body>
