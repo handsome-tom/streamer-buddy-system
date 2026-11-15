@@ -6073,8 +6073,8 @@
     if (POPOUT) document.body.classList.add("popout");
     if (EMBED) document.body.classList.add("embed");
     if (LIVECHAT) document.body.classList.add("livechat");
-    // The OBS chat dock: a dim planet, half out of the bar.
-    if (LIVECHAT && !document.querySelector(".bar__space")) {
+    // The OBS chat dock and a mod's side panel: a dim planet, half out of the bar.
+    if ((LIVECHAT || EMBED) && !document.querySelector(".bar__space")) {
       const deco = el("div", "bar__space");
       deco.setAttribute("aria-hidden", "true");
       deco.append(el("div", "bar__planet"));
