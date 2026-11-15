@@ -729,6 +729,11 @@
   html.cols .pg--mod .chip:hover { box-shadow: 0 8px 26px 6px rgba(0, 0, 0, 0.8), 0 0 14px rgba(63, 201, 142, 0.35); }
   html.cols .pg .chip.on { color: #fff; background: rgba(125, 176, 239, 0.18); box-shadow: 0 6px 22px 4px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--brand-light); }
   html.cols .pg .pg__said { margin-top: 14px; }
+  /* Its notes: no arrow or glowing ring. The page dims behind the note, except a clear window
+     over what it's about. */
+  html.cols .callout__point { display: none !important; }
+  html.cols .callout--dim .callout__ring { border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.62) !important; animation: none; }
+  html.cols .callout--dim { transition: opacity 0.5s; }
   /* Tooltips open toward the page's middle edge of the column, not off the side. */
   html.cols .pg--streamer [data-tip]::after { left: 0; transform: translate(0, -3px); }
   html.cols .pg--streamer [data-tip]:hover::after, html.cols .pg--streamer [data-tip]:focus-visible::after { transform: translate(0, 0); }
@@ -740,7 +745,6 @@
     html.cols .stage { grid-template-columns: repeat(2, minmax(0, 420px)); grid-template-areas: "obs mod" "sbtn mbtn"; row-gap: 18px; }
     html.cols .pg__btns { flex-direction: row; flex-wrap: wrap; }
     html.cols .pg .chip, html.cols .pg select { width: auto; }
-    .twosides__arrow { display: none; }
   }
   @media (max-width: 920px) {
     html.cols .twosides, html.cols .stage { grid-template-columns: minmax(0, 420px); }
@@ -821,12 +825,12 @@
         <div class="twosides__side twosides__side--streamer">
           <h3>The streamer's OBS dock</h3>
           <p>Lives inside OBS. Chat, Twitch's events and the mods' questions in one place, and it stays quiet until someone actually needs the streamer. Answering takes one tap.</p>
-          <p class="twosides__try"><span class="twosides__arrow">← </span>The buttons next to it set off a raid, a gift bomb, a poll and more, so you can see how each one shows up.</p>
+          <p class="twosides__try">The buttons next to it set off a raid, a gift bomb, a poll and more, so you can see how each one shows up.</p>
         </div>
         <div class="twosides__side twosides__side--mod">
           <h3>A mod's side panel</h3>
           <p>Sits next to Twitch in Chrome. Mods see what's on the streamer's dock, ask quietly instead of in chat, nudge, flag a line, or hit the panic button when it can't wait.</p>
-          <p class="twosides__try">The buttons next to it do what a mod would, and you watch it land on the streamer's side.<span class="twosides__arrow"> →</span></p>
+          <p class="twosides__try">The buttons next to it do what a mod would, and you watch it land on the streamer's side.</p>
         </div>
       </div>
 
@@ -1129,7 +1133,7 @@
       setTimeout(() => calloutFor("streamerAsk"), 0);
       return;
     }
-    showCallout("obs", form, `Asking ${me} right from my bar: pick who, type it, press Enter.`, "streamer");
+    if (firstTime("streamerAskBar")) showCallout("obs", form, `Asking ${me} right from my bar: pick who, type it, press Enter.`, "streamer");
     input.value = "";
     for (const ch of text) {
       input.value += ch;
@@ -1498,11 +1502,16 @@
   };
   const panelDoc = (id) => { try { return document.getElementById(id).contentDocument; } catch { return null; } };
   let callout = null;
+  // The public demo (cols): each note shows the first time its button is pressed, over a dimmed
+  // page, then fades. After that, the buttons just do their thing, so people can play.
+  const COLS = document.documentElement.classList.contains("cols");
+  const seenTips = new Set();
+  const firstTime = (key) => !COLS || (!seenTips.has(key) && !!seenTips.add(key));
   function showCallout(on, target, text, from) {
     callout?.remove();
     const frame = document.getElementById(on);
     const box = document.createElement("div");
-    box.className = `callout callout--${from}`;
+    box.className = `callout callout--${from}${COLS ? " callout--dim" : ""}`;
     // Who's "saying" it, with their picture and name, in a black tooltip (not a blue bubble, so
     // it can't be mistaken for a real message). Twitch's own events come from "Twitch", with the StreamSpace mark.
     const who = from === "mod" ? me : from === "streamer" ? "streamer" : from === "guide" ? "StreamSpace" : "Twitch";
@@ -1548,6 +1557,7 @@
     setTimeout(() => box.remove(), 7000);
   }
   function calloutFor(id) {
+    if (!firstTime(id)) return;
     const c = CALLOUTS[id];
     const doc = panelDoc(c.on);
     if (!doc) return;
@@ -1568,6 +1578,8 @@
     toldAnswer.add(q.id);
     if (q.from === me && q.to === "streamer") tour.answered("answer");
     else if (q.from === "streamer" && q.to === me) tour.answered("modAnswer");
+    const key = q.from === me && q.to === "streamer" ? "answerToMod" : q.from === "streamer" && q.to === me ? "answerToStreamer" : "";
+    if (!key || !firstTime(key)) return;
     setTimeout(() => {
       if (q.from === me && q.to === "streamer") {
         const doc = panelDoc("mod");
