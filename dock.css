@@ -5867,3 +5867,15 @@ body .bar:has(.dots--mod)::before, body.livechat .bar:has(.dots--mods)::before {
 /* The streamer's bar is three rows (pictures, the message box, the suggestions): the colored
    edge and its wash belong to the pictures row only, the same size as the mod side's. */
 body.livechat .bar:has(.dots--mods)::before { bottom: auto; height: 46px; }
+/* One even fade on both sides: the color wash and the dark shade behind the pictures are
+   one layer the full height of the pictures row (they were separate, and the shade on the
+   streamer's side only covered the middle of the row, leaving bands of color). */
+body .bar:has(.dots--mod)::before, body.livechat .bar:has(.dots--mods)::before {
+  width: 240px;
+  height: 44px;
+  bottom: auto;
+  background:
+    linear-gradient(90deg, rgba(var(--edge), 0.4) 0%, rgba(var(--edge), 0.15) 22%, rgba(var(--edge), 0) 50%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.6) 25%, rgba(0, 0, 0, 0.45) 55%, rgba(0, 0, 0, 0) 100%);
+}
+.bar > .dots--mod, .bar > .dots--mods { background: none; }
