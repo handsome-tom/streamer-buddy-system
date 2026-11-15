@@ -1113,14 +1113,9 @@
     list.scrollTop = Math.max(0, list.scrollTop - 2);
     list.dispatchEvent(new win.Event("scroll"));
     const { line, who } = twNewest(doc);
-    let dot = null;
-    for (let tries = 0; tries < 3 && !dot; tries++) {
-      const r = line.getBoundingClientRect();
-      line.dispatchEvent(new win.MouseEvent("mousemove", { bubbles: true, clientX: r.left + r.width * 0.9, clientY: r.top + Math.min(r.height, 32) / 2 }));
-      dot = await twUntil(() => line.querySelector(".tbc-notedot.tbc-notedot--on"), 1200).catch(() => null);
-    }
-    if (!dot) throw new Error("no dot");
-    dot.click();
+    // Pointing at the line puts StreamSpace's note button on it (shown while it's pointed at).
+    line.dispatchEvent(new win.MouseEvent("mouseover", { bubbles: true }));
+    (await twUntil(() => line.querySelector(".tbc-notedot"), 1200)).click();
     const box = await twUntil(() => doc.querySelector(".tbc-notebox textarea"));
     box.value = "keep an eye on this one";
     box.dispatchEvent(new win.Event("input", { bubbles: true }));

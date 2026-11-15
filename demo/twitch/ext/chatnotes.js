@@ -387,6 +387,7 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
     const right = hasFlag ? f.left : has ? b.left : r.right - (document.documentElement.classList.contains("tbc-flagging") ? 74 : 38);
     const mid = hasFlag ? f.top + f.height / 2 : has ? b.top + b.height / 2 : r.top + 5;
     line.classList.add("tbc-notehost");
+    dot.classList.remove("tbc-notedot--live");
     dot.style.left = `${right - r.left - 36}px`;
     dot.style.top = `${mid - r.top - 16}px`;
     if (dot.parentElement !== line) line.append(dot);
@@ -408,8 +409,21 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
   // It shows as soon as the pointer is on a line and goes when it leaves, at the same
   // moments Twitch shows and hides its reply button.
   let pointer = { x: -1, y: -1 };
+  // Live chat: the dot waits in whichever line the pointer is on, and the stylesheet shows it
+  // while the line is pointed at (.tbc-notedot--live), the same instant as StreamSpace's flag
+  // and Twitch's reply button. No script in between, so it never lags behind them.
+  document.addEventListener("mouseover", (e) => {
+    if (vodId() || !canNote()) return;
+    const line = e.target.closest?.(LIVE_LINE);
+    if (!line || e.target.closest(".tbc-notes") || dot.parentElement === line) return;
+    dot.classList.add("tbc-notedot--live");
+    dot.style.left = dot.style.top = "";
+    line.classList.add("tbc-notehost");
+    line.append(dot);
+  }, { passive: true });
   document.addEventListener("mousemove", (e) => {
     pointer = { x: e.clientX, y: e.clientY };
+    if (!vodId()) return; // live chat: the stylesheet shows the dot (above)
     if (e.target === dot || dot.contains(e.target)) return clearTimeout(hoverTimer);
     const line = e.target.closest?.(lineSel()) || null;
     const ok = line && canNote() && !e.target.closest(".tbc-notes");
@@ -439,7 +453,8 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
   dot.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (dotLine) openBox(dotLine);
+    const line = dotLine || dot.parentElement?.closest(lineSel());
+    if (line) openBox(line);
     hideDot();
   });
 

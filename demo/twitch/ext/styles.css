@@ -1918,6 +1918,19 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   opacity: 1;
   pointer-events: auto;
 }
+/* Live chat: in the row at the line's top right, left of StreamSpace's flag and Twitch's
+   reply button, and shown exactly while the line is pointed at, like them. */
+.tbc-notedot--live {
+  top: -11px;
+  right: 42px;
+}
+html.tbc-flagging .tbc-notedot--live {
+  right: 78px;
+}
+.chat-line__message:hover > .tbc-notedot--live {
+  opacity: 1;
+  pointer-events: auto;
+}
 .tbc-notedot:hover {
   box-shadow: 0 6px 26px rgba(63, 125, 216, 0.85), 0 0 0 2px rgba(4, 5, 11, 0.9);
 }
