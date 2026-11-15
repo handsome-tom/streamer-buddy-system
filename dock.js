@@ -2002,6 +2002,7 @@
     if (next === "stats" && to) statsDraft.who = to;
     if (next === "group") {
       if (to && to !== groupDraft.tag) groupAdding = false;
+      groupDraft.owner ||= me?.login || "";
       groupDraft.tag = to || groupDraft.tag;
       groupDeleting = "";
     }
@@ -2451,7 +2452,7 @@
   // yours, with how many. Your mods wear a sword. The streamer's chat dock shows only
   // its mods who are connections and are in the chat.
   function drawDots() {
-    const modBar = EMBED && view === "mod" && !!me;
+    const modBar = EMBED && !!me; // the side panel's top bar is always your streamers
     dotsEl.classList.toggle("dots--mod", modBar);
     if (modBar) return drawModDots();
     // Your own chat color, for the glow round lines you bookmarked.
@@ -2571,9 +2572,9 @@
     dotsEl.replaceChildren(...list);
   }
 
-  // The side panel's Mod view: the top bar is the channels you mod instead, the ones you're
-  // lead mod for first (hammer), then the rest (sword). Online ones glow lavender; offline
-  // ones still show, dimmed; the one Mod is about is ringed in mod green. Clicking one switches Mod to them.
+  // The side panel's top bar, on every page: the channels you mod, the ones you're lead mod
+  // for first (hammer), then the rest (sword). Online ones glow lavender; offline ones still
+  // show, dimmed; the one Mod is about is ringed in mod green. Clicking one opens Mod on them.
   function modChannels() {
     const modFor = modLists?.modFor || [];
     const sharing = Object.keys(views).filter((l) => l !== me.login && isLeadFor(l));
@@ -2625,7 +2626,8 @@
       dot.addEventListener("click", () => {
         svPicked = login;
         watching = ""; // picked by hand: stop following the tab until it changes channel
-        render();
+        if (view !== "mod") show("mod");
+        else render();
       });
       return dot;
     });
@@ -3824,6 +3826,36 @@
     pic.classList.add(`cx__pic--${stateOf(login)}`);
     return pic;
   }
+  // Who someone is to you, on their picture: the purple camera for your streamer (a channel
+  // you mod), the sword for your mod (hammer for a lead mod), both side by side for both.
+  function roleBadges(login) {
+    const streamer = !!modLists?.modFor?.includes(login) || isLeadFor(login);
+    const mine = isMyMod(login);
+    if (!streamer && !mine) return null;
+    const live = streaming(login);
+    const pair = el("span", "rank-pair");
+    if (streamer || live) {
+      const cam = liveBadge();
+      cam.title = live ? "Live streaming now" : "Your streamer";
+      pair.append(cam);
+    }
+    if (mine && !live) {
+      const lead = isMyLead(login);
+      const r = el("span", `rank rank--${lead ? "lead" : "mod"}`);
+      r.innerHTML = lead ? HAMMER_ICON : MOD_BADGE;
+      r.title = lead ? "Your lead mod" : "Your mod";
+      pair.prepend(r);
+    }
+    return pair;
+  }
+  // How someone relates to you, as the color of their part of Messages (their unread count,
+  // their private chat): purple for your streamer, green for your mod, else the usual orange.
+  // Their name keeps their Twitch chat color. Both your streamer and your mod: purple.
+  function relClass(login) {
+    if (modLists?.modFor?.includes(login) || isLeadFor(login)) return "rel--streamer";
+    if (isMyMod(login)) return "rel--mod";
+    return "";
+  }
   // How someone is, in words: online, idle, or when they were last on.
   function seenWords(login) {
     const state = stateOf(login);
@@ -3886,7 +3918,7 @@
   // Your groups: the two Twitch fills first (when Twitch lists anyone for them), then your
   // own, A to Z. Only you see your groups; a group chat is how the people in one talk.
   let newGroup = null; // the New group form ({ name, picked }) while it's open
-  const groupDraft = { tag: (POPOUT && params.get("view") === "group" && params.get("to")) || "" };
+  const groupDraft = { tag: (POPOUT && params.get("view") === "group" && params.get("to")) || "", owner: "" };
   let groupAdding = false; // a group's page: the "add people" list is open
   let groupDeleting = ""; // a group's page: Delete pressed once (press again to delete)
   function groupNames() {
@@ -3910,6 +3942,20 @@
     return pic;
   }
   const peopleWords = (n, on) => `${n} ${n === 1 ? "person" : "people"} · ${on} online`;
+  // A group's page: yours (by its name), or a group chat someone else started (by whose).
+  function openGroupPage(owner, tag) {
+    groupDraft.owner = owner;
+    show("group", tag);
+  }
+  // Taken out of Messages: a Twitch group (it can't be deleted: it follows Twitch), or a
+  // group chat someone else started (only they can take you out). { key: when }; it comes
+  // back when someone writes in it after that, or with Show hidden. Kept in this browser.
+  const hiddenKey = () => `hiddenGroups:${me?.login || ""}`;
+  const hiddenGroups = () => get(hiddenKey(), {});
+  function hideGroup(key, at) {
+    put(hiddenKey(), { ...hiddenGroups(), [key]: at || 0 });
+    show(EMBED ? "messages" : "people");
+  }
 
   // The Groups list (Messages; in the OBS dock, which has no Messages, Connections): each
   // of your groups, and each group chat someone started for a group you're in. Anything
@@ -3922,6 +3968,11 @@
     for (const r of rooms.filter((r) => !r.direct && r.owner !== me.login)) items.push({ g: r.tag, room: r, own: false, i: items.length });
     const rank = (x) => (x.room && unread(x.room.owner) ? 0 : x.room ? 1 : 2);
     items.sort((a, b) => rank(a) - rank(b) || lastAtOf(b.room) - lastAtOf(a.room) || a.i - b.i);
+    const hidden = hiddenGroups();
+    const keyOf = (x) => (x.own ? `t:${x.g}` : `r:${x.room.owner}`);
+    const isHidden = (x) => keyOf(x) in hidden && lastAtOf(x.room) <= hidden[keyOf(x)];
+    const tucked = items.filter(isHidden);
+    const shown = items.filter((x) => !isHidden(x));
 
     let start = null;
     if (connections.length) {
@@ -3934,11 +3985,11 @@
         if (newGroup) document.querySelector('[data-key="new-group"]')?.focus();
       });
     }
-    panel.append(head(items.length ? `Groups · ${items.length}` : "Groups", start));
+    panel.append(head(shown.length ? `Groups · ${shown.length}` : "Groups", start));
     if (newGroup) panel.append(newGroupForm());
 
     const list = el("div", "msgs__list msgs__groups");
-    for (const { g, room, own } of items) {
+    for (const { g, room, own } of shown) {
       const auto = own && isAutoGroup(g);
       const name = [el("span", "msgs__name", g || "Group chat")];
       if (auto) name.push(el("span", "msgs__by", "from Twitch"));
@@ -3963,10 +4014,29 @@
         sub: room ? lastSaid(room, quiet) : quiet,
         at: lastAtOf(room),
         count: room ? unread(room.owner) : 0,
-        onClick: () => (room ? openChat(room.owner) : show("group", g)),
+        onClick: () => (room ? openChat(room.owner) : openGroupPage(me.login, g)),
+        end: (() => {
+          const more = el("button", "msgs__x msgs__more", "⋯");
+          more.type = "button";
+          more.title = more.ariaLabel = own && !auto ? `${g}: who's in it, or delete it` : `${g}: who's in it, or remove it from Messages`;
+          more.addEventListener("click", () => openGroupPage(own ? me.login : room.owner, g));
+          return more;
+        })(),
       });
-      row.title = room ? `Open the ${g} group chat` : `${g}: who's in it, and start its group chat`;
+      row.querySelector(".msgs__row").title = room ? `Open the ${g} group chat` : `${g}: who's in it, and start its group chat`;
       list.append(row);
+    }
+    if (tucked.length) {
+      list.append(listRow({
+        pic: rowIcon("+", true),
+        name: el("span", "msgs__name", `Show hidden · ${tucked.length}`),
+        sub: tucked.map((x) => x.g).join(", "),
+        onClick: () => {
+          put(hiddenKey(), {});
+          render();
+        },
+        cls: "msgs__row--quiet",
+      }));
     }
     // Not allowed to see Twitch's mod lists yet (signed in before this asked): one row.
     if (!TESTING && me && !hasModScopes()) {
@@ -4016,7 +4086,7 @@
       for (const login of newGroup.picked) relay({ t: "tag", login, tag, on: true });
       tags[tag] = [...new Set([...(tags[tag] || []), ...newGroup.picked])]; // until the relay says so
       newGroup = null;
-      show("group", tag);
+      openGroupPage(me.login, tag);
     });
     return form;
   }
@@ -4024,6 +4094,7 @@
   // A group's page: who's in it, its group chat, one Ask to everyone; for your own groups,
   // adding and taking people out, and deleting it. All as lists, one thing per row.
   function groupPanel() {
+    if (groupDraft.owner && groupDraft.owner !== me.login) return roomPage(groupDraft.owner);
     const g = groupDraft.tag;
     if (!groupNames().includes(g)) {
       // Gone (deleted, or Twitch stopped listing anyone): back to where groups are listed.
@@ -4161,9 +4232,63 @@
         cls: "msgs__row--danger",
       }));
     } else {
-      panel.append(el("p", "msgs__empty grp__note", "This group follows Twitch's own list, so it fills itself in."));
+      // A Twitch group follows Twitch's own list, so it can't be deleted; it can leave Messages.
+      ends.append(listRow({
+        pic: rowIcon("−", true),
+        name: el("span", "msgs__name", "Remove from Messages"),
+        sub: "It follows Twitch's own list, so it can't be deleted. Ask everyone still works, and Show hidden brings it back.",
+        onClick: () => hideGroup(`t:${g}`, lastAtOf(room)),
+        cls: "msgs__row--danger",
+      }));
     }
     if (ends.childElementCount) panel.append(ends);
+    return panel;
+  }
+
+  // A group chat someone else started, for a group of theirs you're in: who's in it, its
+  // chat, and taking it out of Messages (only they can take you out of the group itself).
+  function roomPage(owner) {
+    const room = rooms.find((r) => !r.direct && r.owner === owner);
+    if (!room) {
+      view = EMBED ? "messages" : "people";
+      return EMBED ? messagesPanel() : peoplePanel();
+    }
+    const panel = el("div", "panel msgs grp");
+    const back = el("button", "chat__back", EMBED ? "‹ Messages" : "‹ Connections");
+    back.type = "button";
+    back.addEventListener("click", () => show(EMBED ? "messages" : "people"));
+    panel.append(back);
+    const others = room.members.filter((m) => m.login !== me.login);
+    const top = el("div", "dm__head");
+    const who = el("div", "dm__who");
+    const state = el("span", "dm__state");
+    state.append("by ", nameBit(owner), ` · ${peopleWords(others.length, others.filter((m) => m.online).length)}`);
+    who.append(el("span", "dm__name", room.tag || "Group chat"), state);
+    top.append(groupStack(others.map((m) => m.login), room.tag), who);
+    panel.append(top);
+
+    const acts = el("div", "msgs__list grp__acts");
+    acts.append(listRow({ pic: rowIcon("chat"), name: el("span", "msgs__name", "Group chat"), sub: lastSaid(room, "Everyone in it talks together here"), at: lastAtOf(room), count: unread(owner), onClick: () => openChat(owner) }));
+    panel.append(acts);
+
+    panel.append(msgsHead(`People · ${others.length}`));
+    const list = el("div", "msgs__list");
+    for (const m of [...others].sort((a, b) => (b.login === owner) - (a.login === owner) || b.online - a.online || a.login.localeCompare(b.login))) {
+      const direct = directWith(m.login);
+      const name = [el("span", "msgs__name", m.login)];
+      if (colorOf(m.login)) name[0].style.color = colorOf(m.login);
+      if (m.login === owner) name.push(el("span", "msgs__by", "started it"));
+      const pic = personPic(m.login);
+      pic.classList.add(`cx__pic--${m.online ? (conn(m.login)?.idle ? "idle" : "on") : "off"}`);
+      list.append(listRow({ pic, name, sub: m.online ? "online" : "offline", onClick: direct ? () => openChat(direct.owner) : null }));
+    }
+    panel.append(list);
+
+    const ends = el("div", "msgs__list grp__ends");
+    const sub = el("span");
+    sub.append("Hides it here until someone writes in it again. Only ", nameBit(owner), " can take you out of the group.");
+    ends.append(listRow({ pic: rowIcon("−", true), name: el("span", "msgs__name", "Remove from Messages"), sub, onClick: () => hideGroup(`r:${owner}`, lastAtOf(room)), cls: "msgs__row--danger" }));
+    panel.append(ends);
     return panel;
   }
 
@@ -4180,13 +4305,17 @@
       const strip = el("div", "msgs__online");
       for (const r of here) {
         const state = stateOf(r.with);
-        const b = el("button", "msgs__face");
+        const b = el("button", `msgs__face ${relClass(r.with)}`);
         b.type = "button";
         b.title = `Message ${r.with} (${state === "idle" ? "idle" : "online"})`;
         const pic = ringedPic(r.with);
+        const badges = roleBadges(r.with);
+        if (badges) pic.append(badges);
         const n = unread(r.owner);
         if (n) pic.append(el("span", "msgs__facecount", String(n)));
-        b.append(pic, nameBit(r.with, "msgs__facename"));
+        const face = nameBit(r.with, "msgs__facename");
+        if (colorOf(r.with)) face.style.color = colorOf(r.with);
+        b.append(pic, face);
         b.addEventListener("click", () => openChat(r.owner));
         strip.append(b);
       }
@@ -4202,9 +4331,12 @@
     panel.append(msgsHead(dms.length ? `Direct messages · ${dms.length}` : "Direct messages"));
     const dList = el("div", "msgs__list");
     for (const r of dms) {
-      const name = withBadge(el("span", "msgs__name", r.with), r.with);
+      const name = el("span", "msgs__name", r.with);
       if (colorOf(r.with)) name.style.color = colorOf(r.with);
-      dList.append(listRow({ pic: ringedPic(r.with), name, sub: lastSaid(r, seenWords(r.with)), at: lastAtOf(r), count: unread(r.owner), onClick: () => openChat(r.owner) }));
+      const pic = ringedPic(r.with);
+      const badges = roleBadges(r.with); // on the picture, as in Online now
+      if (badges) pic.append(badges);
+      dList.append(listRow({ pic, name, sub: lastSaid(r, seenWords(r.with)), at: lastAtOf(r), count: unread(r.owner), onClick: () => openChat(r.owner), cls: relClass(r.with) }));
     }
     if (!dms.length) {
       const empty = el("div", "msgs__empty");
@@ -4276,6 +4408,7 @@
     }
 
     panel.classList.toggle("chat--dm", EMBED);
+    if (room.direct && relClass(room.with)) panel.classList.add(relClass(room.with)); // their color: purple, green or orange
     if (EMBED) {
       // The side panel: who you're talking to, big, with their status, then a soft divider.
       const top = el("div", "dm__head");
@@ -4298,24 +4431,24 @@
         words.append(el("span", "dm__name", room.tag || "Group chat"), state);
         top.append(stack, words);
       }
-      // Your own group's chat: its top opens the group's page (who's in it, Ask everyone, end it).
-      if (room.owner === me.login && groupNames().includes(room.tag)) {
+      // A group chat: its top opens the group's page (who's in it; end, delete or remove it).
+      if (!room.direct && (room.owner !== me.login || groupNames().includes(room.tag))) {
         const link = el("button", "dm__head dm__head--link");
         link.type = "button";
         link.title = `${room.tag}: who's in it, and more`;
         link.append(...top.childNodes, el("span", "msgs__chev", "›"));
-        link.addEventListener("click", () => show("group", room.tag));
+        link.addEventListener("click", () => openGroupPage(room.owner, room.tag));
         panel.append(link);
       } else panel.append(top);
     }
     const head = el("div", "chat__head");
     if (EMBED) head.hidden = true;
     const titleText = room.direct ? `Private chat · only you and ${room.with}` : room.owner === me.login ? `${room.tag} · your group chat` : `${room.tag} · ${room.owner}'s group chat`;
-    if (!room.direct && room.owner === me.login && groupNames().includes(room.tag)) {
+    if (!room.direct && (room.owner !== me.login || groupNames().includes(room.tag))) {
       const title = el("button", "chat__title chat__title--link", `${titleText} ›`);
       title.type = "button";
       title.title = `${room.tag}: who's in it, and more`;
-      title.addEventListener("click", () => show("group", room.tag));
+      title.addEventListener("click", () => openGroupPage(room.owner, room.tag));
       head.append(title);
     } else head.append(el("span", "chat__title", titleText));
     const who = el("span", "chat__who");

@@ -214,6 +214,34 @@ export const tests = {
     noErrors(panel);
   },
 
+  async "the side panel's top bar stays on your streamers, who show in purple; a group chat can leave Messages and come back"(h) {
+    const streamer = h.person("streamer");
+    const mod1 = h.person("mod1");
+    await h.friends(streamer, mod1);
+    streamer.send({ t: "tag", tag: "Mod squad", login: "mod1", on: true });
+    await streamer.next("state", (m) => m.tags?.["Mod squad"]?.includes("mod1"));
+    streamer.send({ t: "room", tag: "Mod squad" });
+    await h.until(() => (mod1.state?.rooms || []).some((r) => !r.direct && r.tag === "Mod squad"), "mod1 to be in the Mod squad group chat");
+
+    const panel = await h.panel("mod1", "ext", "&modfor=streamer");
+    (await h.until(() => panel.$("#msgBtn:not([hidden])"), "the Messages button")).click();
+    await h.until(() => panel.$(".msgs__face"), "Online now");
+    h.check(panel.$("#dots.dots--mod"), "in Messages, the top bar should still be your streamers");
+    const face = panel.$$(".msgs__face").find((b) => b.textContent.includes("streamer"));
+    h.check(face?.classList.contains("rel--streamer") && face.querySelector(".rank--live"), "your streamer's face should be purple, with the camera");
+
+    // ⋯ on the group chat, Remove from Messages: gone, with Show hidden to bring it back.
+    const item = await h.until(() => panel.$$(".msgs__item").find((i) => i.textContent.includes("Mod squad")), "Mod squad in Groups");
+    item.querySelector(".msgs__more").click();
+    const remove = await h.until(() => panel.$$(".grp__ends .msgs__row").find((r) => r.textContent.includes("Remove from Messages")), "Remove from Messages on its page");
+    remove.click();
+    const show = await h.until(() => panel.$$(".msgs__groups .msgs__row").find((r) => r.textContent.includes("Show hidden")), "Show hidden in Groups");
+    h.check(!panel.$$(".msgs__groups .msgs__name").some((n) => n.textContent === "Mod squad"), "Mod squad should be out of Messages");
+    show.click();
+    await h.until(() => panel.$$(".msgs__groups .msgs__name").some((n) => n.textContent === "Mod squad"), "Mod squad back in Messages");
+    noErrors(panel);
+  },
+
   async "someone who's only added one way can't ask yet, and shows as a request"(h) {
     const stranger = h.person("viewer9");
     const streamer = h.person("streamer");

@@ -5637,3 +5637,38 @@ body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; 
 .chat__title--link:hover { text-decoration: underline; text-underline-offset: 3px; }
 /* The OBS dock's Connections: Groups in the same list, under its blue headings. */
 .cx__groupsec .msgs__list { margin-top: 6px; }
+/* Messages' Online now: smaller faces, each wearing who they are to you (the purple camera
+   for your streamer, the sword or hammer for your mod), like the Streamers bar. */
+.msgs__face { width: 48px; gap: 4px; padding: 5px 2px 3px; }
+.msgs__face .people__pic { width: 30px; height: 30px; }
+.msgs__face .rank-pair { right: -5px; bottom: -4px; }
+.msgs__face .rank-pair .rank { width: 12px; height: 12px; }
+.msgs__face .rank-pair .rank svg { width: 7px; height: 7px; }
+.msgs__face .msgs__facecount { top: -5px; right: -7px; }
+.msgs__facename { font-size: 10.5px; }
+/* How someone relates to you, as the color of their part of Messages: purple for your
+   streamer, green for your mod, else the usual orange. Their unread counts, their row's
+   "new" tint and time, and their private chat (your bubbles, the send button, the back
+   link) all take it. Names keep their Twitch chat color. */
+:root { --rel: var(--honey); --rel-hi: var(--honey-hi); --rel-ink: var(--honey-ink); --rel-text: var(--honey); --rel-rgb: 242, 144, 40; }
+.rel--streamer { --rel: #9147ff; --rel-hi: #a970ff; --rel-ink: #fff; --rel-text: #b48cff; --rel-rgb: 145, 71, 255; }
+.rel--mod { --rel: #00ad03; --rel-hi: #3fc98e; --rel-ink: #fff; --rel-text: #3fc98e; --rel-rgb: 0, 173, 3; }
+.msgs__facecount, .msgs__count { color: var(--rel-ink); background: var(--rel); }
+.msgs__row--new { background: rgba(var(--rel-rgb), 0.07); }
+.msgs__row--new .msgs__ago { color: var(--rel-text); }
+.chat--dm .chat__back { color: var(--rel-text); }
+.chat--dm .chat__back:hover { color: var(--rel-hi); }
+.chat--dm .chat__msg--mine .chat__text { background: linear-gradient(160deg, rgba(var(--rel-rgb), 0.38), rgba(var(--rel-rgb), 0.16)); border-color: rgba(var(--rel-rgb), 0.22); }
+.chat--dm .chat__msg--mention .chat__text { box-shadow: 0 0 0 1px rgba(var(--rel-rgb), 0.5), 0 0 12px rgba(var(--rel-rgb), 0.2); }
+.chat--dm .chat__form .ask__input:focus { border-color: rgba(var(--rel-rgb), 0.45); }
+.chat--dm .chat__form .ask__send { color: var(--rel-ink); background: linear-gradient(160deg, var(--rel-hi), var(--rel)); }
+.rel--streamer .chat__msg--mine .chat__text, .rel--mod .chat__msg--mine .chat__text { color: #fff; }
+/* A list row's own badges (Direct messages): on the picture, like Online now. */
+.msgs__row > .people__pic:has(.rank-pair) { position: relative; overflow: visible; }
+.msgs__row > .people__pic:has(.rank-pair) img { border-radius: 50%; }
+.msgs__row > .people__pic .rank-pair { right: -4px; bottom: -3px; }
+.msgs__row > .people__pic .rank-pair .rank { width: 13px; height: 13px; }
+.msgs__row > .people__pic .rank-pair .rank svg { width: 7px; height: 7px; }
+/* Groups: ⋯ opens a group's page (who's in it; delete it, or take it out of Messages). */
+.msgs__more { font-size: 18px; letter-spacing: 0.02em; }
+.msgs__row--quiet .msgs__name { color: var(--msg-muted); font-size: 12.5px; }
