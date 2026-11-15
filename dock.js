@@ -176,6 +176,19 @@
     return b;
   })();
   const msgCount = document.getElementById("msgCount");
+  // Mod tools: a green pixel sword between Mod (your picture) and Messages, in the side panel.
+  const TOOLS_SWORD = '<svg viewBox="0 0 8 8" width="16" height="16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M6 0h2v1h-2zM5 1h3v1h-3zM4 2h3v1h-3zM1 3h1v1h-1zM3 3h3v1h-3zM2 4h3v1h-3zM2 5h2v1h-2zM1 6h1v1h-1zM4 6h1v1h-1zM0 7h1v1h-1z"/></svg>';
+  const toolsBtn = document.getElementById("toolsBtn") || (() => {
+    const b = document.createElement("button");
+    b.className = "pill pill--icon tools-btn";
+    b.id = "toolsBtn";
+    b.type = "button";
+    b.title = b.ariaLabel = "Mod tools";
+    b.hidden = true;
+    b.innerHTML = TOOLS_SWORD;
+    modBtn.after(b);
+    return b;
+  })();
   let chatFrom = ""; // "messages" when a chat was opened from Messages (its back button goes there)
 
   let me = null; // { login, id }
@@ -487,7 +500,7 @@
       response_type: "token",
       client_id: TWITCH_CLIENT_ID,
       redirect_uri: location.origin + location.pathname,
-      scope: [...window.OwnChat.SCOPES, ...(window.OwnChat.EXTRA_SCOPES || [])].join(" "), // extras: nice to have, not needed
+      scope: [...window.OwnChat.SCOPES, ...(window.OwnChat.EXTRA_SCOPES || []), ...(window.OwnChat.TOOL_SCOPES || [])].join(" "), // extras and Mod tools: nice to have, not needed
       state,
     });
     localStorage.setItem(RETURN_KEY, location.search);
@@ -829,6 +842,9 @@
       }
       else if (m.t === "flashed") gotFlashed(m);
       else if (m.t === "view") gotView(m.owner, m.v);
+      else if (m.t === "tool") gotTool(m);
+      else if (m.t === "toolDone") gotToolDone(m);
+      else if (m.t === "tools") gotTools(m.owner, m.s);
       else if (m.t === "stats") {
         stats[m.owner] = m.s;
         if (view === "stats") render();
@@ -873,6 +889,8 @@
     if (first) setTimeout(() => {
       modForSent = ""; // a fresh connection: say it again
       shareModFor();
+      lastTools = "";
+      if (ownChat?.tools) shareTools(ownChat.tools.state());
     }, 0);
     if ("owner" in m) owner = m.owner || null;
     allowed = m.allowed || null;
@@ -2085,7 +2103,7 @@
     pingCheck();
     // Keep typing where it was if things are redrawn under you.
     const typingIn = document.activeElement?.dataset?.key;
-    main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : view === "deck" ? deckPanel() : view === "mod" ? modPanel() : view === "messages" ? messagesPanel() : view === "group" ? groupPanel() : view === "extsettings" ? extSettingsPanel() : cardList());
+    main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : view === "deck" ? deckPanel() : view === "mod" ? modPanel() : view === "messages" ? messagesPanel() : view === "group" ? groupPanel() : view === "extsettings" ? extSettingsPanel() : view === "tools" ? toolsPanel() : cardList());
     main.classList.toggle("main--msgs", view === "messages" || ((view === "chat" || view === "group") && EMBED)); // the dark Messages sheet
     if (LIVECHAT && (view !== "cards" || showAll) && main.firstElementChild?.childElementCount !== 0) main.prepend(inlineHead());
     drawDots();
@@ -2146,6 +2164,9 @@
     chatBtn.hidden = true;
     // The side panel's Messages tab carries the unread count; elsewhere it's on Connections.
     msgBtn.hidden = !EMBED || !me;
+    toolsBtn.hidden = !EMBED || !me || !(modLists?.modFor || []).length; // only for people who mod somewhere
+    toolsBtn.classList.toggle("pill--on", view === "tools");
+    toolsBtn.classList.toggle("bar-btn--here", view === "tools");
     msgBtn.classList.toggle("pill--on", view === "messages" || (view === "chat" && chatFrom === "messages") || (view === "group" && EMBED));
     extGear?.classList.toggle("ext-gear--on", view === "extsettings");
     msgCount.textContent = !msgBtn.hidden && unreadChat ? String(unreadChat) : "";
@@ -3640,6 +3661,246 @@
     if (owner && liveOf[owner]?.live) checkLive(owner);
   }, VIEWERS_EVERY_MS);
   if (EMBED) setInterval(() => me && modOwner() && modRinged() !== modBtn.classList.contains("mod-btn--live") && render(), 30000);
+  // ===== Mod tools (the side panel's sword) ================================================
+  // For the channel Mod is about: its channel points (recent redemptions, refund or mark
+  // done, or Twitch's own reward queue), a raid out (the streamer OKs it in their dock), and
+  // chat modes. Twitch lets only the channel's own sign-in do these, so each one is a request
+  // to the streamer's own chat dock (through the relay), which does it (ownchat.js).
+  const toolsOf = {}; // streamer -> what their dock last shared (null: it isn't open)
+  const toolsAsked = new Set();
+  const toolWait = new Map(); // request id -> { owner, a, x, at }, until their dock answers
+  let toolSaid = null; // { owner, text, ok, at }: the last answer, shown for a while
+  let raidDraft = "";
+  let toolsTimer = 0;
+  let lastTools = "";
+  function askTools(owner) {
+    if (!owner || toolsAsked.has(owner)) return;
+    toolsAsked.add(owner);
+    relay({ t: "toolsGet", owner });
+    setTimeout(() => toolsAsked.delete(owner), 10000);
+  }
+  function gotTools(owner, s) {
+    toolsOf[owner] = s || null;
+    if (view === "tools" && owner === modOwner()) render();
+  }
+  function sendTool(owner, a, x) {
+    const id = `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    if (!relay({ t: "tool", to: owner, id, a, x })) return;
+    toolWait.set(id, { owner, a, x, at: Date.now() });
+    // A raid waits for the streamer (two minutes); anything else, for their dock.
+    setTimeout(() => {
+      if (!toolWait.delete(id)) return;
+      toolSaid = { owner, text: a === "raid" ? `${owner} didn't answer, so there's no raid.` : `${owner}'s dock didn't answer. Is it open in OBS?`, ok: false, at: Date.now() };
+      if (view === "tools") render();
+    }, a === "raid" ? 130000 : 15000);
+    if (view === "tools") render();
+  }
+  function gotToolDone(m) {
+    const w = toolWait.get(m.id);
+    toolWait.delete(m.id);
+    toolSaid = { owner: m.from, text: m.say || (m.ok ? "Done." : "That didn't work."), ok: !!m.ok, at: Date.now() };
+    if (m.ok && w?.a === "raid") raidDraft = "";
+    if (view === "tools") render();
+    setTimeout(() => view === "tools" && render(), 15100);
+  }
+  const waitingOn = (owner, test) => [...toolWait.values()].some((w) => w.owner === owner && test(w));
+
+  // The streamer's own chat dock: share what Mod tools shows with your mods, and do what
+  // they ask (Twitch is asked first whether they really mod here).
+  function shareTools(s) {
+    if (DEMO || !me || liveChannel !== me.login || !s) return;
+    clearTimeout(toolsTimer);
+    toolsTimer = setTimeout(() => {
+      const json = JSON.stringify(s);
+      if (json === lastTools || socket?.readyState !== 1) return;
+      lastTools = json;
+      socket.send(JSON.stringify({ t: "tools", s }));
+    }, 300);
+  }
+  async function twitchSaysMod(login) {
+    if (DEV || DEMO || SANDBOX || !me?.id) return true; // pretend people: the relay's check stands
+    try {
+      if (!ids[login]) await lookUp(login);
+      if (!ids[login]) return true;
+      const r = await helix(`/moderation/moderators?broadcaster_id=${me.id}&user_id=${ids[login]}`);
+      if (!r.ok) return true; // Twitch can't be asked: the relay's check stands
+      return ((await r.json()).data || []).length > 0;
+    } catch {
+      return true;
+    }
+  }
+  async function gotTool(m) {
+    const reply = (ok, say) => relay({ t: "toolDone", to: m.from, id: m.id, ok, say });
+    if (!LIVECHAT || !me || liveChannel !== me.login) return; // only the streamer's own chat dock does these
+    if (!ownChat?.tools) return reply(false, `${me.login}'s dock is using Twitch's plain chat right now, so Mod tools can't run.`);
+    if (!(await twitchSaysMod(m.from))) return reply(false, `Twitch doesn't list ${m.from} as a mod for ${me.login}.`);
+    if (m.a === "raid") return askRaid(m, reply);
+    const r = await ownChat.tools.run(m.a, m.x || {}, m.from).catch(() => ({ ok: false, say: "Something went wrong in their dock." }));
+    reply(r.ok, r.say);
+  }
+  // A raid waits for the streamer: a card in their chat, like a mod's question, with Raid and
+  // Not now. It sticks at the top for the two minutes it waits.
+  function askRaid(m, reply) {
+    const to = m.x?.to;
+    if (!to) return reply(false, "Which channel?");
+    const id = `raid-${m.id}`;
+    let done = false;
+    const finish = (ok, say, text) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      ownChat?.modAnswer?.(id, text);
+      reply(ok, say);
+    };
+    const timer = setTimeout(() => finish(false, `${me.login} didn't answer, so there's no raid.`, "No answer"), 120000);
+    toChat({
+      id, kind: "ask", from: m.from, fromName: m.from, tag: "wants to raid", toName: "", text: to, answer: "", stickUntil: Date.now() + 120000,
+      actions: [
+        { label: `Raid ${to}`, kind: "y", html: `${svg(ANSWERS.y.icon, 14)}<span>Raid</span>`, run: async () => {
+          const r = await ownChat.tools.raid(to, m.from).catch(() => ({ ok: false, say: "Something went wrong." }));
+          finish(r.ok, r.ok ? `${me.login} OK'd it. ${r.say}` : r.say, r.ok ? `Raiding ${to}` : "Couldn't raid");
+        } },
+        { label: "Not now", kind: "dismiss", html: svg(`<path d="M6 6l8 8M14 6l-8 8" ${LINE} stroke-width="2"/>`, 12), run: () => finish(false, `${me.login} said not now.`, "Not now") },
+      ],
+    });
+  }
+
+  function toolButton(label, cls, run, title = "") {
+    const b = el("button", `tools__btn${cls ? ` ${cls}` : ""}`, label);
+    b.type = "button";
+    if (title) b.title = title;
+    if (run) b.addEventListener("click", run);
+    return b;
+  }
+  function toolsPanel() {
+    const owner = modOwner();
+    const panel = el("div", "panel tools");
+    const head = el("div", "tools__head");
+    const icon = el("span", "tools__icon");
+    icon.innerHTML = TOOLS_SWORD;
+    head.append(icon, el("span", "tools__title", "Mod tools"));
+    if (owner) head.append(el("span", "tools__for", owner));
+    panel.append(head);
+    if (!owner || !(modLists?.modFor || []).includes(owner)) {
+      panel.append(el("p", "panel__sub", owner ? `You don't mod for ${owner}, so there are no mod tools for their channel.` : "Open a stream you mod for."));
+      return panel;
+    }
+    if (!conn(owner)?.mutual) {
+      panel.append(el("p", "panel__sub", `Mod tools work once you and ${owner} have added each other.`));
+      return panel;
+    }
+    if (!(owner in toolsOf)) askTools(owner);
+    const s = toolsOf[owner];
+    if (!s) panel.append(el("p", "tools__off", `${owner}'s chat dock isn't open, so these can't run right now. They work while it's open in OBS.`));
+    if (toolSaid && toolSaid.owner === owner && Date.now() - toolSaid.at < 15000) panel.append(el("p", `tools__said${toolSaid.ok ? "" : " tools__said--no"}`, toolSaid.text));
+    panel.append(pointsTools(owner, s), raidTools(owner, s), modeTools(owner, s));
+    return panel;
+  }
+  function pointsTools(owner, s) {
+    const sec = el("section", "tools__sec");
+    const h = el("div", "tools__h");
+    h.append(el("h3", "", "Channel points"));
+    const queue = el("a", "tools__link", "Reward queue ↗");
+    queue.href = `https://www.twitch.tv/popout/${encodeURIComponent(owner)}/reward-queue`;
+    queue.target = "_blank";
+    queue.rel = "noopener";
+    queue.title = "Twitch's own reward queue: refund or complete any redemption there";
+    h.append(queue);
+    sec.append(h);
+    const reds = s?.reds || [];
+    if (!reds.length) {
+      sec.append(el("p", "tools__empty", s ? "No redemptions since their dock opened." : "Recent redemptions show here while their dock is open."));
+      return sec;
+    }
+    const list = el("div", "tools__reds");
+    for (const r of reds.slice(0, 10)) {
+      const row = el("div", `tools__red tools__red--${r.status}`);
+      const top = el("div", "tools__redtop");
+      top.append(el("b", "tools__who", r.user), " ", el("span", "tools__reward", r.title), " ", el("span", "tools__cost", `${r.cost.toLocaleString()} pts`));
+      row.append(top);
+      if (r.input) row.append(el("div", "tools__input", r.input));
+      const bottom = el("div", "tools__redbottom");
+      bottom.append(el("span", "tools__ago", agoShort(r.at)));
+      if (r.status !== "unfulfilled") bottom.append(el("span", "tools__status", r.status === "canceled" ? "Refunded" : "Done"));
+      // Refunds work for rewards made with StreamSpace; until their dock knows (no permission
+      // yet), try, and pressing it asks the streamer for the OK.
+      else if (r.own || !s.can?.points) {
+        const busy = waitingOn(owner, (w) => w.x?.id === r.id);
+        const refund = toolButton(busy ? "…" : "Refund", "tools__btn--refund", () => sendTool(owner, "refund", { id: r.id, rid: r.rid }), `Give ${r.user} their ${r.cost.toLocaleString()} points back`);
+        const done = toolButton("Done", "", () => sendTool(owner, "fulfill", { id: r.id, rid: r.rid }), "Mark it done");
+        refund.disabled = done.disabled = busy;
+        bottom.append(refund, done);
+      } else bottom.append(el("span", "tools__queue", "Made on Twitch: refund it in the reward queue"));
+      row.append(bottom);
+      list.append(row);
+    }
+    sec.append(list);
+    return sec;
+  }
+  function raidTools(owner, s) {
+    const sec = el("section", "tools__sec");
+    sec.append(el("h3", "", "Raid out"));
+    if (s?.raid) {
+      const row = el("div", "tools__raiding");
+      const what = el("span", "tools__raidto", `Raiding ${s.raid.to}`);
+      if (s.raid.by) what.append(el("small", "", ` · asked by ${s.raid.by}`));
+      const off = toolButton("Call it off", "tools__btn--warn", () => sendTool(owner, "unraid", {}));
+      off.disabled = waitingOn(owner, (w) => w.a === "unraid");
+      row.append(what, off);
+      sec.append(row);
+      return sec;
+    }
+    const form = el("form", "tools__raid");
+    const input = el("input", "tools__field");
+    input.placeholder = "Channel to raid";
+    input.value = raidDraft;
+    input.dataset.key = "raidTo";
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    input.addEventListener("input", () => (raidDraft = input.value));
+    const waiting = waitingOn(owner, (w) => w.a === "raid");
+    const go = toolButton(waiting ? "Waiting…" : "Ask to raid", "tools__btn--main", null, `${owner} gets Raid / Not now in their dock`);
+    go.type = "submit";
+    go.disabled = !s || waiting;
+    form.append(input, go);
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const to = input.value.trim().replace(/^@/, "").toLowerCase();
+      if (!/^[a-z0-9_]{2,25}$/.test(to)) {
+        toolSaid = { owner, text: "That doesn't look like a Twitch channel name.", ok: false, at: Date.now() };
+        return render();
+      }
+      sendTool(owner, "raid", { to });
+    });
+    sec.append(form, el("p", "tools__note", waiting ? `Waiting for ${owner} to OK it in their dock.` : `${owner} gets Raid / Not now in their dock; nothing happens unless they OK it.`));
+    return sec;
+  }
+  function modeTools(owner, s) {
+    const sec = el("section", "tools__sec");
+    sec.append(el("h3", "", "Chat modes"));
+    const m = s?.modes || {};
+    const list = el("div", "tools__modes");
+    const MODES = [
+      ["slow", "Slow mode", m.slow > 0, m.slow > 0 ? `${m.slow}s` : "30s", (on) => (on ? 30 : 0)],
+      ["followers", "Followers only", m.followers >= 0, m.followers > 0 ? `${m.followers} min` : m.followers === 0 ? "any follower" : "10 min", (on) => (on ? 10 : false)],
+      ["emote", "Emote only", m.emote],
+      ["sub", "Subscribers only", m.sub],
+      ["unique", "Unique chat", m.unique, "no repeats"],
+    ];
+    for (const [k, label, on, detail, value] of MODES) {
+      const b = el("button", `tools__mode${on ? " tools__mode--on" : ""}`);
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(!!on));
+      b.append(el("span", "tools__switch"), el("span", "tools__modename", label));
+      if (detail) b.append(el("small", "tools__modedetail", detail));
+      b.disabled = !s || waitingOn(owner, (w) => w.a === "mode" && w.x?.k === k);
+      b.addEventListener("click", () => sendTool(owner, "mode", { k, v: value ? value(!on) : !on }));
+      list.append(b);
+    }
+    sec.append(list);
+    return sec;
+  }
+
   let reactionsTimer = 0; // takes a reaction away 3 minutes after it came
   function modPanel() {
     const owner = modOwner();
@@ -5885,6 +6146,7 @@
         onChoose: chooseTwitchChat,
         onSignIn: ownChatSignIn, // to add a permission it would like (EXTRA_SCOPES)
         onBadges: noteLead,
+        onTools: shareTools, // what Mod tools shows, for your mods' side panels
         pretend: SANDBOX, // the public demo: links to Twitch say what they'd do instead
       });
       // Questions already waiting on you go into the new chat (oldest first).
@@ -6062,6 +6324,10 @@
   chatBtn.addEventListener("click", () => show("chat", chatRoom()));
   statsBtn.addEventListener("click", () => show("stats", statsWho()));
   msgBtn.addEventListener("click", () => show("messages"));
+  toolsBtn.addEventListener("click", () => {
+    if (view !== "tools") askTools(modOwner());
+    show("tools");
+  });
   quickAsk.addEventListener("submit", (e) => {
     e.preventDefault();
     const question = clean(quickText.value);

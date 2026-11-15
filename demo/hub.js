@@ -11,7 +11,7 @@
 // window.SANDBOX is what the two panels use (demo/sandbox.js): Socket, fetch and seed.
 // The demo page's own buttons use the same sockets, as the pretend people.
 
-import { Hub } from "../relay/src/index.js?v=317"; // the number: bump it when the relay changes, so browsers fetch the new one (and bump hub.js?v= in play.html)
+import { Hub } from "../relay/src/index.js?v=318"; // the number: bump it when the relay changes, so browsers fetch the new one (and bump hub.js?v= in play.html)
 
 // ===== Sockets ================================================================================
 // One object per connection, on the page's side, shaped like a browser WebSocket (on*
@@ -436,8 +436,8 @@ const twitch = (() => {
     redeem() {
       const who = pick(CHATTERS);
       const REWARDS = [
-        { title: "Hydrate!", cost: 500 }, { title: "Posture check", cost: 300 }, { title: "Say something nice", cost: 1000, words: true },
-        { title: "Pick the next song", cost: 2500, words: true }, { title: "Do 10 push-ups", cost: 5000 },
+        { id: "hydrate", title: "Hydrate!", cost: 500 }, { id: "posture", title: "Posture check", cost: 300 }, { id: "nice", title: "Say something nice", cost: 1000, words: true },
+        { id: "song", title: "Pick the next song", cost: 2500, words: true }, { id: "pushups", title: "Do 10 push-ups", cost: 5000 },
       ];
       if (Math.random() < 0.2) {
         event("channel.channel_points_automatic_reward_redemption.add", { broadcaster_user_id: "1", user_id: `u-${who}`, user_login: who.toLowerCase(), user_name: who, id: `a${++n}`, reward: { type: "random_sub_emote_unlock", channel_points: 160 }, message: { text: "", fragments: [] } });
@@ -448,7 +448,7 @@ const twitch = (() => {
       if (words) chat(words, who, { reward: true }); // Twitch posts typed-in ones in chat too
       event("channel.channel_points_custom_reward_redemption.add", {
         id: `x${++n}`, broadcaster_user_id: "1", user_id: `u-${who}`, user_login: who.toLowerCase(), user_name: who, user_input: words, status: "unfulfilled",
-        reward: { id: `rw-${r.title}`, title: r.title, cost: r.cost, prompt: "" }, redeemed_at: new Date().toISOString(),
+        reward: { id: `rw-${r.id}`, title: r.title, cost: r.cost, prompt: "" }, redeemed_at: new Date().toISOString(),
       });
       return { who, title: r.title };
     },
@@ -593,7 +593,12 @@ const twitch = (() => {
   // dock behaves the way it must with real Twitch.
   let scopesOverride = null;
   const scopesNow = () => scopesOverride || SCOPES;
-  const SCOPES = ["user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod", "moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions", "user:manage:whispers", "channel:read:redemptions"];
+  // Mod tools: rewards "made with StreamSpace" (the only ones the pretend Twitch lets the dock
+  // refund, as the real one does), the chat's modes, and a raid out.
+  const OWN_REWARDS = ["rw-hydrate", "rw-posture", "rw-song"];
+  let chatSettings = { emote_mode: false, follower_mode: false, follower_mode_duration: null, slow_mode: false, slow_mode_wait_time: null, subscriber_mode: false, unique_chat_mode: false };
+  let raidTimer = 0;
+  const SCOPES = ["channel:manage:redemptions", "channel:manage:raids", "moderator:manage:chat_settings", "user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod", "moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions", "user:manage:whispers", "channel:read:redemptions"];
   const json = (status, body) => new Response(status === 204 ? null : JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
   async function api(url, init = {}) {
     const u = new URL(url);
@@ -681,6 +686,38 @@ const twitch = (() => {
       event("channel.warning.send", { broadcaster_user_id: "1", moderator_user_id: "1", moderator_user_name: "streamer", user_id: w.user_id, user_login: name.toLowerCase(), user_name: name, reason: w.reason, chat_rules_cited: null });
       setTimeout(() => event("channel.warning.acknowledge", { broadcaster_user_id: "1", user_id: w.user_id, user_login: name.toLowerCase(), user_name: name }), 4000);
       return json(200, { data: [{ broadcaster_id: "1", user_id: w.user_id, moderator_id: "1", reason: w.reason }] });
+    }
+    // Mod tools.
+    if (route === "/channel_points/custom_rewards") return json(200, { data: OWN_REWARDS.map((id) => ({ id })) });
+    if (route === "/channel_points/custom_rewards/redemptions" && init.method === "PATCH") {
+      if (!scopesNow().includes("channel:manage:redemptions")) return json(401, { message: "Missing scope: channel:manage:redemptions" });
+      const rid = u.searchParams.get("reward_id") || "";
+      if (!OWN_REWARDS.includes(rid)) return json(403, { message: "The ID in the Client-Id header must match the client ID used to create the custom reward." });
+      const status = JSON.parse(body || "{}").status === "CANCELED" ? "canceled" : "fulfilled";
+      const id = u.searchParams.get("id");
+      event("channel.channel_points_custom_reward_redemption.update", { id, broadcaster_user_id: "1", status, reward: { id: rid } });
+      return json(200, { data: [{ id, status: status.toUpperCase(), reward: { id: rid } }] });
+    }
+    if (route === "/chat/settings") {
+      if (init.method === "PATCH") {
+        if (!scopesNow().includes("moderator:manage:chat_settings")) return json(401, { message: "Missing scope: moderator:manage:chat_settings" });
+        const want = JSON.parse(body || "{}");
+        chatSettings = { ...chatSettings, ...want };
+        if (want.slow_mode === false) chatSettings.slow_mode_wait_time = null;
+        if (want.follower_mode === false) chatSettings.follower_mode_duration = null;
+        const s = chatSettings;
+        event("channel.chat_settings.update", { broadcaster_user_id: "1", emote_mode: s.emote_mode, follower_mode: s.follower_mode, follower_mode_duration_minutes: s.follower_mode_duration, slow_mode: s.slow_mode, slow_mode_wait_time_seconds: s.slow_mode_wait_time, subscriber_mode: s.subscriber_mode, unique_chat_mode: s.unique_chat_mode });
+      }
+      return json(200, { data: [{ broadcaster_id: "1", ...chatSettings }] });
+    }
+    if (route === "/raids") {
+      if (!scopesNow().includes("channel:manage:raids")) return json(401, { message: "Missing scope: channel:manage:raids" });
+      clearTimeout(raidTimer);
+      if (init.method === "DELETE") return json(204, {});
+      // The pretend raid goes after 20 seconds (Twitch's countdown is 90).
+      const to = (u.searchParams.get("to_broadcaster_id") || "").replace(/^u-/, "");
+      raidTimer = setTimeout(() => event("channel.raid", { from_broadcaster_user_id: "1", from_broadcaster_user_name: "streamer", to_broadcaster_user_id: `u-${to}`, to_broadcaster_user_name: to, viewers: 42 }), 20000);
+      return json(200, { data: [{ created_at: new Date().toISOString(), is_mature: false }] });
     }
     // Twitch's list of who's in the chat: the regulars and the lurkers (not raiders yet).
     if (route === "/chat/chatters") return json(200, { data: [...CHATTERS, ...NEWBIES, "mod1", "mod2"].map((c) => ({ user_login: c.toLowerCase(), user_name: c })), pagination: {} });

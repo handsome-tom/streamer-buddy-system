@@ -32,6 +32,9 @@
   // followers: "Following since" on a name's card; warnings: Warn, and seeing others' warns;
   // hype train, polls and predictions: their cards at the top (your own channel only).
   const EXTRA_SCOPES = ["moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions", "user:manage:whispers", "channel:read:redemptions"]; // redemptions: your own channel only // whispers: Whisper on a name's card
+  // Mod tools (the side panel's sword): what the streamer's mods may ask this dock to do with
+  // the streamer's sign-in. Asked for at sign-in, but nothing else waits on them.
+  const TOOL_SCOPES = ["channel:manage:redemptions", "channel:manage:raids", "moderator:manage:chat_settings"];
   const CHATTERS_EVERY_MS = 2 * 60 * 1000;
   const PIN_LENGTHS = [["1 minute", 60], ["5 minutes", 300], ["10 minutes", 600], ["30 minutes", 1800], ["Until the stream ends", 0]];
   const TIMEOUTS = [["1m", 60], ["10m", 600], ["1h", 3600], ["24h", 86400]];
@@ -365,6 +368,9 @@
         const own = { broadcaster_user_id: broadcasterId };
         ["channel.hype_train.begin", "channel.hype_train.progress", "channel.hype_train.end"].forEach((type) => extra(type, ["2", "1"], own));
         extra("channel.channel_points_custom_reward_redemption.add", ["1"], own).then((ok) => (redemptionsOn = ok));
+        extra("channel.channel_points_custom_reward_redemption.update", ["1"], own); // refunded or done elsewhere (Mod tools)
+        extra("channel.chat_settings.update", ["1"], asMe); // chat modes (Mod tools)
+        extra("channel.raid", ["1"], { from_broadcaster_user_id: broadcasterId }); // a raid out went (Mod tools)
         extra("channel.channel_points_automatic_reward_redemption.add", ["2", "1"], own);
         ["channel.poll.begin", "channel.poll.progress", "channel.poll.end", "channel.prediction.begin", "channel.prediction.progress", "channel.prediction.lock", "channel.prediction.end"].forEach((type) => extra(type, ["1"], own));
       }
@@ -1205,6 +1211,138 @@
       return line;
     }
 
+    // ----- Mod tools ---------------------------------------------------------------------
+    // On your own channel, your mods' side panels can ask this dock (through the relay and
+    // dock.js) to refund or complete a channel points redemption, turn a chat mode on or off,
+    // or start a raid once you OK it. Twitch lets only the channel's own sign-in do these,
+    // and refunds only for rewards made with StreamSpace (the rest: Twitch's reward queue).
+    const toolReds = []; // recent custom-reward redemptions, newest first
+    const ownRewards = new Set(); // rewards this app made: the only ones Twitch lets it refund
+    let chatModes = { known: false };
+    let raidOut = null; // { to, at, by }: a raid on its way
+    let raidTimer = 0;
+    let toolsAsked = false; // the "allow Mod tools" line in chat, once
+    const canTool = (scope) => granted.includes(scope);
+    const toolsState = () => ({
+      reds: toolReds.slice(0, 20), modes: chatModes, raid: raidOut,
+      can: { points: canTool("channel:manage:redemptions"), raid: canTool("channel:manage:raids"), modes: canTool("moderator:manage:chat_settings") },
+    });
+    const toolsChanged = () => channel === me.login && host.onTools?.(toolsState());
+    // Not api(): a refusal here (a permission not given yet) mustn't end the chat.
+    const call = (path, init = {}) => fetch(urls.helix + path, { ...init, headers: { Authorization: `Bearer ${host.token()}`, "Client-Id": host.clientId, ...(init.body ? { "Content-Type": "application/json" } : {}) } });
+    // Twitch says chat modes two ways: the chat settings call and the EventSub event.
+    const modesFrom = (d) => ({
+      known: true,
+      slow: d.slow_mode ? Number(d.slow_mode_wait_time ?? d.slow_mode_wait_time_seconds) || 30 : 0,
+      followers: d.follower_mode ? Number(d.follower_mode_duration ?? d.follower_mode_duration_minutes) || 0 : -1,
+      emote: !!d.emote_mode, sub: !!d.subscriber_mode, unique: !!d.unique_chat_mode,
+    });
+    async function loadTools() {
+      if (channel !== me.login || stopped) return;
+      try {
+        const r = await call(`/chat/settings?broadcaster_id=${encodeURIComponent(broadcasterId)}`);
+        if (r.ok) chatModes = modesFrom((await r.json()).data?.[0] || {});
+      } catch {}
+      if (canTool("channel:manage:redemptions") || canTool("channel:read:redemptions")) {
+        try {
+          const r = await call(`/channel_points/custom_rewards?broadcaster_id=${encodeURIComponent(broadcasterId)}&only_manageable_rewards=true`);
+          if (r.ok) for (const w of (await r.json()).data || []) ownRewards.add(w.id);
+          for (const red of toolReds) red.own = ownRewards.has(red.rid);
+        } catch {}
+      }
+      toolsChanged();
+    }
+    function toolRedeemed(e) {
+      toolReds.unshift({
+        id: e.id, rid: e.reward?.id || "", title: e.reward?.title || "a reward", cost: Number(e.reward?.cost) || 0, user: e.user_name || e.user_login || "Someone",
+        input: e.user_input || "", at: Date.parse(e.redeemed_at) || Date.now(), status: String(e.status || "unfulfilled").toLowerCase(), own: ownRewards.has(e.reward?.id),
+      });
+      toolReds.splice(20);
+      toolsChanged();
+    }
+    // A permission Mod tools needs and this sign-in hasn't got: say so in chat once, with the
+    // button to give it, and tell the mod why it didn't happen.
+    function needsOK(scope, what) {
+      if (canTool(scope)) return null;
+      if (!toolsAsked && host.onSignIn) {
+        toolsAsked = true;
+        addSystem("Your mods want to use Mod tools (raids, channel point refunds and chat modes). Twitch needs your OK once.", { label: "Allow", run: () => host.onSignIn() });
+      }
+      return { ok: false, say: `${me.login} needs to allow ${what} once. They've been asked in their chat.` };
+    }
+    async function runTool(a, x, by) {
+      if (channel !== me.login) return { ok: false, say: "Only the streamer's own chat dock can do that." };
+      if (a === "refund" || a === "fulfill") {
+        const no = needsOK("channel:manage:redemptions", "channel point refunds");
+        if (no) return no;
+        const red = toolReds.find((r) => r.id === x.id);
+        const what = red ? `${red.user}'s ${red.title}` : "that redemption";
+        const q = new URLSearchParams({ broadcaster_id: broadcasterId, reward_id: x.rid || red?.rid || "", id: x.id || "" });
+        const r = await call(`/channel_points/custom_rewards/redemptions?${q}`, { method: "PATCH", body: JSON.stringify({ status: a === "refund" ? "CANCELED" : "FULFILLED" }) });
+        if (r.ok) {
+          if (red) red.status = a === "refund" ? "canceled" : "fulfilled";
+          toolsChanged();
+          addSystem(`${by} ${a === "refund" ? "refunded" : "completed"} ${what}${a === "refund" && red?.cost ? ` (${red.cost.toLocaleString()} points back)` : ""}.`);
+          return { ok: true, say: a === "refund" ? `Refunded ${what}${red?.cost ? `: ${red.cost.toLocaleString()} points back` : ""}.` : `Marked ${what} as done.` };
+        }
+        if (r.status === 403 || r.status === 404) return { ok: false, say: `Twitch only lets StreamSpace ${a === "refund" ? "refund" : "complete"} rewards made with StreamSpace. Use Twitch's reward queue for this one.` };
+        if (r.status === 400) return { ok: false, say: `${what} was already refunded or completed.` };
+        return { ok: false, say: await why(r, "Twitch didn't accept that.") };
+      }
+      if (a === "mode") {
+        const no = needsOK("moderator:manage:chat_settings", "chat modes");
+        if (no) return no;
+        const NAMES = { slow: "Slow mode", followers: "Followers-only chat", emote: "Emote-only chat", sub: "Subscriber-only chat", unique: "Unique chat" };
+        let body, on;
+        if (x.k === "slow") {
+          on = x.v === true || x.v > 0;
+          body = { slow_mode: on, ...(on ? { slow_mode_wait_time: typeof x.v === "number" ? Math.max(3, Math.min(120, x.v)) : 30 } : {}) };
+        } else if (x.k === "followers") {
+          on = x.v !== false;
+          body = { follower_mode: on, ...(on ? { follower_mode_duration: typeof x.v === "number" ? x.v : 10 } : {}) };
+        } else if (NAMES[x.k]) {
+          on = !!x.v;
+          body = { [{ emote: "emote_mode", sub: "subscriber_mode", unique: "unique_chat_mode" }[x.k]]: on };
+        } else return { ok: false, say: "That isn't a chat mode." };
+        const r = await call(`/chat/settings?broadcaster_id=${encodeURIComponent(broadcasterId)}&moderator_id=${encodeURIComponent(me.id)}`, { method: "PATCH", body: JSON.stringify(body) });
+        if (!r.ok) return { ok: false, say: await why(r, "Twitch didn't change the chat mode.") };
+        try { chatModes = modesFrom((await r.json()).data?.[0] || {}); } catch {}
+        toolsChanged();
+        addSystem(`${by} turned ${NAMES[x.k].toLowerCase()} ${on ? "on" : "off"}.`);
+        return { ok: true, say: `${NAMES[x.k]} is ${on ? "on" : "off"}.` };
+      }
+      if (a === "unraid") {
+        const no = needsOK("channel:manage:raids", "raids");
+        if (no) return no;
+        const r = await call(`/raids?broadcaster_id=${encodeURIComponent(broadcasterId)}`, { method: "DELETE" });
+        if (!r.ok && r.status !== 404) return { ok: false, say: await why(r, "Twitch didn't call off the raid.") };
+        const to = raidOut?.to;
+        raidOut = null;
+        clearTimeout(raidTimer);
+        toolsChanged();
+        if (to) addSystem(`${by} called off the raid to ${to}.`);
+        return { ok: true, say: to ? `The raid to ${to} is called off.` : "No raid was on its way." };
+      }
+      return { ok: false, say: "This dock doesn't know how to do that." };
+    }
+    // A raid, once the streamer has OK'd it (dock.js asks them in chat).
+    async function startRaid(to, by) {
+      const no = needsOK("channel:manage:raids", "raids");
+      if (no) return no;
+      if (raidOut) return { ok: false, say: `A raid to ${raidOut.to} is already on its way.` };
+      let target = "";
+      try { target = (await (await call(`/users?login=${encodeURIComponent(to)}`)).json()).data?.[0]?.id || ""; } catch {}
+      if (!target) return { ok: false, say: `Twitch doesn't know a channel called ${to}.` };
+      const r = await call(`/raids?from_broadcaster_id=${encodeURIComponent(broadcasterId)}&to_broadcaster_id=${encodeURIComponent(target)}`, { method: "POST" });
+      if (!r.ok) return { ok: false, say: r.status === 409 ? "A raid is already on its way." : await why(r, `Twitch wouldn't start a raid to ${to}.`) };
+      raidOut = { to, at: Date.now(), by };
+      clearTimeout(raidTimer);
+      raidTimer = setTimeout(() => { raidOut = null; toolsChanged(); }, 3 * 60 * 1000); // in case Twitch never says it went
+      toolsChanged();
+      addSystem(`Raiding ${to}${by ? ` (asked by ${by})` : ""}. It goes in about 90 seconds, or press Raid Now on Twitch.`);
+      return { ok: true, say: `Raiding ${to}: it goes in about 90 seconds.` };
+    }
+
     // ----- Who came with a raid ---------------------------------------------------------
     // Twitch's own chat highlights raiders, but doesn't tell apps who they are: a raid
     // notice only says which channel and how many. So this is a good guess: someone whose
@@ -1254,6 +1392,7 @@
         if (!r.ok) return;
         const scopes = (await r.json()).scopes || [];
         granted = scopes;
+        loadTools();
         canListChatters = EXTRA_SCOPES.every((sc) => scopes.includes(sc));
         if (canListChatters) {
           listChatters();
@@ -1653,6 +1792,21 @@
         addSystem("Chat was cleared by a moderator.");
       } else if (type === "channel.channel_points_custom_reward_redemption.add") {
         addLine(redemptionLine(e.user_name, e.reward?.title || "a reward", e.reward?.cost, e.user_input));
+        toolRedeemed(e);
+      } else if (type === "channel.channel_points_custom_reward_redemption.update") {
+        const red = toolReds.find((r) => r.id === e.id);
+        if (red) {
+          red.status = String(e.status || red.status).toLowerCase();
+          toolsChanged();
+        }
+      } else if (type === "channel.chat_settings.update") {
+        chatModes = modesFrom(e);
+        toolsChanged();
+      } else if (type === "channel.raid") {
+        if (raidOut) addSystem(`Raided ${e.to_broadcaster_user_name || raidOut.to} with ${Number(e.viewers) || 0} ${Number(e.viewers) === 1 ? "viewer" : "viewers"}.`);
+        raidOut = null;
+        clearTimeout(raidTimer);
+        toolsChanged();
       } else if (type === "channel.channel_points_automatic_reward_redemption.add") {
         const kind = e.reward?.type || "";
         // Highlights, effects and giant emotes already show on the message itself.
@@ -2730,6 +2884,8 @@
       modAnswer(id, text) {
         settleMod(id, text);
       },
+      // Mod tools (dock.js): what Mod tools shows, a mod's request, and a raid once OK'd.
+      tools: { state: toolsState, run: runTool, raid: startRaid },
       // Closes everything and hands back anything typed but not sent.
       stop() {
         stopped = true;
@@ -2751,5 +2907,5 @@
     };
   }
 
-  window.OwnChat = { SCOPES, EXTRA_SCOPES, start };
+  window.OwnChat = { SCOPES, EXTRA_SCOPES, TOOL_SCOPES, start };
 })();

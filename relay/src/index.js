@@ -180,6 +180,9 @@ const MAX_FLAGGED_LEN = 500; // a whole Twitch chat message
 const PIN_MS = 5 * 60 * 1000;
 const SENT_FLASH_MS = 3 * 60 * 1000; // how long a quick note or !vanish can be taken back
 const MAX_PIN_EMOTES = 30;
+const TOOL_ACTIONS = ["refund", "fulfill", "raid", "unraid", "mode"]; // what a mod may ask the streamer's dock to do
+const TOOL_MODES = ["slow", "followers", "emote", "sub", "unique"];
+const MAX_TOOL_REDEMPTIONS = 25;
 const EMOTE_HOSTS = ["static-cdn.jtvnw.net", "cdn.betterttv.net", "cdn.frankerfacez.com", "cdn.7tv.app"];
 const MAX_OPEN_PER_PAIR = 3;
 const MAX_ASKS_PER_MINUTE = 10;
@@ -257,6 +260,10 @@ export class Hub {
       else if (m.t === "sample") await this.sample(who.login, m.s);
       else if (m.t === "statEvent") await this.statEvent(who.login, m);
       else if (m.t === "view") await this.setView(ws, who, m.v);
+      else if (m.t === "tool") await this.tool(ws, who, m);
+      else if (m.t === "toolDone") await this.toolDone(who, m);
+      else if (m.t === "tools") await this.setTools(who.login, m.s);
+      else if (m.t === "toolsGet") await this.toolsGet(ws, who, m.owner);
       else if (m.t === "answer") await this.answer(ws, who, m);
       else if (m.t === "dismiss") await this.update(ws, who, m.id, (q) => q.to === who.login && !q.answer && !q.dismissed, (q) => (q.dismissed = Date.now()));
       // Taking back your own question or message, while it's still waiting.
@@ -637,6 +644,53 @@ export class Hub {
     for (const l of users[login]?.list || []) {
       if (users[l]?.list.includes(login)) this.sendTo(l, { t: "view", owner: login, v });
     }
+  }
+
+  // ===== Mod tools ===========================================================================
+  // A mod asks the streamer's own dock to do something only the streamer's Twitch sign-in may
+  // do: start a raid (the streamer OKs it there), refund or complete a channel points
+  // redemption, or turn a chat mode on or off. The relay only passes it on, between two mutual
+  // connections where the asker's panel says (from Twitch) they mod that channel; the
+  // streamer's dock asks Twitch again before doing anything. The dock's answer goes back the
+  // same way, and what Mod tools shows (recent redemptions, chat modes, a raid on its way) is
+  // kept here for the streamer's mods.
+
+  // Is asker one of owner's mods, as far as the relay can tell?
+  modsFor(users, owner, asker) {
+    const a = users[asker], o = users[owner];
+    return !!(a && o && owner !== asker && a.list.includes(owner) && o.list.includes(asker) && (a.modFor || []).includes(owner));
+  }
+
+  async tool(ws, who, m) {
+    const to = String(m.to || "").toLowerCase();
+    const id = String(m.id || "").slice(0, 40);
+    const a = String(m.a || "");
+    if (!id || !TOOL_ACTIONS.includes(a)) return;
+    const no = (say) => this.send(ws, { t: "toolDone", from: to, id, ok: false, say });
+    if (!this.modsFor(await this.users(), to, who.login)) return no(`Mod tools work for channels you mod, with someone you've added and who's added you.`);
+    if (!this.isOnline(to)) return no(`${to}'s dock isn't open right now, so this can't run.`);
+    this.sendTo(to, { t: "tool", from: who.login, id, a, x: cleanToolArgs(m.x) });
+  }
+
+  async toolDone(who, m) {
+    const to = String(m.to || "").toLowerCase();
+    if (!this.modsFor(await this.users(), who.login, to)) return;
+    this.sendTo(to, { t: "toolDone", from: who.login, id: String(m.id || "").slice(0, 40), ok: !!m.ok, say: String(m.say || "").slice(0, MAX_LEN * 2) });
+  }
+
+  async setTools(login, raw) {
+    const s = cleanTools(raw);
+    if (!s) return;
+    await this.ctx.storage.put(`tl:${login}`, s);
+    const users = await this.users();
+    for (const l of users[login]?.list || []) if (this.modsFor(users, login, l)) this.sendTo(l, { t: "tools", owner: login, s });
+  }
+
+  async toolsGet(ws, who, owner) {
+    owner = String(owner || "").toLowerCase();
+    if (!this.modsFor(await this.users(), owner, who.login)) return;
+    const s = this.isOnline(owner) ? (await this.ctx.storage.get(`tl:${owner}`)) || null : null;
+    this.send(ws, { t: "tools", owner, s });
   }
 
   // ===== Feedback and problem reports ========================================================
@@ -1201,6 +1255,44 @@ function cleanEmotes(emotes) {
     } catch {}
   }
   return out;
+}
+
+// What a mod's request may carry: a redemption (and its reward), a channel, or a chat mode.
+function cleanToolArgs(raw) {
+  const x = raw && typeof raw === "object" ? raw : {};
+  const id = (v) => String(v ?? "").replace(/[^\w-]/g, "").slice(0, 60);
+  const out = { id: id(x.id), rid: id(x.rid) };
+  const to = String(x.to || "").toLowerCase().replace(/^@/, "");
+  if (/^[a-z0-9_]{2,25}$/.test(to)) out.to = to;
+  if (TOOL_MODES.includes(x.k)) out.k = x.k;
+  if (typeof x.v === "boolean") out.v = x.v;
+  else if (Number.isFinite(x.v)) out.v = Math.max(0, Math.min(129600, Math.round(x.v)));
+  return out;
+}
+
+// What Mod tools shows, kept to what the panel draws.
+function cleanTools(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const str = (x, n = MAX_LEN) => String(x ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, n);
+  const num = (x) => (Number.isFinite(x) ? x : 0);
+  const md = raw.modes && typeof raw.modes === "object" ? raw.modes : {};
+  const can = raw.can && typeof raw.can === "object" ? raw.can : {};
+  const raidTo = String(raw.raid?.to || "").toLowerCase();
+  return {
+    reds: (Array.isArray(raw.reds) ? raw.reds : []).slice(0, MAX_TOOL_REDEMPTIONS).map((r) => ({
+      id: str(r.id, 60), rid: str(r.rid, 60), title: str(r.title, 60), cost: num(r.cost), user: str(r.user, 40), input: str(r.input), at: num(r.at),
+      status: ["unfulfilled", "fulfilled", "canceled"].includes(r.status) ? r.status : "unfulfilled", own: !!r.own,
+    })),
+    modes: {
+      known: !!md.known,
+      slow: Math.max(0, Math.min(120, num(md.slow))), // seconds; 0: off
+      followers: md.followers === -1 ? -1 : Math.max(0, Math.min(129600, num(md.followers))), // minutes; -1: off
+      emote: !!md.emote, sub: !!md.sub, unique: !!md.unique,
+    },
+    raid: /^[a-z0-9_]{2,25}$/.test(raidTo) ? { to: raidTo, at: num(raw.raid.at), by: str(raw.raid.by, 25) } : null,
+    can: { points: !!can.points, raid: !!can.raid, modes: !!can.modes },
+    at: Date.now(),
+  };
 }
 
 // A Streamer View summary, kept to what the side panel draws.

@@ -417,6 +417,36 @@ export const tests = {
     noErrors(dock);
   },
 
+  async "Mod tools: a mod refunds a StreamSpace reward, turns on slow mode, and a raid waits for the streamer's OK"(h) {
+    const { streamer, mod } = await streamerAndMod(h);
+    await h.until(() => streamer.$(".oc-line"), "custom chat to start");
+    const tools = await h.until(() => mod.$("#toolsBtn:not([hidden])"), "the sword (Mod tools) in the side panel's bar");
+    const shown = [...tools.parentElement.children].filter((b) => !b.hidden && b.offsetWidth);
+    h.check(shown[shown.indexOf(tools) - 1]?.id === "modBtn" && shown[shown.indexOf(tools) + 1]?.id === "msgBtn", "the sword sits between Mod and Messages");
+    // A redemption of a reward made with StreamSpace (Hydrate!), then refunded from the panel.
+    let r;
+    for (let i = 0; i < 40 && (r = h.pretendTwitch.redeem()).title !== "Hydrate!"; i++) await h.wait(30);
+    h.check(r.title === "Hydrate!", "the pretend Twitch to redeem Hydrate!");
+    tools.click();
+    const row = await h.until(() => mod.$$(".tools__red").find((x) => x.textContent.includes("Hydrate!") && x.querySelector(".tools__btn--refund")), "the redemption in Mod tools");
+    row.querySelector(".tools__btn--refund").click();
+    await h.until(() => /Refunded .*Hydrate!/.test(mod.$(".tools__said")?.textContent || ""), "the refund confirmed in the panel");
+    await h.until(() => streamer.has("refunded"), "the refund noted in the streamer's chat");
+    // Slow mode on.
+    mod.$$(".tools__mode").find((b) => b.textContent.includes("Slow")).click();
+    await h.until(() => mod.$$(".tools__mode").find((b) => b.textContent.includes("Slow"))?.getAttribute("aria-pressed") === "true", "slow mode shown on");
+    // A raid: nothing happens until the streamer presses Raid.
+    const field = mod.$(".tools__field");
+    field.value = "lumpthegreen";
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+    mod.$(".tools__raid").requestSubmit();
+    const ok = await h.until(() => streamer.$(".oc-mod--ask .oc-mod__act--y"), "Raid / Not now in the streamer's chat");
+    h.check(!mod.$(".tools__raiding"), "no raid before the streamer OKs it");
+    ok.click();
+    await h.until(() => /Raiding lumpthegreen/.test(mod.$(".tools__raiding")?.textContent || ""), "the raid shown in the mod's panel");
+    noErrors(streamer, mod);
+  },
+
   async "without the follower permission, the raid card says nothing about following (never a wrong no)"(h) {
     h.pretendTwitch.scopes(["user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod"]);
     const dock = await h.panel("streamer", "obs");
