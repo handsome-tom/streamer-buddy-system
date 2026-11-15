@@ -6023,3 +6023,47 @@ body.livechat .slotwrap { display: none !important; }
 
 /* The raid card's last line: since when raids and chat have been counted, small and quiet. */
 .oc-raid__note--foot { margin-top: 8px; font-size: 9.5px; opacity: 0.65; }
+
+/* ===== Top-of-chat cards and first-time chatters, matching the event blocks =====
+   Predictions, hype trains, polls and gift bombs at the top of chat: the same squared
+   block as subs and bits, a fade of their color with a bar down the left. */
+:is(body, body.has-space.has-space) .oc-top .oc-topcard:is(.oc-topcard--pred, .oc-topcard--hype, .oc-topcard--poll, .oc-topcard--gift) {
+  padding: 9px 12px 10px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--tc) 24%, #1b1b20), color-mix(in srgb, var(--tc) 6%, #1b1b20));
+  border: 0;
+  border-radius: 3px;
+  box-shadow: inset 4px 0 0 var(--tc), 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+:is(body, body.has-space.has-space) .oc-top .oc-topcard:is(.oc-topcard--pred, .oc-topcard--hype, .oc-topcard--poll, .oc-topcard--gift) .oc-topcard__label { color: #fff; }
+:is(body, body.has-space.has-space) .oc-top .oc-topcard:is(.oc-topcard--pred, .oc-topcard--hype, .oc-topcard--poll, .oc-topcard--gift) .oc-topcard__pin { color: var(--tc); }
+:is(body, body.has-space.has-space) .oc-top .oc-topcard:is(.oc-topcard--hype, .oc-topcard--poll, .oc-topcard--gift) .oc-topbar { background: rgba(0, 0, 0, 0.35); border-radius: 2px; }
+:is(body, body.has-space.has-space) .oc-top .oc-topcard:is(.oc-topcard--hype, .oc-topcard--poll, .oc-topcard--gift) .oc-topbar__fill { background: var(--tc); border-radius: 2px; box-shadow: none; }
+
+/* The pinned message, as Twitch draws it: a plain dark card, a small "Pinned by" line with
+   the pin, then the message. No gradients or glow. */
+:is(body, body.has-space.has-space) .oc-top .oc-topcard.oc-topcard--pin {
+  padding: 8px 10px 9px;
+  background: #1f1f23;
+  border: 1px solid #2f2f35;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+:is(body, body.has-space.has-space) .oc-topcard--pin .oc-topcard__label { font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: #adadb8; }
+:is(body, body.has-space.has-space) .oc-topcard--pin .oc-topcard__pin { color: #adadb8; }
+:is(body, body.has-space.has-space) .oc-topcard--pin .oc-topcard__time { font-family: inherit; font-size: 11px; font-weight: 600; color: #77777f; }
+:is(body, body.has-space.has-space) .oc-topcard--pin .oc-topcard__sender { font-family: inherit; font-weight: 700; letter-spacing: 0; }
+:is(body, body.has-space.has-space) .oc-topcard--pin .oc-topcard__body { font-size: 13px; color: #efeff1; }
+:is(body, body.has-space.has-space) .oc-topcard--pin .oc-topcard__unpin { padding: 0; font-size: 12px; font-weight: 600; color: #bf94ff; background: none; border: 0; box-shadow: none; }
+:is(body, body.has-space.has-space) .oc-topcard--pin .oc-topcard__unpin:hover { text-decoration: underline; }
+
+/* A first-time chatter: their line on its own, outlined, with the label on top. */
+:is(body, body.has-space.has-space) .oc-line.oc-line--first {
+  margin: 6px 6px;
+  padding: 5px 10px 6px;
+  background: color-mix(in srgb, var(--k-first, #00db84) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--k-first, #00db84) 60%, transparent);
+  border-radius: 4px;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--k-first, #00db84) 18%, transparent);
+}
+:is(body, body.has-space.has-space) .oc-line--first .oc-firsttag { display: block; margin-bottom: 2px; font-size: 11px; letter-spacing: 0.06em; color: var(--k-first, #3ce59f); }
+:is(body, body.has-space.has-space) .oc-line--raider.oc-line--first { background: linear-gradient(90deg, color-mix(in srgb, var(--raid, #ff6a00) 8%, transparent), color-mix(in srgb, var(--k-first, #00db84) 6%, transparent)); }
