@@ -59,6 +59,20 @@ export const tests = {
     noErrors(streamer, mod);
   },
 
+  async "the streamer's dock shows what's come in one big card at a time, with arrows to step through"(h) {
+    const { streamer, mod } = await streamerAndMod(h);
+    h.typeAndSend(mod.$(".send__bar .ask__input"), "First question?");
+    await h.until(() => streamer.has("First question?"), "the first question on the dock");
+    h.typeAndSend(mod.$(".send__bar .ask__input"), "Second question?");
+    await h.until(() => streamer.$(".slot__count")?.textContent.endsWith("of 2"), "two cards in the slot");
+    h.check(streamer.$$(".slot .peek--on").length === 2, "each question should be its own card");
+    h.check(streamer.$(".slotwrap--many .slot__arrow--next"), "arrows should show with more than one");
+    const before = streamer.$(".slot__count").textContent;
+    streamer.$(".slot__arrow--next").click();
+    await h.until(() => streamer.$(".slot__count").textContent !== before, "the arrow to step to the other card");
+    noErrors(streamer, mod);
+  },
+
   async "a typed reply reaches the person who asked"(h) {
     const a = h.person("streamer");
     const b = h.person("mod1");

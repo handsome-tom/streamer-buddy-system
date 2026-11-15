@@ -1011,6 +1011,7 @@
     // A love note and a "Seen" come in quietly; not when a reload brings back an old pin.
     if (f.kind !== "love" && f.kind !== "seen" && mine && late < 5000 && !f.released) arrived();
     const chip = el("div", `qflash qflash--${f.kind}`);
+    chip.dataset.key = f.id;
     const color = f.color || colorOf(f.from);
     if (color && f.kind !== "love" && f.kind !== "seen") chip.style.setProperty("--c", color);
     const icon = el("span", "qflash__icon");
@@ -2967,7 +2968,7 @@
 
   // Every second: time for the next one?
   setInterval(() => {
-    if (!me || !peekId) return;
+    if (!me || !peekId || LIVECHAT) return;
     if (peekMenu && !peekHover && Date.now() - peekMenuAt > PEEK_MENU_IDLE_MS) {
       peekMenu = false;
       peekSince = Date.now();
@@ -3000,20 +3001,64 @@
       peekId = items[0]?.id || "";
       peekSince = Date.now();
     }
+    // The chat dock: each one its own card, side by side in the slot (see "The slot").
+    if (LIVECHAT) return drawSlides(items, stageOf);
     const current = items.find((it) => it.id === peekId);
+    peekEl.className = "peek";
+    const parts = peekParts(current, stageOf, peekEl);
+    if (signinNote()) parts.unshift(signinPill());
+    // Which one this is, of how many ("2 of 5"): just a label. The arrows either side step
+    // through them, and the turns carry on by themselves.
+    peekMenu = false;
+    if (items.length > 1) {
+      const at = items.findIndex((it) => it.id === peekId);
+      const pager = el("div", "peek__pager");
+      pager.append(el("span", "peek__count", `${at + 1} of ${items.length}`));
+      parts.push(pager);
+    }
+    // The X that clears this one (dismissed, unanswered, or an answer put away): in the
+    // chat dock it sits big in the card's top corner, so it's one tap to be rid of it.
+    parts.find((p) => p.classList?.contains("x"))?.classList.add("peek__dismiss");
+    // More than one: arrows either side to step through them (round and round).
+    if (items.length > 1) {
+      const at = items.findIndex((it) => it.id === peekId);
+      const step = (by, label, glyph) => {
+        const b = el("button", `peek__arrow peek__arrow--${by < 0 ? "prev" : "next"}`, glyph);
+        b.type = "button";
+        b.title = label;
+        b.setAttribute("aria-label", label);
+        b.addEventListener("click", (e) => {
+          e.stopPropagation();
+          peekId = items[(at + by + items.length) % items.length].id;
+          peekSince = Date.now();
+          peekMenu = false;
+          drawPeek();
+        });
+        return b;
+      };
+      parts.unshift(step(-1, "Previous one", "‹"));
+      parts.push(step(1, "Next one", "›"));
+      peekEl.classList.add("peek--paged");
+    }
+    peekEl.replaceChildren(...parts);
+  }
 
+
+  // One card's insides: a question to you (its answers and a reply box), an answer to one
+  // of yours, or (nothing else waiting) someone who wants to connect. Its kind and how
+  // urgent it is go on `card` as classes.
+  function peekParts(current, stageOf, card) {
     const parts = [];
     const who = (login, text) => {
       const name = el("span", "peek__who", text);
       if (colorOf(login)) name.style.color = colorOf(login);
       return name;
     };
-    peekEl.className = "peek";
     if (current?.kind === "q") {
       const id = current.id;
       const q = inbox[id];
       const stage = stageOf(id);
-      peekEl.classList.add("peek--on", `peek--${stage || 1}`);
+      card.classList.add("peek--on", `peek--${stage || 1}`);
       const line = el("div", "peek__line");
       line.title = q.text;
       if (stage) line.append(el("span", `peek__ping peek__ping--${stage}`));
@@ -3054,7 +3099,7 @@
       const id = current.id;
       const q = sent[id];
       const a = ANSWERS[q.answer.code];
-      peekEl.classList.add("peek--on", "peek--answer");
+      card.classList.add("peek--on", "peek--answer");
       const line = el("div", "peek__line");
       line.title = q.text;
       const icon = el("span", `peek__icon answer--${q.answer.code}`);
@@ -3070,41 +3115,143 @@
       add.addEventListener("click", () => relay({ t: "connect", login }));
       parts.push(line, add);
     }
-    if (signinNote()) parts.unshift(signinPill());
-    // Which one this is, of how many ("2 of 5"): just a label. The arrows either side step
-    // through them, and the turns carry on by themselves.
-    peekMenu = false;
-    if (items.length > 1) {
-      const at = items.findIndex((it) => it.id === peekId);
-      const pager = el("div", "peek__pager");
-      pager.append(el("span", "peek__count", `${at + 1} of ${items.length}`));
-      parts.push(pager);
+    return parts;
+  }
+
+  // The chat dock: every question and answer is its own card in the slot, which shows one
+  // at a time and slides sideways between them. The same card is kept for the same one
+  // (only its insides are redrawn), so its glow carries on rather than starting over.
+  const slideCards = new Map(); // key -> card
+  function drawSlides(items, stageOf) {
+    peekEl.className = "peek-list";
+    const cards = [];
+    const card = (key) => {
+      const c = slideCards.get(key) || el("div");
+      c.className = "peek";
+      c.dataset.key = key;
+      c.dataset.breath = peekEl.dataset.breath || "0";
+      return c;
+    };
+    if (signinNote()) {
+      const c = card("signin");
+      c.className = "slot__card";
+      c.replaceChildren(signinPill());
+      cards.push(c);
     }
-    // The X that clears this one (dismissed, unanswered, or an answer put away): in the
-    // chat dock it sits big in the card's top corner, so it's one tap to be rid of it.
-    parts.find((p) => p.classList?.contains("x"))?.classList.add("peek__dismiss");
-    // More than one: arrows either side to step through them (round and round).
-    if (items.length > 1) {
-      const at = items.findIndex((it) => it.id === peekId);
-      const step = (by, label, glyph) => {
-        const b = el("button", `peek__arrow peek__arrow--${by < 0 ? "prev" : "next"}`, glyph);
-        b.type = "button";
-        b.title = label;
-        b.setAttribute("aria-label", label);
-        b.addEventListener("click", (e) => {
-          e.stopPropagation();
-          peekId = items[(at + by + items.length) % items.length].id;
-          peekSince = Date.now();
-          peekMenu = false;
-          drawPeek();
-        });
-        return b;
-      };
-      parts.unshift(step(-1, "Previous one", "‹"));
-      parts.push(step(1, "Next one", "›"));
-      peekEl.classList.add("peek--paged");
+    const list = items.length ? items : requests.length ? [{ id: `req:${requests[0]}`, kind: "r" }] : [];
+    for (const it of list) {
+      const c = card(it.id);
+      const parts = peekParts(it, stageOf, c);
+      parts.find((p) => p.classList?.contains("x"))?.classList.add("peek__dismiss");
+      c.replaceChildren(...parts);
+      cards.push(c);
     }
-    peekEl.replaceChildren(...parts);
+    slideCards.clear();
+    for (const c of cards) slideCards.set(c.dataset.key, c);
+    const have = [...peekEl.children];
+    if (have.length !== cards.length || cards.some((c, i) => c !== have[i])) peekEl.replaceChildren(...cards);
+  }
+
+  // ===== The slot (the streamer's chat dock): what's come in, one big card at a time =====
+  // Questions, answers, quick info, !vanish notes and flagged lines each get the slot's
+  // whole width, side by side. The arrows either side (or a sideways swipe) step through
+  // them, round and round, with "2 of 5" under them; they turn by themselves every
+  // SLIDE_TURN_MS unless the pointer's on the slot or you're typing a reply. Something new
+  // slides straight in (not while you're on the slot). The slot keeps one height, so the
+  // chat under it never moves.
+  const SLIDE_TURN_MS = 8000;
+  function setUpSlides(slot, wrap) {
+    const slides = () => [...slot.querySelectorAll(":scope > .peek-list > *, :scope > .flashes > *, :scope > .pins > *")];
+    const keyOf = (s) => s.dataset.key || s.textContent.slice(0, 80);
+    const known = new Set();
+    let key = ""; // the card showing
+    let since = Date.now();
+    let hover = false;
+    let ours = 0; // when we last scrolled it ourselves (so that isn't taken for a swipe)
+    const at = () => Math.round(slot.scrollLeft / Math.max(1, slot.clientWidth));
+    // The card showing (or on its way in): by which one it is, not how far it's scrolled.
+    const cur = () => {
+      const i = slides().map(keyOf).indexOf(key);
+      return i >= 0 ? i : at();
+    };
+    const held = () => hover || slot.contains(document.activeElement) || !!drafts[key];
+    const count = el("span", "slot__count");
+    const arrow = (by) => {
+      const b = el("button", `slot__arrow slot__arrow--${by < 0 ? "prev" : "next"}`, by < 0 ? "‹" : "›");
+      b.type = "button";
+      b.title = b.ariaLabel = by < 0 ? "Previous one" : "Next one";
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        go(cur() + by);
+      });
+      return b;
+    };
+    wrap.append(arrow(-1), arrow(1), count);
+    wrap.addEventListener("pointerenter", () => (hover = true));
+    wrap.addEventListener("pointerleave", () => {
+      hover = false;
+      since = Math.max(since, Date.now() - SLIDE_TURN_MS + 2500); // a moment before it moves on
+    });
+    const mark = (i, n) => {
+      wrap.classList.toggle("slotwrap--many", n > 1);
+      count.textContent = n > 1 ? `${i + 1} of ${n}` : "";
+    };
+    function go(i, smooth = true) {
+      const list = slides();
+      if (!list.length) return mark(0, 0);
+      i = (i + list.length) % list.length;
+      key = keyOf(list[i]);
+      since = Date.now();
+      ours = Date.now();
+      slot.scrollTo({ left: i * slot.clientWidth, behavior: smooth ? "smooth" : "auto" });
+      mark(i, list.length);
+    }
+    // After any change: stay on the same card, or slide to one that's just come in.
+    function changed() {
+      const keys = slides().map(keyOf);
+      const firstLook = !known.size;
+      const fresh = keys.filter((k) => !known.has(k));
+      for (const k of [...known]) if (!keys.includes(k)) known.delete(k);
+      keys.forEach((k) => known.add(k));
+      if (fresh.length && !firstLook && !held()) return go(keys.indexOf(fresh.at(-1)));
+      const i = keys.indexOf(key);
+      if (i < 0) return go(Math.min(at(), keys.length - 1), false);
+      if (at() !== i) {
+        ours = Date.now();
+        slot.scrollTo({ left: i * slot.clientWidth });
+      }
+      mark(i, keys.length);
+    }
+    let queued = false;
+    new MutationObserver(() => {
+      if (queued) return;
+      queued = true;
+      setTimeout(() => {
+        queued = false;
+        changed();
+      }, 30);
+    }).observe(slot, { childList: true, subtree: true });
+    // A swipe (or a trackpad's sideways scroll): whichever card it settles on is the one.
+    let settle = 0;
+    slot.addEventListener("scroll", () => {
+      clearTimeout(settle);
+      settle = setTimeout(() => {
+        if (Date.now() - ours < 700) return;
+        const list = slides();
+        if (!list.length) return;
+        key = keyOf(list[Math.min(at(), list.length - 1)]);
+        since = Date.now();
+        mark(at(), list.length);
+      }, 150);
+    });
+    addEventListener("resize", () => {
+      const i = slides().map(keyOf).indexOf(key);
+      if (i >= 0) slot.scrollTo({ left: i * slot.clientWidth });
+    });
+    setInterval(() => {
+      if (slides().length < 2 || held() || Date.now() - since < SLIDE_TURN_MS) return;
+      go(cur() + 1);
+    }, 1000);
   }
 
   // A question you asked that hasn't been answered yet (for everyone: how
@@ -5956,24 +6103,10 @@
       slot.id = "slot";
       slot.setAttribute("aria-label", "What's come in");
       slot.append(el("div", "slot__empty"), peekEl, flashesEl, pinsEl);
-      document.querySelector(".bar").after(slot);
-      // More than fits: a small "▾ 2 more" tag on the slot's bottom edge (click: scroll there).
-      const more = el("button", "slot__more");
-      more.type = "button";
-      more.hidden = true;
-      more.addEventListener("click", () => slot.scrollBy({ top: slot.clientHeight - 8, behavior: "smooth" }));
-      slot.after(more);
-      const items = () => [...slot.querySelectorAll(":scope > .peek--on, .flashes > *, .pins > *")];
-      const countMore = () => {
-        const bottom = slot.getBoundingClientRect().bottom;
-        const hidden = items().filter((i) => i.getBoundingClientRect().top > bottom - 6).length;
-        more.hidden = !hidden;
-        more.textContent = `▾ ${hidden} more`;
-        if (hidden) more.style.top = `${Math.round(bottom - 20)}px`;
-      };
-      new MutationObserver(countMore).observe(slot, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
-      slot.addEventListener("scroll", countMore);
-      addEventListener("resize", countMore);
+      const wrap = el("div", "slotwrap");
+      wrap.append(slot);
+      document.querySelector(".bar").after(wrap);
+      setUpSlides(slot, wrap);
       // Pages from the bar sit just under the slot, over the chat (dock.css, --under).
       const under = () => document.body.style.setProperty("--under", `${Math.round(slot.getBoundingClientRect().bottom)}px`);
       under();
