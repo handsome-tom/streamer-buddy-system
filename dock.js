@@ -3155,7 +3155,7 @@
   // ===== The slot (the streamer's chat dock): what's come in, one big card at a time =====
   // Questions, answers, quick info, !vanish notes and flagged lines each get the slot's
   // whole width, side by side. The arrows either side (or a sideways swipe) step through
-  // them, round and round, with "2 of 5" under them; they turn by themselves every
+  // them, round and round, with "2/5" under the right-hand one; they turn by themselves every
   // SLIDE_TURN_MS unless the pointer's on the slot or you're typing a reply. Something new
   // slides straight in (not while you're on the slot). The slot keeps one height, so the
   // chat under it never moves.
@@ -3194,7 +3194,8 @@
     });
     const mark = (i, n) => {
       wrap.classList.toggle("slotwrap--many", n > 1);
-      count.textContent = n > 1 ? `${i + 1} of ${n}` : "";
+      count.textContent = n > 1 ? `${i + 1}/${n}` : ""; // small, under the right-hand arrow
+      count.title = n > 1 ? `${i + 1} of ${n}` : "";
     };
     function go(i, smooth = true) {
       const list = slides();

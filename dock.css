@@ -5681,11 +5681,11 @@ body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; 
 body.livechat .slotwrap { --gut: 8px; position: relative; flex: none; isolation: isolate; }
 body.livechat .slotwrap--many { --gut: 30px; }
 body.livechat .slotwrap .slot {
-  --slot-h: 118px;
+  --slot-h: 78px;
   flex-direction: row;
   align-items: stretch;
   gap: 0;
-  padding: 6px 0 16px;
+  padding: 3px 0;
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
@@ -5721,17 +5721,30 @@ body.livechat.has-space .slotwrap::before {
   pointer-events: none;
 }
 
-/* A question or an answer: the words big, up to two lines, the answers and reply under them. */
+/* A question or an answer: the words big on one line, the answers and reply under them.
+   No box round it: a soft glow in its color that fades out well before its edges. */
 body.livechat .slotwrap .peek--on {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  flex-wrap: nowrap;
-  gap: 7px;
-  padding: 8px 14px 9px;
-  border-radius: 14px;
+  display: grid;
+  grid-template-columns: auto minmax(70px, 1fr);
+  align-content: center;
+  gap: 5px 6px;
+  padding: 5px 12px 6px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
   animation: none;
 }
+body.livechat .slotwrap .peek--on::before {
+  inset: -3px 0;
+  border-radius: 0;
+  background:
+    radial-gradient(ellipse closest-side at 40% 50%, color-mix(in srgb, var(--ping) 20%, transparent), transparent),
+    radial-gradient(ellipse closest-side at 50% 50%, rgba(0, 0, 0, 0.5), transparent);
+  box-shadow: none;
+}
+body.livechat .slotwrap .peek--on > .peek__line { grid-column: 1 / -1; }
+body.livechat .slotwrap .peek--on > .pill:not(.pill--answer) { justify-self: start; }
 body.livechat .slotwrap .peek--on .peek__line {
   display: -webkit-box;
   flex: none;
@@ -5742,7 +5755,8 @@ body.livechat .slotwrap .peek--on .peek__line {
   overflow: hidden;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.85);
 }
 body.livechat .slotwrap .peek--on .peek__who { margin-right: 6px; font-size: 15px; }
 body.livechat .slotwrap .peek--on .peek__text { font-size: 17px; font-weight: 600; }
@@ -5751,10 +5765,7 @@ body.livechat .slotwrap .peek--on .pill--answer { height: 30px; min-width: 30px;
 body.livechat .slotwrap .peek--on .peek__own { flex: 1; min-width: 70px; height: 30px; }
 body.livechat .slotwrap .peek--on .peek__own input { height: 30px; font-size: 13.5px; }
 body.livechat .slotwrap .peek--on > .pill:not(.pill--answer) { align-self: flex-start; height: 30px; padding: 0 12px; font-size: 13px; }
-/* The answers and the reply box share one row under the words. */
-body.livechat .slotwrap .peek--on:has(> .peek__answers) { display: grid; grid-template-columns: auto minmax(70px, 1fr); grid-template-rows: auto auto; align-content: center; column-gap: 6px; }
-body.livechat .slotwrap .peek--on:has(> .peek__answers) > .peek__line { grid-column: 1 / -1; }
-body.livechat .slotwrap .peek--on .peek__dismiss { top: 6px; right: 6px; }
+body.livechat .slotwrap .peek--on .peek__dismiss { top: 3px; right: 4px; }
 
 /* Quick info, !vanish notes and flagged lines: as big as a question. */
 body.livechat .slotwrap .slot .qflash,
@@ -5763,8 +5774,13 @@ body.livechat .slotwrap .slot .qflash--love {
   height: auto;
   align-items: center;
   gap: 12px;
-  padding: 8px 8px 8px 14px;
-  border-radius: 14px;
+  padding: 4px 6px 4px 12px;
+  border: 0;
+  border-radius: 0;
+  background:
+    radial-gradient(ellipse closest-side at 40% 50%, color-mix(in srgb, var(--c) 22%, transparent), transparent),
+    radial-gradient(ellipse closest-side at 50% 50%, rgba(0, 0, 0, 0.5), transparent);
+  box-shadow: none;
 }
 body.livechat .slotwrap .slot .qflash__body,
 body.livechat .slotwrap .slot .qflash--info .qflash__body,
@@ -5776,7 +5792,8 @@ body.livechat .slotwrap .slot .qflash--love .qflash__body {
   overflow: hidden;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.85);
 }
 body.livechat .slotwrap .slot .qflash__icon svg,
 body.livechat .slotwrap .slot .qflash--info .qflash__icon svg,
@@ -5789,8 +5806,8 @@ body.livechat .slotwrap .slot .slot__card { display: grid; place-items: center; 
 /* The arrows either side, and which one this is, under them. */
 body.livechat .slot__arrow {
   position: absolute;
-  top: 6px;
-  bottom: 16px;
+  top: 3px;
+  bottom: 15px;
   z-index: 2;
   display: none;
   width: 26px;
@@ -5810,11 +5827,11 @@ body.livechat .slot__arrow:hover, body.livechat .slot__arrow:focus-visible { col
 body.livechat .slotwrap--many .slot__arrow { display: block; }
 body.livechat .slot__count {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 2px;
+  right: 2px;
+  bottom: 3px;
+  width: 26px;
   color: rgba(185, 200, 230, 0.6);
-  font-size: 10.5px;
+  font-size: 9.5px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-align: center;

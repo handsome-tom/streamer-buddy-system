@@ -64,7 +64,7 @@ export const tests = {
     h.typeAndSend(mod.$(".send__bar .ask__input"), "First question?");
     await h.until(() => streamer.has("First question?"), "the first question on the dock");
     h.typeAndSend(mod.$(".send__bar .ask__input"), "Second question?");
-    await h.until(() => streamer.$(".slot__count")?.textContent.endsWith("of 2"), "two cards in the slot");
+    await h.until(() => streamer.$(".slot__count")?.textContent.endsWith("/2"), "two cards in the slot");
     h.check(streamer.$$(".slot .peek--on").length === 2, "each question should be its own card");
     h.check(streamer.$(".slotwrap--many .slot__arrow--next"), "arrows should show with more than one");
     const before = streamer.$(".slot__count").textContent;
