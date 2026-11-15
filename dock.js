@@ -899,6 +899,8 @@
     for (const q of m.questions || []) {
       questions[q.id] = q;
       noticeSeen(before[q.id], q); // while we were reconnecting
+      if (!first && !had.has(q.id)) questionToChat(q);
+      else if (!first && q.answer && !before[q.id]?.answer) ownChat?.modAnswer?.(q.id, said(q.answer));
     }
     ready = true;
     setStatus("Online", "ok");
@@ -913,12 +915,39 @@
     render();
   }
 
+  // Questions, messages, quick info and !vanish notes between the streamer and their mods
+  // also flow into custom chat as lines of their own (ownchat.js modLine), as well as
+  // showing at the top as they always have. Answers are added to the line when they come.
+  async function toChat(m) {
+    if (!LIVECHAT || !ownChat?.modLine) return;
+    if (!pics[m.from]) await lookUp(m.from).catch(() => {});
+    try {
+      ownChat?.modLine({ ...m, pic: pics[m.from] || "", color: m.color || colorOf(m.from) });
+    } catch {}
+  }
+  function questionToChat(q) {
+    if (q.to !== me.login && q.from !== me.login) return;
+    const mine = q.from === me.login;
+    toChat({
+      id: q.id,
+      kind: mine ? "asked" : q.note ? "say" : "ask",
+      from: q.from,
+      fromName: mine ? "You" : q.from,
+      tag: mine ? (q.note ? "message to" : "asked") : q.note ? "message" : "asks",
+      toName: mine ? q.to : "",
+      text: q.text,
+      answer: q.answer ? said(q.answer) : "",
+    });
+  }
+
   function gotQuestion(q) {
     const old = questions[q.id];
     questions[q.id] = q;
     delete pending[q.id];
     nudging.delete(q.id);
     noticeSeen(old, q);
+    if (!old) questionToChat(q);
+    else if (q.answer && !old.answer) ownChat?.modAnswer?.(q.id, said(q.answer));
     // Something new for you: a question to you, or an answer to yours.
     if ((!old && q.to === me.login && !PINGS_HERE) || (q.from === me.login && q.answer && !old?.answer)) arrived();
     if (!old && q.from === me.login) {
@@ -1001,6 +1030,9 @@
     }
     seenFlashes.add(f.id);
     const late = Date.now() - (f.at || Date.now());
+    if (mine && (f.kind === "info" || f.kind === "love") && (late < 5000 || f.released)) {
+      toChat({ id: f.id, kind: f.kind, from: f.from, tag: f.kind === "love" ? "!vanish" : "quick info", text: f.text, color: f.color });
+    }
     if (f.kind === "chat" && LIVECHAT && f.channel === liveChannel) {
       try {
         ownChat?.glowLine?.({ chatter: f.chatter, text: f.text, color: f.color || colorOf(f.from) });
@@ -1086,6 +1118,11 @@
   function gotFlashed(m) {
     askDraft.note = m.reached ? "" : "They're not online right now, so it didn't go: quick notes don't wait.";
     if (m.reached) {
+      const f = lastFlashSent;
+      lastFlashSent = null;
+      if (f && (f.kind === "info" || f.kind === "love")) {
+        toChat({ id: `sent-${Date.now()}`, kind: f.kind, from: me.login, fromName: "You", tag: `${f.kind === "love" ? "!vanish" : "quick info"} to`, toName: f.to, text: f.text });
+      }
       askDraft.sent = m.kind;
       setTimeout(() => {
         askDraft.sent = "";
@@ -1095,8 +1132,10 @@
     render();
   }
 
+  let lastFlashSent = null; // what gotFlashed confirms, to add to chat
   function sendFlash(kind, to, text) {
     if (relay({ t: "flash", kind, to, text })) {
+      lastFlashSent = { kind, to, text };
       askDraft.text = "";
       rememberTo(to);
     }

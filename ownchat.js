@@ -893,6 +893,7 @@
     function addLine(line) {
       queue.push(line);
     }
+    const modLines = new Map(); // a mod's question or note's id -> its line (modLine below)
 
     // ----- Chat notes ------------------------------------------------------------------
     // Mods' notes on lines of chat (noteLine below). Found by who said it and what they said.
@@ -2494,6 +2495,44 @@
           stack.closest(".oc-line")?.classList.remove("oc-line--noted");
           stack.remove();
         }
+      },
+      // StreamSpace between the streamer and their mods (dock.js): questions, messages,
+      // quick info and !vanish notes flow into chat as lines of their own, as well as
+      // showing at the top. The mod's picture, their name in their color, what kind it is,
+      // and the words; an answer is added to the line once there is one.
+      modLine(m) {
+        if (!m?.id || modLines.has(m.id)) return false;
+        const line = el("div", `oc-line oc-mod oc-mod--${m.kind}`);
+        line.dataset.mod = m.id;
+        if (m.color) line.style.setProperty("--mc", m.color);
+        const pic = el("span", "oc-mod__pic");
+        if (m.pic) {
+          const img = el("img");
+          img.src = m.pic;
+          img.alt = "";
+          pic.append(img);
+        } else pic.textContent = String(m.fromName || m.from || "?").slice(0, 1).toUpperCase();
+        const body = el("span", "oc-mod__body");
+        const who = el("b", "oc-mod__who", m.fromName || m.from);
+        const tag = el("span", "oc-mod__tag", m.tag || "");
+        body.append(who, " ", tag, " ");
+        if (m.toName) body.append(el("b", "oc-mod__to", m.toName), " ");
+        body.append(el("span", "oc-mod__text", m.text || ""));
+        const ans = el("span", "oc-mod__answer");
+        ans.hidden = true;
+        body.append(ans);
+        line.append(pic, body);
+        modLines.set(m.id, line);
+        if (modLines.size > 100) modLines.delete(modLines.keys().next().value);
+        addLine(line);
+        if (m.answer) this.modAnswer(m.id, m.answer);
+        return true;
+      },
+      modAnswer(id, text) {
+        const ans = modLines.get(id)?.querySelector(".oc-mod__answer");
+        if (!ans || !text) return;
+        ans.textContent = `→ ${text}`;
+        ans.hidden = false;
       },
       // Closes everything and hands back anything typed but not sent.
       stop() {

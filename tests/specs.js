@@ -46,7 +46,7 @@ export const tests = {
     yes.click();
     await h.until(() => Object.values(modWatch.questions).some((q) => q.text === "Can I run the poll now?" && q.answer?.code === "y"), "the relay to have the answer");
     await h.until(() => /Yes[\s\S]*Can I run the poll now\?/.test(mod.text()), "Yes in the mod's panel");
-    await h.until(() => !streamer.has("Can I run the poll now?"), "the question to leave the streamer's bar");
+    await h.until(() => !streamer.hasOnTop("Can I run the poll now?"), "the question to leave the streamer's bar");
     noErrors(streamer, mod);
   },
 
@@ -89,7 +89,7 @@ export const tests = {
     await h.until(() => streamer.has("Timeout the spammer?"), "the question on the dock");
     (await h.until(() => streamer.$(".peek__dismiss, .qcard__dismiss"), "a dismiss button")).click();
     await h.until(() => Object.values(modWatch.questions).some((q) => q.text === "Timeout the spammer?" && q.dismissed), "the asker to hear it was dismissed");
-    await h.until(() => !streamer.has("Timeout the spammer?"), "the dock to clear it");
+    await h.until(() => !streamer.hasOnTop("Timeout the spammer?"), "the dock to clear it");
   },
 
   async "a plain message has no answer buttons and can be marked seen"(h) {
@@ -138,7 +138,7 @@ export const tests = {
     const q = await h.until(() => Object.values(modWatch.questions).find((x) => x.text === "Want me to clip that?"), "the relay to keep the question");
     await h.until(() => streamer.has("Want me to clip that?"), "the question on the dock");
     modWatch.send({ t: "withdraw", id: q.id });
-    await h.until(() => !streamer.has("Want me to clip that?"), "the dock to drop it");
+    await h.until(() => !streamer.hasOnTop("Want me to clip that?"), "the dock to drop it");
   },
 
   async "a private chat message reaches only the other person"(h) {

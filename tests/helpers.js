@@ -125,6 +125,15 @@ export async function panel(login, kind = "ext", extra = "") {
     $$: (sel) => [...(frame.contentDocument?.querySelectorAll(sel) || [])],
     text: () => frame.contentDocument?.body?.innerText || "",
     has: (s) => (frame.contentDocument?.body?.innerText || "").includes(s),
+    // The same, leaving out custom chat's copies of mods' questions and notes (.oc-mod),
+    // which stay in chat history after the top lets them go.
+    hasOnTop: (s) => {
+      const body = frame.contentDocument?.body;
+      if (!body) return false;
+      const copy = body.cloneNode(true);
+      copy.querySelectorAll(".oc-mod").forEach((l) => l.remove());
+      return (copy.innerText ?? copy.textContent ?? "").includes(s);
+    },
     errors: [],
     close: () => frame.remove(),
   };
