@@ -1331,11 +1331,11 @@
   })();
 </script>
 <script>
-  // The pug on top of the planet: a real 3D model (squeezed down to about 1,800 triangles in
+  // The pug on top of the planet: a real 3D model (squeezed down to about 7,000 triangles in
   // brand/pug.bin) drawn with plain canvas, no library. He turns his body slowly one way and back,
   // lit from the upper left like the planet. The purple flag beside him waves.
   // pug.bin: two counts (vertices, triangles), the triangles (3 x uint16 each), then the vertices
-  // (3 x int8 each, scaled to -127..127).
+  // (3 x int16 each, scaled to -32767..32767).
   (() => {
     const cv = document.querySelector(".hero-pug");
     if (!cv) return;
@@ -1399,8 +1399,8 @@
       ctx.fillStyle = "rgba(4, 10, 30, 0.35)";
       ctx.beginPath(); ctx.ellipse(ox, H * 0.96, H * 0.3, H * 0.05, 0, 0, Math.PI * 2); ctx.fill();
       for (const f of order) {
-        const a = F[f * 3] * 3, b = F[f * 3 + 1] * 3, c = F[f * 3 + 2] * 3, k = light[f], C = dark[f] ? DARK : FAWN;
-        ctx.fillStyle = `rgb(${Math.round(C[0] * k)},${Math.round(C[1] * k)},${Math.round(C[2] * k)})`;
+        const a = F[f * 3] * 3, b = F[f * 3 + 1] * 3, c = F[f * 3 + 2] * 3, k = light[f], m = dark[f];
+        ctx.fillStyle = `rgb(${[0, 1, 2].map((i) => Math.round((FAWN[i] + (DARK[i] - FAWN[i]) * m) * k)).join(",")})`;
         ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 0.6; // closes hairline gaps between triangles
         ctx.beginPath();
         ctx.moveTo(ox + px3[a] * sc, oy - px3[a + 1] * sc);
@@ -1411,17 +1411,22 @@
       flag(t);
     }
     let light = null, dark = null;
-    const FAWN = [222, 184, 140], DARK = [70, 54, 46], MASK_Y = 20, MASK_Z = 60;
+    const FAWN = [222, 184, 140], DARK = [62, 48, 42], MUZ = [0, 48];
     fetch("brand/pug.bin").then((r) => r.arrayBuffer()).then((buf) => {
       const dv = new DataView(buf); NV = dv.getUint16(0, true); NF = dv.getUint16(2, true);
       F = new Uint16Array(NF * 3); for (let i = 0; i < NF * 3; i++) F[i] = dv.getUint16(4 + i * 2, true);
-      V = new Int8Array(buf, 4 + NF * 6, NV * 3);
+      const q = new Int16Array(buf.slice(4 + NF * 6, 4 + NF * 6 + NV * 6)); V = new Float32Array(NV * 3);
+      for (let i = 0; i < NV * 3; i++) V[i] = q[i] * (127 / 32767); // the drawing code works in -127..127
       px3 = new Float32Array(NV * 3); depth = new Float32Array(NF); light = new Float32Array(NF);
-      // A pug's dark mask: the front of the face (high up, furthest forward) is drawn dark brown.
-      dark = new Uint8Array(NF);
+      // A pug's dark muzzle and ears: how dark each triangle is (0 fawn, 1 dark brown), fading softly
+      // out from the middle of the muzzle, so there's no hard edge.
+      dark = new Float32Array(NF);
       for (let f = 0; f < NF; f++) {
-        let y = 0, z = 0; for (let j = 0; j < 3; j++) { y += V[F[f * 3 + j] * 3 + 1]; z += V[F[f * 3 + j] * 3 + 2]; }
-        dark[f] = y / 3 > MASK_Y && z / 3 > MASK_Z ? 1 : 0;
+        let x = 0, y = 0, z = 0; for (let j = 0; j < 3; j++) { const v = F[f * 3 + j] * 3; x += V[v] / 3; y += V[v + 1] / 3; z += V[v + 2] / 3; }
+        const ss = (e0, e1, v) => { const t = Math.max(0, Math.min(1, (v - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+        const muzzle = (1 - ss(26, 54, Math.hypot(x / 1.3, y - MUZ[1]))) * ss(58, 85, z);
+        const ear = ss(62, 86, y) * ss(48, 72, Math.abs(x));
+        dark[f] = Math.max(muzzle, ear);
       }
       draw(performance.now());
     }).catch(() => {});
