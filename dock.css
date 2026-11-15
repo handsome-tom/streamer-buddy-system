@@ -6176,14 +6176,21 @@ body.livechat .slotwrap { display: none !important; }
 #modBtn .mod-btn__badge svg, #modBtn.bar-btn--here .mod-btn__badge svg { width: 9px; height: 9px; }
 
 /* The side panel: dark circles, colored icons. */
-body.embed #presenceBtn.presence--bar { width: 28px; height: 28px; min-width: 28px; padding: 0; justify-content: center; border-radius: 50%; background: #2f2f35; text-shadow: none; }
+/* Your status in the side panel: a small pixel person in your status's color, no circle,
+   tucked against your picture (which already wears the sword when you're an Available mod).
+   Still a button: a click opens the status menu. */
+body.embed #presenceBtn.presence--bar { width: 16px; min-width: 16px; height: 28px; margin-right: -3px; padding: 0; justify-content: center; border-radius: 4px; background: none; text-shadow: none; }
 body.embed #presenceBtn.presence--bar::after { display: none; }
-body.embed #presenceBtn.presence--bar:hover, body.embed #presenceBtn.presence--bar.presence--open { background: #3a3a44; text-decoration: none; }
-body.embed #presenceBtn.presence--bar::before { width: 13px; height: 15px; }
-body.embed #presenceBtn.presence--bar.presence--modding::before { width: 21px; }
+body.embed #presenceBtn.presence--bar:hover, body.embed #presenceBtn.presence--bar.presence--open { background: none; text-decoration: none; filter: brightness(1.35); }
+body.embed #presenceBtn.presence--bar::before, body.embed #presenceBtn.presence--bar.presence--modding::before {
+  width: 12px; height: 12px;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='1 2 12 12' shape-rendering='crispEdges'%3E%3Cpath d='M5 2h4v1h-4zM4 3h6v1h-6zM4 4h6v1h-6zM4 5h6v1h-6zM4 6h6v1h-6zM5 7h4v1h-4zM2 9h10v1h-10zM1 10h12v1h-12zM1 11h12v1h-12zM1 12h12v1h-12zM1 13h12v1h-12z'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='1 2 12 12' shape-rendering='crispEdges'%3E%3Cpath d='M5 2h4v1h-4zM4 3h6v1h-6zM4 4h6v1h-6zM4 5h6v1h-6zM4 6h6v1h-6zM5 7h4v1h-4zM2 9h10v1h-10zM1 10h12v1h-12zM1 11h12v1h-12zM1 12h12v1h-12zM1 13h12v1h-12z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
 body.embed .msg-btn, body.has-space.embed .msg-btn { color: var(--honey); background: #2f2f35; border-color: transparent; }
 body.embed .msg-btn:hover, body.has-space.embed .msg-btn:hover { color: var(--honey-hi); background: #3a3a44; border-color: transparent; }
-body.embed .msg-btn.pill--on, body.has-space.embed .msg-btn.pill--on, body.embed .msg-btn.pill--on:hover { color: #fff; background: color-mix(in srgb, var(--honey) 70%, #1a1a1d); border-color: transparent; box-shadow: 0 0 10px color-mix(in srgb, var(--honey) 45%, transparent); }
+/* Open: a real orange, its icon in the dark ink it had before. */
+body.embed .msg-btn.pill--on, body.has-space.embed .msg-btn.pill--on, body.embed .msg-btn.pill--on:hover { color: var(--honey-ink); background: var(--honey); border-color: transparent; box-shadow: 0 0 12px color-mix(in srgb, var(--honey) 55%, transparent); }
+body.embed .msg-btn.pill--on .pill__count { color: #fff; background: #1d1206; }
 body.embed .msg-btn .pill__count { color: var(--honey-ink); background: var(--honey); }
 body.embed #peopleBtn { color: #7db0ef; background: #2f2f35; }
 body.embed #peopleBtn:hover:not(:disabled) { color: #a6c8f5; background: #3a3a44; }
