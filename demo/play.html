@@ -779,6 +779,11 @@
   .twlive__box iframe, .twlive__player { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; border: 0; border-radius: 0; box-shadow: none; pointer-events: none; }
   .twlive__cover { position: absolute; inset: 0; z-index: 2; cursor: default; }
   .twlive__wait { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; color: #8d8d97; }
+  .twlive__wait[hidden] { display: none; }
+  /* The player stays invisible until a stream is actually playing, so a paused or age-gated
+     channel never shows while the next one is tried. */
+  .twlive__player { opacity: 0; transition: opacity 0.5s ease; }
+  .twlive__box.is-live .twlive__player { opacity: 1; }
   .twlive__note { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: #8d8d97; }
   .twnote .eyebrow { color: #bf94ff; }
   .twnote h3 { margin: 6px 0 8px; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; color: #fff; }
@@ -1105,7 +1110,7 @@
   // A real live stream through Twitch's own embed player, watch-only: muted, clicks land on a
   // cover over it, and nothing in it can type, cheer or spend. Big channels, in order, until one
   // is live (Twitch's player says when a channel is offline).
-  const LIVE_CHANNELS = ["xqc", "kaicenat", "jynxzi", "caseoh_", "ishowspeed", "zackrawrr", "hasanabi", "summit1g", "tarik", "lirik", "sodapoppin", "shroud", "ludwig", "pokimane", "tfue"];
+  const LIVE_CHANNELS = ["kaicenat", "ishowspeed", "ludwig", "pokimane", "zackrawrr", "hasanabi", "caseoh_", "lirik", "sodapoppin", "tarik", "jynxzi", "xqc", "summit1g", "shroud", "tfue"];
   function twLive(box) {
     const who = box.parentElement.querySelector(".twlive__who");
     const wait = box.querySelector(".twlive__wait");
@@ -1119,22 +1124,28 @@
       const lock = () => box.querySelectorAll("iframe").forEach((f) => { f.tabIndex = -1; f.setAttribute("aria-hidden", "true"); });
       const next = () => {
         clearTimeout(timer);
+        box.classList.remove("is-live");
+        wait.hidden = false;
+        who.textContent = "";
         if (++tries >= LIVE_CHANNELS.length) return (wait.textContent = "None of the big streams are live right now.");
         i = (i + 1) % LIVE_CHANNELS.length;
         player.setChannel(LIVE_CHANNELS[i]);
-        timer = setTimeout(next, 9000);
+        timer = setTimeout(next, 10000);
       };
+      // Only a stream that's really playing counts. "Online" isn't enough: a channel behind
+      // Twitch's "intended for certain audiences" screen is online but sits paused and
+      // blurred, waiting for a click the cover (rightly) never lets through. Those get skipped.
       const live = () => {
         clearTimeout(timer);
         wait.hidden = true;
+        box.classList.add("is-live");
         who.textContent = `${LIVE_CHANNELS[i]}, live right now`;
         player.setMuted(true);
         lock();
       };
-      player.addEventListener(T.Player.ONLINE, live);
       player.addEventListener(T.Player.PLAYING, live);
       player.addEventListener(T.Player.OFFLINE, next);
-      timer = setTimeout(next, 9000);
+      timer = setTimeout(next, 10000);
       lock();
     };
     s.onerror = () => (wait.textContent = "Twitch's player didn't load.");
