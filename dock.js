@@ -5171,7 +5171,7 @@
     const card = el("section", "cx__card cx__reports");
     const head = el("button", "cx__allowhead");
     head.type = "button";
-    head.append(el("span", "cx__label", "Feedback & problems"), el("span", "cx__allowtoggle", reportsOpen ? "Hide" : "Show"));
+    head.append(el("span", "cx__label", "Agreements, feedback & problems"), el("span", "cx__allowtoggle", reportsOpen ? "Hide" : "Show"));
     if (reportsNew) head.querySelector(".cx__label").after(el("span", "cx__askcount", `${reportsNew} new`));
     head.addEventListener("click", () => {
       reportsOpen = !reportsOpen;
@@ -5181,7 +5181,15 @@
     card.append(head);
     if (!reportsOpen) return card;
     if (!reportsData) return card.append(el("p", "cx__hint", "Loading…")), card;
-    const { feedback = [], oops = [] } = reportsData;
+    const { feedback = [], oops = [], agreements = [] } = reportsData;
+    card.append(el("div", "cx__label", `Tester agreements · ${agreements.length}`));
+    if (!agreements.length) card.append(el("p", "cx__hint", "No one has agreed yet."));
+    for (const g of agreements) {
+      const row = el("div", "rep");
+      const when = new Date(g.at).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+      row.append(el("div", "rep__text", g.name), el("div", "rep__who", `${when} · ${g.where === "test site" ? "test site" : "extension"} · agreement ${g.version || "?"}${g.build ? ` · ${g.build}` : ""}${g.country ? ` · ${g.country}` : ""}`));
+      card.append(row);
+    }
     card.append(el("div", "cx__label", `Feedback · ${feedback.length}`));
     if (!feedback.length) card.append(el("p", "cx__hint", "None yet."));
     for (const f of feedback) {

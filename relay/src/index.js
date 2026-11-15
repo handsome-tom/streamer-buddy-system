@@ -41,6 +41,13 @@
 // kind of error, counting how often and for whom, until a month after it last happened.
 // Only the owner can read them (reports), and the owner's state says how many are new.
 //
+// Tester agreements: before a tester uses StreamSpace (the tester extension, or the test site),
+// they agree to the tester agreement (tester-agreement.html) and their page sends POST
+// /api/agree { name, where, version, build }. The name is the Twitch name they typed, not a
+// sign-in, so it's a record of who said they agreed, not proof. Kept as "agree:<time>" (newest
+// MAX_AGREEMENTS) with the time and a rough place (Cloudflare's country), and shown to the owner
+// with the feedback (reports).
+//
 // Connections: each person's list of who they've added. Two people can ask
 // each other only once both have added each other ("mutual"); until then the
 // other side sees the request. Whether someone's online is only shared
@@ -167,6 +174,8 @@ const MAX_OPEN_INVITES = 20; // unused invite links one person can have at a tim
 const INVITE_LETTERS = "abcdefghjkmnpqrstuvwxyz23456789"; // no 0/o, 1/l/i: easy to read out
 const INVITE_RE = /^[a-hj-km-np-z2-9]{10}$/;
 const MAX_REPORTS = 300; // feedback kept, and kinds of error kept
+const MAX_AGREEMENTS = 2000; // tester agreements kept
+const AGREE_ORIGINS = /^(https:\/\/([a-z0-9-]+\.)?streamspace\.tv|chrome-extension:\/\/[a-p]{32}|http:\/\/localhost(:\d+)?)$/;
 const MAX_FEEDBACK_LEN = 1500;
 const OOPS_KEEP_MS = 30 * 24 * 60 * 60 * 1000;
 const OOPS_PER_HOUR = 20; // error reports one person's pages can send an hour
@@ -214,6 +223,7 @@ export default {
       if (req.headers.get("Upgrade") !== "websocket") return new Response("Expected a WebSocket", { status: 426 });
       return env.HUB.get(env.HUB.idFromName("hub")).fetch(req);
     }
+    if (url.pathname === "/api/agree") return env.HUB.get(env.HUB.idFromName("hub")).fetch(req); // tester agreements
     if (url.pathname.startsWith("/api/")) return lookup(req, env, url); // StreamSpace's public lookups (lookup.js)
     return new Response("Streamer Buddy System relay", { headers: { "content-type": "text/plain" } });
   },
@@ -226,7 +236,8 @@ export class Hub {
     this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
   }
 
-  async fetch() {
+  async fetch(req) {
+    if (new URL(req.url).pathname === "/api/agree") return this.agree(req);
     const [client, server] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(server);
     server.serializeAttachment({});
@@ -739,12 +750,56 @@ export class Hub {
     if (this.isOnline(owner)) await this.sendState(owner);
   }
 
+  // A tester agreeing to the tester agreement (see "Tester agreements" at the top).
+  async agree(req) {
+    const origin = req.headers.get("Origin") || "";
+    const headers = { "content-type": "application/json", "cache-control": "no-store", vary: "Origin" };
+    if (AGREE_ORIGINS.test(origin)) headers["access-control-allow-origin"] = origin;
+    const out = (status, body) => new Response(status === 204 ? null : JSON.stringify(body), { status, headers });
+    if (!AGREE_ORIGINS.test(origin)) return out(403, { error: "Not from StreamSpace" });
+    if (req.method === "OPTIONS") {
+      headers["access-control-allow-methods"] = "POST";
+      headers["access-control-allow-headers"] = "content-type";
+      return out(204, null);
+    }
+    if (req.method !== "POST") return out(405, { error: "POST only" });
+    let b;
+    try {
+      b = JSON.parse((await req.text()).slice(0, 2000));
+    } catch {
+      return out(400, { error: "Not JSON" });
+    }
+    const clean = (v, n) => String(v || "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, n);
+    const name = clean(b.name, 40).replace(/^@/, "");
+    if (!name) return out(400, { error: "Which name?" });
+    const at = Date.now();
+    const rec = {
+      name,
+      where: clean(b.where, 20),
+      version: clean(b.version, 20),
+      build: clean(b.build, 20),
+      at,
+      country: clean(req.cf && req.cf.country, 4),
+      from: origin.startsWith("chrome-extension:") ? "extension" : origin.replace(/^https?:\/\//, ""),
+    };
+    await this.ctx.storage.put(`agree:${String(at).padStart(15, "0")}${Math.random().toString(36).slice(2, 6)}`, rec);
+    const all = await this.ctx.storage.list({ prefix: "agree:" });
+    if (all.size > MAX_AGREEMENTS) await this.ctx.storage.delete([...all.keys()].slice(0, all.size - MAX_AGREEMENTS));
+    const owner = this.owner();
+    if (owner) {
+      await this.ctx.storage.put("reportsNew", ((await this.ctx.storage.get("reportsNew")) || 0) + 1);
+      if (this.isOnline(owner)) await this.sendState(owner);
+    }
+    return out(200, { ok: true, at });
+  }
+
   async reports(ws, who) {
     const owner = this.owner();
     if (!owner || who.login !== owner) return;
     const feedback = [...(await this.ctx.storage.list({ prefix: "fb:", reverse: true, limit: 100 })).values()];
     const oops = [...(await this.ctx.storage.list({ prefix: "oops:" })).values()].sort((a, b) => b.last - a.last).slice(0, 100);
-    this.send(ws, { t: "reports", feedback, oops });
+    const agreements = [...(await this.ctx.storage.list({ prefix: "agree:", reverse: true, limit: 300 })).values()];
+    this.send(ws, { t: "reports", feedback, oops, agreements });
     if ((await this.ctx.storage.get("reportsNew")) || 0) {
       await this.ctx.storage.put("reportsNew", 0);
       await this.sendState(owner);
