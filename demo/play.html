@@ -698,6 +698,18 @@
   .pg .chip, .pg select { display: flex; justify-content: flex-start; width: 100%; height: auto; padding: 6px 10px; font: inherit; font-size: 12.5px; font-weight: 600; text-align: left; color: #e4e4ea; background: #141418; border: 1px solid #2a2a30; border-radius: 4px; box-shadow: none; }
   .pg .chip:hover { background: #1f1f25; border-color: #44444c; }
   .pg .chip.on { border-color: #3fc98e; }
+  /* Above the far-right chat: pretend, or TallGlassOfBees' real chat to watch. */
+  .twsw { display: flex; align-items: center; gap: 4px; height: 30px; margin-bottom: 6px; font-size: 12px; }
+  .twsw__opt { flex: none; white-space: nowrap; height: 26px; padding: 0 12px; font: inherit; font-weight: 600; color: #b9b9c3; background: #141418; border: 1px solid #2a2a30; border-radius: 9999px; cursor: pointer; }
+  .twsw__opt:hover { color: #fff; border-color: #44444c; }
+  .twsw__opt--on { color: #fff; background: #9147ff; border-color: #9147ff; }
+  .twsw__note { margin-left: auto; white-space: nowrap; color: #77777f; font-weight: 600; }
+  html.bare .stage .twbox { position: relative; height: calc(100vh - 32px - 36px); min-height: 444px; overflow: hidden; }
+  html.bare .stage .twbox #twitch { height: 100%; min-height: 0; }
+  /* Watch only: Twitch's chat is drawn 150px taller than the box, so its bottom (message box,
+     Bits, points) sits out of sight, and nothing in it takes a click or a key. */
+  html.bare .stage .twbox--live #twitch { height: calc(100% + 150px); pointer-events: none; }
+  .twbox--live::after { content: ""; position: absolute; inset: 0; }
   .pg__said { margin-top: 12px; font-size: 11.5px; line-height: 1.4; color: #9a9aa5; }
 </style>
 </head>
@@ -890,7 +902,31 @@
     chat.id = "twitch";
     chat.title = "Twitch chat (pretend), as the mod sees it with StreamSpace";
     chat.dataset.src = "twitch/chat.html";
-    twitch.append(chat);
+    // Above it: the pretend chat (StreamSpace runs on it, the buttons drive it), or a
+    // watch-only window onto TallGlassOfBees' real Twitch chat. Watch-only for real: the
+    // bottom of Twitch's chat (the message box, Bits, channel points) is cut off out of
+    // sight, and the whole window ignores clicks, so nothing in it can be typed or spent.
+    const LIVE_CHANNEL = "tallglassofbees";
+    const sw = document.createElement("div");
+    sw.className = "twsw";
+    sw.innerHTML = '<button type="button" class="twsw__opt twsw__opt--on" data-mode="pretend">Pretend</button>' +
+      '<button type="button" class="twsw__opt" data-mode="live">TallGlassOfBees, live</button>' +
+      '<span class="twsw__note" hidden>Watch only</span>';
+    const box = document.createElement("div");
+    box.className = "twbox";
+    box.append(chat);
+    const opts = sw.querySelectorAll(".twsw__opt");
+    const setMode = (mode) => {
+      const live = mode === "live";
+      chat.src = live ? `https://www.twitch.tv/embed/${LIVE_CHANNEL}/chat?parent=${location.hostname}&darkpopout` : chat.dataset.src;
+      chat.title = live ? "TallGlassOfBees' live Twitch chat (watch only)" : "Twitch chat (pretend), as the mod sees it with StreamSpace";
+      chat.tabIndex = live ? -1 : 0;
+      box.classList.toggle("twbox--live", live);
+      sw.querySelector(".twsw__note").hidden = !live;
+      opts.forEach((o) => o.classList.toggle("twsw__opt--on", o.dataset.mode === mode));
+    };
+    opts.forEach((o) => o.addEventListener("click", () => setMode(o.dataset.mode)));
+    twitch.append(sw, box);
     stage.append(twitch);
   }
 </script>
