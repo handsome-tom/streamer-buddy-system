@@ -1014,6 +1014,7 @@
         const n = Number(m.bits) || 0;
         const tier = n >= 10000 ? 5 : n >= 5000 ? 4 : n >= 1000 ? 3 : n >= 100 ? 2 : 1;
         line.classList.add("oc-cheerline", `oc-cheerline--t${tier}`);
+        line.style.setProperty("--s", sizeBy(n, 25000).toFixed(2)); // room it takes, as for subs
         const head = el("div", "oc-cheerline__head");
         const gem = el("span", "oc-cheerline__gem");
         gem.innerHTML = icon("gem", 16);
@@ -1168,6 +1169,25 @@
     const ANNOUNCE_COLORS = { BLUE: "#00b5f0", GREEN: "#00db84", ORANGE: "#ff9a1f", PURPLE: "#a970ff" };
     const tierName = (t, prime) => (prime ? "Prime" : t === "3000" ? "Tier 3" : t === "2000" ? "Tier 2" : "Tier 1");
     const plural = (n, one, many) => `${Number(n).toLocaleString()} ${Number(n) === 1 ? one : many}`;
+    // How much room an event takes in chat, 0 (small) to 1 (huge): the bigger it is, the
+    // bigger it's drawn (dock.css --s). Counted on a log scale, so 10,000 bits is big
+    // without 100 bits being a speck.
+    const sizeBy = (n, top) => Math.max(0, Math.min(1, Math.log10(Math.max(1, Number(n) || 1)) / Math.log10(top)));
+    function eventSize(kind, e) {
+      if (kind === "sub" || kind === "resub") {
+        const r = e.resub || e.sub || {};
+        const tier = r.is_prime ? 0 : r.sub_tier === "3000" ? 0.2 : r.sub_tier === "2000" ? 0.1 : 0;
+        return Math.min(1, sizeBy(r.cumulative_months || r.duration_months || 1, 120) * 0.8 + tier);
+      }
+      if (kind === "community_sub_gift") return sizeBy(e.community_sub_gift?.total, 100) * 0.85 + 0.15;
+      if (kind === "watch_streak") return sizeBy(Number(e.watch_streak?.streak) || Number(String(e.system_message || "").match(/(\d[\d,]*)\s+consecutive/i)?.[1]?.replace(/,/g, "")), 300) * 0.8;
+      if (kind === "bits_badge_tier") return sizeBy(e.bits_badge_tier?.tier, 1000000);
+      if (kind === "charity_donation") {
+        const a = e.charity_donation?.amount;
+        return a ? sizeBy(a.value / 10 ** (a.decimal_places ?? 2), 1000) : 0.3;
+      }
+      return 0.15;
+    }
     // How a notice is drawn: { icon, tone, value (big), what, who (the smaller line) }.
     function eventLook(kind, e) {
       const name = e.chatter_is_anonymous ? "Anonymous" : e.chatter_user_name || "Someone";
@@ -1421,6 +1441,7 @@
       const ev = eventLook(kind, e);
       if (ev) {
         line.classList.add("oc-event", `oc-event--${ev.tone}`);
+        line.style.setProperty("--s", eventSize(kind, e).toFixed(2));
         const art = el("span", "oc-event__icon");
         art.innerHTML = pixel(ev.icon, 20);
         const words = el("div", "oc-event__words");

@@ -333,7 +333,7 @@ const twitch = (() => {
     },
     gift() {
       const who = pick(CHATTERS);
-      const total = pick([5, 5, 10, 20]);
+      const total = pick([1, 5, 10, 20, 50]);
       const giftId = `g${n}`;
       notice("community_sub_gift", { who, system: `${who} is gifting ${total} Tier 1 Subs to the community!`, fields: { community_sub_gift: { id: giftId, total, sub_tier: "1000" } } });
       // Then each gift lands, a moment apart, as Twitch sends them.
@@ -468,7 +468,7 @@ const twitch = (() => {
     },
     cheer() {
       const who = pick(CHATTERS);
-      chat(pick(["great stream!", "for the snack fund", "that play deserved it"]), who, { bits: pick([100, 250, 500, 1000]) });
+      chat(pick(["great stream!", "for the snack fund", "that play deserved it"]), who, { bits: pick([1, 50, 100, 250, 500, 1000, 5000, 10000, 25000]) });
       return who;
     },
     highlight() {

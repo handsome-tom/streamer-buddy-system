@@ -5948,3 +5948,26 @@ body .bar:has(.dots--mod)::before, body.livechat .bar:has(.dots--mods)::before {
 :is(body, body.has-space.has-space) .oc-line.oc-event { margin: 6px 6px; padding: 9px 12px 10px; background: linear-gradient(90deg, color-mix(in srgb, var(--ev) 26%, #1b1b20), color-mix(in srgb, var(--ev) 7%, #1b1b20)); border: 0; border-radius: 3px; box-shadow: inset 4px 0 0 var(--ev), 0 2px 8px rgba(0, 0, 0, 0.6); }
 :is(body, body.has-space.has-space) .oc-line.oc-event--bomb { background: linear-gradient(90deg, color-mix(in srgb, var(--ev) 36%, #1b1b20), color-mix(in srgb, var(--ev) 10%, #1b1b20)); box-shadow: inset 4px 0 0 var(--ev), 0 0 18px color-mix(in srgb, var(--ev) 30%, transparent), 0 2px 8px rgba(0, 0, 0, 0.6); }
 :is(body, body.has-space.has-space) .oc-line.oc-event + .oc-giftline { margin-top: 2px; }
+
+/* ===== Bigger events take more room =====
+   ownchat.js sets --s on each event, 0 (a 1-month sub, 1 bit) to 1 (100 months, 25,000
+   bits, a 100-sub bomb), on a log scale. Space around it, padding, the icon and the big
+   number all grow with it, so a huge one stops chat and a small one stays small. */
+:is(body, body.has-space.has-space) .oc-line.oc-event,
+:is(body, body.has-space.has-space) .oc-line.oc-cheerline {
+  --s: 0.3;
+  margin-top: calc(3px + 14px * var(--s));
+  margin-bottom: calc(3px + 14px * var(--s));
+  padding: calc(5px + 16px * var(--s)) calc(10px + 6px * var(--s));
+  gap: calc(8px + 8px * var(--s));
+  font-size: calc(12.5px + 2.5px * var(--s));
+  box-shadow: inset calc(3px + 4px * var(--s)) 0 0 var(--ev), 0 0 calc(30px * var(--s) * var(--s)) color-mix(in srgb, var(--ev) calc(60% * var(--s)), transparent), 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+:is(body, body.has-space.has-space) .oc-line.oc-event .oc-event__icon { width: calc(26px + 30px * var(--s)); height: calc(26px + 30px * var(--s)); }
+:is(body, body.has-space.has-space) .oc-line.oc-event .oc-event__icon svg { width: calc(14px + 16px * var(--s)); height: calc(14px + 16px * var(--s)); }
+:is(body, body.has-space.has-space) .oc-line.oc-event .oc-event__value { font-size: calc(17px + 31px * var(--s)); }
+:is(body, body.has-space.has-space) .oc-line.oc-event .oc-event__big { font-size: calc(13px + 5px * var(--s)); }
+:is(body, body.has-space.has-space) .oc-line.oc-cheerline .oc-cheerline__value { font-size: calc(16px + 32px * var(--s)); }
+:is(body, body.has-space.has-space) .oc-line.oc-cheerline .oc-cheerline__gem { width: calc(20px + 26px * var(--s)); height: calc(20px + 26px * var(--s)); }
+:is(body, body.has-space.has-space) .oc-line.oc-cheerline .oc-cheerline__gem svg { width: calc(12px + 14px * var(--s)); height: calc(12px + 14px * var(--s)); }
+:is(body, body.has-space.has-space) .oc-line.oc-cheerline .oc-cheerline__what { font-size: calc(10.5px + 3px * var(--s)); }
