@@ -27,8 +27,8 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
 
   const LIVE_LINE = ".chat-line__message";
   const VOD_LINE = ".vod-message";
-  const HOVER_MS = 500; // that long near a line's right side before the dot shows
-  const NEAR_RIGHT = 0.55; // how far across a line counts as heading for its right side
+  const HOVER_MS = 0; // shows the moment you point at a line, with Twitch's reply button
+  const NEAR_RIGHT = 0; // anywhere on the line, as Twitch's reply button does
   const LIVE_LOOKBACK_MS = 12 * 60 * 60 * 1000; // notes asked for on opening a live channel
   const VOD_BEFORE_S = 15 * 60; // a note can be written this long after its comment
   const VOD_AFTER_S = 60; // ... or seem a little before it (the stream's delay)
@@ -405,8 +405,8 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
     hoverLine = null;
   }
 
-  // It shows once the pointer heads for the right side of a line, where Twitch's buttons
-  // are, after a moment there; back to the left (or off the line) it goes.
+  // It shows as soon as the pointer is on a line and goes when it leaves, at the same
+  // moments Twitch shows and hides its reply button.
   let pointer = { x: -1, y: -1 };
   document.addEventListener("mousemove", (e) => {
     pointer = { x: e.clientX, y: e.clientY };

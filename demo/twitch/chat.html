@@ -13,8 +13,8 @@
   name, your name boxed, quick phrases. shim.js stands in for Chrome and twitch.tv.
   Not Twitch's code or art: only built to look close enough for the extension to work on.
 -->
-<link rel="stylesheet" href="ext/styles.css?v=5">
-<link rel="stylesheet" href="chat.css?v=3">
+<link rel="stylesheet" href="ext/styles.css?v=6">
+<link rel="stylesheet" href="chat.css?v=4">
 <script src="shim.js"></script>
 </head>
 <body>
@@ -30,8 +30,9 @@
       <div class="chat-input__textarea">
         <div class="chat-wysiwyg-input__editor" data-a-target="chat-input" contenteditable="true" role="textbox" aria-label="Send a message" data-placeholder="Send a message"></div>
         <div class="tw-chat__inputbtns">
-          <button type="button" class="tw-iconbtn" data-a-target="bits-button" aria-label="Bits" title="Bits"><svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M3 12l7-10 7 10-7 6-7-6zm7 3.4L13.9 12 10 6.4 6.1 12 10 15.4z" fill="currentColor"/></svg></button>
-          <button type="button" class="tw-iconbtn" data-a-target="emote-picker-button" aria-label="Emote picker" title="Emotes"><svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M7 11a3 3 0 0 0 6 0h2a5 5 0 0 1-10 0h2zm-1-4a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm8 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2zM10 0a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16z" fill="currentColor"/></svg></button>
+          <!-- Each in a wrapper of its own, as on Twitch (StreamSpace finds the row through it). -->
+          <div class="tw-btnwrap"><button type="button" class="tw-iconbtn" data-a-target="bits-button" aria-label="Bits" title="Bits"><svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M3 12l7-10 7 10-7 6-7-6zm7 3.4L13.9 12 10 6.4 6.1 12 10 15.4z" fill="currentColor"/></svg></button></div>
+          <div class="tw-btnwrap"><button type="button" class="tw-iconbtn" data-a-target="emote-picker-button" aria-label="Emote picker" title="Emotes"><svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M7 11a3 3 0 0 0 6 0h2a5 5 0 0 1-10 0h2zm-1-4a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm8 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2zM10 0a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16z" fill="currentColor"/></svg></button></div>
         </div>
       </div>
       <div class="chat-input__buttons-container">
@@ -44,14 +45,14 @@
   </div>
   <script src="chat.js?v=3"></script>
   <!-- StreamSpace's chat scripts, in the extension's own order (its manifest.json). -->
-  <script src="ext/backup.js?v=3"></script>
-  <script src="ext/settings.js?v=3"></script>
-  <script src="ext/lookup.js?v=3"></script>
-  <script src="ext/people.js?v=3"></script>
-  <script src="ext/myname.js?v=3"></script>
-  <script src="ext/phrases.js?v=3"></script>
-  <script src="ext/hub.js?v=3"></script>
-  <script src="ext/flag.js?v=3"></script>
-  <script src="ext/chatnotes.js?v=3"></script>
+  <script src="ext/backup.js?v=4"></script>
+  <script src="ext/settings.js?v=4"></script>
+  <script src="ext/lookup.js?v=4"></script>
+  <script src="ext/people.js?v=4"></script>
+  <script src="ext/myname.js?v=4"></script>
+  <script src="ext/phrases.js?v=4"></script>
+  <script src="ext/hub.js?v=4"></script>
+  <script src="ext/flag.js?v=4"></script>
+  <script src="ext/chatnotes.js?v=4"></script>
 </body>
 </html>
