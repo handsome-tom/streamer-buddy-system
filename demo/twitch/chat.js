@@ -100,9 +100,13 @@
     name.append(author);
     who.append(name);
     box.append(who, el("span", "tw-colon", ": "), body(e));
-    // Twitch's own buttons on a line: reply, and the three dots (shown on hover).
+    // Twitch's own button on a line, shown on hover: reply, a round dark button at the top right.
     const icons = el("div", "chat-line__icons");
-    icons.append(iconBtn("Click to reply", "M8.5 5.5L7 4 2 9l5 5 1.5-1.5L6 10h4a4 4 0 0 1 4 4v2h2v-2a6 6 0 0 0-6-6H6l2.5-2.5z"), iconBtn("More message options", "M10 18a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0-6a2 2 0 1 1 0-4 2 2 0 0 1 0 4zM8 4a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"));
+    const reply = el("button", "tw-replybtn");
+    reply.type = "button";
+    reply.title = reply.ariaLabel = "Click to reply";
+    reply.innerHTML = '<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M8.5 5.5L7 4 2 9l5 5 1.5-1.5L6 10h4a4 4 0 0 1 4 4v2h2v-2a6 6 0 0 0-6-6H6l2.5-2.5z" fill="currentColor"/></svg>';
+    icons.append(reply);
     line.append(box, icons);
     return line;
   }

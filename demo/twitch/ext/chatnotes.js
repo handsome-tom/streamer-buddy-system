@@ -33,7 +33,7 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
   const VOD_BEFORE_S = 15 * 60; // a note can be written this long after its comment
   const VOD_AFTER_S = 60; // ... or seem a little before it (the stream's delay)
   const MAX_BODY = 300;
-  const BUBBLE_ICON = '<svg viewBox="0 0 20 20" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 16 14h-6l-4 3v-3H4a1.5 1.5 0 0 1-1.5-1.5v-7A1.5 1.5 0 0 1 4 4z"/></svg>';
+  const BUBBLE_ICON = '<svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 16 14h-6l-4 3v-3H4a1.5 1.5 0 0 1-1.5-1.5v-7A1.5 1.5 0 0 1 4 4z"/></svg>';
   const SEND_ICON = '<svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l14-6-5 14-2.5-6L3 10z"/></svg>';
 
   // ===== Where we are =========================================================================
@@ -380,11 +380,15 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
     const r = line.getBoundingClientRect();
     const b = twitchButtons(line)?.getBoundingClientRect();
     const has = b && b.width > 0 && b.top < r.bottom && b.bottom > r.top;
-    const right = has ? b.left : r.right - 8;
-    const mid = has ? b.top + b.height / 2 : r.top + Math.min(r.height, 32) / 2;
+    // StreamSpace's flag (flag.js) sits just left of Twitch's reply; the dot goes left of it.
+    const f = line.querySelector(".tbc-flagbtn, .tbc-flagx")?.getBoundingClientRect();
+    const hasFlag = f && f.width > 0;
+    // Not drawn yet (Twitch shows its buttons on hover): where they'll be, at the top right.
+    const right = hasFlag ? f.left : has ? b.left : r.right - (document.documentElement.classList.contains("tbc-flagging") ? 74 : 38);
+    const mid = hasFlag ? f.top + f.height / 2 : has ? b.top + b.height / 2 : r.top + 5;
     line.classList.add("tbc-notehost");
-    dot.style.left = `${right - r.left - 28}px`;
-    dot.style.top = `${mid - r.top - 12}px`;
+    dot.style.left = `${right - r.left - 36}px`;
+    dot.style.top = `${mid - r.top - 16}px`;
     if (dot.parentElement !== line) line.append(dot);
     dotLine = line;
     dot.classList.remove("tbc-notedot--quick");

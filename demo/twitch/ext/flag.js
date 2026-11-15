@@ -17,7 +17,7 @@ whenOn("flag", "Flag chat lines to the streamer", () => {
 
   const LINE = ".chat-line__message";
   const GLOW_MS = 5 * 60 * 1000;
-  const FLAG_ICON = '<svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18V3M5 4h10l-2.5 3.5L15 11H5"/></svg>';
+  const FLAG_ICON = '<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18V3M5 4h10l-2.5 3.5L15 11H5"/></svg>';
 
   // The channel whose chat this is.
   function channelName() {
@@ -205,7 +205,7 @@ whenOn("flag", "Flag chat lines to the streamer", () => {
     port.postMessage({ t: "flag", channel, chatter, text, color: chatColor, emotes: lineEmotes(line), ...lineName(line) });
   });
   me.then((p) => {
-    if (p.chatColor) button.style.color = p.chatColor;
+    if (p.chatColor) button.style.setProperty("--tbc-mycolor", p.chatColor); // its color when pointed at
   });
 
   document.addEventListener("mouseover", (e) => {
