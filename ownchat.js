@@ -121,6 +121,8 @@
     `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" fill="currentColor">${GLYPH[name] || ICON[name]}</svg>`;
   const icon = (name, size = 15) =>
     `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[name]}</svg>`;
+  // Twitch's channel-points mark, for redemptions and highlighted messages.
+  const POINTS = '<svg viewBox="0 0 20 20" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M10 2a8 8 0 1 0 8 8h-2.5A5.5 5.5 0 1 1 10 4.5z"/><path fill="currentColor" d="M12 3.3a7 7 0 0 1 4.7 4.7H12z"/></svg>';
   function iconButton(className, name, onClick, title) {
     const b = button(className, "", onClick, title);
     b.innerHTML = icon(name);
@@ -966,7 +968,15 @@
       if (host.isConnection(m.login)) line.classList.add("oc-line--connection");
       if (m.history) line.classList.add("oc-line--old");
       // How Twitch dressed the message up: a channel-points highlight, a gigantified emote.
-      if (m.kind === "channel_points_highlighted" || m.kind === "power_ups_message_effect") line.classList.add("oc-line--highlight");
+      // A highlighted message, like Twitch's: a label on top, then the message on a solid
+      // block of color.
+      if (m.kind === "channel_points_highlighted" || m.kind === "power_ups_message_effect") {
+        line.classList.add("oc-line--highlight");
+        const hl = el("div", "oc-hl__head");
+        hl.innerHTML = POINTS;
+        hl.append(m.kind === "power_ups_message_effect" ? "Message effect" : "Highlighted their message");
+        line.append(hl);
+      }
       if (m.kind === "power_ups_gigantified_emote") line.classList.add("oc-line--giant");
       if (m.reply) {
         const r = el("div", "oc-replied");
@@ -1085,17 +1095,26 @@
       chosen_modified_sub_emote_unlock: "Modify a single emote",
       celebration: "On-screen celebration",
     };
+    // Laid out like Twitch's: one plain line, "name redeemed Reward (points)", in the
+    // chat's own font; when they typed something, their words underneath, as big as chat.
+    const nameColor = (name) => safeColor([...list.querySelectorAll(".oc-line[data-login]")].reverse().find((l) => l.dataset.login === String(name || "").toLowerCase())?.dataset.color);
     function redemptionLine(name, title, cost, words) {
-      const line = el("div", "oc-line oc-redeem");
-      const art = el("span", "oc-event__icon");
-      art.innerHTML = pixel("sparkles", 18);
-      const box = el("div", "oc-event__words");
+      const line = el("div", `oc-line oc-redeem${words ? " oc-redeem--words" : ""}`);
       const head = el("div", "oc-redeem__head");
-      head.append(el("b", "", name), " redeemed ", el("b", "oc-redeem__title", title));
-      if (cost) head.append(el("span", "oc-redeem__cost", ` ${Number(cost).toLocaleString()}`));
-      box.append(head);
-      if (words) box.append(el("div", "oc-body", words));
-      line.append(art, box);
+      const mark = el("span", "oc-redeem__mark");
+      mark.innerHTML = POINTS;
+      const who = el("b", "oc-redeem__who", name);
+      const color = nameColor(name);
+      if (color) who.style.color = color;
+      head.append(mark, who, " redeemed ", el("b", "oc-redeem__title", title));
+      if (cost) {
+        const c = el("span", "oc-redeem__cost");
+        c.innerHTML = POINTS;
+        c.append(Number(cost).toLocaleString());
+        head.append(" ", c);
+      }
+      line.append(head);
+      if (words) line.append(el("div", "oc-redeem__words", words));
       return line;
     }
 

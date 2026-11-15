@@ -5971,3 +5971,23 @@ body .bar:has(.dots--mod)::before, body.livechat .bar:has(.dots--mods)::before {
 :is(body, body.has-space.has-space) .oc-line.oc-cheerline .oc-cheerline__gem { width: calc(20px + 26px * var(--s)); height: calc(20px + 26px * var(--s)); }
 :is(body, body.has-space.has-space) .oc-line.oc-cheerline .oc-cheerline__gem svg { width: calc(12px + 14px * var(--s)); height: calc(12px + 14px * var(--s)); }
 :is(body, body.has-space.has-space) .oc-line.oc-cheerline .oc-cheerline__what { font-size: calc(10.5px + 3px * var(--s)); }
+
+/* ===== Redemptions and highlighted messages, laid out like Twitch's =====
+   A redemption is one plain, readable line in chat's own font: the points mark, who (in
+   their name color), "redeemed", the reward and its cost. Words they typed sit under it at
+   chat size. A highlighted message is Twitch's solid block of color with a small label. */
+:is(body, body.has-space.has-space) .oc-line.oc-redeem { display: block; margin: 3px 6px; padding: 5px 10px; font-family: inherit; font-size: 13px; background: linear-gradient(90deg, color-mix(in srgb, var(--k-points, #31c4f3) 14%, transparent), transparent 80%); border: 0; border-radius: 3px; box-shadow: inset 3px 0 0 var(--k-points, #31c4f3); }
+:is(body, body.has-space.has-space) .oc-line.oc-redeem--words { padding: 6px 10px 7px; background: linear-gradient(90deg, color-mix(in srgb, var(--k-points, #31c4f3) 20%, #1b1b20), color-mix(in srgb, var(--k-points, #31c4f3) 5%, #1b1b20)); box-shadow: inset 3px 0 0 var(--k-points, #31c4f3), 0 2px 6px rgba(0, 0, 0, 0.5); }
+:is(body, body.has-space.has-space) .oc-redeem__head { display: block; font-family: inherit; font-size: 13px; letter-spacing: 0; text-transform: none; color: #c8c8d0; }
+:is(body, body.has-space.has-space) .oc-redeem--words .oc-redeem__head { font-size: 12px; color: #adadb8; }
+:is(body, body.has-space.has-space) .oc-redeem__head .oc-redeem__who { font-family: inherit; font-weight: 700; letter-spacing: 0; color: #fff; }
+:is(body, body.has-space.has-space) .oc-redeem__title { font-family: inherit; font-size: inherit; font-weight: 700; letter-spacing: 0; text-transform: none; color: #fff; }
+.oc-redeem__mark { display: inline-block; margin-right: 5px; vertical-align: -2px; color: var(--k-points, #31c4f3); }
+:is(body, body.has-space.has-space) .oc-redeem__cost { display: inline-flex; align-items: center; gap: 3px; font-family: inherit; font-weight: 700; color: var(--k-points, #31c4f3); white-space: nowrap; }
+.oc-redeem__cost svg { width: 12px; height: 12px; }
+.oc-redeem__words { margin-top: 3px; font-size: 14px; line-height: 1.4; color: #fff; }
+
+:is(body, body.has-space.has-space) .oc-line.oc-line--highlight { margin: 4px 6px; padding: 6px 10px 7px; color: #fff; background: #6b45c2; border-radius: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); }
+:is(body, body.has-space.has-space) .oc-line.oc-line--highlight:hover { background: #7550cc; }
+:is(body, body.has-space.has-space) .oc-line--highlight .oc-body { color: #fff; }
+.oc-hl__head { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; font-size: 11.5px; font-weight: 600; color: rgba(255, 255, 255, 0.82); }
