@@ -315,12 +315,19 @@ const twitch = (() => {
       chat(cmd, who);
       return { who, cmd };
     },
+    // A sub, as Twitch posts them: with Prime or at a tier, new or coming back (how many
+    // months, the streak if they've kept it going), sometimes with a message.
     sub() {
       const who = pick(CHATTERS);
-      if (Math.random() < 0.5) notice("sub", { who, system: `${who} subscribed at Tier 1.`, fields: { sub: { sub_tier: "1000", is_prime: false, duration_months: 1 } } });
+      const prime = Math.random() < 0.4;
+      const tier = prime ? "1000" : pick(["1000", "1000", "1000", "2000", "3000"]);
+      const how = prime ? "with Prime" : `at Tier ${tier[0]}`;
+      if (Math.random() < 0.35) notice("sub", { who, system: `${who} subscribed ${how}.`, fields: { sub: { sub_tier: tier, is_prime: prime, duration_months: 1 } } });
       else {
-        const months = 2 + Math.floor(Math.random() * 30);
-        notice("resub", { who, system: `${who} subscribed at Tier 1. They've subscribed for ${months} months!`, text: "love this community", fields: { resub: { cumulative_months: months, sub_tier: "1000" } } });
+        const months = 2 + Math.floor(Math.random() * 60);
+        const streak = Math.random() < 0.6 ? Math.max(2, months - Math.floor(Math.random() * 4)) : 0;
+        const text = pick(["love this community", "", "happy to be here o7", "another month LETSGO", "", "best stream on twitch"]);
+        notice("resub", { who, system: `${who} subscribed ${how}. They've subscribed for ${months} months${streak ? `, currently on a ${streak} month streak` : ""}!`, text, fields: { resub: { cumulative_months: months, streak_months: streak || null, sub_tier: tier, is_prime: prime } } });
       }
       return who;
     },
@@ -448,7 +455,7 @@ const twitch = (() => {
     // A watch streak someone shares, as Twitch posts it.
     streak() {
       const who = pick(CHATTERS);
-      const n = pick([5, 12, 25, 55, 100]);
+      const n = pick([5, 12, 25, 55, 100, 170]);
       notice("watch_streak", { who, system: `${who} watched ${n} consecutive streams and sparked a watch streak!`, text: pick(["", "never missing one", "BIRD CITY", "here every time o7"]) });
       return { who, n };
     },

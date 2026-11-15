@@ -106,20 +106,72 @@
     line.append(box, icons);
     return line;
   }
-  // Raids, subs, gifts, announcements: Twitch's notice lines (StreamSpace leaves these alone).
+  // Raids, subs, gifts, watch streaks, announcements: Twitch's notice lines, drawn the way
+  // Twitch draws them (checked against live chats): a colored bar down the left, the icon
+  // and the name on top, what happened under it with the key words in bold, and their
+  // message (if they wrote one) as an ordinary chat line inside it. StreamSpace leaves
+  // these alone.
+  const NOTICE_ICONS = {
+    prime: "M2 6.5l4 3 4-6 4 6 4-3-1.8 9.5H3.8z",
+    sub: "M10 1.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L10 15l-5.2 2.7 1-5.9L1.5 7.7l5.9-.8z",
+    gift: "M2 6h16v4H2zM3 11h6v7H3zM11 11h6v7h-6zM9.2 5.5C7 1.5 4 2.5 6.2 5.5zM10.8 5.5c2.2-4 5.2-3 3-0z",
+    streak: "M10 1c1 3 5 5 5 10.5a5 5 0 0 1-10 0c0-2.2 1-3.8 2.2-4.8 0 2 .9 3.1 1.8 3.3-.8-3.3.2-6.3 1-9z",
+    bits: "M10 1l7 7.5L10 19 3 8.5z",
+    raid: "M7 4a3 3 0 1 1 0 6 3 3 0 0 1 0-6zM1 17.5c0-3.2 2.7-5.5 6-5.5s6 2.3 6 5.5zM14 5.5l4.5 4.5-4.5 4.5v-3h-2.5V8.5H14z",
+    announcement: "M3 8h3l8.5-5v14L6 12H3zM6.2 12.5l1.3 5h2.2l-1.3-5z",
+  };
+  const KIND_OF = { sub: "sub", resub: "sub", prime_paid_upgrade: "sub", gift_paid_upgrade: "sub", sub_gift: "gift", community_sub_gift: "gift", pay_it_forward: "gift", watch_streak: "streak", bits_badge_tier: "bits", raid: "raid", unraid: "raid", announcement: "announcement" };
+  const ANNOUNCE_COLORS = { PRIMARY: ["#9147ff", "#ff75e6"], BLUE: ["#00d6d6", "#9146ff"], GREEN: ["#00db84", "#57bee6"], ORANGE: ["#ffb31a", "#e0e000"], PURPLE: ["#9146ff", "#ff75e6"] };
+  // "Name subscribed with Prime. They've subscribed for 12 months!" -> what's after the name,
+  // with the words Twitch puts in bold in bold (and Prime in purple).
+  function noticeWords(text, login, shown) {
+    let t = String(text || "");
+    for (const n of [shown, login]) if (n && t.toLowerCase().startsWith(`${n.toLowerCase()} `)) t = t.slice(n.length + 1);
+    t = t.charAt(0).toUpperCase() + t.slice(1);
+    const out = el("span", "tw-notice__sys");
+    const BOLD = /(Subscribed|Prime|Tier \d|\d+ months?|\d+ month streak|gifting \d+ Tier \d Subs?|gifted a Tier \d sub|\d+ consecutive streams|watch streak|\d+ raiders)/g;
+    let last = 0;
+    for (const m of t.matchAll(BOLD)) {
+      if (m.index > last) out.append(t.slice(last, m.index));
+      const b = el("b", m[0] === "Prime" ? "tw-prime" : null, m[0]);
+      out.append(b);
+      last = m.index + m[0].length;
+    }
+    out.append(t.slice(last));
+    return out;
+  }
   function noticeLine(e) {
-    const line = el("div", "user-notice-line");
-    const kind = String(e.notice_type || "").replace(/^shared_chat_/, "");
-    line.dataset.kind = kind;
-    const say = e.system_message || (kind === "announcement" ? "Announcement" : kind);
-    line.append(el("div", "tw-notice__head", say));
+    const type = String(e.notice_type || "").replace(/^shared_chat_/, "");
+    const kind = KIND_OF[type] || "sub";
+    const login = String(e.chatter_user_login || "").toLowerCase();
+    const shown = SHOWN[login] || e.chatter_user_name || login;
+    const line = el("div", `user-notice-line tw-notice tw-notice--${kind}`);
+    line.dataset.kind = type;
+    const icon = el("span", "tw-notice__icon");
+    const prime = /with Prime/i.test(e.system_message || "") || e.sub?.is_prime || e.resub?.is_prime;
+    icon.innerHTML = `<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="${NOTICE_ICONS[kind === "sub" && prime ? "prime" : kind]}" fill="currentColor"/></svg>`;
+    if (kind === "sub" && prime) icon.classList.add("tw-notice__icon--prime");
+    const top = el("div", "tw-notice__top");
+    if (kind === "announcement") {
+      const [c1, c2] = ANNOUNCE_COLORS[e.announcement?.color] || ANNOUNCE_COLORS.PRIMARY;
+      line.style.setProperty("--a1", c1);
+      line.style.setProperty("--a2", c2);
+      top.append(icon, el("span", "tw-notice__label", "Announcement"));
+      line.append(top);
+    } else {
+      const name = el("span", "tw-notice__name", shown);
+      top.append(icon, name);
+      line.append(top);
+      let words = e.system_message || "";
+      if (type === "bits_badge_tier") words = `${shown} just earned a new ${Number(e.bits_badge_tier?.tier || 0).toLocaleString()} Bits badge!`;
+      line.append(noticeWords(words, login, shown));
+    }
+    // What they said with it: an ordinary chat line, badges and name and all.
     if (e.message?.text) {
-      const msg = el("div", "tw-notice__msg");
-      const login = String(e.chatter_user_login || "").toLowerCase();
-      const author = el("span", "chat-author__display-name", SHOWN[login] || e.chatter_user_name || login);
-      author.style.color = e.color || "#a970ff";
-      msg.append(author, el("span", "tw-colon", ": "), body(e));
-      line.append(msg);
+      const said = messageLine({ ...e, chatter_user_login: login });
+      said.classList.add("tw-notice__msg");
+      said.querySelector(".chat-line__icons")?.remove();
+      line.append(said);
     }
     return line;
   }

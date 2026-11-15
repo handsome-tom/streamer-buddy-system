@@ -27,11 +27,26 @@ body { background: var(--tw-bg); color: var(--tw-text); font: 13px/20px Inter, "
 .chat-line__icons { position: absolute; top: -12px; right: 14px; display: none; padding: 2px; background: var(--tw-bg); border: 1px solid var(--tw-border); border-radius: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); }
 .chat-line__message:hover .chat-line__icons { display: flex; }
 
-.user-notice-line { margin: 5px 10px; padding: 6px 16px; border-left: 4px solid var(--tw-purple); background: rgba(145, 71, 255, 0.08); }
-.user-notice-line[data-kind="raid"] { border-left-color: #ff6a00; background: rgba(255, 106, 0, 0.1); }
-.user-notice-line[data-kind="announcement"] { border-left-color: #00c7ac; }
-.tw-notice__head { font-weight: 600; }
-.tw-notice__msg { margin-top: 2px; }
+/* Twitch's notices (subs, gifts, watch streaks, bits badges, raids): a slightly lighter
+   line with a colored bar down its left, as Twitch draws them. */
+.tw-notice { --nb: #e9b72b; margin: 4px 0; padding: 6px 16px 7px 14px; background: #1f1f23; border-left: 4px solid var(--nb); }
+.tw-notice--raid { --nb: #9147ff; }
+.tw-notice__top { display: flex; align-items: center; gap: 5px; }
+.tw-notice__icon { display: inline-grid; place-items: center; width: 16px; height: 16px; color: var(--tw-text); }
+.tw-notice__icon--prime { color: #bf94ff; }
+.tw-notice--streak .tw-notice__icon { color: #ff8b3d; }
+.tw-notice--bits .tw-notice__icon { color: #9c3ee8; }
+.tw-notice--raid .tw-notice__icon { color: #bf94ff; }
+.tw-notice__name { font-weight: 700; color: #bf94ff; }
+.tw-notice__sys { display: block; padding-left: 21px; color: var(--tw-text); }
+.tw-notice__sys b { font-weight: 700; }
+.tw-notice__sys .tw-prime { font-weight: 400; color: #bf94ff; }
+.tw-notice .tw-notice__msg { margin: 4px 0 0; padding: 0 0 0 21px; border-radius: 0; }
+.tw-notice .tw-notice__msg:hover { background: none; }
+/* Announcements: a gradient bar in the announcement's colors, and a header line. */
+.tw-notice--announcement { border-left: 0; padding-left: 18px; background: linear-gradient(#1f1f23, #1f1f23) padding-box, linear-gradient(180deg, var(--a1), var(--a2)) border-box; border-left: 4px solid transparent; }
+.tw-notice__label { font-size: 12px; font-weight: 600; color: var(--tw-muted); }
+.tw-notice--announcement .tw-notice__msg { padding-left: 0; }
 
 .tw-paused { position: absolute; left: 50%; bottom: 112px; transform: translateX(-50%); padding: 5px 12px; font: inherit; font-weight: 600; color: #fff; background: rgba(0, 0, 0, 0.75); border: 0; border-radius: 4px; cursor: pointer; }
 

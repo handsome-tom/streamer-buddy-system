@@ -698,6 +698,14 @@
   .pg .chip, .pg select { display: flex; justify-content: flex-start; width: 100%; height: auto; padding: 6px 10px; font: inherit; font-size: 12.5px; font-weight: 600; text-align: left; color: #e4e4ea; background: #141418; border: 1px solid #2a2a30; border-radius: 4px; box-shadow: none; }
   .pg .chip:hover { background: #1f1f25; border-color: #44444c; }
   .pg .chip.on { border-color: #3fc98e; }
+  /* Above the far-right chat: pretend chat, or a real channel's live chat. */
+  .twsw { display: flex; align-items: center; gap: 4px; height: 30px; margin-bottom: 6px; font-size: 12px; }
+  .twsw__opt { flex: none; white-space: nowrap; height: 26px; padding: 0 12px; font: inherit; font-weight: 600; color: #b9b9c3; background: #141418; border: 1px solid #2a2a30; border-radius: 9999px; cursor: pointer; }
+  .twsw__opt:hover { color: #fff; border-color: #44444c; }
+  .twsw__opt--on { color: #fff; background: #9147ff; border-color: #9147ff; }
+  .twsw__ch { flex: 1; min-width: 60px; height: 26px; padding: 0 10px; font: inherit; color: #efeff1; background: #141418; border: 1px solid #2a2a30; border-radius: 8px; outline: none; }
+  .twsw__ch:focus { border-color: #9147ff; }
+  html.bare .stage #twitch { height: calc(100vh - 32px - 36px); min-height: 444px; }
   .pg__said { margin-top: 12px; font-size: 11.5px; line-height: 1.4; color: #9a9aa5; }
 </style>
 </head>
@@ -890,12 +898,38 @@
     chat.id = "twitch";
     chat.title = "Twitch chat (pretend), as the mod sees it with StreamSpace";
     chat.dataset.src = "twitch/chat.html";
-    twitch.append(chat);
+    // Above it: pretend chat (StreamSpace runs on it, the buttons drive it) or a real channel's
+    // live Twitch chat (Twitch's own embed: sign in to Twitch in this browser to type in it).
+    const sw = document.createElement("form");
+    sw.className = "twsw";
+    sw.innerHTML = '<button type="button" class="twsw__opt twsw__opt--on" data-mode="pretend">Pretend</button>' +
+      '<button type="button" class="twsw__opt" data-mode="live">Live</button>' +
+      '<input class="twsw__ch" name="ch" placeholder="channel" value="xqc" aria-label="Twitch channel for live chat" spellcheck="false">';
+    const opts = sw.querySelectorAll(".twsw__opt");
+    const channelBox = sw.querySelector(".twsw__ch");
+    const goLive = () => {
+      const ch = channelBox.value.trim().replace(/^@/, "").toLowerCase();
+      if (!/^[a-z0-9_]{2,25}$/.test(ch)) return channelBox.focus();
+      chat.src = `https://www.twitch.tv/embed/${ch}/chat?parent=${location.hostname}&darkpopout`;
+      chat.title = `${ch}'s live Twitch chat`;
+      opts.forEach((o) => o.classList.toggle("twsw__opt--on", o.dataset.mode === "live"));
+    };
+    opts[0].addEventListener("click", () => {
+      chat.src = chat.dataset.src;
+      chat.title = "Twitch chat (pretend), as the mod sees it with StreamSpace";
+      opts.forEach((o) => o.classList.toggle("twsw__opt--on", o.dataset.mode === "pretend"));
+    });
+    opts[1].addEventListener("click", goLive);
+    sw.addEventListener("submit", (e) => {
+      e.preventDefault();
+      goLive();
+    });
+    twitch.append(sw, chat);
     stage.append(twitch);
   }
 </script>
 <script type="module">
-  import { Socket, pretendTwitch } from "./hub.js?v=129"; // the number: bump it when hub.js changes, so browsers fetch the new one
+  import { Socket, pretendTwitch } from "./hub.js?v=130"; // the number: bump it when hub.js changes, so browsers fetch the new one
 
   const said = (text) => (document.getElementById("said").textContent = text);
   const pick = (list) => list[Math.floor(Math.random() * list.length)];
