@@ -444,7 +444,7 @@ export const tests = {
     (await h.until(() => line.querySelector(".tbc-flagbtn"), "the flag button on the line")).click();
     await streamer.next("flash", (m) => m.f.kind === "chat" && m.f.chatter === "hellofoxy" && m.f.text === "is this the right stream?" && m.f.from === "mod1");
     await h.until(() => line.classList.contains("tbc-flagged"), "the line to glow in the Twitch chat");
-    h.check(tw.$(".tbc-hubchat") && tw.$(".tbc-phrases-btn"), "the handshake and quick phrases buttons");
+    h.check(tw.$(".tbc-hubchat") && tw.$(".tbc-phrases-btn"), "the StreamSpace and quick phrases buttons");
     const input = tw.$('[data-a-target="chat-input"]');
     input.textContent = "on it";
     input.dispatchEvent(new tw.win.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));

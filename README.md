@@ -117,7 +117,7 @@ connections. They're kept in OBS between restarts.
 
 ### Streamer View (for mods, in the Chrome side panel)
 
-The top of the handshake side panel shows what the streamer's OBS dock is showing right
+The top of the StreamSpace side panel shows what the streamer's OBS dock is showing right
 now: the edge's glow color, everything waiting for them (from anyone, each with how far
 it has glowed), answers they haven't marked seen yet, and the quick notes and flagged
 chat lines in their bar. It follows the channel open in the Twitch tab beside the panel;

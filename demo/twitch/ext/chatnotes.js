@@ -344,7 +344,7 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
       const b = document.querySelector(`[data-tbc-note="${CSS.escape(m.id)}"]`);
       if (b) unstack(b);
     } else if (m.t === "needSignin") {
-      toast("Click the handshake and sign in first");
+      toast("Click the StreamSpace button and sign in first");
     }
   }
 

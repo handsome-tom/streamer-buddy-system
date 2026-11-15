@@ -8,7 +8,7 @@
 // The flag only appears in the chat of a channel you and its streamer have both
 // connected with in Streamer Buddy System (or your own channel), not on every
 // stream you watch. background.js keeps the connection to the relay, using the
-// sign-in the hub handed over, so the handshake has to have been signed in once.
+// sign-in the hub handed over, so the StreamSpace button has to have been signed in once.
 //
 // Wrapped so its names don't clash with the other scripts, and only started if
 // it's switched on (settings.js).
@@ -178,7 +178,7 @@ whenOn("flag", "Flag chat lines to the streamer", () => {
     } else if (m.t === "flashed" && m.kind === "chat") {
       toast(m.reached ? `Sent to ${m.to}` : `${m.to}'s panel isn't open, so only the chat glow went out`);
     } else if (m.t === "needSignin") {
-      toast("Click the handshake and sign in first, then flag again");
+      toast("Click the StreamSpace button and sign in first, then flag again");
     } else if (m.t === "error") {
       toast(m.why);
     }
