@@ -3246,7 +3246,7 @@ body.no-modicons .oc-modicons { display: none; }
   --k-first: #3ce59f;
   --k-points: #31c4f3;
   --k-announce: #ffb31a;
-  --k-hype: #c6f135;
+  --k-hype: #ff4fa8;
   --k-poll: #4d8dff;
   --k-pred: #e08cff;
   --k-pin: #e6e6ea;
@@ -3338,7 +3338,7 @@ body.no-modicons .oc-modicons { display: none; }
   --k-first: #3fc98e;
   --k-points: #3aa9db;
   --k-announce: #e0a53a;
-  --k-hype: #a9cf45;
+  --k-hype: #e85a9c;
   --k-poll: #5a8de8;
   --k-pred: #c788e8;
   --k-pin: #b8b8c2;
@@ -6095,3 +6095,12 @@ body.livechat .slotwrap { display: none !important; }
    poll cards come after it, so they'd otherwise cover it). */
 :is(body, body.has-space.has-space) .oc-top .oc-topcard--pin:has(.oc-pinopts:not([hidden])) { z-index: 30; }
 :is(body, body.has-space.has-space) .oc-top .oc-pinopts { z-index: 31; }
+
+/* Announcements: a soft glow behind the card in the announcement's color (the color the mod
+   picked on Twitch, or gold when they didn't pick one). */
+:is(body, body.has-space.has-space) .oc-notice--announcement {
+  box-shadow:
+    0 0 26px -4px color-mix(in srgb, var(--twitch-color, var(--k-announce)) 55%, transparent),
+    0 0 60px -10px color-mix(in srgb, var(--twitch-color, var(--k-announce)) 30%, transparent),
+    0 12px 28px rgba(0, 0, 0, 0.55);
+}

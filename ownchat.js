@@ -1280,11 +1280,9 @@
     // without 100 bits being a speck.
     const sizeBy = (n, top) => Math.max(0, Math.min(1, Math.log10(Math.max(1, Number(n) || 1)) / Math.log10(top)));
     function eventSize(kind, e) {
-      if (kind === "sub" || kind === "resub") {
-        const r = e.resub || e.sub || {};
-        const tier = r.is_prime ? 0 : r.sub_tier === "3000" ? 0.2 : r.sub_tier === "2000" ? 0.1 : 0;
-        return Math.min(1, sizeBy(r.cumulative_months || r.duration_months || 1, 120) * 0.8 + tier);
-      }
+      // Subs and resubs are always the plain one-sub size, whatever the months or tier, so
+      // they never grow to look like gift bombs.
+      if (kind === "sub" || kind === "resub") return 0;
       if (kind === "community_sub_gift") return sizeBy(e.community_sub_gift?.total, 100) * 0.85 + 0.15;
       if (kind === "watch_streak") return sizeBy(Number(e.watch_streak?.streak) || Number(String(e.system_message || "").match(/(\d[\d,]*)\s+consecutive/i)?.[1]?.replace(/,/g, "")), 300) * 0.8;
       if (kind === "bits_badge_tier") return sizeBy(e.bits_badge_tier?.tier, 1000000);
