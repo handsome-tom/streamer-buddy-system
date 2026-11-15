@@ -3239,7 +3239,7 @@ body.no-modicons .oc-modicons { display: none; }
   --serif: "Plus Jakarta Sans", Inter, sans-serif;
   --label: "Plus Jakarta Sans", Inter, sans-serif;
   --k-sub: #a970ff;
-  --k-gift: #ff5fa2;
+  --k-gift: var(--k-sub);
   --k-streak: #ff7a1a;
   --k-bits: #1fd1b2;
   --k-charity: #ff5252;
@@ -3331,7 +3331,7 @@ body.no-modicons .oc-modicons { display: none; }
 /* Calmer, deeper colors for the kinds. */
 :root {
   --k-sub: #9d6bf0;
-  --k-gift: #e2568f;
+  --k-gift: var(--k-sub);
   --k-streak: #ee7a2f;
   --k-bits: #2bbfa4;
   --k-charity: #e25555;
