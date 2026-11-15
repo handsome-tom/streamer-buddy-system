@@ -384,7 +384,14 @@
   /* Blend the hero into the live demo below: the space colors are no longer cut off at the hero's
      bottom edge; they carry on down a little and fade out behind the demo's heading. */
   .hero { overflow-x: clip; overflow-y: visible; background: radial-gradient(700px 300px at 78% 40%, rgba(63, 125, 216, 0.18), transparent 70%); }
-  .hero__swathes { -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 96%); mask-image: linear-gradient(to bottom, #000 62%, transparent 96%); }
+  /* Faded out on every edge, not just the bottom: the blur spills past the box, and the mask
+     cuts whatever is outside it, so an edge that isn't faded shows as a hard line. */
+  .hero__swathes {
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 24%, #000 62%, transparent 96%), linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+    -webkit-mask-composite: source-in;
+    mask-image: linear-gradient(to bottom, transparent, #000 24%, #000 62%, transparent 96%), linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+    mask-composite: intersect;
+  }
   .hero__art::before { -webkit-mask-image: radial-gradient(closest-side, #000 55%, transparent 100%), linear-gradient(to bottom, #000 64%, transparent 96%); -webkit-mask-composite: source-in;
     mask-image: radial-gradient(closest-side, #000 55%, transparent 100%), linear-gradient(to bottom, #000 64%, transparent 96%); mask-composite: intersect; }
   .demo { z-index: 1; }
