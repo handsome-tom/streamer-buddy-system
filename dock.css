@@ -5864,3 +5864,6 @@ body .bar:has(.dots--mod)::before, body.livechat .bar:has(.dots--mods)::before {
   background: linear-gradient(90deg, rgba(var(--edge), 0.42) 0%, rgba(var(--edge), 0.16) 38%, rgba(var(--edge), 0) 100%);
   box-shadow: inset 3px 0 0 rgb(var(--edge));
 }
+/* The streamer's bar is three rows (pictures, the message box, the suggestions): the colored
+   edge and its wash belong to the pictures row only, the same size as the mod side's. */
+body.livechat .bar:has(.dots--mods)::before { bottom: auto; height: 46px; }
