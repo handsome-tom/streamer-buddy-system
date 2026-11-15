@@ -24,7 +24,7 @@
   const MAX_LINES = 400;
   const MAX_LINES_PAUSED = 1500;
   const FLUSH_MS = 100; // busy chats draw in small batches
-  const HOVER_HOLD_MS = 3000; // the chat holds still while the mouse is moving over it
+  const HOVER_HOLD_MS = 3000; // the chat holds still this long after you grab its scrollbar or click a line
   const ERRORS_ALLOWED = 3; // in a minute
   const RAIDER_MS = 15 * 60 * 1000; // how long raiders' lines are marked after a raid
   // Asked for at sign-in but not needed: Twitch's full list of who's in the chat, which
@@ -588,13 +588,15 @@
         drawMore();
       }
     }, { passive: true });
-    // Grabbing the scrollbar or touching the chat holds it still while you drag.
+    // Grabbing the scrollbar or clicking a line holds it still a moment. Just pointing at
+    // the chat doesn't: like Twitch, at the bottom it keeps hugging the newest message.
     list.addEventListener("pointerdown", () => {
       holdUntil = Date.now() + HOVER_HOLD_MS;
     }, { passive: true });
-    list.addEventListener("mousemove", () => {
-      holdUntil = Date.now() + HOVER_HOLD_MS;
-    }, { passive: true });
+    // An emote or badge loading makes its line taller: stay on the newest one.
+    list.addEventListener("load", () => {
+      if (!held()) toBottom();
+    }, true);
 
     function flushLines() {
       if (queue.length) {
