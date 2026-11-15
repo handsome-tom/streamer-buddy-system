@@ -351,6 +351,8 @@ export const tests = {
     tom.send({ t: "allow", login: "streamer", on: true });
     await tom.next("state", (m) => (m.allowed || []).some((a) => (a.login || a) === "streamer"));
     const dock = await h.panel("streamer", "ext");
+    // Signed in first: Send feedback is only in Settings once you are.
+    await h.until(() => dock.$("#peopleBtn:not([hidden])"), "the panel to sign in");
     (await h.until(() => dock.$("#settingsBtn"), "the Settings button")).click();
     (await h.until(() => dock.$(".set__feedback"), "Send feedback in Settings")).click();
     const box = await h.until(() => dock.$(".feedback__text"), "the feedback box");
@@ -381,7 +383,7 @@ export const tests = {
     tom.send({ t: "allow", login: "streamer", on: true });
     await tom.next("state", (m) => (m.allowed || []).some((a) => (a.login || a) === "streamer"));
     const dock = await h.panel("streamer", "obs");
-    await h.until(() => dock.$("#quickAsk"), "the dock to be ready");
+    await h.until(() => dock.$("#peopleBtn:not([hidden])"), "the dock to sign in");
     await h.wait(300);
     const boom = () => dock.win.dispatchEvent(new dock.win.ErrorEvent("error", { message: "TypeError: test boom", filename: "https://example.com/dock.js?v=341", lineno: 12, colno: 34 }));
     boom();
