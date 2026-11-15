@@ -1792,8 +1792,8 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   position: relative;
 }
 /* The flag sits at the line's top right, just left of Twitch's reply button and built the
-   same way: a 32px dark circle, half above the line, with a 20px white icon. Pointing at it
-   turns it your chat color (flag.js sets --tbc-mycolor). */
+   same way (a 32px circle, half above the line, a 20px white icon), but in mod green, so it
+   reads as a mod's tool. */
 .tbc-flagbtn {
   position: absolute;
   top: -11px;
@@ -1807,17 +1807,17 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: #18181b;
+  background: #00ad03; /* Twitch's moderator green */
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.9);
-  color: #efeff1;
+  color: #fff;
   cursor: pointer;
 }
 .chat-line__message:hover .tbc-flagbtn {
   display: flex;
 }
 .tbc-flagbtn:hover {
-  background: #26262c;
-  color: var(--tbc-mycolor, #ffb31a);
+  background: #14c417;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 10px rgba(0, 173, 3, 0.6);
 }
 .tbc-flagged {
   position: relative;
