@@ -723,6 +723,7 @@
      (Twitch, with the popout panel beside it), the part that's ours lit up. */
   .where { margin: 0 0 14px; }
   .where svg { display: block; width: 240px; max-width: 100%; height: auto; }
+  .where--chrome svg { width: 293px; } /* wider: Twitch, its chat, and the panel beside them, at the same scale as OBS */
   .where__hi { filter: drop-shadow(0 0 6px currentColor); }
   .where--obs .where__hi { color: rgba(180, 140, 255, 0.6); }
   .where--chrome .where__hi { color: rgba(63, 201, 142, 0.6); }
@@ -922,28 +923,30 @@
           <p class="twosides__try">The buttons next to it set off a raid, a gift bomb, a poll and more, so you can see how each one shows up.</p>
         </div>
         <div class="twosides__side twosides__side--mod">
-          <figure class="where where--chrome" aria-hidden="true"><svg viewBox="0 0 200 120" width="200" height="120">
-            <rect x="0.5" y="0.5" width="199" height="119" rx="4" fill="#15151a" stroke="rgba(255,255,255,0.14)"/>
-            <rect x="1" y="1" width="198" height="13" rx="3" fill="#202027"/>
+          <figure class="where where--chrome" aria-hidden="true"><svg viewBox="0 0 244 120" width="244" height="120">
+            <rect x="0.5" y="0.5" width="171" height="119" rx="4" fill="#15151a" stroke="rgba(255,255,255,0.14)"/>
+            <rect x="1" y="1" width="170" height="13" rx="3" fill="#202027"/>
             <circle cx="7" cy="7.5" r="1.5" fill="#55555f"/><circle cx="12" cy="7.5" r="1.5" fill="#55555f"/><circle cx="17" cy="7.5" r="1.5" fill="#55555f"/>
             <path d="M24 14 V5 Q24 3 26 3 H70 Q72 3 72 5 V14 Z" fill="#15151a"/><rect x="28" y="5.5" width="6" height="6" rx="1" fill="#9147ff"/><rect x="38" y="7.5" width="26" height="2" fill="#8d8d97"/>
-            <rect x="6" y="17" width="160" height="8" rx="4" fill="#24242b"/>
-            <rect x="172" y="17" width="8" height="8" rx="2" fill="#2a2a33"/>
-            <rect class="where__hi" x="184" y="16" width="10" height="10" rx="2.5" fill="#3fc98e"/><path d="M187 19 h4 v3 h-2 l-1 1.4 v-1.4 h-1 z" fill="#0e0e10"/>
-            <rect x="6" y="30" width="190" height="70" fill="#1c1a29"/><rect x="40" y="56" width="22" height="15" fill="#9147ff" opacity="0.45"/>
-            <rect x="6" y="104" width="60" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="6" y="110" width="40" height="3" fill="#c6c6d0" opacity="0.2"/>
-            <circle cx="21.0" cy="84.0" r="12.0" fill="#0e0e10"/><image href="brand/logo-chrome.png" x="11" y="74" width="20" height="20"/><circle cx="47.0" cy="84.0" r="12.0" fill="#0e0e10"/><image href="brand/logo-brave.png" x="37" y="74" width="20" height="20"/>
-            <path d="M184.5 29.5 L189 25 L193.5 29.5" fill="#0f1d18" stroke="#3fc98e"/>
-            <rect class="where__hi" x="104.5" y="29.5" width="92" height="86" rx="4" fill="#0f1d18" stroke="#3fc98e"/>
-            <rect x="105" y="30" width="91" height="13" rx="3" fill="rgba(63,201,142,0.14)"/>
-            <circle cx="113" cy="36.5" r="4" fill="#3a3550" stroke="#b48cff" stroke-width="1.2"/><circle cx="124" cy="36.5" r="4" fill="#3a3550" stroke="#55555f" stroke-width="1"/>
-            <circle cx="113" cy="52" r="5" fill="#1f6f46" stroke="#3fc98e"/><circle cx="126" cy="52" r="5" fill="#1f6f46" stroke="#3fc98e"/><circle cx="139" cy="52" r="5" fill="#a85a12" stroke="#f29028"/><circle cx="152" cy="52" r="5" fill="#2a4a7a" stroke="#6aa0e8"/>
-            <rect x="109" y="62" width="83" height="18" rx="3" fill="#202027"/><rect x="113" y="66" width="34" height="3" fill="#e6e6ea" opacity="0.8"/><rect x="113" y="72" width="44" height="2" fill="#c6c6d0" opacity="0.4"/><rect x="168" y="66" width="20" height="9" rx="2" fill="#3a3a44"/>
-            <rect x="109" y="86" width="12" height="12" rx="6" fill="#3a3550"/><rect x="124" y="90" width="40" height="3" fill="#e6e6ea" opacity="0.55"/>
-            <rect x="109" y="103" width="83" height="9" rx="4.5" fill="#15151a" stroke="#3a3a44"/><rect x="113" y="106.5" width="14" height="2" fill="#6aa0e8"/><circle cx="187" cy="107.5" r="3.2" fill="#3b82f6"/>
-          </svg><figcaption>Pops out in Chrome or Brave</figcaption></figure>
+            <rect x="6" y="17" width="134" height="8" rx="4" fill="#24242b"/>
+            <rect x="145" y="17" width="8" height="8" rx="2" fill="#2a2a33"/>
+            <rect class="where__hi" x="157" y="16" width="10" height="10" rx="2.5" fill="#3fc98e"/><path d="M160 19 h4 v3 h-2 l-1 1.4 v-1.4 h-1 z" fill="#0e0e10"/>
+            <rect x="6" y="30" width="108" height="62" fill="#1c1a29"/><rect x="50" y="54" width="20" height="14" fill="#9147ff" opacity="0.45"/>
+            <rect x="6" y="97" width="60" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="6" y="103" width="40" height="3" fill="#c6c6d0" opacity="0.2"/>
+            <circle cx="20.0" cy="79.0" r="11.0" fill="#0e0e10"/><image href="brand/logo-chrome.png" x="11" y="70" width="18" height="18"/><circle cx="44.0" cy="79.0" r="11.0" fill="#0e0e10"/><image href="brand/logo-brave.png" x="35" y="70" width="18" height="18"/>
+            <rect x="118" y="30" width="49" height="85" fill="#18181c"/><rect x="121" y="32" width="20" height="1.5" fill="#8d8d97"/><rect x="121" y="36.0" width="9" height="2.5" fill="#ff6b8b"/><rect x="132" y="36.0" width="22" height="2.5" fill="#c6c6d0" opacity="0.35"/><rect x="121" y="43.5" width="9" height="2.5" fill="#3fc98e"/><rect x="132" y="43.5" width="18" height="2.5" fill="#c6c6d0" opacity="0.35"/><rect x="121" y="51.0" width="9" height="2.5" fill="#6aa0e8"/><rect x="132" y="51.0" width="26" height="2.5" fill="#c6c6d0" opacity="0.35"/><rect x="121" y="58.5" width="9" height="2.5" fill="#f0a330"/><rect x="132" y="58.5" width="16" height="2.5" fill="#c6c6d0" opacity="0.35"/><rect x="121" y="66.0" width="9" height="2.5" fill="#b48cff"/><rect x="132" y="66.0" width="24" height="2.5" fill="#c6c6d0" opacity="0.35"/><rect x="121" y="73.5" width="9" height="2.5" fill="#ff6b8b"/><rect x="132" y="73.5" width="20" height="2.5" fill="#c6c6d0" opacity="0.35"/><rect x="121" y="81.0" width="9" height="2.5" fill="#3fc98e"/><rect x="132" y="81.0" width="14" height="2.5" fill="#c6c6d0" opacity="0.35"/><rect x="121" y="88.5" width="9" height="2.5" fill="#6aa0e8"/><rect x="132" y="88.5" width="22" height="2.5" fill="#c6c6d0" opacity="0.35"/><rect x="121" y="106" width="43" height="6" rx="3" fill="#24242b"/>
+            <path d="M167 21 H181" stroke="#3fc98e" stroke-dasharray="2 1.5"/>
+            <rect class="where__hi" x="181.5" y="13.5" width="61" height="102" rx="4" fill="#0f1d18" stroke="#3fc98e"/>
+            <rect x="182" y="14" width="60" height="12" rx="3" fill="rgba(63,201,142,0.14)"/>
+            <circle cx="189" cy="20" r="3.6" fill="#3a3550" stroke="#b48cff" stroke-width="1.1"/><circle cx="198.5" cy="20" r="3.6" fill="#3a3550" stroke="#55555f"/>
+            <circle cx="190" cy="34" r="4.3" fill="#1f6f46" stroke="#3fc98e"/><circle cx="201" cy="34" r="4.3" fill="#1f6f46" stroke="#3fc98e"/><circle cx="212" cy="34" r="4.3" fill="#a85a12" stroke="#f29028"/><circle cx="223" cy="34" r="4.3" fill="#2a4a7a" stroke="#6aa0e8"/>
+            <rect x="186" y="44" width="52" height="17" rx="3" fill="#202027"/><rect x="189" y="48" width="24" height="2.5" fill="#e6e6ea" opacity="0.8"/><rect x="189" y="53.5" width="30" height="2" fill="#c6c6d0" opacity="0.4"/><rect x="222" y="47" width="13" height="8" rx="2" fill="#3a3a44"/>
+            <circle cx="191" cy="70" r="4.5" fill="#3a3550"/><rect x="198" y="68.5" width="30" height="2.5" fill="#e6e6ea" opacity="0.55"/>
+            <circle cx="191" cy="82" r="4.5" fill="#3a3550"/><rect x="198" y="80.5" width="24" height="2.5" fill="#e6e6ea" opacity="0.4"/>
+            <rect x="186" y="103" width="52" height="8" rx="4" fill="#15151a" stroke="#3a3a44"/><rect x="190" y="106" width="10" height="2" fill="#6aa0e8"/><circle cx="234" cy="107" r="2.8" fill="#3b82f6"/>
+          </svg><figcaption>Pops out in Chrome or Brave, next to Twitch chat</figcaption></figure>
           <h3>A mod's popout panel</h3>
-          <p>Pops out of the StreamSpace button in Chrome or Brave, right over Twitch. Mods see what's on the streamer's dock, ask quietly instead of in chat, nudge, flag a line, or hit the panic button when it can't wait.</p>
+          <p>Pops out of the StreamSpace button in Chrome or Brave and sits beside Twitch chat. Mods see what's on the streamer's dock, ask quietly instead of in chat, nudge, flag a line, or hit the panic button when it can't wait.</p>
           <p class="twosides__try">The buttons next to it do what a mod would, and you watch it land on the streamer's side.</p>
         </div>
       </div>
