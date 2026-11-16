@@ -294,7 +294,7 @@ const twitch = (() => {
     // A raid: the notice, then the raiders saying hello.
     raid() {
       const from = "Lump"; // the raiding streamer (demo/pics/raider.webp)
-      colorOf[from] = "#8fd14f"; // Lump's name color, which the raid card takes
+      colorOf[from] = "#dc143c"; // crimson: Lump's name color, which the raid card takes
       const count = 8 + Math.floor(Math.random() * 140);
       notice("raid", {
         who: from,

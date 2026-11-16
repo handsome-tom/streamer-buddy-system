@@ -6402,3 +6402,6 @@ body.embed .bar #modBtn.bar-btn--here[data-status="offline"] { --st: var(--muted
 :is(body, body.has-space.has-space) .oc-line.oc-event.oc-event--first { align-items: center; }
 /* The First-time sub tag: white words, no shadow, on a deeper gold so they read. */
 :is(body, body.has-space.has-space) .oc-event--first .oc-event__label { color: #fff; text-shadow: none; background: linear-gradient(180deg, #e9a31c, #c47a00); }
+/* The RAID tag: squarer, with small rounded corners. */
+body.has-space.has-space .oc-raidtag, body.has-space.has-space .oc-line--raider .oc-raidtag { border-radius: 4px; padding: 1px 6px; }
+body.has-space.has-space .oc-raidtag__pic { border-radius: 3px; }

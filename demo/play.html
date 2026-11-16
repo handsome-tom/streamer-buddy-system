@@ -963,7 +963,7 @@
               <button type="button" class="chip" data-click="streamerAsk" data-tip="→ The streamer types a question in the dock's Message box and sends it to mod1. Watch it land in the mod's panel.">Ask mod1<span class="go" aria-hidden="true">→</span></button>
             </div>
             <div class="menu__row"><span class="menu__cap">Twitch events</span>
-              <button type="button" class="chip" data-click="tRaid" data-k style="--k:#8fd14f" data-tip="Lump raids with a crowd. Raiders get a RAID tag with Lump's picture.">Raid</button>
+              <button type="button" class="chip" data-click="tRaid" data-k style="--k:#dc143c" data-tip="Lump raids with a crowd. Raiders get a RAID tag with Lump's picture.">Raid</button>
               <button type="button" class="chip" data-click="tGift" data-k style="--k:#9d6bf0" data-tip="20 gifted subs: a progress card on top, and a card listing everyone who got one.">Gift bomb</button>
               <button type="button" class="chip" data-click="tFirst" data-k style="--k:#3fc98e" data-tip="Someone chats in the channel for the very first time.">First-timer</button>
               <button type="button" class="chip" data-click="tStreak" data-k style="--k:#ee7a2f" data-tip="A viewer shares their watch streak.">Streak</button>
@@ -1007,7 +1007,7 @@
         <button id="feed" type="button" class="chip" data-tip="Turns the pretend chatter on or off, to keep things calm while you look around.">Chat feed: off</button>
         </div>
         <div class="pane" role="tabpanel" id="paneTwitch" aria-labelledby="tabTwitch" hidden>
-        <button id="tRaid" type="button" class="chip" data-k style="--k:#8fd14f" data-tip="Lump raids with a crowd. Raiders get a RAID tag with Lump's picture.">Raid</button>
+        <button id="tRaid" type="button" class="chip" data-k style="--k:#dc143c" data-tip="Lump raids with a crowd. Raiders get a RAID tag with Lump's picture.">Raid</button>
         <button id="tFirst" type="button" class="chip" data-k style="--k:#3fc98e" data-tip="Someone chats in the channel for the very first time.">First-time chatter</button>
         <button id="tGift" type="button" class="chip" data-k style="--k:#9d6bf0" data-tip="20 gifted subs: a progress card on top, and a card listing everyone who got one.">Gift bomb</button>
         <button id="tStreak" type="button" class="chip" data-k style="--k:#ee7a2f" data-tip="A viewer shares their watch streak.">Watch streak</button>
@@ -1304,7 +1304,7 @@
   }
 </script>
 <script type="module">
-  import { Socket, pretendTwitch } from "./hub.js?v=140"; // the number: bump it when hub.js changes, so browsers fetch the new one
+  import { Socket, pretendTwitch } from "./hub.js?v=141"; // the number: bump it when hub.js changes, so browsers fetch the new one
 
   const said = (text) => (document.getElementById("said").textContent = text);
   const pick = (list) => list[Math.floor(Math.random() * list.length)];
