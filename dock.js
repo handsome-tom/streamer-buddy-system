@@ -4086,8 +4086,10 @@
     // Send: always to them, so no "Send to".
     if (c?.mutual) panel.append(composer(owner, true, true));
 
-    // Their feed (Streamer View), drawn by drawStreamerView after this is on the page.
+    // Their feed (Streamer View), drawn by drawStreamerView after this is on the page, and
+    // your history with them under it; both fold away.
     panel.append(svEl);
+    panel.append(...historyParts(owner, true));
 
     // Their reactions to what you sent: just the heading, unless they've reacted in the
     // last 3 minutes; each reaction shows for 3 minutes, then goes.
@@ -4203,14 +4205,34 @@
     const fromThem = Object.keys(inbox).filter((id) => inbox[id].from === login && !inbox[id].done).sort((a, b) => stageFor(inbox[b]) - stageFor(inbox[a]) || inbox[b].at - inbox[a].at);
     if (fromThem.length) panel.append(inboxList(fromThem));
 
-    // Everything finished or waiting on them, newest first.
+    if (!inMod) panel.append(...historyParts(login));
+    return panel;
+  }
+
+  // History with someone: everything finished or waiting on them, newest first. In Mod it
+  // sits under Their feed and folds away the same way ("histOpen").
+  function historyParts(login, foldable = false) {
+    const parts = [];
     const rows = [
       ...Object.entries(inbox).filter(([, q]) => q.from === login && q.done && !q.gone).map(([id, q]) => ({ id, q, mine: false })),
       ...Object.entries(sent).filter(([, q]) => q.to === login && !q.gone).map(([id, q]) => ({ id, q, mine: true })),
     ].sort((a, b) => b.q.at - a.q.at);
-    const logHead = el("div", "log__head");
-    logHead.append(el("span", null, "History"));
-    if (rows.length) {
+    const open = !foldable || get("histOpen", true);
+    const logHead = el("div", `log__head${foldable ? " log__head--fold" : ""}`);
+    if (foldable) {
+      const toggle = el("button", "sv__toggle log__toggle");
+      toggle.type = "button";
+      toggle.title = open ? "Fold History away" : "Show History";
+      toggle.setAttribute("aria-expanded", String(open));
+      toggle.append(el("span", "sv__title", "History"), el("span", "sv__says", rows.length ? `${rows.length} so far` : "Nothing yet"));
+      toggle.addEventListener("click", () => {
+        put("histOpen", !open);
+        render();
+      });
+      logHead.classList.toggle("log__head--closed", !open);
+      logHead.append(toggle);
+    } else logHead.append(el("span", null, "History"));
+    if (rows.length && open) {
       const all = el("button", "pill", "Clear all");
       all.type = "button";
       all.addEventListener("click", () => {
@@ -4219,10 +4241,11 @@
       });
       logHead.append(all);
     }
-    panel.append(logHead);
-    if (!rows.length) panel.append(el("p", "panel__sub", "Nothing yet."));
-    for (const { id, q, mine } of rows) panel.append(logRow(id, q, mine, login));
-    return panel;
+    parts.push(logHead);
+    if (!open) return parts;
+    if (!rows.length && !foldable) parts.push(el("p", "panel__sub", "Nothing yet."));
+    for (const { id, q, mine } of rows) parts.push(logRow(id, q, mine, login));
+    return parts;
   }
 
   // One line of history: who asked what, what came back, and if it was seen.

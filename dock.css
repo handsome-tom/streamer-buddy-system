@@ -6328,3 +6328,8 @@ body.embed .bar #modBtn.bar-btn--here[data-status="offline"] { --st: var(--muted
 .mod__mate--off { opacity: 0.45; }
 .mod__mate--off .mod__matepic { filter: grayscale(1); }
 .mod__mate--off .mod__matename { color: var(--muted); }
+
+/* Mod: History, under Their feed, folding away the same way. */
+.log__head--fold { padding: 6px 8px 6px 10px; }
+.log__head--closed .log__toggle::before { transform: rotate(-45deg); }
+.log__head--fold { margin: 2px 0 0; color: var(--text); } .log__head--fold .sv__says { text-transform: none; letter-spacing: 0; font-weight: 400; }
