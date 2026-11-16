@@ -665,6 +665,9 @@
   /* Sits on the planet's north pole, which leans 16deg left with the spin axis: the canvas is turned by
      the same amount round the planet's middle (71% of the planet below the canvas top = 296% of its height). */
   .hero-pug { position: absolute; left: 25%; top: -21%; width: 50%; height: 24%; transform: rotate(-16deg); transform-origin: 50% 295.83%; z-index: 2; pointer-events: none; }
+  /* The pug himself rides the planet's surface on his own canvas, a bit bigger than the planet so he
+     can stand out past its edge: he comes round the left edge, crosses, and slips behind the right edge. */
+  .hero-pug-dog { position: absolute; left: -15%; top: -15%; width: 130%; height: 130%; z-index: 2; pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { #space, #space::before, #space::after, .hero__art::before, .hero__swathes { animation: none !important; } }
   /* ===== One space, top to bottom: no lines between sections, and the space only turns to
      black at the very end, under the thank-yous. ===== */
@@ -771,7 +774,7 @@
           <path class="sw sw--ll" fill="url(#swLL)" d="M-640 150 Q-330 85 -145 68 Q-80 120 -40 185 Q-300 215 -640 260 Z"/>
           <path class="sw sw--lr" fill="url(#swLR)" d="M-15 210 Q20 110 75 60 Q160 42 460 25 L460 300 Z"/>
         </g>
-      </svg><div class="hero-planet"><canvas class="hero-ring hero-ring--back"></canvas><div class="hero-planet__globe"><canvas class="hero-planet__canvas"></canvas></div><canvas class="hero-ring hero-ring--front"></canvas><canvas class="hero-pug" aria-hidden="true"></canvas><span class="hero-moon"><span class="hero-moon__face"><img src="brand/tom.png" alt="" width="128" height="128"></span><span class="hero-moon__face hero-moon__face--back"><img src="brand/tom.png" alt="" width="128" height="128"></span></span></div></div>
+      </svg><div class="hero-planet"><canvas class="hero-ring hero-ring--back"></canvas><div class="hero-planet__globe"><canvas class="hero-planet__canvas"></canvas></div><canvas class="hero-ring hero-ring--front"></canvas><canvas class="hero-pug" aria-hidden="true"></canvas><canvas class="hero-pug-dog" aria-hidden="true"></canvas><span class="hero-moon"><span class="hero-moon__face"><img src="brand/tom.png" alt="" width="128" height="128"></span><span class="hero-moon__face hero-moon__face--back"><img src="brand/tom.png" alt="" width="128" height="128"></span></span></div></div>
     </div>
   </section>
 
@@ -1391,64 +1394,90 @@
       }
       ctx.restore();
     }
+    // The pug lives round the back of the planet, on his own canvas (.hero-pug-dog, 130% of the planet,
+    // centered on it). Once every 40 seconds he comes round the right edge, stands there a few seconds
+    // facing us (feet on the ground, standing straight out from it), then goes back round out of sight.
+    const dcv = document.querySelector(".hero-pug-dog"), dctx = dcv && dcv.getContext("2d");
+    let DW = 0, DH = 0;
+    const sizeDog = () => { if (!dcv) return; DW = dcv.clientWidth; DH = dcv.clientHeight; dcv.width = Math.round(DW * dpr); dcv.height = Math.round(DH * dpr); };
+    const LAT = 22 * Math.PI / 180; // how far north he stands: the upper right edge
+    // How far round he is (90 degrees = exactly on the right edge; more = round the back, hidden).
+    // He spends most of the time hidden, then comes out over about 3 seconds, stays about 6, and goes back.
+    const lonAt = (t) => {
+      const p = ((t / SPIN) % 1 + 1) % 1, k = Math.max(0, Math.min(1, (0.15 - Math.abs(p - 0.5)) / 0.07));
+      return (150 - 74 * k * k * (3 - 2 * k)) * Math.PI / 180;
+    };
+    const TILT = 16 * Math.PI / 180, ct = Math.cos(TILT), st = Math.sin(TILT); // the planet's axis leans left
+    const DOG = 0.0378 * 1.0; // his height from middle to feet, in planet widths (the same size as before)
     const order = [];
-    // His body is drawn onto its own canvas about 15 times a second (he turns slowly, so it looks the
-    // same) and copied in every frame; the flag is drawn fresh every frame so it waves smoothly.
     const body = document.createElement("canvas"), bx = body.getContext("2d");
-    let bodyAt = -1e9;
-    function drawBody(g, cy, sy) {
-      if (body.width !== cv.width || body.height !== cv.height) { body.width = cv.width; body.height = cv.height; }
-      bx.setTransform(dpr, 0, 0, dpr, 0, 0); bx.clearRect(0, 0, W, H);
+    function drawDog(t) {
+      if (!dctx) return;
+      dctx.setTransform(dpr, 0, 0, dpr, 0, 0); dctx.clearRect(0, 0, DW, DH);
+      if (!V || !DW) return;
+      const P = DW / 1.3, R = P / 2, cx = DW / 2, cy = DH / 2;
+      const lon = still ? 76 * Math.PI / 180 : lonAt(t); // with motion turned off, he just stands at the edge
+      // His spot in the planet's own frame (Y up, Z toward us), then leaned with the axis.
+      const X = Math.cos(LAT) * Math.sin(lon), Y = Math.sin(LAT), Z = Math.cos(LAT) * Math.cos(lon);
+      const up = [X * ct - Y * st, X * st + Y * ct, Z];
+      if (up[2] < -0.3) return; // well round the back: out of sight
+      // Facing: as close to straight at us as he can while standing on the ground there.
+      let fw = [-up[2] * up[0], -up[2] * up[1], 1 - up[2] * up[2]]; const fm = Math.hypot(...fw) || 1; fw = fw.map((v) => v / fm);
+      const lf = [up[1] * fw[2] - up[2] * fw[1], up[2] * fw[0] - up[0] * fw[2], up[0] * fw[1] - up[1] * fw[0]]; // his left
+      const sc = P * DOG / 127, lift = R + 127 * sc * 0.92; // feet sink a touch into the ground
+      const ax = cx + up[0] * lift, ay = cy - up[1] * lift;
+      if (body.width !== dcv.width || body.height !== dcv.height) { body.width = dcv.width; body.height = dcv.height; }
+      bx.setTransform(dpr, 0, 0, dpr, 0, 0); bx.clearRect(0, 0, DW, DH);
       for (let i = 0; i < NV; i++) {
         const x = V[i * 3], y = V[i * 3 + 1], z = V[i * 3 + 2];
-        px3[i * 3] = x * cy + z * sy; px3[i * 3 + 1] = y; px3[i * 3 + 2] = -x * sy + z * cy;
+        px3[i * 3] = x * lf[0] + y * up[0] + z * fw[0];
+        px3[i * 3 + 1] = x * lf[1] + y * up[1] + z * fw[1];
+        px3[i * 3 + 2] = x * lf[2] + y * up[2] + z * fw[2];
       }
-      // Soft shading: light each corner from its smooth normal (the light turned into his own frame), and
-      // give each triangle the average of its corners, so there are no hard facets.
-      const lx = L[0] * cy - L[2] * sy, ly = L[1], lz = L[0] * sy + L[2] * cy;
-      for (let i = 0; i < NV; i++) vl[i] = 0.5 + 0.6 * Math.max(0, VN[i * 3] * lx + VN[i * 3 + 1] * ly + VN[i * 3 + 2] * lz);
+      for (let i = 0; i < NV; i++) {
+        const a = VN[i * 3], b = VN[i * 3 + 1], c = VN[i * 3 + 2];
+        const nx = a * lf[0] + b * up[0] + c * fw[0], ny = a * lf[1] + b * up[1] + c * fw[1], nz = a * lf[2] + b * up[2] + c * fw[2];
+        vl[i] = 0.5 + 0.6 * Math.max(0, nx * L[0] + ny * L[1] + nz * L[2]);
+      }
       order.length = 0;
       for (let f = 0; f < NF; f++) {
         const a = F[f * 3] * 3, b = F[f * 3 + 1] * 3, c = F[f * 3 + 2] * 3;
-        const ux = px3[b] - px3[a], uy = px3[b + 1] - px3[a + 1], uz = px3[b + 2] - px3[a + 2];
-        const vx = px3[c] - px3[a], vy = px3[c + 1] - px3[a + 1], vz = px3[c + 2] - px3[a + 2];
-        const nz = ux * vy - uy * vx;
-        if (nz <= 0) continue; // facing away
+        const ux = px3[b] - px3[a], uy = px3[b + 1] - px3[a + 1], vx = px3[c] - px3[a], vy = px3[c + 1] - px3[a + 1];
+        if (ux * vy - uy * vx <= 0) continue; // facing away
         depth[f] = px3[a + 2] + px3[b + 2] + px3[c + 2];
-        light[f] = (vl[F[f * 3]] + vl[F[f * 3 + 1]] + vl[F[f * 3 + 2]]) / 3; // soft: blended from its corners
+        light[f] = (vl[F[f * 3]] + vl[F[f * 3 + 1]] + vl[F[f * 3 + 2]]) / 3;
         order.push(f);
       }
       order.sort((p, q) => depth[p] - depth[q]);
-      bx.fillStyle = "rgba(4, 10, 30, 0.35)"; // a soft shadow where he sits
-      bx.beginPath(); bx.ellipse(g.ox, g.oy + 127 * g.sc, H * 0.26 * SIZE, H * 0.045 * SIZE, 0, 0, Math.PI * 2); bx.fill();
-      // Triangles in a row with the same color and shade go in one path (fewer, bigger draws: much faster).
-      bx.lineWidth = 0.6; // the outline closes hairline gaps between triangles
+      bx.lineWidth = 0.6;
       let style = "";
       const flush = () => { if (style) { bx.fillStyle = bx.strokeStyle = style; bx.fill(); bx.stroke(); } };
       for (const f of order) {
         const a = F[f * 3] * 3, b = F[f * 3 + 1] * 3, c = F[f * 3 + 2] * 3;
-        const st = shades[paint[f]][Math.min(SHADES - 1, (light[f] * (SHADES - 1) / 1.1 + 0.5) | 0)];
-        if (st !== style) { flush(); style = st; bx.beginPath(); }
-        bx.moveTo(g.ox + px3[a] * g.sc, g.oy - px3[a + 1] * g.sc);
-        bx.lineTo(g.ox + px3[b] * g.sc, g.oy - px3[b + 1] * g.sc);
-        bx.lineTo(g.ox + px3[c] * g.sc, g.oy - px3[c + 1] * g.sc);
+        const s = shades[paint[f]][Math.min(SHADES - 1, (light[f] * (SHADES - 1) / 1.1 + 0.5) | 0)];
+        if (s !== style) { flush(); style = s; bx.beginPath(); }
+        bx.moveTo(ax + px3[a] * sc, ay - px3[a + 1] * sc);
+        bx.lineTo(ax + px3[b] * sc, ay - px3[b + 1] * sc);
+        bx.lineTo(ax + px3[c] * sc, ay - px3[c + 1] * sc);
         bx.closePath();
       }
       flush();
+      dctx.save();
+      if (up[2] < 0) { // just round the edge: only what sticks out past the planet shows
+        dctx.beginPath(); dctx.rect(0, 0, DW, DH); dctx.arc(cx, cy, R, 0, Math.PI * 2, true); dctx.clip("evenodd");
+      }
+      dctx.setTransform(1, 0, 0, 1, 0, 0); dctx.filter = `blur(${(0.45 * dpr).toFixed(2)}px)`; // a touch soft, so no facet edges show
+      dctx.drawImage(body, 0, 0); dctx.filter = "none";
+      dctx.restore();
     }
-    function draw(ms, force) {
+    function draw(ms) {
       const t = ms / 1000;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
-      if (!V) return;
+      drawDog(t);
       const g = geo();
-      // Turning with the planet: its near side moves left to right, so seen from above he turns the same way.
+      // The purple flag stays on the north pole, turning with the planet.
       const yaw = (t / SPIN) * Math.PI * 2;
-      if (force || ms - bodyAt > 66) { bodyAt = ms; drawBody(g, Math.cos(yaw), Math.sin(yaw)); }
-      const flagBehind = -Math.sin(yaw) < 0; // the pole's depth: + toward us
-      if (flagBehind) flag(g, t, yaw, true);
-      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.filter = `blur(${(0.45 * dpr).toFixed(2)}px)`; // a touch soft, so no facet edges show
-      ctx.drawImage(body, 0, 0); ctx.filter = "none"; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      if (!flagBehind) flag(g, t, yaw, false);
+      flag(g, t, yaw, -Math.sin(yaw) < 0);
     }
     fetch("brand/pug.bin").then((r) => r.arrayBuffer()).then((buf) => {
       const dv = new DataView(buf); NV = dv.getUint16(0, true); NF = dv.getUint16(2, true);
@@ -1475,8 +1504,8 @@
     let shown = 0; // at most 30 frames a second
     const frame = (ms) => { if (!running) return; if (ms - shown >= 32) { shown = ms; draw(ms); } requestAnimationFrame(frame); };
     const go = (on) => { if (still) { draw(0, true); return; } if (on && !running) { running = true; requestAnimationFrame(frame); } else if (!on) running = false; };
-    size(); go(true);
-    addEventListener("resize", () => { size(); draw(performance.now(), true); });
+    size(); sizeDog(); go(true);
+    addEventListener("resize", () => { size(); sizeDog(); draw(performance.now(), true); });
     new IntersectionObserver(([e]) => go(e.isIntersecting)).observe(cv);
   })();
 </script>
