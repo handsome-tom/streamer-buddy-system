@@ -6407,28 +6407,39 @@ body.has-space.has-space .oc-raidtag, body.has-space.has-space .oc-line--raider 
 body.has-space.has-space .oc-raidtag__pic { border-radius: 3px; }
 
 /* ===== One shape for every notification in the chat dock ======================
-   Taken from the hype train and gift bomb cards: 3px corners, a 4px line down the left in
-   the card's own color, and the same 6px gap at the sides. Everything that's a card in the
-   chat follows it (bigger events still glow more; only the line no longer grows with them). */
+   Taken from the hype train and gift bomb cards: 3px corners and the same 6px gap at the
+   sides. Down the left, a 4px line in the card's own color (--bar), padded in from the edge
+   (6px in, 6px short of the top and bottom) rather than running along it. Bigger events
+   still glow more. */
 html :is(body, body.has-space.has-space) :is(
   .oc-line.oc-event, .oc-line.oc-notice, .oc-line.oc-cheerline, .oc-line.oc-redeem, .oc-line.oc-giftline,
   .oc-line.oc-line--first, .oc-line.oc-line--raider, .oc-line.oc-line--highlight, .oc-line.oc-line--connection,
   .oc-line.oc-line--flagged, .oc-line.oc-mod
-) { margin-left: 6px; margin-right: 6px; border: 0; border-radius: 3px; }
-html :is(body, body.has-space.has-space) .oc-line.oc-event { box-shadow: inset 4px 0 0 var(--ev), 0 0 calc(30px * var(--s, 0) * var(--s, 0)) color-mix(in srgb, var(--ev) calc(60% * var(--s, 0)), transparent), 0 2px 8px rgba(0, 0, 0, 0.6); }
-html :is(body, body.has-space.has-space) .oc-line.oc-event.oc-event--first { box-shadow: inset 4px 0 0 #ffcf5a, 0 2px 8px rgba(0, 0, 0, 0.6); }
-html :is(body, body.has-space.has-space) .oc-line.oc-cheerline { box-shadow: inset 4px 0 0 var(--ev), 0 2px 8px rgba(0, 0, 0, 0.6); }
-html :is(body, body.has-space.has-space) .oc-line.oc-giftline { box-shadow: inset 4px 0 0 var(--ev); }
-html :is(body, body.has-space.has-space) .oc-line.oc-notice--raid { box-shadow: inset 4px 0 0 var(--raid, #ff6a00), 0 2px 8px rgba(0, 0, 0, 0.6); }
-html :is(body, body.has-space.has-space) .oc-line.oc-notice--announcement { box-shadow: inset 4px 0 0 var(--notice, #9147ff), 0 2px 8px rgba(0, 0, 0, 0.6); }
-html :is(body, body.has-space.has-space) .oc-line.oc-redeem { box-shadow: inset 4px 0 0 var(--k-points, #31c4f3), 0 1px 4px rgba(0, 0, 0, 0.5); }
-html :is(body, body.has-space.has-space) .oc-line.oc-line--first { box-shadow: inset 4px 0 0 var(--k-first, #3ce59f); }
-html :is(body, body.has-space.has-space) .oc-line.oc-line--raider { box-shadow: inset 4px 0 0 var(--raid, #ff6a00); }
-html :is(body, body.has-space.has-space) .oc-line.oc-line--highlight { box-shadow: inset 4px 0 0 #bf94ff, 0 2px 8px rgba(0, 0, 0, 0.5); }
-html :is(body, body.has-space.has-space) .oc-line.oc-line--connection { box-shadow: inset 4px 0 0 #3f7dd8; }
-html :is(body, body.has-space.has-space) .oc-line.oc-line--flagged { box-shadow: inset 4px 0 0 var(--flag, #3fb2ff); }
-html :is(body, body.has-space.has-space) .oc-line.oc-mod { box-shadow: inset 4px 0 0 var(--mc, #3fc98e); }
+) { position: relative; margin-left: 6px; margin-right: 6px; padding-left: 18px; border: 0; border-radius: 3px; }
+html :is(body, body.has-space.has-space) :is(
+  .oc-line.oc-event, .oc-line.oc-notice, .oc-line.oc-cheerline, .oc-line.oc-redeem, .oc-line.oc-giftline,
+  .oc-line.oc-line--first, .oc-line.oc-line--raider, .oc-line.oc-line--highlight, .oc-line.oc-line--connection,
+  .oc-line.oc-line--flagged, .oc-line.oc-mod, .oc-top .oc-topcard
+):not(.oc-line--marked)::before {
+  content: ""; position: absolute; left: 6px; top: 6px; bottom: 6px; width: 4px; border-radius: 2px; background: var(--bar); pointer-events: none;
+}
+html :is(body, body.has-space.has-space) .oc-line.oc-event { --bar: var(--ev); box-shadow: 0 0 calc(30px * var(--s, 0) * var(--s, 0)) color-mix(in srgb, var(--ev) calc(60% * var(--s, 0)), transparent), 0 2px 8px rgba(0, 0, 0, 0.6); }
+html :is(body, body.has-space.has-space) .oc-line.oc-event.oc-event--first { --bar: #ffcf5a; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
+html :is(body, body.has-space.has-space) .oc-line.oc-cheerline { --bar: var(--ev); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
+html :is(body, body.has-space.has-space) .oc-line.oc-giftline { --bar: var(--ev); box-shadow: none; }
+html :is(body, body.has-space.has-space) .oc-line.oc-notice:not(.oc-event) { --bar: var(--notice, #9147ff); }
+html :is(body, body.has-space.has-space) .oc-line.oc-notice--raid { --bar: var(--raid, #ff6a00); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
+html :is(body, body.has-space.has-space) .oc-line.oc-notice--announcement { --bar: var(--notice, #9147ff); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
+html :is(body, body.has-space.has-space) .oc-line.oc-redeem { --bar: var(--k-points, #31c4f3); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
+html :is(body, body.has-space.has-space) .oc-line.oc-line--first { --bar: var(--k-first, #3ce59f); box-shadow: none; }
+html :is(body, body.has-space.has-space) .oc-line.oc-line--raider { --bar: var(--raid, #ff6a00); box-shadow: none; }
+html :is(body, body.has-space.has-space) .oc-line.oc-line--highlight { --bar: #bf94ff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); }
+html :is(body, body.has-space.has-space) .oc-line.oc-line--connection { --bar: #3f7dd8; box-shadow: none; }
+html :is(body, body.has-space.has-space) .oc-line.oc-line--flagged { --bar: var(--flag, #3fb2ff); box-shadow: none; }
+html :is(body, body.has-space.has-space) .oc-line.oc-mod { --bar: var(--mc, #3fc98e); box-shadow: none; }
+/* Twitch's cards at the top of chat: the line padded in the same way. */
+html :is(body, body.has-space.has-space) .oc-top .oc-topcard, html :is(body, body.has-space.has-space) .oc-top .oc-topcard:is(.oc-topcard--pred, .oc-topcard--hype, .oc-topcard--poll, .oc-topcard--gift) { position: relative; --bar: var(--tc, #9147ff); padding-left: 20px; border-left: 0; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
 /* Twitch's own cards at the top of chat (the pinned message too) and the ad timer: same corners. */
 html :is(body, body.has-space.has-space) :is(.oc-topcard, .twad, .oc-stuck > *) { border-radius: 3px; }
-html :is(body, body.has-space.has-space) .oc-top .oc-topcard.oc-topcard--pin { border: 0; border-radius: 3px; box-shadow: inset 4px 0 0 #adadb8, 0 2px 8px rgba(0, 0, 0, 0.6); }
+html :is(body, body.has-space.has-space) .oc-top .oc-topcard.oc-topcard--pin { --bar: #adadb8; border: 0; border-radius: 3px; padding-left: 20px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
 html :is(body, body.has-space.has-space) .oc-adslot .twad { margin: 6px; }
