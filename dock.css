@@ -5549,6 +5549,9 @@ body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; 
 .set__feedback { display: block; width: 100%; margin: 10px 0 2px; padding: 7px 10px; border: 1px solid rgba(125, 176, 239, 0.25); border-radius: 8px; background: none; color: #a9c8f2; font: inherit; font-size: 12.5px; cursor: pointer; }
 .set__feedback:hover { background: rgba(125, 176, 239, 0.12); color: #fff; }
 .cx__reports .cx__label { margin-top: 12px; }
+.cx__agreedhead { display: flex; align-items: baseline; gap: 10px; }
+.cx__savelog { margin-left: auto; padding: 0; border: 0; background: none; font: inherit; font-size: 11px; letter-spacing: 0; text-transform: none; color: #7db0ef; cursor: pointer; }
+.cx__savelog:hover { color: #fff; text-decoration: underline; }
 .rep { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.04); }
 .rep__who { font-size: 11px; color: var(--muted); }
 .rep__text { margin: 2px 0; font-size: 12.5px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }

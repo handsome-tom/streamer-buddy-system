@@ -5166,6 +5166,21 @@
   // straight away (you're their first connection); taking them off signs them out.
   let allowOpen = false;
   let allowOff = ""; // asked "are you sure?" about taking this one off
+  // The tester agreement log, saved as a .csv file: one row per agreement, newest first.
+  function saveAgreements(list) {
+    const cell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const rows = [["Twitch name", "Agreed (your time)", "Agreed (UTC)", "Where", "Agreement version", "Build", "Country"]];
+    for (const g of list) {
+      const at = new Date(g.at);
+      rows.push([g.name, at.toLocaleString(), at.toISOString(), g.where === "test site" ? "test site" : "extension", g.version, g.build, g.country]);
+    }
+    const blob = new Blob([rows.map((r) => r.map(cell).join(",")).join("\r\n")], { type: "text/csv" });
+    const a = el("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `StreamSpace tester agreements ${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  }
   // The owner's feedback and problem reports (only the owner's page gets them).
   function reportsCard() {
     const card = el("section", "cx__card cx__reports");
@@ -5182,7 +5197,16 @@
     if (!reportsOpen) return card;
     if (!reportsData) return card.append(el("p", "cx__hint", "Loading…")), card;
     const { feedback = [], oops = [], agreements = [] } = reportsData;
-    card.append(el("div", "cx__label", `Tester agreements · ${agreements.length}`));
+    const agreedHead = el("div", "cx__label cx__agreedhead", `Tester agreements · ${agreements.length}`);
+    if (agreements.length) {
+      // The log as a spreadsheet file (opens in Numbers, Excel or Google Sheets), to keep a copy.
+      const save = el("button", "cx__savelog", "Save a copy");
+      save.type = "button";
+      save.title = "Download every agreement here as a spreadsheet file";
+      save.addEventListener("click", () => saveAgreements(agreements));
+      agreedHead.append(save);
+    }
+    card.append(agreedHead);
     if (!agreements.length) card.append(el("p", "cx__hint", "No one has agreed yet."));
     for (const g of agreements) {
       const row = el("div", "rep");
