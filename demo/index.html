@@ -530,13 +530,14 @@
   .duo .band__eyebrow, .viewer .band__eyebrow { color: var(--c); }
   .duo .band__title, .viewer .band__title { color: #fff; }
   .duo .band__title::after, .viewer .band__title::after { content: ""; display: block; width: 44px; height: 3px; margin-top: 14px; border-radius: 2px; background: var(--c); box-shadow: 0 0 12px rgba(var(--c-rgb), 0.6); }
-  /* The streamer's side (left): its heading block right-aligned, toward the middle line: the icon,
-     "For the streamer", the title, the short line under it and the intro. The list stays as it is. */
+  /* Each side is one column, the same width on both, sitting against the middle line:
+     everything in it (icon, label, title, its short line, intro, the list) shares one left
+     edge, so the two sides mirror each other as blocks without any right-aligned text. */
+  .duo__side > * { width: 100%; max-width: 500px; box-sizing: border-box; }
+  .duo .band__lead { max-width: 500px; }
+  .duo .ft { padding-left: 0; padding-right: 0; }
   @media (min-width: 861px) {
-    .duo__side--streamer > :is(.band__eyebrow, .band__title, .band__lead) { text-align: right; }
-    .duo__side--streamer .band__eyebrow .duo__pix { margin-left: auto; }
-    .duo__side--streamer .band__title::after { margin-left: auto; }
-    .duo__side--streamer > .band__lead { margin-left: auto; }
+    .duo__side--streamer > * { margin-left: auto; }
   }
   .duo .ft__icon, .viewer .ft__icon { --k: var(--c); }
   .duo .ft, .viewer .ft { border-color: rgba(var(--c-rgb), 0.22); }
