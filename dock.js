@@ -1539,6 +1539,7 @@
       log.stale = false; // nudged since: it's live again
       if ((q.warns || 0) > (log.warns || 0)) {
         log.warns = q.warns;
+        delete log.hushed; // a new panic tap brings the alert back
         warned = true;
         loudest = Math.max(loudest, PING_WARN);
         saveLog = true;
@@ -1549,7 +1550,7 @@
         loudest = Math.max(loudest, stage);
         saveLog = true;
       }
-      glow = Math.max(glow, log.stage);
+      if (!(log.hushed && log.stage <= log.hushed)) glow = Math.max(glow, log.stage); // Stop alert pressed: quiet until it climbs again
     }
     if (saveLog) put("pings", pingLog);
     if (!pingGlow) {
@@ -1568,7 +1569,40 @@
       peekEl.dataset.breath = peekEl.dataset.breath === "1" ? "0" : "1";
     }
     if (loudest) ping(warned ? PING_WARN : fresh ? 1 : loudest);
+    alertButton();
     return !!loudest;
+  }
+  // While the panic alert is going off (the edge flashing red), a small "Stop" in the icon bar
+  // (a pulsing red dot and the word). One click stops the flashing and cuts the chime off mid-ring. The question
+  // stays in chat to answer; another panic tap from the mod sets it off again.
+  let stopBtn = null;
+  function alertButton() {
+    const on = glowNow === PING_WARN && !dndOn();
+    if (on && !stopBtn) {
+      stopBtn = el("button", "stopalert");
+      stopBtn.type = "button";
+      stopBtn.innerHTML = `<span class="stopalert__dot" aria-hidden="true"></span>Stop`;
+      stopBtn.title = "Stop the alert: the flashing and the sound. The message stays in chat.";
+      stopBtn.setAttribute("aria-label", "Stop the alert");
+      stopBtn.addEventListener("click", stopAlert);
+      // In the icon bar, just before the first icon showing; no bar (a pop-out): top corner.
+      const bar = document.querySelector("header.bar");
+      const first = bar && [...bar.querySelectorAll(":scope > .pill")].find((b) => b.offsetParent);
+      if (first) first.before(stopBtn);
+      else { stopBtn.classList.add("stopalert--float"); document.body.append(stopBtn); }
+    }
+    if (stopBtn) stopBtn.hidden = !on;
+  }
+  function stopAlert() {
+    for (const [id, q] of Object.entries(inbox)) {
+      const log = pingLog[id];
+      if (log && !q.done && log.stage) log.hushed = log.stage;
+    }
+    put("pings", pingLog);
+    try { audio?.close(); } catch {}
+    audio = null; // the next sound starts fresh
+    pingCheck();
+    shareView();
   }
 
   // ===== Streamer View =====================================================================
