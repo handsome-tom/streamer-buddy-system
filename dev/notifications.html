@@ -30,16 +30,22 @@
 </head>
 <body>
 <h1>Notification gallery</h1>
-<p class="lead">Every notification as it looks right now, taken from the live demo with the real stylesheet. The streamer's OBS chat dock first, then the mod's Chrome side panel. Animations play once when a frame loads; reload a frame (right-click → Reload frame) to see one again.</p>
-<p class="status" id="status">Loading the demo…</p>
+<p class="lead">Every notification, taken from the demo and drawn with the real stylesheet: the streamer's OBS chat dock first, then the mod's Chrome side panel. They're collected once and kept in this browser, so the page opens at once; the styles are fresh on every reload, so design changes show straight away. Press Collect again only when a notification itself changes (new parts or words). Animations play once as a frame loads; right-click a frame → Reload frame to see one again.</p>
+<p class="status" id="status"></p>
 <div id="out"></div>
-<iframe id="demo" src="../demo/play.html" title="The demo, used to make each notification"></iframe>
+<iframe id="demo" title="The demo, used to make each notification"></iframe>
 <script>
 (async () => {
   const status = document.getElementById("status");
   const out = document.getElementById("out");
   const demo = document.getElementById("demo");
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const SAVED = "notificationGallery";
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(SAVED)); } catch {}
+  if (saved?.items?.length && location.hash !== "#collect") return draw(saved);
+  status.textContent = "Collecting from the demo (about a minute and a half, once)…";
+  demo.src = "../demo/play.html";
   await new Promise((r) => (demo.contentDocument?.readyState === "complete" ? r() : demo.addEventListener("load", r, { once: true })));
   status.textContent = "Starting the demo…";
   await wait(7000);
@@ -119,10 +125,19 @@
   await wait(3500);
   add("Mod's note on a chat line", "obs", [...sides.obs.document.querySelectorAll(".oc-line--noted")].pop());
 
-  // Draw them: one frame each, with the real stylesheet and that side's page classes.
-  status.textContent = "";
-  const css = [...sides.obs.document.querySelectorAll('link[rel="stylesheet"]')].map((l) => l.getAttribute("href")).find((h) => /dock\.css/.test(h)) || "dock.css";
   const pageOf = { obs: { html: sides.obs.document.documentElement.className, body: sides.obs.document.body.className }, mod: { html: sides.mod.document.documentElement.className, body: sides.mod.document.body.className } };
+  const got = { items, pageOf, at: Date.now() };
+  try { localStorage.setItem(SAVED, JSON.stringify(got)); } catch {}
+  demo.remove();
+  if (location.hash) history.replaceState(null, "", location.pathname);
+  draw(got);
+
+  // Draw them: one frame each, with the real stylesheet (fresh each time) and that side's
+  // page classes.
+  function draw({ items, pageOf, at }) {
+  status.textContent = "";
+  out.replaceChildren();
+  const css = `dock.css?fresh=${Date.now()}`;
   const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
   const SECTIONS = [["obs", "The streamer's OBS chat dock"], ["mod", "The mod's Chrome side panel"]];
   for (const [side, title] of SECTIONS) {
@@ -159,9 +174,12 @@
   const again = document.createElement("button");
   again.className = "again";
   again.textContent = "Collect again";
-  again.addEventListener("click", () => location.reload());
-  status.append(`${items.length} notifications collected.`, again);
-  demo.remove();
+  again.addEventListener("click", () => {
+    location.hash = "collect";
+    location.reload();
+  });
+  status.append(`${items.length} notifications, collected ${new Date(at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.`, again);
+  }
 })().catch((e) => (document.getElementById("status").textContent = `Something went wrong: ${e.message}`));
 </script>
 </body>
