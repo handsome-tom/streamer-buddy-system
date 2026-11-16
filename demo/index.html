@@ -596,6 +596,23 @@
   .thanks .wrap { max-width: 720px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 46px; }
   .thanks__eyebrow, .thanks__head { margin: 0 0 14px; font-family: "Silkscreen", "Pixelify Sans", monospace; font-size: 11px; font-weight: 400; letter-spacing: 0.16em; text-transform: uppercase; color: var(--brand-light); }
   .thanks__me { display: inline-flex; align-items: center; gap: 16px; text-align: left; }
+  .thanks__pic { position: relative; flex: none; width: 72px; height: 72px; }
+  /* The real face under the parody: on every other visit, the first time "Created by" scrolls
+     into view, Tom glitches out to it for a second, then glitches back (script at the bottom). */
+  .thanks__real { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+  .thanks__pic.is-real .thanks__real { opacity: 1; }
+  .thanks__pic.is-glitch img { animation: tomGlitch 0.22s steps(1) 1; }
+  @keyframes tomGlitch {
+    0% { transform: translate(-3px, 1px); filter: hue-rotate(90deg) saturate(2); clip-path: inset(10% 0 55% 0); }
+    20% { transform: translate(4px, -2px); filter: hue-rotate(-60deg) contrast(1.6); clip-path: inset(50% 0 15% 0); }
+    40% { transform: translate(-2px, 0); filter: invert(0.8); clip-path: inset(0 0 70% 0); }
+    60% { transform: translate(3px, 2px); filter: hue-rotate(160deg); clip-path: inset(30% 0 30% 0); }
+    80% { transform: translate(-1px, -1px); filter: saturate(3) brightness(1.4); clip-path: none; }
+    100% { transform: none; filter: none; clip-path: none; }
+  }
+  .thanks__pic.is-glitch::after { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+    background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0 2px, transparent 2px 5px); mix-blend-mode: overlay; }
+  @media (prefers-reduced-motion: reduce) { .thanks__pic.is-glitch img { animation: none; } .thanks__pic.is-glitch::after { content: none; } }
   .thanks__me img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px rgba(125, 176, 239, 0.45), 0 0 26px rgba(125, 176, 239, 0.25); }
   .thanks__name { font-size: 22px; font-weight: 800; color: #fff; text-decoration: none; }
   .thanks__name:hover { color: var(--brand-light); }
@@ -906,7 +923,7 @@
     <div class="wrap">
       <p class="thanks__eyebrow">Created by</p>
       <div class="thanks__me">
-        <img src="brand/tom.png" alt="" width="72" height="72">
+        <span class="thanks__pic"><img src="brand/tom.png" alt="" width="72" height="72"><img class="thanks__real" data-src="brand/alex.jpg" alt="" width="72" height="72"></span>
         <div>
           <a class="thanks__name" href="https://www.twitch.tv/myspacetomofficial" target="_blank" rel="noopener">MyspaceTomOfficial</a>
           <p class="thanks__bit">Fake Tom, Real Friend</p>
@@ -930,6 +947,38 @@
       </div>
     </div>
   </footer>
+<script>
+  // "Created by": on every other visit (1st, 3rd, 5th...), the first time it scrolls into view,
+  // Tom glitches out to the real face for a second, then glitches back. Only if that picture
+  // loads; never more than once a visit.
+  (() => {
+    const pic = document.querySelector(".thanks__pic"), real = pic?.querySelector(".thanks__real");
+    if (!pic || !real) return;
+    let visit = 1;
+    try { visit = Number(localStorage.getItem("tomRealVisits") || 0) + 1; localStorage.setItem("tomRealVisits", String(visit)); } catch {}
+    if (visit % 2 === 0) return;
+    const go = () => {
+      const glitch = () => { pic.classList.remove("is-glitch"); void pic.offsetWidth; pic.classList.add("is-glitch"); setTimeout(() => pic.classList.remove("is-glitch"), 240); };
+      setTimeout(() => { glitch(); setTimeout(() => pic.classList.add("is-real"), 110); }, 500);
+      setTimeout(() => { glitch(); setTimeout(() => pic.classList.remove("is-real"), 110); }, 500 + 1110);
+    };
+    // Fully on screen yet? Checked on every scroll and resize, and once the page has settled
+    // (a reload can land straight on it).
+    let done = false;
+    const check = () => {
+      const r = pic.getBoundingClientRect();
+      if (done || !r.height || r.top < 0 || r.bottom > innerHeight) return;
+      done = true;
+      removeEventListener("scroll", check);
+      removeEventListener("resize", check);
+      real.onload = go;
+      real.src = real.dataset.src;
+    };
+    addEventListener("scroll", check, { passive: true });
+    addEventListener("resize", check);
+    addEventListener("load", () => setTimeout(check, 300));
+  })();
+</script>
 <script>
   // Discord can't open a DM from a username alone: copy the username, then open Discord, where
   // it goes in Add Friend.
