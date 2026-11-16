@@ -710,7 +710,7 @@
      the center line: the streamer's right-aligned, the mod's left-aligned. (The script moves
      them into the stage; display: contents lets each one take its own place in its grid.) */
   html.cols .twosides { display: contents; }
-  html.cols .twosides__side { max-width: 400px; padding-bottom: 6px; }
+  html.cols .twosides__side { max-width: 400px; padding: 0 22px 6px; box-sizing: border-box; } /* room on both edges, so the words and drawings never crowd the middle line */
   html.cols .twosides__side--streamer { grid-area: tss; justify-self: end; text-align: right; }
   html.cols .twosides__side--mod { grid-area: tsm; justify-self: start; text-align: left; }
   .twosides h3 { margin: 0 0 6px; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; }
@@ -721,13 +721,13 @@
   .twosides .twosides__try { font-size: 13px; color: #8d8d97; }
   /* Where each half lives: a little drawing of OBS (dock on its right edge) and of Chrome
      (Twitch, with the popout panel beside it), the part that's ours lit up. */
-  .where { margin: 0 0 14px; }
+  .where { margin: 6px 0 24px; } /* breathing room round each drawing */
   .where svg { display: block; width: 240px; max-width: 100%; height: auto; }
   .where--chrome svg { width: 293px; } /* wider: Twitch, its chat, and the panel beside them, at the same scale as OBS */
   .where__hi { filter: drop-shadow(0 0 6px currentColor); }
   .where--obs .where__hi { color: rgba(180, 140, 255, 0.6); }
   .where--chrome .where__hi { color: rgba(63, 201, 142, 0.6); }
-  .where figcaption { margin-top: 7px; font-family: "Silkscreen", "Plus Jakarta Sans", sans-serif; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #8d8d97; }
+  .where figcaption { margin-top: 10px; font-family: "Silkscreen", "Plus Jakarta Sans", sans-serif; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #8d8d97; }
   html.cols .twosides__side--streamer .where svg { margin-left: auto; }
   /* No dark haze behind the panels here, so the two-color glow shows around them. */
   html.cols .screen::before { display: none; }
@@ -944,7 +944,7 @@
             <circle cx="191" cy="70" r="4.5" fill="#3a3550"/><rect x="198" y="68.5" width="30" height="2.5" fill="#e6e6ea" opacity="0.55"/>
             <circle cx="191" cy="82" r="4.5" fill="#3a3550"/><rect x="198" y="80.5" width="24" height="2.5" fill="#e6e6ea" opacity="0.4"/>
             <rect x="186" y="103" width="52" height="8" rx="4" fill="#15151a" stroke="#3a3a44"/><rect x="190" y="106" width="10" height="2" fill="#6aa0e8"/><circle cx="234" cy="107" r="2.8" fill="#3b82f6"/>
-          </svg><figcaption>Pops out in Chrome or Brave, next to Twitch chat</figcaption></figure>
+          </svg><figcaption>Pops out in Chrome or Brave</figcaption></figure>
           <h3>A mod's popout panel</h3>
           <p>Pops out of the StreamSpace button in Chrome or Brave and sits beside Twitch chat. Mods see what's on the streamer's dock, ask quietly instead of in chat, nudge, flag a line, or hit the panic button when it can't wait.</p>
           <p class="twosides__try">The buttons next to it do what a mod would, and you watch it land on the streamer's side.</p>

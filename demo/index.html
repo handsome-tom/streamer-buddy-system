@@ -593,6 +593,18 @@
   .getit__round-tag { margin: 0 0 8px; font-family: "Silkscreen", "Pixelify Sans", monospace; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--brand-light); }
   .getit__round-text { margin: 0; font-size: 14.5px; line-height: 1.6; color: #b9b9c3; }
   .getit__round-text b { color: #efeff1; }
+  .getit__round-text + .getit__round-text { margin-top: 8px; }
+  /* Asking to test: pick which one you are first; the Discord and email buttons wait for it. */
+  .getit__role { max-width: 560px; margin: 0 auto 22px; }
+  .getit__role-label { margin: 0 0 10px; font-size: 14.5px; font-weight: 700; color: #efeff1; }
+  .getit__role-opts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .getit__role-opts button { padding: 8px 14px; font: inherit; font-size: 14px; font-weight: 600; color: #c6c6d0; background: rgba(255, 255, 255, 0.06); border: 0; border-radius: 999px; cursor: pointer; transition: background 0.15s, color 0.15s, box-shadow 0.15s; }
+  .getit__role-opts button:hover { color: #fff; background: rgba(255, 255, 255, 0.11); }
+  .getit__role-opts button[aria-checked="true"] { color: #fff; background: rgba(88, 101, 242, 0.32); box-shadow: 0 0 0 2px #7983f5, 0 0 18px rgba(88, 101, 242, 0.45); }
+  .getit__btn[aria-disabled="true"], .getit__mail[aria-disabled="true"] { opacity: 0.45; box-shadow: none; cursor: not-allowed; }
+  .getit__mail { padding: 13px 22px; font-size: 15px; color: #fff; text-decoration: none; background: rgba(255, 255, 255, 0.08); }
+  .getit__mail:hover { background: rgba(255, 255, 255, 0.14); }
+  .getit__mail[hidden] { display: none; }
   .getit__ctas { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px 20px; }
   .getit__btn { padding: 13px 22px; font-size: 15px; color: #fff; background: #5865f2; border-color: #7983f5; box-shadow: 0 10px 30px rgba(88, 101, 242, 0.35); }
   .getit__btn:hover { background: #6d78f4; }
@@ -918,11 +930,22 @@
       <div class="getit__round">
         <p class="getit__round-tag">Round one: the Top 8</p>
         <p class="getit__round-text">The first group of testers is capped at <b>8</b> (get it). But once we work out some of the rough edges, we'll open it back up to more friends.</p>
+        <p class="getit__round-text">Anyone can ask to join, but testers are hand-picked so we get a good mix of streamers, mods and viewers.</p>
+      </div>
+      <div class="getit__role" role="radiogroup" aria-labelledby="roleLabel">
+        <p class="getit__role-label" id="roleLabel">First, which one are you?</p>
+        <div class="getit__role-opts">
+          <button type="button" role="radio" aria-checked="false" data-role="Stream only">Stream only</button>
+          <button type="button" role="radio" aria-checked="false" data-role="Mod only">Mod only</button>
+          <button type="button" role="radio" aria-checked="false" data-role="Just a viewer">Just a viewer</button>
+          <button type="button" role="radio" aria-checked="false" data-role="Stream and mod">Stream and mod</button>
+        </div>
       </div>
       <div class="getit__ctas">
         <button type="button" class="btn btn--main getit__btn" id="discordBtn" data-user="myspacetomunofficial">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M19.5 5.3A17 17 0 0 0 15.3 4l-.5 1a15.6 15.6 0 0 0-5.6 0l-.5-1a17 17 0 0 0-4.2 1.3C1.8 9.3 1.1 13.2 1.4 17a17 17 0 0 0 5.2 2.6l1.1-1.8a11 11 0 0 1-1.7-.8l.4-.3a12.2 12.2 0 0 0 11.2 0l.4.3c-.5.3-1.1.6-1.7.8l1.1 1.8a17 17 0 0 0 5.2-2.6c.4-4.4-.7-8.3-3.1-11.7ZM8.7 14.7c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1Zm6.6 0c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1Z"/></svg>
           Message me on Discord</button>
+        <a class="btn getit__mail" id="mailBtn" data-email="" hidden>Send an email</a>
         <span class="getit__user">I'm <b>myspacetomunofficial</b> on Discord</span>
       </div>
       <p class="getit__hint" id="discordHint" aria-live="polite"></p>
@@ -992,16 +1015,47 @@
 <script>
   // Discord can't open a DM from a username alone: copy the username, then open Discord, where
   // it goes in Add Friend.
-  document.getElementById("discordBtn").addEventListener("click", async (e) => {
-    const user = e.currentTarget.dataset.user;
+  // Asking to test: pick a role first; the message (Discord) or email carries it.
+  (() => {
+    const discord = document.getElementById("discordBtn");
+    const mail = document.getElementById("mailBtn");
     const hint = document.getElementById("discordHint");
-    let copied = false;
-    try { await navigator.clipboard.writeText(user); copied = true; } catch {}
-    hint.textContent = copied
-      ? `Copied “${user}”. In Discord, go to Add Friend, paste it and send me a message.`
-      : `In Discord, go to Add Friend and type “${user}”, then send me a message.`;
-    window.open("https://discord.com/app", "_blank", "noopener");
-  });
+    const opts = [...document.querySelectorAll(".getit__role-opts button")];
+    let role = "";
+    const request = () => `Hi! I'd like to test StreamSpace. I'm: ${role}. My Twitch name is: `;
+    const lock = () => {
+      for (const b of [discord, mail]) b.setAttribute("aria-disabled", role ? "false" : "true");
+      if (mail.dataset.email) {
+        mail.hidden = false;
+        mail.href = role ? `mailto:${mail.dataset.email}?subject=${encodeURIComponent(`StreamSpace tester request (${role})`)}&body=${encodeURIComponent(request())}` : "#";
+      }
+    };
+    for (const b of opts) b.addEventListener("click", () => {
+      role = b.dataset.role;
+      for (const o of opts) o.setAttribute("aria-checked", String(o === b));
+      hint.textContent = "";
+      lock();
+    });
+    const pickFirst = (e) => {
+      if (role) return false;
+      e.preventDefault();
+      hint.textContent = "Pick which one you are first, so I know how to fit you in.";
+      opts[0].focus();
+      return true;
+    };
+    mail.addEventListener("click", (e) => pickFirst(e));
+    discord.addEventListener("click", async (e) => {
+      if (pickFirst(e)) return;
+      const user = discord.dataset.user;
+      let copied = false;
+      try { await navigator.clipboard.writeText(request()); copied = true; } catch {}
+      hint.textContent = copied
+        ? `Copied your request. In Discord, add “${user}” as a friend, paste it to me and add your Twitch name.`
+        : `In Discord, add “${user}” as a friend and tell me you're “${role}”, plus your Twitch name.`;
+      window.open("https://discord.com/app", "_blank", "noopener");
+    });
+    lock();
+  })();
 </script>
 
 <script>
