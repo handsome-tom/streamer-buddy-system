@@ -719,6 +719,15 @@
   .twosides__side--streamer h3 { color: #b48cff; }
   .twosides__side--mod h3 { color: #3fc98e; }
   .twosides .twosides__try { font-size: 13px; color: #8d8d97; }
+  /* Where each half lives: a little drawing of OBS (dock on its right edge) and of Chrome
+     (Twitch, with the popout panel beside it), the part that's ours lit up. */
+  .where { margin: 0 0 14px; }
+  .where svg { display: block; width: 200px; max-width: 100%; height: auto; }
+  .where__hi { filter: drop-shadow(0 0 6px currentColor); }
+  .where--obs .where__hi { color: rgba(180, 140, 255, 0.6); }
+  .where--chrome .where__hi { color: rgba(63, 201, 142, 0.6); }
+  .where figcaption { margin-top: 7px; font-family: "Silkscreen", "Plus Jakarta Sans", sans-serif; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #8d8d97; }
+  html.cols .twosides__side--streamer .where svg { margin-left: auto; }
   /* No dark haze behind the panels here, so the two-color glow shows around them. */
   html.cols .screen::before { display: none; }
   html.cols #tour, html.cols .introfeats, html.cols .demo__bar, html.cols .stage .menu, html.cols #allControls, html.cols .sides__word { display: none !important; }
@@ -759,6 +768,7 @@
   @media (max-width: 920px) {
     html.cols .stage { grid-template-columns: minmax(0, 420px); grid-template-areas: "tss" "obs" "sbtn" "tsm" "mod" "mbtn"; }
     html.cols .twosides__side--streamer { justify-self: start; text-align: left; }
+    html.cols .twosides__side--streamer .where svg { margin-left: 0; }
   }
   /* The third window, under the two: Twitch's own chat with StreamSpace in it, as the mod
      sees it on twitch.tv. What it's for on the left, the chat in the middle, its buttons on
@@ -888,19 +898,43 @@
         <div>
           <p class="eyebrow">Live demo</p>
           <h2>Try it: you're both sides at once.</h2>
-          <p>On the left, the streamer's OBS dock with chat. On the right, a mod's side panel in Chrome. Say hi to the crew: everyone here is pretend, and nothing is sent anywhere.</p>
+          <p>On the left, the streamer's dock, which lives inside OBS. On the right, a mod's popout panel, which sits next to Twitch in Chrome. Say hi to the crew: everyone here is pretend, and nothing is sent anywhere.</p>
         </div>
       </div>
       <!-- The public demo: what each side is for, streamer on the left, mods on the right. -->
       <div class="twosides">
         <div class="twosides__side twosides__side--streamer">
+          <figure class="where where--obs" aria-hidden="true"><svg viewBox="0 0 200 112" width="200" height="112" shape-rendering="crispEdges">
+            <rect x="0.5" y="0.5" width="199" height="111" rx="4" fill="#15151a" stroke="rgba(255,255,255,0.14)"/>
+            <rect x="1" y="1" width="198" height="9" rx="3" fill="#202027"/>
+            <circle cx="6" cy="5.5" r="1.5" fill="#55555f"/><circle cx="11" cy="5.5" r="1.5" fill="#55555f"/><circle cx="16" cy="5.5" r="1.5" fill="#55555f"/>
+            <rect x="6" y="15" width="134" height="62" fill="#0d0d12"/><rect x="11" y="20" width="124" height="52" fill="#1c1a29"/><rect x="104" y="51" width="26" height="17" fill="#2c2840"/>
+            <rect x="6" y="82" width="31" height="24" fill="#1e1e25"/><rect x="40" y="82" width="31" height="24" fill="#1e1e25"/><rect x="74" y="82" width="31" height="24" fill="#1e1e25"/><rect x="108" y="82" width="32" height="24" fill="#1e1e25"/>
+            <rect x="9" y="86" width="18" height="2" fill="#3a3a44"/><rect x="43" y="86" width="20" height="2" fill="#3a3a44"/><rect x="77" y="86" width="16" height="2" fill="#3a3a44"/><rect x="111" y="86" width="22" height="2" fill="#3a3a44"/>
+            <rect class="where__hi" x="146" y="15" width="48" height="91" fill="rgba(180,140,255,0.16)" stroke="#b48cff"/>
+            <circle cx="153" cy="22" r="3" fill="#b48cff"/><circle cx="161" cy="22" r="3" fill="#8f6ad6"/><circle cx="169" cy="22" r="3" fill="#6f52a8"/>
+            <rect x="150" y="31" width="38" height="3" fill="#b48cff" opacity="0.55"/><rect x="150" y="39" width="30" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="150" y="47" width="36" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="150" y="55" width="24" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="150" y="63" width="34" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="150" y="71" width="28" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="150" y="96" width="40" height="6" fill="#26222f"/>
+          </svg><figcaption>Goes in OBS, beside your scenes</figcaption></figure>
           <h3>The streamer's OBS dock</h3>
-          <p>Lives inside OBS. Chat, Twitch's events and the mods' questions in one place, and it stays quiet until someone actually needs the streamer. Answering takes one tap.</p>
+          <p>Added to OBS as a dock, right next to your scenes and sources. Chat, Twitch's events and the mods' questions in one place, and it stays quiet until someone actually needs the streamer. Answering takes one tap.</p>
           <p class="twosides__try">The buttons next to it set off a raid, a gift bomb, a poll and more, so you can see how each one shows up.</p>
         </div>
         <div class="twosides__side twosides__side--mod">
-          <h3>A mod's side panel</h3>
-          <p>Sits next to Twitch in Chrome. Mods see what's on the streamer's dock, ask quietly instead of in chat, nudge, flag a line, or hit the panic button when it can't wait.</p>
+          <figure class="where where--chrome" aria-hidden="true"><svg viewBox="0 0 200 112" width="200" height="112" shape-rendering="crispEdges">
+            <rect x="0.5" y="0.5" width="156" height="111" rx="4" fill="#15151a" stroke="rgba(255,255,255,0.14)"/>
+            <rect x="1" y="1" width="155" height="9" rx="3" fill="#202027"/><rect x="22" y="3" width="40" height="7" fill="#15151a"/>
+            <circle cx="6" cy="5.5" r="1.5" fill="#55555f"/><circle cx="11" cy="5.5" r="1.5" fill="#55555f"/><circle cx="16" cy="5.5" r="1.5" fill="#55555f"/>
+            <rect x="6" y="13" width="145" height="7" rx="3" fill="#24242b"/>
+            <rect x="6" y="25" width="108" height="61" fill="#1c1a29"/><rect x="50" y="49" width="20" height="13" fill="#9147ff" opacity="0.5"/>
+            <rect x="6" y="91" width="60" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="6" y="98" width="40" height="3" fill="#c6c6d0" opacity="0.2"/>
+            <rect x="119" y="25" width="32" height="81" fill="#1c1c22"/><rect x="122" y="31" width="24" height="2" fill="#c6c6d0" opacity="0.3"/><rect x="122" y="38" width="20" height="2" fill="#c6c6d0" opacity="0.3"/><rect x="122" y="45" width="25" height="2" fill="#c6c6d0" opacity="0.3"/><rect x="122" y="52" width="18" height="2" fill="#c6c6d0" opacity="0.3"/><rect x="122" y="99" width="25" height="4" fill="#2a2a33"/>
+            <rect class="where__hi" x="162.5" y="12.5" width="37" height="99" rx="3" fill="rgba(63,201,142,0.16)" stroke="#3fc98e"/>
+            <rect x="163" y="13" width="36" height="7" rx="2" fill="rgba(63,201,142,0.28)"/>
+            <circle cx="170" cy="27" r="3" fill="#3fc98e"/><circle cx="178" cy="27" r="3" fill="#2f9c6d"/>
+            <rect x="166" y="36" width="29" height="3" fill="#3fc98e" opacity="0.55"/><rect x="166" y="44" width="24" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="166" y="52" width="27" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="166" y="60" width="20" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="166" y="100" width="29" height="6" fill="#1f2a25"/>
+          </svg><figcaption>Pops out next to Twitch in Chrome</figcaption></figure>
+          <h3>A mod's popout panel</h3>
+          <p>Pops out of Chrome and sits right next to Twitch. Mods see what's on the streamer's dock, ask quietly instead of in chat, nudge, flag a line, or hit the panic button when it can't wait.</p>
           <p class="twosides__try">The buttons next to it do what a mod would, and you watch it land on the streamer's side.</p>
         </div>
       </div>
@@ -933,7 +967,7 @@
           <i class="sides__line"></i>
         </div>
         <div class="screen">
-          <div class="screen__label">Mod's side panel <small>you're mod1, watching the streamer</small>
+          <div class="screen__label">Mod's popout panel <small>you're mod1, watching the streamer</small>
             <span class="info" tabindex="0" data-tip="What a mod sees in Chrome, next to Twitch: Streamer View at the top shows what's on the streamer's screen right now, then the box to ask, send quick info or a !vanish note.">?</span></div>
           <iframe id="mod" title="Mod side panel"></iframe>
           <div class="menu menu--grouped" aria-label="Try as mod1">
@@ -1961,7 +1995,7 @@
     head.querySelector("h2").textContent = "A shift as a mod.";
     head.querySelector("p:not(.eyebrow)").textContent = "You're BlazeMod420, modding for RomansEmpire.TV. Follow along: each step is something mods do every stream. On the left, what the streamer sees; on the right, your side panel.";
     const [modLabel, obsLabel] = ["mod", "obs"].map((id) => document.getElementById(id).closest(".screen").querySelector(".screen__label"));
-    modLabel.firstChild.nodeValue = "Your side panel ";
+    modLabel.firstChild.nodeValue = "Your popout panel ";
     modLabel.querySelector("small").textContent = "you're BlazeMod420";
     obsLabel.firstChild.nodeValue = "What the streamer sees ";
     obsLabel.querySelector("small").textContent = "RomansEmpire.TV's OBS dock";
