@@ -6276,3 +6276,8 @@ body.embed .bar { column-gap: 12px; }
 /* A menu open in the bar (your status, Do Not Disturb…) sits over every page, not just
    Mod tools: the bar is its own layer (sticky, z-index 1), so the bar comes up with it. */
 .bar:has(.presence__menu:not([hidden]), .dnd-menu:not([hidden])) { z-index: 999; }
+
+/* Your picture in the side panel's bar: no ring round it (the sword badge already says
+   you're modding), so it lines up with the buttons beside it. */
+body .bar .mod-btn, body.has-space .bar .mod-btn.mod-btn--live, body.has-space .bar .mod-btn.mod-btn--off,
+body .bar .mod-btn.mod-btn--off[data-status], body.has-space .bar .mod-btn.mod-btn--off[data-status] { box-shadow: none; }
