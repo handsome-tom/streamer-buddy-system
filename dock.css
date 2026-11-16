@@ -6272,3 +6272,7 @@ body.no-chatnotes .oc-line.oc-line--noted { background: none; }
    counts hang off the corner, so the gaps are wide enough to hold them. */
 body.embed .bar { column-gap: 12px; }
 .chat--dm .chat__form:focus-within { border-color: transparent; box-shadow: none; }
+
+/* A menu open in the bar (your status, Do Not Disturb…) sits over every page, not just
+   Mod tools: the bar is its own layer (sticky, z-index 1), so the bar comes up with it. */
+.bar:has(.presence__menu:not([hidden]), .dnd-menu:not([hidden])) { z-index: 999; }
