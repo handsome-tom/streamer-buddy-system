@@ -661,8 +661,10 @@
   /* The planet and its moon on their own layers too. */
   .hero-planet__globe, .hero-moon { will-change: transform; }
   /* ===== A little pug standing on top of the planet, with a purple flag beside him ===== */
-  /* Drawn on a canvas (script at the bottom) from a tiny 3D model; his feet sink a touch into the surface. */
-  .hero-pug { position: absolute; left: 50%; top: -27%; width: 50%; height: 30%; transform: translateX(-50%); z-index: 2; pointer-events: none; }
+  /* Drawn on a canvas (script at the bottom) from a small 3D model; his feet sink a touch into the surface. */
+  /* Sits on the planet's north pole, which leans 16deg left with the spin axis: the canvas is turned by
+     the same amount round the planet's middle (71% of the planet below the canvas top = 296% of its height). */
+  .hero-pug { position: absolute; left: 25%; top: -21%; width: 50%; height: 24%; transform: rotate(-16deg); transform-origin: 50% 295.83%; z-index: 2; pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { #space, #space::before, #space::after, .hero__art::before, .hero__swathes { animation: none !important; } }
   /* ===== One space, top to bottom: no lines between sections, and the space only turns to
      black at the very end, under the thank-yous. ===== */
@@ -1331,16 +1333,17 @@
   })();
 </script>
 <script>
-  // The pug on top of the planet: a real 3D model (squeezed down to about 7,000 triangles in
-  // brand/pug.bin) drawn with plain canvas, no library. He turns his body slowly one way and back,
-  // lit from the upper left like the planet. The purple flag beside him waves.
+  // The pug on top of the planet: a real 3D model (squeezed down to about 2,600 triangles in
+  // brand/pug.bin) drawn with plain canvas, no library. He sits on the planet's north pole and turns
+  // with it, once every 40 seconds like the globe, and his purple flag goes round with him.
   // pug.bin: two counts (vertices, triangles), the triangles (3 x uint16 each), then the vertices
   // (3 x int16 each, scaled to -32767..32767).
   (() => {
     const cv = document.querySelector(".hero-pug");
     if (!cv) return;
     const ctx = cv.getContext("2d");
-    let V = null, F = null, NV = 0, NF = 0;
+    const SPIN = 40; // seconds per turn, the same as the planet
+    let V = null, F = null, NV = 0, NF = 0, px3 = null, depth = null, light = null, paint = null;
     let W = 0, H = 0, dpr = 1;
     function size() {
       dpr = Math.min(devicePixelRatio || 1, 2);
@@ -1348,39 +1351,63 @@
       cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     }
     const L = (() => { const l = [-0.55, 0.6, 0.6], m = Math.hypot(...l); return l.map((v) => v / m); })(); // light: upper left, in front
-    const PURPLE = [169, 112, 255];
-    function flag(t) {
-      // The pole stands to the pug's right; the flag flies out to the right of it.
-      const s = H / 100, px = W / 2 + 34 * s, base = H * 0.97, top = H * 0.06;
-      ctx.lineCap = "round";
-      ctx.strokeStyle = "#cfd8ea"; ctx.lineWidth = Math.max(1.2, 1.6 * s);
-      ctx.beginPath(); ctx.moveTo(px, base); ctx.lineTo(px, top); ctx.stroke();
-      ctx.fillStyle = "#eef3ff"; ctx.beginPath(); ctx.arc(px, top, Math.max(1.4, 2.2 * s), 0, Math.PI * 2); ctx.fill();
-      const fw = 30 * s, fh = 19 * s, y0 = top + 2 * s, N = 14;
-      const wave = (u) => Math.sin(u * 5.2 - t * 4.2) * u * 2.6 * s;
-      const shade = (u) => 0.82 + 0.18 * Math.cos(u * 5.2 - t * 4.2);
-      for (let i = 0; i < N; i++) { // strips, each lit by its slope, so the fold shows
-        const u0 = i / N, u1 = (i + 1) / N, k = shade((u0 + u1) / 2);
+    // Colors: fawn coat, dark brown ears and nose, white eyes with dark pupils.
+    const FAWN = [222, 184, 140], BROWN = [66, 50, 42], WHITE = [246, 246, 250], PUPIL = [22, 18, 20], PURPLE = [169, 112, 255];
+    // Where things are on the model (its units run -127..127; X to his left, Y up, Z out of his face).
+    const EYES = [[-37, 58, 90], [37, 58, 90]], EYE_R = 18, PUPIL_R = 7, NOSE = [0, 46, 114], NOSE_R = 11;
+    const COLORS = [FAWN, BROWN, WHITE, PUPIL], SHADES = 24;
+    const shades = COLORS.map((C) => Array.from({ length: SHADES }, (_, i) => { const k = i / (SHADES - 1) * 1.1; return `rgb(${C.map((v) => Math.min(255, Math.round(v * k))).join(",")})`; }));
+    function colorOf(x, y, z) {
+      for (const [ex, ey, ez] of EYES) {
+        if (Math.hypot(x - ex, y - ey, z - ez) < EYE_R) return Math.hypot(x - ex, y - ey) < PUPIL_R && z > ez ? 3 : 2;
+      }
+      if (Math.hypot(x - NOSE[0], y - NOSE[1], z - NOSE[2]) < NOSE_R) return 1;
+      if (y > 62 && Math.abs(x) > 48) return 1; // ears
+      return 0;
+    }
+    // In canvas units (H = canvas height): the planet's middle and size, his scale, and the flag.
+    const geo = () => {
+      const R = H * 2.0833, cy0 = H * 2.9583; // planet radius, and its centre below the canvas
+      const sc = H * 0.42 / 127, ox = W / 2, oy = H * 0.5;
+      const fx = 150 * sc, th = fx / R, base = cy0 - R * Math.cos(th); // the pole stands on the curve
+      return { R, cy0, sc, ox, oy, fx, base, top: base - H * 0.78 };
+    };
+    function flag(g, t, yaw, behind) {
+      const cyw = Math.cos(yaw), sx = g.ox + g.fx * cyw;
+      ctx.save();
+      if (behind) { // round the far side: the planet hides its foot
+        ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.arc(W / 2, g.cy0, g.R, 0, Math.PI * 2, true); ctx.clip("evenodd");
+      }
+      const s = H / 100;
+      ctx.lineCap = "round"; ctx.strokeStyle = "#cfd8ea"; ctx.lineWidth = Math.max(1, 1.3 * s);
+      ctx.beginPath(); ctx.moveTo(sx, g.base); ctx.lineTo(sx, g.top); ctx.stroke();
+      ctx.fillStyle = "#eef3ff"; ctx.beginPath(); ctx.arc(sx, g.top, Math.max(1.2, 1.8 * s), 0, Math.PI * 2); ctx.fill();
+      // The cloth points straight out from the pole, so it narrows to a line as it turns side-on.
+      const fw = 24 * s * cyw, fh = 15 * s, y0 = g.top + 1.5 * s, N = 12;
+      const wave = (u) => Math.sin(u * 5.2 - t * 4.2) * u * 2.2 * s;
+      const back = behind ? 0.7 : 1;
+      for (let i = 0; i < N; i++) {
+        const u0 = i / N, u1 = (i + 1) / N, k = (0.82 + 0.18 * Math.cos((u0 + u1) * 2.6 - t * 4.2)) * back;
         ctx.fillStyle = `rgb(${PURPLE.map((c) => Math.round(c * k)).join(",")})`;
+        const e = 0.4 * Math.sign(fw || 1);
         ctx.beginPath();
-        ctx.moveTo(px + u0 * fw, y0 + wave(u0)); ctx.lineTo(px + u1 * fw + 0.4, y0 + wave(u1));
-        ctx.lineTo(px + u1 * fw + 0.4, y0 + fh * (1 - 0.12 * u1) + wave(u1)); ctx.lineTo(px + u0 * fw, y0 + fh * (1 - 0.12 * u0) + wave(u0));
+        ctx.moveTo(sx + u0 * fw, y0 + wave(u0)); ctx.lineTo(sx + u1 * fw + e, y0 + wave(u1));
+        ctx.lineTo(sx + u1 * fw + e, y0 + fh * (1 - 0.12 * u1) + wave(u1)); ctx.lineTo(sx + u0 * fw, y0 + fh * (1 - 0.12 * u0) + wave(u0));
         ctx.fill();
       }
+      ctx.restore();
     }
     const order = [];
-    let px3 = null, depth = null;
-    function draw(ms) {
-      const t = ms / 1000;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
-      if (!V) return;
-      // Model: X sideways, Y up, Z toward us (his face is at +Z).
-      const yaw = Math.sin(t * 0.35) * 0.6, cy = Math.cos(yaw), sy = Math.sin(yaw);
-      const sc = H * 0.45 / 127, ox = W / 2 - 0.2 * H, oy = H * 0.5;
+    // His body is drawn onto its own canvas about 15 times a second (he turns slowly, so it looks the
+    // same) and copied in every frame; the flag is drawn fresh every frame so it waves smoothly.
+    const body = document.createElement("canvas"), bx = body.getContext("2d");
+    let bodyAt = -1e9;
+    function drawBody(g, cy, sy) {
+      if (body.width !== cv.width || body.height !== cv.height) { body.width = cv.width; body.height = cv.height; }
+      bx.setTransform(dpr, 0, 0, dpr, 0, 0); bx.clearRect(0, 0, W, H);
       for (let i = 0; i < NV; i++) {
         const x = V[i * 3], y = V[i * 3 + 1], z = V[i * 3 + 2];
-        const rx = x * cy + z * sy, rz = -x * sy + z * cy;
-        px3[i * 3] = rx; px3[i * 3 + 1] = y; px3[i * 3 + 2] = rz;
+        px3[i * 3] = x * cy + z * sy; px3[i * 3 + 1] = y; px3[i * 3 + 2] = -x * sy + z * cy;
       }
       order.length = 0;
       for (let f = 0; f < NF; f++) {
@@ -1391,51 +1418,58 @@
         if (nz <= 0) continue; // facing away
         const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, m = Math.hypot(nx, ny, nz) || 1;
         depth[f] = px3[a + 2] + px3[b + 2] + px3[c + 2];
-        const d = Math.max(0, (nx * L[0] + ny * L[1] + nz * L[2]) / m);
-        order.push(f); light[f] = 0.32 + 0.78 * d;
+        light[f] = 0.32 + 0.78 * Math.max(0, (nx * L[0] + ny * L[1] + nz * L[2]) / m);
+        order.push(f);
       }
       order.sort((p, q) => depth[p] - depth[q]);
-      // A soft shadow where he stands.
-      ctx.fillStyle = "rgba(4, 10, 30, 0.35)";
-      ctx.beginPath(); ctx.ellipse(ox, H * 0.96, H * 0.3, H * 0.05, 0, 0, Math.PI * 2); ctx.fill();
+      bx.fillStyle = "rgba(4, 10, 30, 0.35)"; // a soft shadow where he sits
+      bx.beginPath(); bx.ellipse(g.ox, g.oy + 127 * g.sc, H * 0.26, H * 0.045, 0, 0, Math.PI * 2); bx.fill();
+      // Triangles in a row with the same color and shade go in one path (fewer, bigger draws: much faster).
+      bx.lineWidth = 0.6; // the outline closes hairline gaps between triangles
+      let style = "";
+      const flush = () => { if (style) { bx.fillStyle = bx.strokeStyle = style; bx.fill(); bx.stroke(); } };
       for (const f of order) {
-        const a = F[f * 3] * 3, b = F[f * 3 + 1] * 3, c = F[f * 3 + 2] * 3, k = light[f], m = dark[f];
-        ctx.fillStyle = `rgb(${[0, 1, 2].map((i) => Math.round((FAWN[i] + (DARK[i] - FAWN[i]) * m) * k)).join(",")})`;
-        ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 0.6; // closes hairline gaps between triangles
-        ctx.beginPath();
-        ctx.moveTo(ox + px3[a] * sc, oy - px3[a + 1] * sc);
-        ctx.lineTo(ox + px3[b] * sc, oy - px3[b + 1] * sc);
-        ctx.lineTo(ox + px3[c] * sc, oy - px3[c + 1] * sc);
-        ctx.closePath(); ctx.fill(); ctx.stroke();
+        const a = F[f * 3] * 3, b = F[f * 3 + 1] * 3, c = F[f * 3 + 2] * 3;
+        const st = shades[paint[f]][Math.min(SHADES - 1, (light[f] * (SHADES - 1) / 1.1 + 0.5) | 0)];
+        if (st !== style) { flush(); style = st; bx.beginPath(); }
+        bx.moveTo(g.ox + px3[a] * g.sc, g.oy - px3[a + 1] * g.sc);
+        bx.lineTo(g.ox + px3[b] * g.sc, g.oy - px3[b + 1] * g.sc);
+        bx.lineTo(g.ox + px3[c] * g.sc, g.oy - px3[c + 1] * g.sc);
+        bx.closePath();
       }
-      flag(t);
+      flush();
     }
-    let light = null, dark = null;
-    const FAWN = [222, 184, 140], DARK = [62, 48, 42], MUZ = [0, 48];
+    function draw(ms, force) {
+      const t = ms / 1000;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+      if (!V) return;
+      const g = geo();
+      // Turning with the planet: its near side moves left to right, so seen from above he turns the same way.
+      const yaw = (t / SPIN) * Math.PI * 2;
+      if (force || ms - bodyAt > 66) { bodyAt = ms; drawBody(g, Math.cos(yaw), Math.sin(yaw)); }
+      const flagBehind = -Math.sin(yaw) < 0; // the pole's depth: + toward us
+      if (flagBehind) flag(g, t, yaw, true);
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(body, 0, 0); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (!flagBehind) flag(g, t, yaw, false);
+    }
     fetch("brand/pug.bin").then((r) => r.arrayBuffer()).then((buf) => {
       const dv = new DataView(buf); NV = dv.getUint16(0, true); NF = dv.getUint16(2, true);
       F = new Uint16Array(NF * 3); for (let i = 0; i < NF * 3; i++) F[i] = dv.getUint16(4 + i * 2, true);
       const q = new Int16Array(buf.slice(4 + NF * 6, 4 + NF * 6 + NV * 6)); V = new Float32Array(NV * 3);
       for (let i = 0; i < NV * 3; i++) V[i] = q[i] * (127 / 32767); // the drawing code works in -127..127
-      px3 = new Float32Array(NV * 3); depth = new Float32Array(NF); light = new Float32Array(NF);
-      // A pug's dark muzzle and ears: how dark each triangle is (0 fawn, 1 dark brown), fading softly
-      // out from the middle of the muzzle, so there's no hard edge.
-      dark = new Float32Array(NF);
-      for (let f = 0; f < NF; f++) {
+      px3 = new Float32Array(NV * 3); depth = new Float32Array(NF); light = new Float32Array(NF); paint = new Uint8Array(NF);
+      for (let f = 0; f < NF; f++) { // each triangle's color, from where its middle is
         let x = 0, y = 0, z = 0; for (let j = 0; j < 3; j++) { const v = F[f * 3 + j] * 3; x += V[v] / 3; y += V[v + 1] / 3; z += V[v + 2] / 3; }
-        const ss = (e0, e1, v) => { const t = Math.max(0, Math.min(1, (v - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
-        const muzzle = (1 - ss(26, 54, Math.hypot(x / 1.3, y - MUZ[1]))) * ss(58, 85, z);
-        const ear = ss(62, 86, y) * ss(48, 72, Math.abs(x));
-        dark[f] = Math.max(muzzle, ear);
+        paint[f] = colorOf(x, y, z); // an index into COLORS
       }
-      draw(performance.now());
+      draw(performance.now(), true);
     }).catch(() => {});
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
     let running = false;
     const frame = (ms) => { if (!running) return; draw(ms); requestAnimationFrame(frame); };
-    const go = (on) => { if (still) { draw(0); return; } if (on && !running) { running = true; requestAnimationFrame(frame); } else if (!on) running = false; };
+    const go = (on) => { if (still) { draw(0, true); return; } if (on && !running) { running = true; requestAnimationFrame(frame); } else if (!on) running = false; };
     size(); go(true);
-    addEventListener("resize", () => { size(); draw(performance.now()); });
+    addEventListener("resize", () => { size(); draw(performance.now(), true); });
     new IntersectionObserver(([e]) => go(e.isIntersecting)).observe(cv);
   })();
 </script>
