@@ -6400,3 +6400,5 @@ body.embed .bar #modBtn.bar-btn--here[data-status="offline"] { --st: var(--muted
 :is(body, body.has-space.has-space) .oc-line.oc-event.oc-event--first .oc-event__icon { width: 44px; height: 44px; border-radius: 50%; color: #ffe08a; background: radial-gradient(circle at 40% 35%, #b98cff, #9147ff 60%, #6a2ee0); }
 :is(body, body.has-space.has-space) .oc-line.oc-event.oc-event--first .oc-event__icon svg { width: 24px; height: 24px; }
 :is(body, body.has-space.has-space) .oc-line.oc-event.oc-event--first { align-items: center; }
+/* The First-time sub tag: white words, no shadow, on a deeper gold so they read. */
+:is(body, body.has-space.has-space) .oc-event--first .oc-event__label { color: #fff; text-shadow: none; background: linear-gradient(180deg, #e9a31c, #c47a00); }

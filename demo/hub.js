@@ -320,9 +320,9 @@ const twitch = (() => {
     // Someone subscribing for the very first time (Twitch's "sub"; coming back is "resub").
     firstSub() {
       const who = pick(NEWBIES.length ? NEWBIES : CHATTERS);
-      const prime = Math.random() < 0.3;
-      const tier = prime ? "1000" : pick(["1000", "1000", "2000"]);
-      notice("sub", { who, system: `${who} subscribed ${prime ? "with Prime" : `at Tier ${tier[0]}`}.`, fields: { sub: { sub_tier: tier, is_prime: prime, duration_months: 1 } } });
+      // A paid sub, so it shows Twitch's sub star (the crown is only for Prime).
+      const tier = pick(["1000", "1000", "2000"]);
+      notice("sub", { who, system: `${who} subscribed at Tier ${tier[0]}.`, fields: { sub: { sub_tier: tier, is_prime: false, duration_months: 1 } } });
       return who;
     },
     sub() {
