@@ -1033,8 +1033,11 @@
       el.style.transform = `translate(${x}px, ${y}px) scale(${1 + near * scaleNear})`;
       el.style.zIndex = near > 0 ? 3 : -1; // far side: behind the ring and the planet
     };
+    let W = planet.offsetWidth, running = false;
+    new ResizeObserver(() => (W = planet.offsetWidth)).observe(planet); // read once, not every frame
     const draw = (ms) => {
-      const W = planet.offsetWidth, s = ms / 1000;
+      if (!running) return;
+      const s = ms / 1000;
       glints.forEach((g, i) => {
         const a = s * 0.7 + i * Math.PI;
         place(g, W, a, 0.88, 0.068, -14, 0.25);
@@ -1051,7 +1054,11 @@
       moon.style.setProperty("--edge", (0.45 + 0.55 * Math.abs(Math.cos(spin))).toFixed(2));
       if (!still) requestAnimationFrame(draw);
     };
-    requestAnimationFrame(draw);
+    // Only while the hero is on screen.
+    const go = (on) => { if (on && !running) { running = true; requestAnimationFrame(draw); } else if (!on) running = false; };
+    go(true);
+    const hero = document.querySelector(".hero");
+    if (hero && "IntersectionObserver" in window) new IntersectionObserver(([e]) => go(e.isIntersecting)).observe(hero);
   })();
 </script>
 <script>
@@ -1138,7 +1145,7 @@
       return [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
     })();
     function layout() {
-      const size = Math.round(cv.clientWidth * Math.min(devicePixelRatio || 1, 2));
+      const size = Math.round(cv.clientWidth * Math.min(devicePixelRatio || 1, 1.5)); // 1.5x is sharp enough, and far fewer pixels to work out each frame
       if (!size || size === S) return;
       S = cv.width = cv.height = size;
       img = ctx.createImageData(S, S);
@@ -1207,7 +1214,9 @@
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
     const SPIN = 40; // seconds per turn
     let running = false, start = performance.now(), last = 0;
-    const frame = (ms) => { if (!running) return; pulse = 0.5 + 0.18 * Math.sin(ms / 900); draw(last = (ms - start) / 1000 / SPIN); requestAnimationFrame(frame); };
+    // 30 frames a second is plenty for something that turns once every 40 seconds.
+    let shown = 0;
+    const frame = (ms) => { if (!running) return; if (ms - shown >= 32) { shown = ms; pulse = 0.5 + 0.18 * Math.sin(ms / 900); draw(last = (ms - start) / 1000 / SPIN); } requestAnimationFrame(frame); };
     const go = (on) => {
       if (still) { draw(0); return; }
       if (on && !running) { running = true; requestAnimationFrame(frame); } else if (!on) running = false;
@@ -1248,38 +1257,45 @@
       return { r, a: rnd() * Math.PI * 2, w: 0.35 / Math.pow(r / 0.7, 1.5), s: 0.4 + rnd() * 0.7, o: 0.3 + rnd() * 0.55 };
     });
     let W = 0, P = 0, dpr = 1;
+    // The bands are drawn at half size and stretched up, which softens their edges like dust
+    // (a blur filter did that before, but cost a lot every frame). The shadow never changes,
+    // so it's drawn once per size.
+    const bandC = document.createElement("canvas"), bandX = bandC.getContext("2d");
+    const shadowC = document.createElement("canvas");
     function size() {
-      dpr = Math.min(devicePixelRatio || 1, 2);
+      dpr = Math.min(devicePixelRatio || 1, 1.5);
       W = back.clientWidth; P = W / 2.2; // the canvas is 2.2 planet widths across
-      for (const c of [back, front]) { c.width = Math.round(W * dpr); c.height = Math.round(W * dpr); }
+      for (const c of [back, front, shadowC]) { c.width = Math.round(W * dpr); c.height = Math.round(W * dpr); }
+      bandC.width = bandC.height = Math.max(1, Math.round(W * dpr * 0.5));
+      // The near side casts a soft shadow on the planet just below it, so it clearly passes in front.
+      const sx = shadowC.getContext("2d");
+      sx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      sx.beginPath(); sx.arc(W / 2, W / 2, P / 2, 0, Math.PI * 2); sx.clip();
+      sx.translate(W / 2 + 0.04 * P, W / 2 + 0.1 * P); sx.rotate(TILT); sx.scale(1, K);
+      sx.filter = `blur(${(5 * dpr).toFixed(1)}px)`;
+      for (const [r, w, o] of BANDS) { sx.strokeStyle = `rgba(2, 6, 24, ${Math.min(0.32, 0.08 + o * 0.45)})`; sx.lineWidth = w * P; sx.beginPath(); sx.arc(0, 0, r * P, 0, Math.PI); sx.stroke(); }
     }
     function half(ctx, from, to, turn) {
       const near = from === 0;
-      if (near) {
-        // The near side casts a soft shadow on the planet just below it, so it clearly passes in front.
-        ctx.save();
-        ctx.beginPath(); ctx.arc(W / 2, W / 2, P / 2, 0, Math.PI * 2); ctx.clip();
-        ctx.translate(W / 2 + 0.04 * P, W / 2 + 0.1 * P); ctx.rotate(TILT); ctx.scale(1, K);
-        ctx.filter = `blur(${(5 * dpr).toFixed(1)}px)`;
-        for (const [r, w, o] of BANDS) { ctx.strokeStyle = `rgba(2, 6, 24, ${Math.min(0.32, 0.08 + o * 0.45)})`; ctx.lineWidth = w * P; ctx.beginPath(); ctx.arc(0, 0, r * P, from, to); ctx.stroke(); }
-        ctx.restore(); ctx.filter = "none";
-      }
-      ctx.save();
-      ctx.translate(W / 2, W / 2 + 0.01 * P); ctx.rotate(TILT);
-      ctx.save(); ctx.scale(1, K);
+      if (near) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(shadowC, 0, 0); ctx.restore(); }
+      const bs = dpr * 0.5;
+      bandX.setTransform(bs, 0, 0, bs, 0, 0); bandX.clearRect(0, 0, W, W);
+      bandX.translate(W / 2, W / 2 + 0.01 * P); bandX.rotate(TILT); bandX.scale(1, K);
       BANDS.forEach(([r, w, o], bi) => {
         // Clumpy light round each band, turning at its own speed (inner bands faster), so it reads as moving.
-        const g = ctx.createConicGradient(turn * (1.6 - bi * 0.18) + bi * 1.3, 0, 0);
+        const g = bandX.createConicGradient(turn * (1.6 - bi * 0.18) + bi * 1.3, 0, 0);
         const steps = 14;
         for (let j = 0; j <= steps; j++) {
           const v = 0.35 + 0.65 * Math.abs(Math.sin(j * 2.3 + bi * 1.7) * Math.cos(j * 0.9 + bi));
           g.addColorStop(j / steps, `rgba(${Math.round(125 + 75 * v)}, ${Math.round(176 + 49 * v)}, ${Math.round(239 + 16 * v)}, ${Math.min(1, o * (0.45 + 0.85 * v) * (near ? 2.8 : 1)).toFixed(3)})`);
         }
-        ctx.strokeStyle = g; ctx.lineWidth = w * P; ctx.filter = `blur(${(1.4 * dpr).toFixed(1)}px)`; // soft edges, like dust
-        ctx.beginPath(); ctx.arc(0, 0, r * P, from, to); ctx.stroke();
+        bandX.strokeStyle = g; bandX.lineWidth = w * P;
+        bandX.beginPath(); bandX.arc(0, 0, r * P, from, to); bandX.stroke();
       });
-      ctx.restore();
-      ctx.filter = "none";
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(bandC, 0, 0, ctx.canvas.width, ctx.canvas.height); ctx.restore();
+      ctx.save();
+      ctx.translate(W / 2, W / 2 + 0.01 * P); ctx.rotate(TILT);
       for (const p of specks) {
         const a = p.a, sn = Math.sin(a);
         if ((from === 0) !== (sn > 0)) continue;
@@ -1297,7 +1313,8 @@
       half(fx, 0, Math.PI, t * 0.25);           // near side
     }
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const frame = (ms) => { if (!running) return; draw(ms); requestAnimationFrame(frame); };
+    let shown = 0; // at most 30 frames a second
+    const frame = (ms) => { if (!running) return; if (ms - shown >= 32) { shown = ms; draw(ms); } requestAnimationFrame(frame); };
     const go = (on) => { if (still) { draw(t0); return; } if (on && !running) { running = true; requestAnimationFrame(frame); } else if (!on) running = false; };
     size(); draw(t0); go(true);
     addEventListener("resize", () => { size(); draw(performance.now()); });
@@ -1455,7 +1472,8 @@
     }).catch(() => {});
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
     let running = false;
-    const frame = (ms) => { if (!running) return; draw(ms); requestAnimationFrame(frame); };
+    let shown = 0; // at most 30 frames a second
+    const frame = (ms) => { if (!running) return; if (ms - shown >= 32) { shown = ms; draw(ms); } requestAnimationFrame(frame); };
     const go = (on) => { if (still) { draw(0, true); return; } if (on && !running) { running = true; requestAnimationFrame(frame); } else if (!on) running = false; };
     size(); go(true);
     addEventListener("resize", () => { size(); draw(performance.now(), true); });

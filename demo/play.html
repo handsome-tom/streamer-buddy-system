@@ -1151,9 +1151,12 @@
     f.tabIndex = -1;
     f.allow = "autoplay; encrypted-media; picture-in-picture";
     f.referrerPolicy = "strict-origin-when-cross-origin";
-    f.src = `https://www.youtube-nocookie.com/embed/${ID}?autoplay=1&mute=1&loop=1&playlist=${ID}&controls=0&disablekb=1&fs=0&iv_load_policy=3&modestbranding=1&playsinline=1&rel=0`;
+    f.src = `https://www.youtube-nocookie.com/embed/${ID}?enablejsapi=1&autoplay=1&mute=1&loop=1&playlist=${ID}&controls=0&disablekb=1&fs=0&iv_load_policy=3&modestbranding=1&playsinline=1&rel=0`;
     f.addEventListener("load", () => { box.querySelector(".twlive__wait").hidden = true; }, { once: true });
     box.prepend(f);
+    // Paused while it's off screen, so it isn't playing video nobody's looking at.
+    const tell = (func) => f.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args: [] }), "*");
+    new IntersectionObserver(([e]) => tell(e.isIntersecting ? "playVideo" : "pauseVideo"), { rootMargin: "200px 0px" }).observe(box);
     const up = box.closest(".twlive").querySelector(".twbar__up");
     const count = box.closest(".twlive").querySelector(".twbar__count");
     const t0 = Date.now() - (1 * 3600 + 54 * 60 + 2) * 1000;
@@ -1501,6 +1504,16 @@
     e.target.textContent = `Chat feed: ${feeding ? "on" : "off"}`;
     e.target.classList.toggle("on", feeding);
   });
+  // While the demo is scrolled off screen (on the front page), the pretend chat waits, so three
+  // chats aren't busy adding lines nobody sees; it picks up again on the way back.
+  if ("IntersectionObserver" in window) {
+    let seen = true;
+    new IntersectionObserver(([e]) => {
+      if (e.isIntersecting === seen) return;
+      seen = e.isIntersecting;
+      if (feeding) seen ? pretendTwitch.feed() : pretendTwitch.feedoff();
+    }, { rootMargin: "300px 0px" }).observe(document.body);
+  }
   const LINES = ["hey chat", "that was clean", "lol", "o7", "nice one", "W"];
   const chatter = () => document.getElementById("chatter").value;
   document.getElementById("cJoin").addEventListener("click", () => (pretendTwitch.join(chatter()), said(`${chatter()} joined the chat`)));
