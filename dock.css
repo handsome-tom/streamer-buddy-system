@@ -6443,3 +6443,17 @@ html :is(body, body.has-space.has-space) .oc-top .oc-topcard, html :is(body, bod
 html :is(body, body.has-space.has-space) :is(.oc-topcard, .twad, .oc-stuck > *) { border-radius: 3px; }
 html :is(body, body.has-space.has-space) .oc-top .oc-topcard.oc-topcard--pin { --bar: #adadb8; border: 0; border-radius: 3px; padding-left: 20px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
 html :is(body, body.has-space.has-space) .oc-adslot .twad { margin: 6px; }
+
+/* Quick info (green) and !vanish notes (pink, with the smiling devil) in the streamer's chat:
+   taller, in their own colors (the mod's name keeps the mod's color). */
+html :is(body, body.has-space.has-space) .oc-line.oc-mod:is(.oc-mod--info, .oc-mod--love) {
+  --bar: var(--kind); align-items: center; padding-top: 10px; padding-bottom: 10px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--kind) 26%, #1b1b20), color-mix(in srgb, var(--kind) 8%, #1b1b20));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.oc-mod--info { --kind: #3fc98e; }
+.oc-mod--love { --kind: #ff5fa2; }
+:is(.oc-mod--info, .oc-mod--love) .oc-mod__pic { width: 26px; height: 26px; margin-top: 0; }
+:is(.oc-mod--info, .oc-mod--love) .oc-mod__body { font-size: 14px; }
+:is(.oc-mod--info, .oc-mod--love) .oc-mod__tag { color: var(--kind); font-size: 11px; }
+.oc-mod__kind { display: inline-grid; place-items: center; margin-right: 4px; vertical-align: -2px; color: var(--kind); }

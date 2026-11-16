@@ -921,7 +921,15 @@
         pic.append(img);
       } else pic.textContent = String(m.fromName || m.from || "?").slice(0, 1).toUpperCase();
       const body = el("span", "oc-mod__body");
-      body.append(el("b", "oc-mod__who", m.fromName || m.from), " ", el("span", "oc-mod__tag", m.tag || ""), " ");
+      // Quick info wears its lightning bolt and a !vanish note its little smiling devil (as
+      // they look where mods send them), beside the tag.
+      const KIND_ICONS = {
+        info: '<path d="M11 2 4 11.5h5L8 18l7-9.5h-5z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>',
+        love: '<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"><path d="M5.2 7.6 4 3.2l3.6 2.4M14.8 7.6 16 3.2l-3.6 2.4"/><circle cx="10" cy="11.2" r="6"/><path d="M6.9 9.3l2.1 1.1M13.1 9.3 11 10.4"/><path d="M7.1 13.1q2.9 2.7 5.8 0"/></g>',
+      };
+      const kindIcon = KIND_ICONS[m.kind] && !String(m.id || "").startsWith("sent-") ? el("span", "oc-mod__kind") : null;
+      if (kindIcon) kindIcon.innerHTML = `<svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true">${KIND_ICONS[m.kind]}</svg>`;
+      body.append(el("b", "oc-mod__who", m.fromName || m.from), " ", ...(kindIcon ? [kindIcon] : []), el("span", "oc-mod__tag", m.tag || ""), " ");
       if (m.toName) body.append(el("b", "oc-mod__to", m.toName), " ");
       body.append(el("span", "oc-mod__text", m.text || ""));
       const ans = el("span", "oc-mod__answer");
