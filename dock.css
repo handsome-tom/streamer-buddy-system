@@ -6281,3 +6281,13 @@ body.embed .bar { column-gap: 12px; }
    you're modding), so it lines up with the buttons beside it. */
 body .bar .mod-btn, body.has-space .bar .mod-btn.mod-btn--live, body.has-space .bar .mod-btn.mod-btn--off,
 body .bar .mod-btn.mod-btn--off[data-status], body.has-space .bar .mod-btn.mod-btn--off[data-status] { box-shadow: none; }
+
+/* Mod, in the side panel's bar: an icon for what you're doing (dock.js), plain like the
+   buttons beside it, in your status's color. */
+body .bar .mod-btn, body.has-space .bar .mod-btn.mod-btn--live, body.has-space .bar .mod-btn.mod-btn--off,
+body .bar .mod-btn.mod-btn--off[data-status], body.has-space .bar .mod-btn.mod-btn--off[data-status] { display: grid; place-items: center; overflow: visible; background: #2f2f35; }
+body.embed .bar #modBtn { color: var(--good); }
+body.embed .bar #modBtn[data-status="online"] { color: var(--honey); }
+body.embed .bar #modBtn[data-status="idle"] { color: var(--yellow); }
+body.embed .bar #modBtn[data-status="offline"] { color: var(--muted); }
+body .bar .mod-btn svg { width: 16px; height: 16px; }

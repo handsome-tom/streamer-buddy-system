@@ -176,8 +176,14 @@
     return b;
   })();
   const msgCount = document.getElementById("msgCount");
-  // Mod tools: a green pixel sword between Mod (your picture) and Messages, in the side panel.
-  const TOOLS_SWORD = '<svg viewBox="0 0 8 8" width="16" height="16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M6 0h2v1h-2zM5 1h3v1h-3zM4 2h3v1h-3zM1 3h1v1h-1zM3 3h3v1h-3zM2 4h3v1h-3zM2 5h2v1h-2zM1 6h1v1h-1zM4 6h1v1h-1zM0 7h1v1h-1z"/></svg>';
+  // The pixel sword (8×8): Mod shows it while you're modding.
+  const PIXEL_SWORD_D = "M6 0h2v1h-2zM5 1h3v1h-3zM4 2h3v1h-3zM1 3h1v1h-1zM3 3h3v1h-3zM2 4h3v1h-3zM2 5h2v1h-2zM1 6h1v1h-1zM4 6h1v1h-1zM0 7h1v1h-1z";
+  const BAR_SWORD = `<svg viewBox="0 0 8 8" width="16" height="16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="${PIXEL_SWORD_D}"/></svg>`;
+  // A pixel person (14×16), as in the status menu: Mod shows it, in your status's color,
+  // when you're not modding (online, idle, invisible).
+  const PIXEL_PERSON = '<svg viewBox="0 0 14 16" width="16" height="16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M5 2h4v1h-4zM4 3h6v1h-6zM4 4h6v1h-6zM4 5h6v1h-6zM4 6h6v1h-6zM5 7h4v1h-4zM2 9h10v1h-10zM1 10h12v1h-12zM1 11h12v1h-12zM1 12h12v1h-12zM1 13h12v1h-12z"/></svg>';
+  // Mod tools: the sword with a little gear in its free corner, green, between Mod and Messages.
+  const TOOLS_SWORD = `<svg viewBox="0 0 16 16" width="16" height="16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" transform="scale(2)" d="${PIXEL_SWORD_D}"/><path fill="currentColor" d="M10 10h1v1h-1zM12 10h2v1h-2zM15 10h1v1h-1zM11 11h4v1h-4zM10 12h2v1h-2zM14 12h2v1h-2zM10 13h2v1h-2zM14 13h2v1h-2zM11 14h4v1h-4zM10 15h1v1h-1zM12 15h2v1h-2zM15 15h1v1h-1z"/></svg>`;
   const toolsBtn = document.getElementById("toolsBtn") || (() => {
     const b = document.createElement("button");
     b.className = "pill pill--icon tools-btn";
@@ -2199,22 +2205,12 @@
     const lead = isLeadFor(modOwner());
     // Your own picture, wearing the bar's only ring. Modding (online and ready to mod): a
     // green sword badge in its corner (hammer for a lead mod).
+    // What you're doing, not your picture: the green sword while you're modding, otherwise
+    // a little person in your status's color (orange online, yellow idle, gray invisible).
     const want = modIcon();
     if (modBtn.dataset.icon !== want) {
       modBtn.dataset.icon = want;
-      const [face, badge] = want.split("-");
-      let faceEl;
-      if (face === "pic") {
-        faceEl = el("img", "mod-btn__pic");
-        faceEl.src = pics[me.login];
-        faceEl.alt = "";
-      } else faceEl = el("span", "mod-btn__letter", me.login[0].toUpperCase());
-      modBtn.replaceChildren(faceEl);
-      if (badge) {
-        const b = el("span", `mod-btn__badge mod-btn__badge--${badge}`);
-        b.innerHTML = badge === "hammer" ? HAMMER_ICON : SWORD_ICON;
-        modBtn.append(b);
-      }
+      modBtn.innerHTML = want === "sword" ? BAR_SWORD : PIXEL_PERSON;
     }
     modBtn.classList.toggle("mod-btn--live", modLive);
     modBtn.classList.toggle("mod-btn--off", !modLive);
@@ -3703,8 +3699,7 @@
   // What the Mod button shows: your picture (or letter), with a sword (hammer for a lead
   // mod) in its corner while you're an Available mod.
   function modIcon() {
-    const face = me && pics[me.login] ? "pic" : "letter";
-    return modRinged() ? `${face}-${isLeadFor(modOwner()) ? "hammer" : "sword"}` : face;
+    return myStatus === "modding" ? "sword" : "person";
   }
   async function checkLive(login) {
     if (liveChecking.has(login)) return;
