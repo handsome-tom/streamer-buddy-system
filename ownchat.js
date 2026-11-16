@@ -1012,6 +1012,13 @@
       const mine = n.from === me.login;
       const b = el("div", `oc-notebub${mine ? " oc-notebub--mine" : ""}`);
       b.dataset.id = n.id;
+      // In the writer's Twitch name color (sent with the note, or from their lines here),
+      // with dark text on a light color.
+      const c = safeColor(n.color) || nameColor(n.from);
+      if (c) {
+        b.style.setProperty("--note-c", c);
+        if (inkFor(c) !== "#fff") b.classList.add("oc-notebub--light");
+      }
       const pic = el("span", "oc-notebub__pic");
       if (n.pic) {
         const img = el("img");

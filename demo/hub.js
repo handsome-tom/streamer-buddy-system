@@ -186,7 +186,7 @@ const twitch = (() => {
     "I've been watching for like two years now and this is easily one of the best streams, thanks for always being so chill",
     "not to be a backseat gamer but I think there's a chest behind the waterfall you skipped earlier, no pressure though",
   ];
-  const colorOf = {};
+  const colorOf = { mod1: "#3fc98e" }; // BlazeMod420 (the mod you play) keeps one color, the one twitch/shim.js tells StreamSpace
   const hue = () => {
     const h = Math.floor(Math.random() * 360) / 360;
     const f = (k) => Math.round(255 * (0.62 - 0.28 * Math.max(-1, Math.min(((k + h * 12) % 12) - 3, 9 - ((k + h * 12) % 12), 1)))).toString(16).padStart(2, "0");

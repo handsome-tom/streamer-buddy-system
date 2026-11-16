@@ -1952,6 +1952,7 @@ html.tbc-flagging .tbc-notedot--live {
   gap: 6px;
   max-width: 88%;
   color: #efeff1;
+  --note-c: #3f7dd8; /* the writer's Twitch name color, set per bubble; blue if Twitch has none */
 }
 .tbc-note--mine {
   flex-direction: row-reverse;
@@ -1973,13 +1974,13 @@ html.tbc-flagging .tbc-notedot--live {
   min-width: 0;
   padding: 6px 12px 6px;
   border-radius: 18px;
-  background: linear-gradient(180deg, #5b9af0, #2f63c0); /* the send button's blue on the mod side, top to bottom */
+  background: linear-gradient(180deg, color-mix(in srgb, var(--note-c) 75%, #fff), color-mix(in srgb, var(--note-c) 75%, #000)); /* the writer's name color, lighter at the top, deeper at the bottom */
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
   text-shadow: none;
   overflow-wrap: anywhere;
 }
 .tbc-note--mine .tbc-note__main {
-  box-shadow: 0 10px 30px rgba(63, 125, 216, 0.35);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--note-c) 35%, transparent);
 }
 /* Picture, name, then the note on the same line, wrapping down underneath. */
 .tbc-note__head {
@@ -1996,7 +1997,7 @@ html.tbc-flagging .tbc-notedot--live {
   height: 20px;
   border-radius: 50%;
   object-fit: cover;
-  background: #2a5aa8;
+  background: color-mix(in srgb, var(--note-c) 60%, #000);
   color: #fff;
   font-size: 10px;
   font-weight: 600;
@@ -2018,6 +2019,14 @@ html.tbc-flagging .tbc-notedot--live {
 }
 .tbc-note--mine .tbc-note__when {
   color: rgba(255, 255, 255, 0.75);
+}
+/* A light name color (yellow, mint, pink…): dark text on it. */
+.tbc-note--light .tbc-note__main,
+.tbc-note--light .tbc-note__who {
+  color: #18181b;
+}
+.tbc-note--light .tbc-note__when {
+  color: rgba(24, 24, 27, 0.7);
 }
 .tbc-note__x {
   align-self: center;
@@ -2045,7 +2054,7 @@ html.tbc-flagging .tbc-notedot--live {
   bottom: 0;
   width: 16px;
   height: 18px;
-  background: #2f63c0; /* the gradient's bottom */
+  background: color-mix(in srgb, var(--note-c) 75%, #000); /* the gradient's bottom */
   clip-path: path("M6 0 Q6 14 0 18 Q10 18 16 12 L16 0 Z");
 }
 .tbc-notes > .tbc-note--mine:last-child .tbc-note__main::after {

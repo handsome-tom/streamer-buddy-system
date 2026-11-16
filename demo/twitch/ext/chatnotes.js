@@ -192,6 +192,16 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
     // with its tail bottom-left; yours on the right in brighter blue, tail bottom-right.
     const mine = n.from === circle.me;
     if (mine) b.classList.add("tbc-note--mine");
+    // The bubble is in the writer's Twitch name color (sent with the note, or looked up),
+    // with dark text on a light color so it stays readable.
+    const paint = (c) => {
+      if (!/^#[0-9a-f]{6}$/i.test(c || "")) return false;
+      const [r, g, bl] = [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+      b.style.setProperty("--note-c", c);
+      b.classList.toggle("tbc-note--light", 0.2126 * r + 0.7152 * g + 0.0722 * bl > 0.4);
+      return true;
+    };
+    const painted = paint(n.color);
     const main = document.createElement("div");
     main.className = "tbc-note__main";
     const name = document.createElement("b");
@@ -226,6 +236,7 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
     }
     person(n.from).then((p) => {
       if (p.displayName && !mine) name.textContent = p.displayName;
+      if (!painted) paint(p.chatColor);
       if (!p.profileImageURL) return;
       const img = document.createElement("img");
       img.className = "tbc-note__pic";
