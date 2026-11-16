@@ -436,7 +436,7 @@ export const tests = {
     mod.$$(".tools__mode").find((b) => b.textContent.includes("Slow")).click();
     await h.until(() => mod.$$(".tools__mode").find((b) => b.textContent.includes("Slow"))?.getAttribute("aria-pressed") === "true", "slow mode shown on");
     // A raid: nothing happens until the streamer presses Raid.
-    const field = mod.$(".tools__field");
+    const field = mod.$(".tools__raid .tools__field");
     field.value = "lumpthegreen";
     field.dispatchEvent(new Event("input", { bubbles: true }));
     mod.$(".tools__raid").requestSubmit();
@@ -444,6 +444,33 @@ export const tests = {
     h.check(!mod.$(".tools__raiding"), "no raid before the streamer OKs it");
     ok.click();
     await h.until(() => /Raiding lumpthegreen/.test(mod.$(".tools__raiding")?.textContent || ""), "the raid shown in the mod's panel");
+    noErrors(streamer, mod);
+  },
+
+  async "More mod tools: a mod starts a poll, blocks a word and answers an unban request, and the mod log credits them"(h) {
+    const { streamer, mod } = await streamerAndMod(h);
+    await h.until(() => streamer.$(".oc-line"), "custom chat to start");
+    (await h.until(() => mod.$("#toolsBtn:not([hidden])"), "the sword in the side panel's bar")).click();
+    const type = (key, v) => { const i = mod.$(`[data-key="${key}"]`); i.value = v; i.dispatchEvent(new Event("input", { bubbles: true })); };
+    const button = (re) => mod.$$(".tools button").find((b) => re.test(b.textContent.trim()));
+    await h.until(() => mod.$$(".tools__chip").some((c) => c.textContent.includes("spoilers")), "the channel's blocked words");
+    // A poll.
+    type("pollQ", "Which boss next?");
+    type("pollC1", "Margit");
+    type("pollC2", "Godrick");
+    await h.wait(100);
+    button(/^Start poll$/).closest("form").requestSubmit();
+    await h.until(() => mod.$$(".tools__bar").some((b) => b.textContent.includes("Godrick")), "the poll running in Mod tools");
+    await h.until(() => streamer.has("started a poll"), "the poll noted in the streamer's chat");
+    // A blocked word.
+    type("termAdd", "camping");
+    button(/^Block$/).closest("form").requestSubmit();
+    await h.until(() => mod.$$(".tools__chip").some((c) => c.textContent.includes("camping")), "the new blocked word");
+    // The unban request waiting.
+    (await h.until(() => button(/^Unban$/), "the unban request")).click();
+    await h.until(() => /Approved/.test(mod.$(".tools__said")?.textContent || ""), "the unban confirmed");
+    // The mod log names the mod, not the streamer whose sign-in did it.
+    await h.until(() => mod.$$(".tools__logrow").some((l) => /mod1 blocked “camping”/.test(l.textContent)), "the mod log crediting the mod");
     noErrors(streamer, mod);
   },
 
