@@ -722,7 +722,7 @@
   /* Where each half lives: a little drawing of OBS (dock on its right edge) and of Chrome
      (Twitch, with the popout panel beside it), the part that's ours lit up. */
   .where { margin: 0 0 14px; }
-  .where svg { display: block; width: 200px; max-width: 100%; height: auto; }
+  .where svg { display: block; width: 240px; max-width: 100%; height: auto; }
   .where__hi { filter: drop-shadow(0 0 6px currentColor); }
   .where--obs .where__hi { color: rgba(180, 140, 255, 0.6); }
   .where--chrome .where__hi { color: rgba(63, 201, 142, 0.6); }
@@ -904,37 +904,43 @@
       <!-- The public demo: what each side is for, streamer on the left, mods on the right. -->
       <div class="twosides">
         <div class="twosides__side twosides__side--streamer">
-          <figure class="where where--obs" aria-hidden="true"><svg viewBox="0 0 200 112" width="200" height="112" shape-rendering="crispEdges">
-            <rect x="0.5" y="0.5" width="199" height="111" rx="4" fill="#15151a" stroke="rgba(255,255,255,0.14)"/>
-            <rect x="1" y="1" width="198" height="9" rx="3" fill="#202027"/>
-            <circle cx="6" cy="5.5" r="1.5" fill="#55555f"/><circle cx="11" cy="5.5" r="1.5" fill="#55555f"/><circle cx="16" cy="5.5" r="1.5" fill="#55555f"/>
-            <rect x="6" y="15" width="134" height="62" fill="#0d0d12"/><rect x="11" y="20" width="124" height="52" fill="#1c1a29"/><rect x="104" y="51" width="26" height="17" fill="#2c2840"/>
-            <rect x="6" y="82" width="31" height="24" fill="#1e1e25"/><rect x="40" y="82" width="31" height="24" fill="#1e1e25"/><rect x="74" y="82" width="31" height="24" fill="#1e1e25"/><rect x="108" y="82" width="32" height="24" fill="#1e1e25"/>
-            <rect x="9" y="86" width="18" height="2" fill="#3a3a44"/><rect x="43" y="86" width="20" height="2" fill="#3a3a44"/><rect x="77" y="86" width="16" height="2" fill="#3a3a44"/><rect x="111" y="86" width="22" height="2" fill="#3a3a44"/>
-            <rect class="where__hi" x="146" y="15" width="48" height="91" fill="rgba(180,140,255,0.16)" stroke="#b48cff"/>
-            <circle cx="153" cy="22" r="3" fill="#b48cff"/><circle cx="161" cy="22" r="3" fill="#8f6ad6"/><circle cx="169" cy="22" r="3" fill="#6f52a8"/>
-            <rect x="150" y="31" width="38" height="3" fill="#b48cff" opacity="0.55"/><rect x="150" y="39" width="30" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="150" y="47" width="36" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="150" y="55" width="24" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="150" y="63" width="34" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="150" y="71" width="28" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="150" y="96" width="40" height="6" fill="#26222f"/>
+          <figure class="where where--obs" aria-hidden="true"><svg viewBox="0 0 200 120" width="200" height="120">
+            <rect x="0.5" y="0.5" width="199" height="119" rx="4" fill="#15151a" stroke="rgba(255,255,255,0.14)"/>
+            <rect x="1" y="1" width="198" height="13" rx="3" fill="#202027"/>
+            <circle cx="7" cy="7.5" r="1.5" fill="#55555f"/><circle cx="12" cy="7.5" r="1.5" fill="#55555f"/><circle cx="17" cy="7.5" r="1.5" fill="#55555f"/>
+            <circle cx="92" cy="7.5" r="4.4" fill="#2b2a30" stroke="#e6e6ea" stroke-width="0.7"/><circle cx="92.00" cy="5.39" r="1.32" fill="#e6e6ea"/><circle cx="93.83" cy="8.56" r="1.32" fill="#e6e6ea"/><circle cx="90.17" cy="8.56" r="1.32" fill="#e6e6ea"/><text x="100" y="10" font-family="Plus Jakarta Sans, sans-serif" font-size="7.5" font-weight="700" fill="#c6c6d0">OBS</text>
+            <rect x="6" y="19" width="134" height="62" fill="#0d0d12"/><rect x="11" y="24" width="124" height="52" fill="#1c1a29"/><rect x="104" y="55" width="26" height="17" fill="#2c2840"/><circle cx="26" cy="62" r="12.6" fill="#0e0e10"/><circle cx="26" cy="62" r="11" fill="#2b2a30" stroke="#e6e6ea" stroke-width="1.2"/><circle cx="26.00" cy="56.72" r="3.30" fill="#e6e6ea"/><circle cx="30.57" cy="64.64" r="3.30" fill="#e6e6ea"/><circle cx="21.43" cy="64.64" r="3.30" fill="#e6e6ea"/>
+            <rect x="6" y="86" width="31" height="28" fill="#1e1e25"/><rect x="40" y="86" width="31" height="28" fill="#1e1e25"/><rect x="74" y="86" width="31" height="28" fill="#1e1e25"/><rect x="108" y="86" width="32" height="28" fill="#1e1e25"/>
+            <rect x="9" y="90" width="18" height="2" fill="#3a3a44"/><rect x="43" y="90" width="20" height="2" fill="#3a3a44"/><rect x="77" y="90" width="16" height="2" fill="#3a3a44"/><rect x="111" y="90" width="22" height="2" fill="#3a3a44"/>
+            <rect class="where__hi" x="146" y="19" width="48" height="95" fill="rgba(180,140,255,0.16)" stroke="#b48cff"/>
+            <circle cx="153" cy="26" r="3" fill="#b48cff"/><circle cx="161" cy="26" r="3" fill="#8f6ad6"/><circle cx="169" cy="26" r="3" fill="#6f52a8"/>
+            <rect x="150" y="35" width="38" height="3" fill="#b48cff" opacity="0.55"/><rect x="150" y="43" width="30" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="150" y="51" width="36" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="150" y="59" width="24" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="150" y="67" width="34" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="150" y="75" width="28" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="150" y="104" width="40" height="6" fill="#26222f"/>
           </svg><figcaption>Goes in OBS, beside your scenes</figcaption></figure>
           <h3>The streamer's OBS dock</h3>
           <p>Added to OBS as a dock, right next to your scenes and sources. Chat, Twitch's events and the mods' questions in one place, and it stays quiet until someone actually needs the streamer. Answering takes one tap.</p>
           <p class="twosides__try">The buttons next to it set off a raid, a gift bomb, a poll and more, so you can see how each one shows up.</p>
         </div>
         <div class="twosides__side twosides__side--mod">
-          <figure class="where where--chrome" aria-hidden="true"><svg viewBox="0 0 200 112" width="200" height="112" shape-rendering="crispEdges">
-            <rect x="0.5" y="0.5" width="156" height="111" rx="4" fill="#15151a" stroke="rgba(255,255,255,0.14)"/>
-            <rect x="1" y="1" width="155" height="9" rx="3" fill="#202027"/><rect x="22" y="3" width="40" height="7" fill="#15151a"/>
-            <circle cx="6" cy="5.5" r="1.5" fill="#55555f"/><circle cx="11" cy="5.5" r="1.5" fill="#55555f"/><circle cx="16" cy="5.5" r="1.5" fill="#55555f"/>
-            <rect x="6" y="13" width="145" height="7" rx="3" fill="#24242b"/>
-            <rect x="6" y="25" width="108" height="61" fill="#1c1a29"/><rect x="50" y="49" width="20" height="13" fill="#9147ff" opacity="0.5"/>
-            <rect x="6" y="91" width="60" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="6" y="98" width="40" height="3" fill="#c6c6d0" opacity="0.2"/>
-            <rect x="119" y="25" width="32" height="81" fill="#1c1c22"/><rect x="122" y="31" width="24" height="2" fill="#c6c6d0" opacity="0.3"/><rect x="122" y="38" width="20" height="2" fill="#c6c6d0" opacity="0.3"/><rect x="122" y="45" width="25" height="2" fill="#c6c6d0" opacity="0.3"/><rect x="122" y="52" width="18" height="2" fill="#c6c6d0" opacity="0.3"/><rect x="122" y="99" width="25" height="4" fill="#2a2a33"/>
-            <rect class="where__hi" x="162.5" y="12.5" width="37" height="99" rx="3" fill="rgba(63,201,142,0.16)" stroke="#3fc98e"/>
-            <rect x="163" y="13" width="36" height="7" rx="2" fill="rgba(63,201,142,0.28)"/>
-            <circle cx="170" cy="27" r="3" fill="#3fc98e"/><circle cx="178" cy="27" r="3" fill="#2f9c6d"/>
-            <rect x="166" y="36" width="29" height="3" fill="#3fc98e" opacity="0.55"/><rect x="166" y="44" width="24" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="166" y="52" width="27" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="166" y="60" width="20" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="166" y="100" width="29" height="6" fill="#1f2a25"/>
-          </svg><figcaption>Pops out next to Twitch in Chrome</figcaption></figure>
+          <figure class="where where--chrome" aria-hidden="true"><svg viewBox="0 0 200 120" width="200" height="120">
+            <rect x="0.5" y="0.5" width="199" height="119" rx="4" fill="#15151a" stroke="rgba(255,255,255,0.14)"/>
+            <rect x="1" y="1" width="198" height="13" rx="3" fill="#202027"/>
+            <circle cx="7" cy="7.5" r="1.5" fill="#55555f"/><circle cx="12" cy="7.5" r="1.5" fill="#55555f"/><circle cx="17" cy="7.5" r="1.5" fill="#55555f"/>
+            <path d="M24 14 V5 Q24 3 26 3 H70 Q72 3 72 5 V14 Z" fill="#15151a"/><path d="M31 8.5 L27.88 6.70 A3.6 3.6 0 0 1 34.12 6.70 Z" fill="#ea4335"/><path d="M31 8.5 L34.12 6.70 A3.6 3.6 0 0 1 31.00 12.10 Z" fill="#fbbc04"/><path d="M31 8.5 L31.00 12.10 A3.6 3.6 0 0 1 27.88 6.70 Z" fill="#34a853"/><circle cx="31" cy="8.5" r="1.80" fill="#fff"/><circle cx="31" cy="8.5" r="1.37" fill="#4285f4"/><rect x="38" y="7.5" width="26" height="2" fill="#8d8d97"/>
+            <rect x="6" y="17" width="160" height="8" rx="4" fill="#24242b"/>
+            <rect x="172" y="17" width="8" height="8" rx="2" fill="#2a2a33"/>
+            <rect class="where__hi" x="184" y="16" width="10" height="10" rx="2.5" fill="#3fc98e"/><path d="M187 19 h4 v3 h-2 l-1 1.4 v-1.4 h-1 z" fill="#0e0e10"/>
+            <rect x="6" y="30" width="112" height="60" fill="#1c1a29"/><rect x="52" y="53" width="20" height="13" fill="#9147ff" opacity="0.5"/><circle cx="24" cy="72" r="12.6" fill="#0e0e10"/><path d="M24 72 L14.47 66.50 A11 11 0 0 1 33.53 66.50 Z" fill="#ea4335"/><path d="M24 72 L33.53 66.50 A11 11 0 0 1 24.00 83.00 Z" fill="#fbbc04"/><path d="M24 72 L24.00 83.00 A11 11 0 0 1 14.47 66.50 Z" fill="#34a853"/><circle cx="24" cy="72" r="5.50" fill="#fff"/><circle cx="24" cy="72" r="4.18" fill="#4285f4"/>
+            <rect x="6" y="95" width="60" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="6" y="102" width="40" height="3" fill="#c6c6d0" opacity="0.2"/>
+            <rect x="122" y="30" width="72" height="84" fill="#1c1c22"/>
+            <path d="M184.5 29.5 L189 25 L193.5 29.5" fill="#123227" stroke="#3fc98e"/>
+            <rect class="where__hi" x="104.5" y="29.5" width="92" height="86" rx="4" fill="#0f1d18" stroke="#3fc98e"/>
+            <rect x="105" y="30" width="91" height="10" rx="3" fill="rgba(63,201,142,0.22)"/>
+            <circle cx="113" cy="49" r="4" fill="#3fc98e"/><circle cx="124" cy="49" r="4" fill="#2f9c6d"/><circle cx="135" cy="49" r="4" fill="#24785a"/>
+            <rect x="110" y="60" width="62" height="3" fill="#3fc98e" opacity="0.55"/><rect x="110" y="68" width="74" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="110" y="76" width="52" height="3" fill="#c6c6d0" opacity="0.35"/><rect x="110" y="84" width="66" height="3" fill="#c6c6d0" opacity="0.35"/>
+            <rect x="110" y="102" width="81" height="8" rx="4" fill="#1f2a25"/>
+          </svg><figcaption>Pops out of the StreamSpace button in Chrome</figcaption></figure>
           <h3>A mod's popout panel</h3>
-          <p>Pops out of Chrome and sits right next to Twitch. Mods see what's on the streamer's dock, ask quietly instead of in chat, nudge, flag a line, or hit the panic button when it can't wait.</p>
+          <p>Pops out of the StreamSpace button in Chrome's toolbar, right over Twitch. Mods see what's on the streamer's dock, ask quietly instead of in chat, nudge, flag a line, or hit the panic button when it can't wait.</p>
           <p class="twosides__try">The buttons next to it do what a mod would, and you watch it land on the streamer's side.</p>
         </div>
       </div>
