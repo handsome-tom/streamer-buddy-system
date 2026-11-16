@@ -968,6 +968,8 @@
               <button type="button" class="chip" data-click="tFirst" data-k style="--k:#3fc98e" data-tip="Someone chats in the channel for the very first time.">First-timer</button>
               <button type="button" class="chip" data-click="tStreak" data-k style="--k:#ee7a2f" data-tip="A viewer shares their watch streak.">Streak</button>
               <button type="button" class="chip" data-click="tPoll" data-k style="--k:#5a8de8" data-tip="A poll, with live votes at the top of chat.">Poll</button>
+              <button type="button" class="chip" data-click="tFirstSub" data-k style="--k:#ffbf3f" data-tip="Someone subscribes for the first time: a little celebration in chat.">First sub</button>
+              <button type="button" class="chip" data-click="tAd" data-k style="--k:#9147ff" data-tip="An ad break 90 seconds away: Twitch's ad timer, with Snooze, above the streamer's chat and in the mod's panel.">Ad break</button>
             </div>
           </div>
         </div>
@@ -1018,6 +1020,8 @@
         <button id="tPin" type="button" class="chip" data-k style="--k:#b8b8c2" data-tip="mod2 pins a message to the top of chat.">Pin</button>
         <button id="tHype" type="button" class="chip" data-k style="--k:#e85a9c" data-tip="A hype train starts at the top of chat.">Hype train</button>
         <button id="tPoll" type="button" class="chip" data-k style="--k:#5a8de8" data-tip="A poll, with live votes at the top of chat.">Poll</button>
+        <button id="tFirstSub" type="button" class="chip" data-k style="--k:#ffbf3f" data-tip="Someone subscribes for the first time: a little celebration in chat.">First-time sub</button>
+        <button id="tAd" type="button" class="chip" data-k style="--k:#9147ff" data-tip="An ad break 90 seconds away: Twitch's ad timer, with Snooze, above the streamer's chat and in the mod's panel.">Ad break</button>
         <button id="tPred" type="button" class="chip" data-k style="--k:#c788e8" data-tip="A prediction: it locks after 20 seconds, then a side wins.">Prediction</button>
         </div>
       </div>
@@ -1056,7 +1060,7 @@
     document.getElementById("mod").closest(".screen").classList.add("scr-mod");
     const streamer = pgColumn("streamer", "Try the streamer's side", [
       ["To the mods", ["streamerAsk"]],
-      ["Twitch events", ["tRaid", "tFirst", "tGift", "tSub", "tCheer", "tStreak", "tHype", "tPoll", "tPred", "tPin"]],
+      ["Twitch events", ["tRaid", "tFirst", "tGift", "tSub", "tCheer", "tStreak", "tHype", "tPoll", "tPred", "tPin", "tFirstSub", "tAd"]],
       ["Chat", ["feed"]],
       ["The demo", ["reload"]],
     ], true);
@@ -1262,7 +1266,7 @@
     }
     const streamer = column("streamer", "Streamer", [
       ["To your mods", ["streamerAsk"]],
-      ["Twitch events", ["tRaid", "tFirst", "tGift", "tStreak", "tSub", "tCheer", "tBadge", "tRedeem", "tHighlight", "tAnnounce", "tPin", "tHype", "tPoll", "tPred"]],
+      ["Twitch events", ["tRaid", "tFirst", "tGift", "tStreak", "tSub", "tCheer", "tBadge", "tRedeem", "tHighlight", "tAnnounce", "tPin", "tHype", "tPoll", "tPred", "tFirstSub", "tAd"]],
       ["Chat", ["tCmd", "feed"]],
       ["The playground", ["auto", "reload"]],
     ]);
@@ -1300,7 +1304,7 @@
   }
 </script>
 <script type="module">
-  import { Socket, pretendTwitch } from "./hub.js?v=137"; // the number: bump it when hub.js changes, so browsers fetch the new one
+  import { Socket, pretendTwitch } from "./hub.js?v=139"; // the number: bump it when hub.js changes, so browsers fetch the new one
 
   const said = (text) => (document.getElementById("said").textContent = text);
   const pick = (list) => list[Math.floor(Math.random() * list.length)];
@@ -1532,6 +1536,11 @@
     said(`${who} typed ${cmd}: StreamElements answers (you can type one in the streamer's chat too)`);
   });
   on("tSub", () => said(`${pretendTwitch.sub()} subscribed`));
+  on("tFirstSub", () => said(`${pretendTwitch.firstSub()} subscribed for the first time`));
+  on("tAd", () => {
+    pretendTwitch.adSoon();
+    said("An ad break is coming up in 90 seconds");
+  });
   on("tGift", () => {
     const { who, total } = pretendTwitch.gift();
     said(`${who} gifted ${total} subs`);
@@ -1756,6 +1765,8 @@
     tFirst: { on: "obs", from: "twitch", find: ".oc-line--first", say: () => "First-time chatters are labeled, so they're easy to welcome." },
     tStreak: { on: "obs", from: "twitch", find: ".oc-notice", say: () => "A watch streak, shown as a clean card in chat." },
     tPoll: { on: "obs", from: "twitch", find: ".oc-topcard--poll", say: () => "The poll sits at the top of chat, with live votes." },
+    tFirstSub: { on: "obs", from: "twitch", find: ".oc-event--first", say: () => "A first-time sub gets a little celebration: a new supporter worth a thank-you." },
+    tAd: { on: "obs", from: "twitch", find: ".twad", say: () => "Twitch's ad timer, above your chat: Snooze pushes the break back 5 minutes. Your mods see it too, and can snooze it for you." },
   };
   const panelDoc = (id) => { try { return document.getElementById(id).contentDocument; } catch { return null; } };
   let callout = null;

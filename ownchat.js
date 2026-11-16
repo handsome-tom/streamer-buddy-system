@@ -374,6 +374,7 @@
         extra("channel.channel_points_custom_reward_redemption.update", ["1"], own); // refunded or done elsewhere (Mod tools)
         extra("channel.chat_settings.update", ["1"], asMe); // chat modes (Mod tools)
         extra("channel.raid", ["1"], { from_broadcaster_user_id: broadcasterId }); // a raid out went (Mod tools)
+        extra("channel.ad_break.begin", ["1"], own); // an ad break started (the ad timer)
         extra("channel.channel_points_automatic_reward_redemption.add", ["2", "1"], own);
         ["channel.poll.begin", "channel.poll.progress", "channel.poll.end", "channel.prediction.begin", "channel.prediction.progress", "channel.prediction.lock", "channel.prediction.end"].forEach((type) => extra(type, ["1"], own));
       }
@@ -1289,7 +1290,7 @@
           toolsChanged();
         }
       } catch {}
-      let wait = 60000;
+      let wait = host.pretend ? 3000 : 60000; // the demo: often, so its Ad break button shows at once
       const now = Date.now();
       if (ads?.next > now) wait = Math.min(wait, Math.max(3000, ads.next - now + 3000));
       if (ads?.last && ads.last + ads.dur * 1000 > now) wait = Math.min(wait, Math.max(3000, ads.last + ads.dur * 1000 - now + 3000));
@@ -1515,7 +1516,10 @@
       if (kind === "sub") {
         const s2 = e.sub || {};
         const months = s2.duration_months > 1 ? ` for ${s2.duration_months} months` : "";
-        return { icon: s2.is_prime ? "crown" : "star", tone: "sub", value: "", what: `New ${tierName(s2.sub_tier, s2.is_prime)} sub`, who: `${name} subscribed${months}` };
+        // Twitch's "sub" is someone subscribing for the first time (coming back is "resub"):
+        // a new supporter, so it's made a little more of (oc-event--first: a bigger icon that
+        // pops in with a few sparkles, and a shine across the card).
+        return { icon: s2.is_prime ? "crown" : "star", tone: "sub", first: true, value: "", what: `New ${tierName(s2.sub_tier, s2.is_prime)} sub`, label: "First-time sub", who: `${name} subscribed for the first time${months}` };
       }
       if (kind === "resub") {
         const r = e.resub || {};
@@ -1759,6 +1763,10 @@
         line.style.setProperty("--s", eventSize(kind, e).toFixed(2));
         const art = el("span", "oc-event__icon");
         art.innerHTML = pixel(ev.icon, 20);
+        if (ev.first) {
+          line.classList.add("oc-event--first");
+          for (let i = 0; i < 4; i++) art.append(el("i", `oc-spark oc-spark--${i}`));
+        }
         const words = el("div", "oc-event__words");
         if (fromChannel) words.append(el("span", "oc-shared", fromChannel));
         const big = el("div", "oc-event__big");
@@ -1875,6 +1883,11 @@
       } else if (type === "channel.chat_settings.update") {
         chatModes = modesFrom(e);
         toolsChanged();
+      } else if (type === "channel.ad_break.begin") {
+        // Started (on time, run by hand, or by Twitch): the timer shows it running straight away.
+        ads = { ...(ads || adsFrom({})), last: when(e.started_at) || Date.now(), dur: Number(e.duration_seconds) || ads?.dur || 0 };
+        toolsChanged();
+        setTimeout(loadAds, 5000);
       } else if (type === "channel.raid") {
         if (raidOut) addSystem(`Raided ${e.to_broadcaster_user_name || raidOut.to} with ${Number(e.viewers) || 0} ${Number(e.viewers) === 1 ? "viewer" : "viewers"}.`);
         raidOut = null;

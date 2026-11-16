@@ -317,6 +317,14 @@ const twitch = (() => {
     },
     // A sub, as Twitch posts them: with Prime or at a tier, new or coming back (how many
     // months, the streak if they've kept it going), sometimes with a message.
+    // Someone subscribing for the very first time (Twitch's "sub"; coming back is "resub").
+    firstSub() {
+      const who = pick(NEWBIES.length ? NEWBIES : CHATTERS);
+      const prime = Math.random() < 0.3;
+      const tier = prime ? "1000" : pick(["1000", "1000", "2000"]);
+      notice("sub", { who, system: `${who} subscribed ${prime ? "with Prime" : `at Tier ${tier[0]}`}.`, fields: { sub: { sub_tier: tier, is_prime: prime, duration_months: 1 } } });
+      return who;
+    },
     sub() {
       const who = pick(CHATTERS);
       const prime = Math.random() < 0.4;
@@ -330,6 +338,11 @@ const twitch = (() => {
         notice("resub", { who, system: `${who} subscribed ${how}. They've subscribed for ${months} months${streak ? `, currently on a ${streak} month streak` : ""}!`, text, fields: { resub: { cumulative_months: months, streak_months: streak || null, sub_tier: tier, is_prime: prime } } });
       }
       return who;
+    },
+    // An ad break 90 seconds from now (the ad timer: countdown, Snooze, then "in progress").
+    adSoon() {
+      pretendAds.next = Date.now() + 90000;
+      pretendAds.snoozes = Math.max(pretendAds.snoozes, 1);
     },
     gift() {
       const who = pick(CHATTERS);
