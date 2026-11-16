@@ -348,10 +348,11 @@
   }
 
   /* ===== The space backdrop moves, slowly: the stars drift, the glows breathe, the planet floats ===== */
-  #space::before { animation: drift 160s linear infinite; }
-  #space::after { animation: drift2 240s linear infinite, twinkle 4s ease-in-out infinite alternate; }
-  @keyframes drift { to { background-position: -320px 160px; } }
-  @keyframes drift2 { to { background-position: 560px -280px; } }
+  /* Moved with transform (drawn once, slid by the graphics card), not background-position (repainted every frame). */
+  #space::before { inset: -320px; animation: drift 160s linear infinite; will-change: transform; }
+  #space::after { inset: -560px; animation: drift2 240s linear infinite, twinkle 4s ease-in-out infinite alternate; will-change: transform, opacity; }
+  @keyframes drift { to { transform: translate(-320px, 320px); } }
+  @keyframes drift2 { to { transform: translate(560px, -560px); } }
   #space { animation: breathe 18s ease-in-out infinite alternate; }
   @keyframes breathe { from { filter: hue-rotate(0deg) brightness(1); } to { filter: hue-rotate(-12deg) brightness(1.12); } }
   #space .planet { animation: orbit 40s ease-in-out infinite alternate; }
