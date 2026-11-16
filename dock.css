@@ -6619,3 +6619,6 @@ html :is(body, body.has-space.has-space) .oc-line.oc-mod.oc-mod--bright.oc-mod--
 .tools__grptitle { margin: 0 0 2px; font-family: "Pixelify Sans", "Plus Jakarta Sans", sans-serif; font-size: 15px; font-weight: 600; letter-spacing: 0.01em; color: #fff; }
 .tools__grp > .tools__sec:first-of-type { box-shadow: none; }
 .tools__grp > .tools__sec { padding-left: 2px; }
+
+/* Mod tools sit on a dark sheet like Messages, a little lighter, so a hint of space still shows. */
+main.main--tools { position: relative; z-index: 1; min-height: calc(100vh - 43px); background: linear-gradient(180deg, rgba(2, 3, 8, 0.86) 0%, rgba(2, 3, 8, 0.62) 100%); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }

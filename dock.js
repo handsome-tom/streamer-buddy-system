@@ -2235,6 +2235,7 @@
     const typingIn = document.activeElement?.dataset?.key;
     main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : view === "deck" ? deckPanel() : view === "mod" ? modPanel() : view === "messages" ? messagesPanel() : view === "group" ? groupPanel() : view === "extsettings" ? extSettingsPanel() : view === "tools" ? toolsPanel() : cardList());
     main.classList.toggle("main--msgs", view === "messages" || ((view === "chat" || view === "group") && EMBED)); // the dark Messages sheet
+    main.classList.toggle("main--tools", view === "tools"); // Mod tools: the same dark sheet, a little lighter
     if (LIVECHAT && (view !== "cards" || showAll) && main.firstElementChild?.childElementCount !== 0) main.prepend(inlineHead());
     drawDots();
     drawPeek();
