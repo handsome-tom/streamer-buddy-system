@@ -5013,9 +5013,15 @@ main.main--msgs .panel__sub { color: var(--msg-muted); }
 .msgs__seen--on { color: var(--good); }
 .msgs__seen--idle { color: var(--amber); }
 .msgs__count { flex: none; min-width: 18px; padding: 1px 5px; color: var(--honey-ink); font-size: 11px; font-weight: 800; text-align: center; background: var(--honey); border-radius: 9px; }
-.msgs__stack { display: flex; flex: none; width: 36px; }
-.msgs__stack .people__pic { width: 26px; height: 26px; box-shadow: 0 0 0 2px #04050a; }
-.msgs__stack .people__pic + .people__pic { margin-left: -16px; margin-top: 10px; }
+/* Up to three faces, clustered inside one 36px square so they never reach the words:
+   one fills it, two sit corner to corner, three make a little triangle. */
+.msgs__stack { position: relative; flex: none; width: 36px; height: 36px; }
+.msgs__stack .people__pic { position: absolute; left: 0; top: 0; width: 24px; height: 24px; box-shadow: 0 0 0 2px #04050a; }
+.msgs__stack .people__pic:only-child { width: 36px; height: 36px; }
+.msgs__stack .people__pic:nth-child(2):last-child { left: 12px; top: 12px; }
+.msgs__stack .people__pic:nth-child(1):nth-last-child(3) { top: 2px; }
+.msgs__stack .people__pic:nth-child(2):nth-last-child(2) { left: 12px; }
+.msgs__stack .people__pic:nth-child(3) { left: 6px; top: 12px; }
 .msgs__grouppic { width: 36px !important; height: 36px !important; color: var(--honey-ink); font-weight: 800; background: var(--honey); }
 .msgs__empty { margin: 0; padding: 10px 4px; color: var(--msg-muted); font-size: 12px; line-height: 1.45; }
 .msgs__empty p { margin: 0 0 8px; }
