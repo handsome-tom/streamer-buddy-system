@@ -6590,3 +6590,25 @@ html :is(body, body.has-space.has-space) .oc-line.oc-mod.oc-mod--bright.oc-mod--
 .tools__sec--shut { padding: 10px 0; }
 .tools__sec--shut > :not(.tools__fold):not(.tools__h) { display: none !important; }
 @media (prefers-reduced-motion: reduce) { .tools__chev { transition: none; } }
+
+/* Mod tools, tidied: every box, dropdown and button in a form is the same height (36px), boxes
+   run the full width, soft fills with no outlines, and small labels group what goes together. */
+.tools__sec { padding: 12px 0; }
+.tools__field { flex: none; width: 100%; box-sizing: border-box; height: 36px; padding: 0 12px; background: rgba(255, 255, 255, 0.05); box-shadow: none; border-radius: 8px; }
+.tools__field::placeholder { color: color-mix(in srgb, var(--muted) 80%, transparent); }
+.tools__field:focus { background: rgba(255, 255, 255, 0.08); box-shadow: 0 0 0 2px color-mix(in srgb, var(--purple) 70%, transparent); }
+.tools__row > .tools__field, .tools__raid > .tools__field { flex: 1 1 140px; width: auto; }
+.tools__select { flex: 1 1 auto; min-width: 0; height: 36px; padding: 0 10px; background: rgba(255, 255, 255, 0.05); box-shadow: none; border-radius: 8px; }
+.tools__row .tools__btn, .tools__raid .tools__btn, .tools__btn--main { height: 36px; padding: 0 16px; font-size: 12.5px; border-radius: 8px; }
+.tools__seg .tools__btn { height: 32px; border-radius: 8px; }
+.tools__row { gap: 8px; }
+.tools__row--even > .tools__btn { flex: 1; }
+.tools__stack { gap: 8px; }
+.tools__stack + .tools__row, .tools__stack + .tools__field, .tools__field + .tools__row { margin-top: 8px; }
+.tools__group + .tools__group { margin-top: 16px; }
+.tools__now { margin: 0 0 12px; }
+.tools__label { margin: 16px 0 6px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.01em; color: var(--muted); }
+.tools__stack > .tools__label { margin: 0; }
+.tools__stack > .tools__label:not(:first-child) { margin-top: 4px; }
+.tools__label--first { margin-top: 0; }
+.tools__chips { margin-bottom: 8px; }

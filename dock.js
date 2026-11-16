@@ -4129,7 +4129,8 @@
   function streamTools(owner, s) {
     const sec = secOf("Stream");
     if (s?.info) sec.append(el("p", "tools__now", `${s.info.title || "No title"}${s.info.game ? ` · ${s.info.game}` : ""}`));
-    const form = el("form", "tools__stack");
+    // Title and category.
+    const form = el("form", "tools__group tools__stack");
     const title = draftInput("infoTitle", "New title", 140);
     const game = draftInput("infoGame", "New category (like Just Chatting)", 100);
     const row = el("div", "tools__row");
@@ -4137,7 +4138,7 @@
     save.type = "submit";
     save.disabled = !s || busyTool(owner, "info");
     row.append(game, save);
-    form.append(title, row);
+    form.append(el("p", "tools__label", "Title and category"), title, row);
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const x = {};
@@ -4149,19 +4150,26 @@
     });
     sec.append(form);
     const off = !s?.live;
-    const note = draftInput("markNote", "Marker note (optional)", 140);
-    const acts = el("div", "tools__row");
+    // This moment: a clip, or a marker (with a note) in the past broadcast.
+    const moment = el("div", "tools__group tools__stack");
+    const acts = el("div", "tools__row tools__row--even");
     const clip = toolButton(busyTool(owner, "clip") ? "…" : "Clip it", "", () => sendTool(owner, "clip", {}), "Make a clip of the last 30 seconds");
     const mark = toolButton(busyTool(owner, "marker") ? "…" : "Add marker", "", () => { sendTool(owner, "marker", { note: toolDrafts.markNote || "" }); toolDrafts.markNote = ""; }, "Mark this moment in the past broadcast, so it's easy to find later");
-    const len = toolSelect("adLen", [["30", "30s ad"], ["60", "1 min ad"], ["90", "90s ad"], ["120", "2 min ad"], ["180", "3 min ad"]], "60", "How long");
-    const lenLabel = { 30: "30s", 60: "1 min", 90: "90s", 120: "2 min", 180: "3 min" }[toolDrafts.adLen || 60];
-    const ad = sureButton(owner, "ad", busyTool(owner, "commercial") ? "…" : "Run ad", `Sure? Run a ${lenLabel} ad`, "tools__btn--warn", () => sendTool(owner, "commercial", { length: Number(toolDrafts.adLen || 60) }), "Start an ad break now");
     clip.disabled = off || busyTool(owner, "clip");
     mark.disabled = off || busyTool(owner, "marker");
+    acts.append(clip, mark);
+    moment.append(el("p", "tools__label", "This moment"), draftInput("markNote", "Marker note (optional)", 140), acts);
+    // An ad break now.
+    const adBox = el("div", "tools__group tools__stack");
+    const adRow = el("div", "tools__row");
+    const len = toolSelect("adLen", [["30", "30 seconds"], ["60", "1 minute"], ["90", "90 seconds"], ["120", "2 minutes"], ["180", "3 minutes"]], "60", "How long");
+    const lenLabel = { 30: "30s", 60: "1 min", 90: "90s", 120: "2 min", 180: "3 min" }[toolDrafts.adLen || 60];
+    const ad = sureButton(owner, "ad", busyTool(owner, "commercial") ? "…" : "Run ad", `Sure? Run a ${lenLabel} ad`, "tools__btn--warn", () => sendTool(owner, "commercial", { length: Number(toolDrafts.adLen || 60) }), "Start an ad break now");
     ad.disabled = off || busyTool(owner, "commercial");
     len.disabled = off;
-    acts.append(clip, mark, len, ad);
-    sec.append(note, acts);
+    adRow.append(len, ad);
+    adBox.append(el("p", "tools__label", "Ad break"), adRow);
+    sec.append(moment, adBox);
     if (s && off) sec.append(el("p", "tools__note", `Clips, markers and ads work while ${owner} is live.`));
     return sec;
   }
@@ -4208,7 +4216,7 @@
     go.disabled = !s || busyTool(owner, "poll");
     const row = el("div", "tools__row");
     row.append(toolSelect("pollDur", [["60", "1 minute"], ["120", "2 minutes"], ["300", "5 minutes"], ["600", "10 minutes"]], "120", "How long it runs"), go);
-    form.append(draftInput("pollQ", "Question", 60), choiceInputs("pollC", 5, "Choice"), row);
+    form.append(draftInput("pollQ", "Question", 60), choiceInputs("pollC", 5, "Choice"), el("p", "tools__label", "How long it runs"), row);
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const title = (toolDrafts.pollQ || "").trim(), choices = choicesOf("pollC", 5);
@@ -4254,8 +4262,8 @@
     go.type = "submit";
     go.disabled = !s || busyTool(owner, "pred");
     const row = el("div", "tools__row");
-    row.append(toolSelect("predWin", [["60", "1 minute to predict"], ["120", "2 minutes to predict"], ["300", "5 minutes to predict"], ["600", "10 minutes to predict"]], "120", "How long people can put points in"), go);
-    form.append(draftInput("predQ", "Question (like: Do we beat the boss?)", 45), choiceInputs("predO", 5, "Outcome"), row);
+    row.append(toolSelect("predWin", [["60", "1 minute"], ["120", "2 minutes"], ["300", "5 minutes"], ["600", "10 minutes"]], "120", "How long people can put points in"), go);
+    form.append(draftInput("predQ", "Question (like: Do we beat the boss?)", 45), choiceInputs("predO", 5, "Outcome"), el("p", "tools__label", "Time to put points in"), row);
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const title = (toolDrafts.predQ || "").trim(), outcomes = choicesOf("predO", 5);
@@ -4332,7 +4340,7 @@
     take.addEventListener("click", () => send(false));
     form.addEventListener("submit", (e) => { e.preventDefault(); send(true); });
     form.append(name, give, take);
-    sec.append(form);
+    sec.append(el("p", "tools__label tools__label--first", "Add or remove a VIP"), form);
     return sec;
   }
 
