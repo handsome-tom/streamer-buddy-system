@@ -1479,7 +1479,7 @@
     const LON0 = 50 * Math.PI / 180; // where he is when the planet hasn't turned yet (right of the logo)
     const lonAt = (t) => LON0 + ((t * 1000 - (window.heroSpinStart || 0)) / 1000 / SPIN) * Math.PI * 2;
     const TILT = 16 * Math.PI / 180, ct = Math.cos(TILT), st = Math.sin(TILT); // the planet's axis leans left
-    const DOG = 0.0378 * 1.0; // his height from middle to feet, in planet widths (the same size as before)
+    const DOG = 0.0378 * 0.75; // his height from middle to feet, in planet widths (a quarter smaller than he was)
     const order = [];
     const body = document.createElement("canvas"), bx = body.getContext("2d");
     function drawDog(t) {
