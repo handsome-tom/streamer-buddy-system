@@ -6243,3 +6243,32 @@ body.embed .bar > #peopleBtn { order: 7; }
 @keyframes ocFlagLand { 0% { box-shadow: inset 0 0 0 2px var(--flag), 0 0 26px var(--flag); } }
 .oc-flagpic { position: absolute; right: 8px; bottom: 5px; width: 20px; height: 20px; border-radius: 50%; object-fit: cover; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .oc-line--flagged { animation: none; } }
+
+/* ===== Settings switches (custom chat and the mod's side panel) ===== */
+body.no-badges .oc-line .oc-badge { display: none; }
+body.no-events .oc-line.oc-event { display: none; }
+body.no-chatnotes .oc-notes { display: none; }
+.cx__settings .set__head { margin-top: 10px; }
+.cx__settings .set__row { padding: 6px 0; }
+.cx__settings .xset__keep { display: flex; gap: 8px; margin-top: 6px; }
+body.no-chatnotes .oc-line.oc-line--noted { background: none; }
+
+/* The ring goes behind the planet, as on the website: the back half of the ring (its top
+   half, before it's tilted) is hidden where it crosses the planet, and the front half
+   still passes in front. The planet is 100/180 of the ring's width, centered. */
+.space__planet::after,
+.bar__planet::after {
+  -webkit-mask-image: linear-gradient(90deg, #000 21%, transparent 23.5%, transparent 76.5%, #000 79%), linear-gradient(180deg, transparent 50%, #000 50%);
+  mask-image: linear-gradient(90deg, #000 21%, transparent 23.5%, transparent 76.5%, #000 79%), linear-gradient(180deg, transparent 50%, #000 50%);
+}
+
+/* Private and group chat: the message box at full height. (.ask__form is a fixed 38px,
+   so this form's own padding was squeezing the box to a sliver.) */
+.chat--dm .chat__form { height: auto; align-items: center; gap: 8px; }
+.chat--dm .chat__form .ask__input { height: 42px; padding: 0 14px; font-size: 14px; }
+.chat--dm .chat__form .ask__send { width: 36px; height: 36px; }
+
+/* The side panel's buttons stay evenly spaced with or without a count or badge on them:
+   counts hang off the corner, so the gaps are wide enough to hold them. */
+body.embed .bar { column-gap: 12px; }
+.chat--dm .chat__form:focus-within { border-color: transparent; box-shadow: none; }

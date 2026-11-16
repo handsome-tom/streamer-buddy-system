@@ -1755,7 +1755,7 @@
   function drawStreamerView() {
     if (!svEl) return;
     // Shown inside Mod only, for the streamer it's about (when their dock shares a view).
-    const modFor = EMBED && me && view === "mod" ? modOwner() : "";
+    const modFor = EMBED && me && view === "mod" && get("svShow", true) ? modOwner() : "";
     const owner = views[modFor] ? modFor : "";
     svEl.hidden = !owner;
     if (!owner) return svEl.replaceChildren();
@@ -1882,9 +1882,71 @@
     document.body.classList.toggle("no-edge", !get("edgeGlow", true));
     document.body.classList.toggle("hide-quick", !get("showQuick", true));
     document.body.classList.toggle("no-modicons", !get("modIcons", true));
+    document.body.classList.toggle("no-chatnotes", !get("chatNotes", true));
+    document.body.classList.toggle("no-badges", !get("chatBadges", true));
+    document.body.classList.toggle("no-events", !get("chatEvents", true));
     document.body.classList.remove("chat-small", "chat-large");
     const size = get("chatSize", "normal");
     if (size !== "normal") document.body.classList.add(`chat-${size}`);
+  }
+
+  // A switch row and a choice row, for both Settings lists. `redraw` redraws the list.
+  function setSwitch(key, label, fallback, after, redraw) {
+    const row = el("label", "set__row");
+    const box = el("input", "set__switch");
+    box.type = "checkbox";
+    box.checked = get(key, fallback);
+    box.addEventListener("change", () => {
+      put(key, box.checked);
+      applySettings();
+      after?.(box.checked);
+      redraw();
+    });
+    row.append(el("span", "set__label", label), box);
+    return row;
+  }
+  function setChoice(label, options, now, pick, redraw) {
+    const row = el("div", "set__row");
+    const group = el("div", "set__seg");
+    group.setAttribute("role", "group");
+    group.setAttribute("aria-label", label);
+    for (const [value, text] of options) {
+      const b = el("button", `set__opt${value === now ? " set__opt--on" : ""}`, text);
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(value === now));
+      b.addEventListener("click", () => {
+        pick(value);
+        applySettings();
+        redraw();
+      });
+      group.append(b);
+    }
+    row.append(el("span", "set__label", label), group);
+    return row;
+  }
+
+  // The mod's side panel: Settings, at the bottom of Connections.
+  //   "sound", "volume"  as in OBS        "edgeGlow"  the glow round the edge
+  //   "svShow"   Streamer View in Mod     "toolsTab"  the Mod tools button
+  function modSettings() {
+    const card = el("section", "cx__card set cx__settings");
+    card.id = "cxSettings";
+    const redraw = () => render();
+    card.append(el("div", "cx__label", "Settings"));
+    card.append(el("div", "set__head", "This panel"));
+    card.append(setSwitch("sound", "Sound when something arrives", PINGS_HERE, (on) => on && ping(1), redraw));
+    if (soundOn()) {
+      card.append(setChoice("Volume", [["quiet", "Quiet"], ["normal", "Normal"], ["loud", "Loud"]], get("volume", "normal"), (v) => {
+        put("volume", v);
+        ping(1);
+      }, redraw));
+    }
+    card.append(setSwitch("edgeGlow", "Glow round the edge", true, null, redraw));
+    card.append(setSwitch("svShow", "Streamer View in the Mod tab", true, null, redraw));
+    card.append(setSwitch("toolsTab", "Mod tools button", true, null, redraw));
+    card.append(el("div", "set__head", "StreamSpace on Twitch"));
+    extSettingsPanel(card);
+    return card;
   }
 
   function drawSettings() {
@@ -1946,6 +2008,11 @@
         }));
         parts.push(choice("Chat text", [["small", "Small"], ["normal", "Normal"], ["large", "Large"]], get("chatSize", "normal"), (v) => put("chatSize", v)));
         parts.push(sw("modIcons", "Mod icons next to names (ban, time out, delete)", true));
+        parts.push(sw("chatBadges", "Twitch badges next to names", true));
+        parts.push(sw("firstChatters", "Mark first-time chatters", true));
+        parts.push(sw("raiders", "Mark people who came in with a raid", true));
+        parts.push(sw("chatEvents", "Subs, gifts, cheers and streaks in chat", true));
+        parts.push(sw("chatNotes", "Mods' notes on chat lines", true));
       }
     }
 
@@ -2165,11 +2232,11 @@
     chatBtn.hidden = true;
     // The side panel's Messages tab carries the unread count; elsewhere it's on Connections.
     msgBtn.hidden = !EMBED || !me;
-    toolsBtn.hidden = !EMBED || !me || !(modLists?.modFor || []).length; // only for people who mod somewhere
+    toolsBtn.hidden = !EMBED || !me || !(modLists?.modFor || []).length || !get("toolsTab", true); // only for people who mod somewhere (and haven't switched it off)
     toolsBtn.classList.toggle("pill--on", view === "tools");
     toolsBtn.classList.toggle("bar-btn--here", view === "tools");
     msgBtn.classList.toggle("pill--on", view === "messages" || (view === "chat" && chatFrom === "messages") || (view === "group" && EMBED));
-    extGear?.classList.toggle("ext-gear--on", view === "extsettings");
+    extGear?.classList.toggle("ext-gear--on", view === "people");
     msgCount.textContent = !msgBtn.hidden && unreadChat ? String(unreadChat) : "";
     chatCount.textContent = msgBtn.hidden && unreadChat ? String(unreadChat) : "";
     if (POPOUT) closeWhenDone();
@@ -4167,21 +4234,19 @@
       extNote = m.error ? `That isn't a StreamSpace backup (${m.error}).` : `Restored ${m.count} thing${m.count === 1 ? "" : "s"}.`;
       if (!m.error) extChanged = true;
     } else return;
-    if (view === "extsettings") render();
+    if (view === "people") render();
   }
-  function extSettingsPanel() {
-    const panel = el("div", "panel msgs xset");
-    panel.append(el("div", "panel__head", "Settings"));
+  // The extension's part of Settings, at the bottom of Connections (side panel only).
+  function extSettingsPanel(panel = el("div", "xset")) {
     if (!ext) {
       if (!extAskedAt) {
         extAskedAt = Date.now();
         toExt({ t: "ext-get" });
-        setTimeout(() => view === "extsettings" && !ext && render(), 1500);
+        setTimeout(() => view === "people" && !ext && render(), 1500);
       }
       panel.append(el("p", "panel__sub", Date.now() - extAskedAt < 1400 ? "Loading…" : "Update StreamSpace (the Chrome extension) to change its settings here."));
       return panel;
     }
-    panel.append(el("div", "msgs__label", "StreamSpace features"));
     const list = el("div", "xset__list");
     if (!ext.features.length) list.append(el("p", "panel__sub", "Open or refresh a Twitch tab once, then the switches show here."));
     for (const { key, label } of ext.features) {
@@ -4212,7 +4277,7 @@
       foot.append(go);
     }
     panel.append(foot);
-    panel.append(el("div", "msgs__label", "Your saved things"));
+    panel.append(el("div", "set__head", "Your saved things"));
     const keep = el("div", "xset__keep");
     const backup = el("button", "pill", "Back up");
     backup.type = "button";
@@ -4245,11 +4310,14 @@
     extGear.type = "button";
     extGear.title = extGear.ariaLabel = "Settings";
     extGear.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="M6 1h4v1h-4zM2 2h2v1h-2zM6 2h4v1h-4zM12 2h2v1h-2zM2 3h12v1h-12zM3 4h10v1h-10zM3 5h10v1h-10zM1 6h5v1h-5zM10 6h5v1h-5zM1 7h5v1h-5zM10 7h5v1h-5zM1 8h5v1h-5zM10 8h5v1h-5zM1 9h5v1h-5zM10 9h5v1h-5zM3 10h10v1h-10zM3 11h10v1h-10zM2 12h12v1h-12zM2 13h2v1h-2zM6 13h4v1h-4zM12 13h2v1h-2zM6 14h4v1h-4z"/></svg>';
+    // Settings live at the bottom of Connections: the gear goes straight there.
     extGear.addEventListener("click", () => {
-      ext = null; // fresh each time it opens (clicked again, it closes: show() toggles)
+      ext = null; // fresh each time
       extAskedAt = 0;
       extNote = "";
-      show("extsettings");
+      if (view !== "people") show("people");
+      else render();
+      document.getElementById("cxSettings")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
@@ -5123,7 +5191,10 @@
     if (allowed && !asked) panel.append(allowCard());
     if (me && owner && me.login === owner) panel.append(reportsCard());
 
-    // ----- Bottom: sound, sign out, build
+    // ----- Settings (side panel): this panel's switches, then StreamSpace's on Twitch
+    if (EMBED) panel.append(modSettings());
+
+    // ----- Bottom: sound (OBS; the side panel has it under Settings), sign out, build
     const foot = el("div", "cx__foot");
     const sound = el("label", "panel__check");
     const box = el("input");
@@ -5140,7 +5211,7 @@
     const fb = el("button", "panel__signout cx__feedback", "Send feedback");
     fb.type = "button";
     fb.addEventListener("click", openFeedback);
-    foot.append(sound, fb, out, el("p", "cx__build", `Build ${window.DOCK_VERSION || "?"}`));
+    foot.append(...(EMBED ? [] : [sound]), fb, out, el("p", "cx__build", `Build ${window.DOCK_VERSION || "?"}`));
     panel.append(foot);
     return panel;
   }
@@ -6183,6 +6254,7 @@
         onSignIn: ownChatSignIn, // to add a permission it would like (EXTRA_SCOPES)
         onBadges: noteLead,
         onTools: shareTools, // what Mod tools shows, for your mods' side panels
+        setting: get, // the gear's switches (first-time chatters, raiders)
         pretend: SANDBOX, // the public demo: links to Twitch say what they'd do instead
       });
       // Questions already waiting on you go into the new chat (oldest first).

@@ -77,6 +77,11 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
   // Notes work on any channel once you're signed in to Streamer Buddy System; the relay
   // decides who sees each one.
   let circle = { me: null, mutual: [] };
+  // Who you are and your circle, as last heard: kept so the note button is there from the
+  // first hover after Twitch loads, instead of popping in once the relay answers.
+  chrome.storage.local.get("notesCircle", (d) => {
+    if (!circle.me && d?.notesCircle?.me) circle = d.notesCircle;
+  });
   function canNote() {
     return !!channel() && !!circle.me;
   }
@@ -335,6 +340,7 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
   function heard(m) {
     if (m.t === "people") {
       circle = { me: m.me, mutual: m.mutual };
+      chrome.storage.local.set({ notesCircle: circle });
       tick();
     } else if (m.t === "notes") {
       const want = vodId() ? vod && `vod:${vod.id}` : `live:${liveChannel()}`;

@@ -135,6 +135,7 @@
 
   function start(host) {
     const { me, channel, urls } = host;
+    const setting = (key) => (host.setting ? host.setting(key, true) !== false : true); // the gear's switches, on unless switched off
     let stopped = false;
     let failed = false;
     let ready = false;
@@ -1133,7 +1134,7 @@
       }
       // Twitch only tells the channel owner which reward it was.
       if (m.reward) line.append(el("span", "oc-reward", "Redeemed"), " ");
-      const raid = !line.dataset.staff && m.login !== me.login && raidOf(m.login, m.history);
+      const raid = !line.dataset.staff && m.login !== me.login && setting("raiders") && raidOf(m.login, m.history);
       if (raid) {
         line.classList.add("oc-line--raider");
         if (raid.color) {
@@ -1164,7 +1165,7 @@
 
     const firstIds = new Set(); // first messages Twitch told us about before they arrived
     function markFirst(line, intro) {
-      if (line.classList.contains("oc-line--first")) return;
+      if (line.classList.contains("oc-line--first") || !setting("firstChatters")) return;
       line.classList.add("oc-line--first");
       line.prepend(el("div", "oc-firsttag", intro ? "First-time chatter, introducing themselves" : "First-time chatter"));
     }
