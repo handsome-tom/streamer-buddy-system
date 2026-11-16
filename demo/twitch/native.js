@@ -56,7 +56,7 @@
     },
     tCheer: {
       title: "Cheer",
-      html: line("SneakySneaky", "#2e8b57", `<span class="nt-cheer">${svg("gem", "#9c3ee8", 18)}<b style="color:#9c3ee8">100</b></span> great play!!`, badge("#9c3ee8", "◆")),
+      html: line("SneakySneaky", "#2e8b57", `<span class="nt-cheer">${svg("gem", "#9c3ee8", 18)}<b style="color:#9c3ee8">100</b></span> GGEZ`, badge("#9c3ee8", "◆")),
     },
     tBadge: {
       title: "Bits badge",

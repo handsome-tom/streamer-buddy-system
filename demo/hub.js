@@ -173,7 +173,7 @@ const twitch = (() => {
   const event = (type, ev) => eventsubSockets.forEach((s) => say(s, "notification", { subscription: { type }, event: ev }, type));
 
   const CHATTERS = ["hellofoxy", "MacAndCheeseMan", "SneakySneaky", "TomWasTaken", "MiloMunch", "LeonTears", "CuttyKid", "Amazinghertz",
-    "deathdancer", "BigDog15", "HoneyBuddy", "KGTurbo", "PocketMan", "BestieHuman", "CaptainSausage", "SunChaser"];
+    "deathdancer", "BigDog15", "HoneyBuddy", "KGTurbo", "PocketMan", "BestieHuman", "CaptainSausage", "SunChaser", "INeverDie"];
   const SHORT = ["lol", "W", "nice", "LETS GO", "oof", "gg", "true", "hi chat", "no way", "clean", "rip", "o7", "yo", "hahaha", "first try?"];
   const MEDIUM = [
     "that was actually so clean", "how is the mic so good today", "wait what just happened", "chat is moving fast tonight",
@@ -197,6 +197,7 @@ const twitch = (() => {
   // A chat message, as Twitch sends it to custom chat. A first message in the channel is
   // also marked on Twitch's public chat, the way Twitch really says so (first-msg=1).
   function chat(text, who = pick(CHATTERS), { kind = "text", bits = 0, first = false, badges = [], reward = false } = {}) {
+    if (who === "SneakySneaky") text = "GGEZ"; // all SneakySneaky ever says
     const id = `m${++n}`;
     lastIds.push(id);
     if (lastIds.length > 50) lastIds.shift();
