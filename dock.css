@@ -6574,3 +6574,19 @@ html :is(body, body.has-space.has-space) .oc-line.oc-mod.oc-mod--bright.oc-mod--
 .tools__log { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; }
 .tools__logrow { font-size: 12.5px; line-height: 1.4; overflow-wrap: anywhere; }
 .tools__logrow .tools__ago { display: inline; margin-right: 6px; }
+
+/* Mod tools' sections fold up under their headings: tap a heading to open or close it. A short
+   note beside it says what's inside (a poll running, unban requests waiting, chat modes on). */
+.tools__fold { display: flex; align-items: center; gap: 7px; width: 100%; margin: 0; padding: 2px 0; font: inherit; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; text-align: left; color: var(--good); background: none; border: 0; cursor: pointer; }
+.tools__h .tools__fold { width: auto; flex: 1; }
+.tools__fold:hover .tools__foldname { color: #fff; }
+.tools__fold:focus-visible { outline: 2px solid var(--good); outline-offset: 3px; border-radius: 4px; }
+.tools__chev { flex: none; width: 0; height: 0; border-left: 5px solid currentColor; border-top: 4px solid transparent; border-bottom: 4px solid transparent; transition: transform 0.15s; }
+.tools__fold[aria-expanded="true"] .tools__chev { transform: rotate(90deg); }
+.tools__badge { margin-left: auto; padding: 1px 7px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.02em; text-transform: none; color: var(--muted); background: rgba(255, 255, 255, 0.06); border-radius: 999px; }
+.tools__h .tools__badge { margin-left: 6px; }
+.tools__badge--hot { color: #04160e; background: var(--good); }
+.tools__sec:has(> .tools__fold[aria-expanded="true"]) > .tools__fold, .tools__sec:has(> .tools__h .tools__fold[aria-expanded="true"]) > .tools__h { margin-bottom: 10px; }
+.tools__sec--shut { padding: 10px 0; }
+.tools__sec--shut > :not(.tools__fold):not(.tools__h) { display: none !important; }
+@media (prefers-reduced-motion: reduce) { .tools__chev { transition: none; } }

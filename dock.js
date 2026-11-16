@@ -4038,9 +4038,52 @@
     const s = toolsOf[owner];
     if (!s) panel.append(el("p", "tools__off", `${owner}'s chat dock isn't open, so these can't run right now. They work while it's open in OBS.`));
     if (toolSaid && toolSaid.owner === owner && Date.now() - toolSaid.at < 15000) panel.append(el("p", `tools__said${toolSaid.ok ? "" : " tools__said--no"}`, toolSaid.text));
-    panel.append(streamTools(owner, s), pollTools(owner, s), predTools(owner, s), modeTools(owner, s), safetyTools(owner, s),
-      pointsTools(owner, s), raidTools(owner, s), vipTools(owner, s), unbanTools(owner, s), logTools(owner, s));
+    const secs = [streamTools(owner, s), pollTools(owner, s), predTools(owner, s), modeTools(owner, s), safetyTools(owner, s),
+      pointsTools(owner, s), raidTools(owner, s), vipTools(owner, s), unbanTools(owner, s), logTools(owner, s)];
+    for (const sec of secs) foldable(sec, s);
+    panel.append(...secs);
     return panel;
+  }
+  // Each Mod tools section folds up under its heading (tap to open or close), with a short
+  // note beside the heading saying what's going on inside. Which ones are open is remembered.
+  let toolsOpen = new Set();
+  try { toolsOpen = new Set(JSON.parse(localStorage.getItem("toolsOpen") || "[]")); } catch {}
+  function toolsBadge(name, s) {
+    if (!s) return "";
+    const m = s.modes || {};
+    switch (name) {
+      case "Stream": return s.live ? "live" : "offline";
+      case "Poll": return s.poll ? "running" : "";
+      case "Prediction": return s.pred ? (s.pred.status === "locked" ? "locked" : "running") : "";
+      case "Chat modes": { const on = [m.slow > 0, m.followers >= 0, m.emote, m.sub, m.unique].filter(Boolean).length; return on ? `${on} on` : ""; }
+      case "Chat safety": return s.automod != null ? (s.automod ? `AutoMod ${s.automod}` : "AutoMod off") : "";
+      case "Channel points": { const n = (s.reds || []).filter((r) => r.status === "unfulfilled").length; return n ? `${n} new` : ""; }
+      case "Raid out": return s.raid ? `raiding ${s.raid.to}` : "";
+      case "Unban requests": return s.unbans?.length ? `${s.unbans.length} waiting` : "";
+      case "Mod log": return s.log?.length ? String(s.log.length) : "";
+      default: return "";
+    }
+  }
+  function foldable(sec, s) {
+    const head = sec.querySelector(":scope > h3, :scope > .tools__h");
+    const h3 = head?.matches("h3") ? head : head?.querySelector("h3");
+    if (!h3) return;
+    const name = h3.textContent;
+    const open = toolsOpen.has(name);
+    const btn = el("button", "tools__fold");
+    btn.type = "button";
+    btn.setAttribute("aria-expanded", String(open));
+    const badge = toolsBadge(name, s);
+    btn.append(el("span", "tools__chev"), el("span", "tools__foldname", name));
+    if (badge) btn.append(el("span", `tools__badge${/waiting|new|running|raiding|locked|live/.test(badge) ? " tools__badge--hot" : ""}`, badge));
+    btn.addEventListener("click", () => {
+      if (toolsOpen.has(name)) toolsOpen.delete(name);
+      else toolsOpen.add(name);
+      try { localStorage.setItem("toolsOpen", JSON.stringify([...toolsOpen])); } catch {}
+      render();
+    });
+    h3.replaceWith(btn);
+    sec.classList.toggle("tools__sec--shut", !open);
   }
   // What's typed in Mod tools' boxes, kept while the panel redraws (data-key keeps the focus).
   const toolDrafts = {};
