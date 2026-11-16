@@ -6489,3 +6489,46 @@ html :is(body, body.has-space.has-space) :is(.oc-event__label, .oc-top .oc-topca
   font-family: "Chakra Petch", "Plus Jakarta Sans", sans-serif; font-weight: 600; letter-spacing: 0.06em; font-variant-numeric: tabular-nums;
 }
 html :is(body, body.has-space.has-space) .oc-top .oc-topcard__time { font-size: 15px; letter-spacing: 0.02em; }
+
+/* ===== A mod talking to the streamer (a question, a message, quick info, a !vanish note) is
+   someone speaking to you, not an announcement: an iPhone-style text bubble in the mod's color,
+   like the chat notes (.oc-notebub). Their picture and name inside, a curled tail at the
+   bottom, the answer buttons on dark chips inside it. The streamer's own are on the right. ===== */
+html :is(body, body.has-space.has-space) .oc-line.oc-mod,
+html :is(body, body.has-space.has-space) .oc-line.oc-mod:is(.oc-mod--info, .oc-mod--love, .oc-mod--ask, .oc-mod--stuck) {
+  --ink: #fff; --ink-soft: rgba(255, 255, 255, 0.78);
+  width: fit-content; max-width: 88%; margin: 6px 10px 8px 12px; padding: 7px 12px; align-items: center;
+  border-radius: 18px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--mc) 85%, #fff), color-mix(in srgb, var(--mc) 85%, #000)) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  color: var(--ink); text-shadow: none;
+  animation: oc-note-up 0.32s ease-out;
+}
+html :is(body, body.has-space.has-space) .oc-line.oc-mod.oc-mod--light { --ink: #18181b; --ink-soft: rgba(24, 24, 27, 0.72); }
+html :is(body, body.has-space.has-space) .oc-line.oc-mod.oc-mod--mine { margin-left: auto; margin-right: 12px; box-shadow: 0 10px 30px color-mix(in srgb, var(--mc) 35%, transparent); }
+html :is(body, body.has-space.has-space) .oc-line.oc-mod.oc-mod--stuck { margin: 4px 10px 6px 12px; }
+/* No card line down the left; the tail instead. */
+html :is(body, body.has-space.has-space) .oc-line.oc-mod:not(.oc-line--marked)::before { content: none; }
+html :is(body, body.has-space.has-space) .oc-line.oc-mod::after {
+  content: ""; position: absolute; left: -5px; bottom: 0; width: 16px; height: 18px;
+  background: color-mix(in srgb, var(--mc) 85%, #000); clip-path: path("M6 0 Q6 14 0 18 Q10 18 16 12 L16 0 Z"); pointer-events: none;
+}
+html :is(body, body.has-space.has-space) .oc-line.oc-mod.oc-mod--mine::after { left: auto; right: -5px; clip-path: path("M10 0 Q10 14 16 18 Q6 18 0 12 L0 0 Z"); }
+html :is(body, body.has-space.has-space) .oc-line.oc-mod .oc-mod__pic { width: 22px; height: 22px; margin: 0; background: color-mix(in srgb, var(--mc) 60%, #000); }
+html :is(body, body.has-space.has-space) .oc-line.oc-mod .oc-mod__body { font-size: 13.5px; line-height: 1.35; overflow-wrap: anywhere; }
+html :is(body, body.has-space.has-space) .oc-line.oc-mod :is(.oc-mod__who, .oc-mod__to, .oc-mod__text, .oc-mod__answer, .oc-mod__kind) { color: var(--ink); }
+html :is(body, body.has-space.has-space) .oc-line.oc-mod .oc-mod__tag { color: var(--ink-soft); font-size: 10.5px; }
+html :is(body, body.has-space.has-space) .oc-line.oc-mod .oc-mod__act { color: #fff; background: rgba(0, 0, 0, 0.32); box-shadow: none; }
+html :is(body, body.has-space.has-space) .oc-line.oc-mod .oc-mod__act:hover { background: rgba(0, 0, 0, 0.5); }
+html :is(body, body.has-space.has-space) .oc-line.oc-mod .oc-mod__act--dismiss { color: var(--ink-soft); background: transparent; }
+html :is(body, body.has-space.has-space) .oc-line.oc-mod .oc-mod__act--dismiss:hover { color: var(--ink); background: rgba(0, 0, 0, 0.18); }
+/* Answered: it stays, a little quieter. */
+html :is(body, body.has-space.has-space) .oc-line.oc-mod.oc-mod--done { opacity: 0.82; }
+@media (prefers-reduced-motion: reduce) { html :is(body, body.has-space.has-space) .oc-line.oc-mod { animation: none; } }
+/* Bright mod colors, toned down: the color at about half strength over the dark chat, white words. */
+html :is(body, body.has-space.has-space) .oc-line.oc-mod.oc-mod--bright {
+  --ink: #fff; --ink-soft: rgba(255, 255, 255, 0.72);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--mc) 48%, rgba(24, 24, 28, 0.6)), color-mix(in srgb, var(--mc) 32%, rgba(16, 16, 20, 0.7))) !important;
+}
+html :is(body, body.has-space.has-space) .oc-line.oc-mod.oc-mod--bright::after { background: color-mix(in srgb, var(--mc) 32%, rgba(16, 16, 20, 0.7)); }
+html :is(body, body.has-space.has-space) .oc-line.oc-mod.oc-mod--bright.oc-mod--mine { box-shadow: 0 10px 30px color-mix(in srgb, var(--mc) 18%, transparent); }

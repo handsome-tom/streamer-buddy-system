@@ -929,6 +929,17 @@
       const line = el("div", `oc-line oc-mod oc-mod--${m.kind}${copy ? " oc-mod--stuck" : ""}`);
       line.dataset.mod = m.id;
       if (m.color) line.style.setProperty("--mc", m.color);
+      // A text-message bubble in the mod's color (dock.css): white or dark words, whichever reads
+      // better on it, and the streamer's own on the right.
+      // A bright color (a vivid green, yellow, pink...) is toned down instead: a softer, more
+      // see-through version of it, so it doesn't shout. White words on that.
+      const mc = m.color || "#3fc98e"; // no color given: the green dock.css falls back to
+      if (/^#[0-9a-f]{6}$/i.test(mc)) {
+        const lin = [1, 3, 5].map((i) => parseInt(mc.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+        if (0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2] > 0.22) line.classList.add("oc-mod--bright");
+        else if (noteInk(mc) !== "#fff") line.classList.add("oc-mod--light");
+      }
+      if (m.kind === "asked" || String(m.id || "").startsWith("sent-")) line.classList.add("oc-mod--mine");
       const pic = el("span", "oc-mod__pic");
       if (m.pic) {
         const img = el("img");
