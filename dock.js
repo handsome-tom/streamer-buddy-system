@@ -4038,10 +4038,23 @@
     const s = toolsOf[owner];
     if (!s) panel.append(el("p", "tools__off", `${owner}'s chat dock isn't open, so these can't run right now. They work while it's open in OBS.`));
     if (toolSaid && toolSaid.owner === owner && Date.now() - toolSaid.at < 15000) panel.append(el("p", `tools__said${toolSaid.ok ? "" : " tools__said--no"}`, toolSaid.text));
-    const secs = [streamTools(owner, s), pollTools(owner, s), predTools(owner, s), modeTools(owner, s), safetyTools(owner, s),
-      pointsTools(owner, s), raidTools(owner, s), vipTools(owner, s), unbanTools(owner, s), logTools(owner, s)];
-    for (const sec of secs) foldable(sec, s);
-    panel.append(...secs);
+    // Four groups, each a heading over its folding sections.
+    const GROUPS = [
+      ["On stream", [streamTools, pollTools, predTools, raidTools]],
+      ["Chat", [modeTools, safetyTools]],
+      ["People", [pointsTools, vipTools, unbanTools]],
+      ["History", [logTools]],
+    ];
+    for (const [name, makers] of GROUPS) {
+      const grp = el("div", "tools__grp");
+      grp.append(el("h2", "tools__grptitle", name));
+      for (const make of makers) {
+        const sec = make(owner, s);
+        foldable(sec, s);
+        grp.append(sec);
+      }
+      panel.append(grp);
+    }
     return panel;
   }
   // Each Mod tools section folds up under its heading (tap to open or close), with a short

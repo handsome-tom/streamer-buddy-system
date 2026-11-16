@@ -6612,3 +6612,10 @@ html :is(body, body.has-space.has-space) .oc-line.oc-mod.oc-mod--bright.oc-mod--
 .tools__stack > .tools__label:not(:first-child) { margin-top: 4px; }
 .tools__label--first { margin-top: 0; }
 .tools__chips { margin-bottom: 8px; }
+
+/* Mod tools in four groups (On stream, Chat, People, History): a heading over each group's
+   folding sections, and a little room between groups. */
+.tools__grp + .tools__grp { margin-top: 18px; }
+.tools__grptitle { margin: 0 0 2px; font-family: "Pixelify Sans", "Plus Jakarta Sans", sans-serif; font-size: 15px; font-weight: 600; letter-spacing: 0.01em; color: #fff; }
+.tools__grp > .tools__sec:first-of-type { box-shadow: none; }
+.tools__grp > .tools__sec { padding-left: 2px; }
