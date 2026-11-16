@@ -43,7 +43,7 @@
     tRaid: {
       title: "Raid",
       html: notice(svg("raid", "#bf94ff"), "<b>42 raiders</b> from <b>Lump</b> have joined!") +
-        line("Lump", "#8fd14f", "lumpRaid lumpRaid lumpRaid") + line("KidCutter", "#1e90ff", "RAID HYPE"),
+        line("Lump", "#8fd14f", "lumpRaid lumpRaid lumpRaid") + line("CuttyKid", "#1e90ff", "RAID HYPE"),
     },
     tFirst: {
       title: "First-time chatter",
@@ -97,7 +97,7 @@
     },
     tCmd: {
       title: "!command",
-      html: line("KidCutter", "#1e90ff", "!discord") + line("StreamElements", "#5b99ff", "Join the Discord: discord.gg/example", badge("#2e2e33", "✓")),
+      html: line("CuttyKid", "#1e90ff", "!discord") + line("StreamElements", "#5b99ff", "Join the Discord: discord.gg/example", badge("#2e2e33", "✓")),
     },
   };
 

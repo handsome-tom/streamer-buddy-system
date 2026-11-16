@@ -172,7 +172,7 @@ const twitch = (() => {
   const say = (s, type, payload, sub) => s._receive(JSON.stringify({ metadata: { message_type: type, subscription_type: sub }, payload }));
   const event = (type, ev) => eventsubSockets.forEach((s) => say(s, "notification", { subscription: { type }, event: ev }, type));
 
-  const CHATTERS = ["hellofoxy", "MacAndCheeseMan", "SneakySneaky", "TomWasTaken", "MiloMunch", "LeonTears", "KidCutter", "Amazinghertz",
+  const CHATTERS = ["hellofoxy", "MacAndCheeseMan", "SneakySneaky", "TomWasTaken", "MiloMunch", "LeonTears", "CuttyKid", "Amazinghertz",
     "deathdancer", "BigDog15", "HoneyBuddy", "KGTurbo", "PocketMan", "BestieHuman", "CaptainSausage", "SunChaser"];
   const SHORT = ["lol", "W", "nice", "LETS GO", "oof", "gg", "true", "hi chat", "no way", "clean", "rip", "o7", "yo", "hahaha", "first try?"];
   const MEDIUM = [
