@@ -2243,6 +2243,9 @@
     modBtn.title = modBtn.ariaLabel = `${lead ? "Lead mod" : "Mod"}${modOwner() ? ` · ${modOwner()}` : ""}${modLive ? " · you're an Available mod (ready to mod)" : " · click to become an Available mod"}`;
     drawQuickAsk();
     drawPresence();
+    // The ad strip follows the channel Mod is about (mods ask its dock once for its state).
+    if (EMBED && me && modOwner() && toolsOf[modOwner()] === undefined) askTools(modOwner());
+    drawAd();
     statsBtn.hidden = true; // dropped from the bar (Mod and Connections stay); Stats still runs underneath
     statsBtn.classList.toggle("pill--on", view === "stats");
     // Chat lives in Connections now (a Chat button by each person, rooms at the top), so
@@ -3754,6 +3757,115 @@
     if (owner && liveOf[owner]?.live) checkLive(owner);
   }, VIEWERS_EVERY_MS);
   if (EMBED) setInterval(() => me && modOwner() && modRinged() !== modBtn.classList.contains("mod-btn--live") && render(), 30000);
+  // ===== Ad breaks ==========================================================================
+  // The streamer's chat dock knows the channel's next ad break (ownchat.js asks Twitch) and
+  // shares it with Mod tools. A few minutes before it, and while it runs, a strip sits at the
+  // top with the flagged lines: when, how long, and Snooze (5 minutes, as on Twitch, while
+  // snoozes are left). Mods' side panels show the same for the channel Mod is about; their
+  // Snooze asks the streamer's dock to do it.
+  const AD_SOON_MS = 5 * 60 * 1000;
+  const AD_ICON = '<svg viewBox="0 0 16 16" width="16" height="16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M1 3h14v1h-14zM1 4h1v8h-1zM14 4h1v8h-1zM1 12h14v1h-14zM4 6h2v1h-2zM3 7h1v3h-1zM6 7h1v3h-1zM4 8h2v1h-2zM9 6h2v1h-2zM9 7h1v2h-1zM11 7h1v2h-1zM9 9h2v1h-2zM5 14h6v1h-6z"/></svg>';
+  let myAd = null; // the streamer's chat dock: its own channel's, from ownchat.js
+  let adEl = null;
+  let adTick = 0;
+  let adBusy = false;
+  let adNote = null; // { text, ok, at }: what Snooze said, for a few seconds
+  let adHidden = 0; // the ad break you closed the strip for
+  const mmss = (ms) => {
+    const t = Math.max(0, Math.ceil(ms / 1000));
+    return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
+  };
+  function adNow() {
+    if (LIVECHAT && me && liveChannel === me.login) return myAd ? { ad: myAd, owner: me.login, mine: true } : null;
+    if (EMBED && me) {
+      const owner = modOwner();
+      const t = owner && toolsOf[owner];
+      return t?.ad ? { ad: t.ad, owner, mine: false } : null;
+    }
+    return null;
+  }
+  function adSaid(text, ok) {
+    adBusy = false;
+    adNote = { text, ok, at: Date.now() };
+    drawAd();
+  }
+  async function snoozeNow(info) {
+    if (adBusy) return;
+    adBusy = true;
+    adNote = null;
+    drawAd();
+    if (info.mine) {
+      const r = await ownChat?.tools?.run("snooze", {}, me.login).catch(() => null);
+      adSaid(r?.say || "That didn't work.", !!r?.ok);
+    } else sendTool(info.owner, "snooze", {});
+  }
+  // Drawn like Twitch's own ad timer above chat, so it's clear what it is: a dark card,
+  // "Ad break in 2:15", Snooze (as on Twitch) and the snoozes left, and a thin purple bar
+  // running down to the break. While it runs: "Ad break in progress" and the time left.
+  function drawAd() {
+    clearTimeout(adTick);
+    const info = adNow();
+    const a = info?.ad;
+    const now = Date.now();
+    const running = !!(a?.last && a.dur && now < a.last + a.dur * 1000);
+    const soon = !!(a?.next && a.next > now && a.next - now <= AD_SOON_MS);
+    const note = adNote && now - adNote.at < 6000 ? adNote : null;
+    const home = LIVECHAT ? ownChat?.adSlot : pinsEl;
+    if (!home || !info || (!running && !soon && !note) || (!running && a.next === adHidden)) {
+      adEl?.remove();
+      adEl = null;
+      if (a?.next > now) adTick = setTimeout(drawAd, Math.min(2147483000, Math.max(1000, a.next - now - AD_SOON_MS + 50)));
+      return;
+    }
+    adEl ||= el("div", "twad");
+    adEl.classList.toggle("twad--run", running);
+    const top = el("div", "twad__top");
+    const icon = el("span", "twad__icon");
+    icon.innerHTML = AD_ICON;
+    const words = el("div", "twad__words");
+    const left = a.snoozes || 0;
+    let fill = 0;
+    if (running) {
+      words.append(el("div", "twad__title", "Ad break in progress"), el("div", "twad__sub", `${mmss(a.last + a.dur * 1000 - now)} remaining${info.mine ? "" : ` · ${info.owner}'s channel`}`));
+      fill = (now - a.last) / (a.dur * 1000);
+    } else {
+      words.append(el("div", "twad__title", soon ? `Ad break in ${mmss(a.next - now)}` : "Ad break"));
+      const sub = [left ? `${left} snooze${left === 1 ? "" : "s"} left` : a.refresh ? `No snoozes left until ${clock(a.refresh)}` : "No snoozes left", a.dur ? `${mmss(a.dur * 1000)} long` : "", info.mine ? "" : `${info.owner}'s channel`].filter(Boolean).join(" · ");
+      words.append(el("div", "twad__sub", sub));
+      fill = 1 - Math.max(0, a.next - now) / AD_SOON_MS;
+    }
+    top.append(icon, words);
+    if (soon && !running) {
+      const b = el("button", "twad__snooze", adBusy ? "Snoozing…" : "Snooze");
+      b.type = "button";
+      b.disabled = adBusy || !left;
+      b.title = left ? "Delay this ad break by 5 minutes" : "No snoozes left";
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        snoozeNow(info);
+      });
+      top.append(b);
+    }
+    const x = el("button", "twad__x", "×");
+    x.type = "button";
+    x.title = x.ariaLabel = "Hide";
+    x.addEventListener("click", (e) => {
+      e.stopPropagation();
+      adHidden = a?.next || 0;
+      drawAd();
+    });
+    top.append(x);
+    const bar = el("div", "twad__bar");
+    const done = el("div", "twad__fill");
+    done.style.width = `${Math.round(Math.min(1, Math.max(0, fill)) * 1000) / 10}%`;
+    bar.append(done);
+    const parts = [top, bar];
+    if (note) parts.splice(1, 0, el("div", `twad__note${note.ok ? "" : " twad__note--no"}`, note.text));
+    adEl.replaceChildren(...parts);
+    if (adEl.parentElement !== home) home.prepend(adEl);
+    adTick = setTimeout(drawAd, 1000 - (now % 1000) + 20);
+  }
+
   // ===== Mod tools (the side panel's sword) ================================================
   // For the channel Mod is about: its channel points (recent redemptions, refund or mark
   // done, or Twitch's own reward queue), a raid out (the streamer OKs it in their dock), and
@@ -3774,6 +3886,7 @@
   }
   function gotTools(owner, s) {
     toolsOf[owner] = s || null;
+    if (owner === modOwner()) drawAd();
     if (view === "tools" && owner === modOwner()) render();
   }
   function sendTool(owner, a, x) {
@@ -3792,6 +3905,7 @@
     const w = toolWait.get(m.id);
     toolWait.delete(m.id);
     toolSaid = { owner: m.from, text: m.say || (m.ok ? "Done." : "That didn't work."), ok: !!m.ok, at: Date.now() };
+    if (w?.a === "snooze") adSaid(m.say || (m.ok ? "Snoozed." : "That didn't work."), !!m.ok);
     if (m.ok && w?.a === "raid") raidDraft = "";
     if (view === "tools") render();
     setTimeout(() => view === "tools" && render(), 15100);
@@ -3801,6 +3915,10 @@
   // The streamer's own chat dock: share what Mod tools shows with your mods, and do what
   // they ask (Twitch is asked first whether they really mod here).
   function shareTools(s) {
+    if (s && me && liveChannel === me.login) {
+      myAd = s.ad || null;
+      drawAd();
+    }
     if (DEMO || !me || liveChannel !== me.login || !s) return;
     clearTimeout(toolsTimer);
     toolsTimer = setTimeout(() => {

@@ -34,7 +34,7 @@
   const EXTRA_SCOPES = ["moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions", "user:manage:whispers", "channel:read:redemptions"]; // redemptions: your own channel only // whispers: Whisper on a name's card
   // Mod tools (the side panel's sword): what the streamer's mods may ask this dock to do with
   // the streamer's sign-in. Asked for at sign-in, but nothing else waits on them.
-  const TOOL_SCOPES = ["channel:manage:redemptions", "channel:manage:raids", "moderator:manage:chat_settings"];
+  const TOOL_SCOPES = ["channel:manage:redemptions", "channel:manage:raids", "moderator:manage:chat_settings", "channel:read:ads", "channel:manage:ads"]; // ads: the next ad break, and Snooze
   const CHATTERS_EVERY_MS = 2 * 60 * 1000;
   const PIN_LENGTHS = [["1 minute", 60], ["5 minutes", 300], ["10 minutes", 600], ["30 minutes", 1800], ["Until the stream ends", 0]];
   const TIMEOUTS = [["1m", 60], ["10m", 600], ["1h", 3600], ["24h", 86400]];
@@ -209,7 +209,9 @@
     // Mods' questions still waiting, once they've scrolled up out of sight (modLine below).
     const stuckEl = el("div", "oc-stuck");
     stuckEl.hidden = true;
-    root.append(bar, heldEl, topEl, stuckEl, listWrap, noteEl, warnEl, replyEl, picker, composer);
+    // The ad break timer (dock.js draws it, like Twitch's): above everything else in the chat.
+    const adSlot = el("div", "oc-adslot");
+    root.append(bar, adSlot, heldEl, topEl, stuckEl, listWrap, noteEl, warnEl, replyEl, picker, composer);
     host.box.append(root);
 
     function setStatus(text, kind) {
@@ -1232,8 +1234,8 @@
     let toolsAsked = false; // the "allow Mod tools" line in chat, once
     const canTool = (scope) => granted.includes(scope);
     const toolsState = () => ({
-      reds: toolReds.slice(0, 20), modes: chatModes, raid: raidOut,
-      can: { points: canTool("channel:manage:redemptions"), raid: canTool("channel:manage:raids"), modes: canTool("moderator:manage:chat_settings") },
+      reds: toolReds.slice(0, 20), modes: chatModes, raid: raidOut, ad: ads,
+      can: { points: canTool("channel:manage:redemptions"), raid: canTool("channel:manage:raids"), modes: canTool("moderator:manage:chat_settings"), ads: canTool("channel:manage:ads") },
     });
     const toolsChanged = () => channel === me.login && host.onTools?.(toolsState());
     // Not api(): a refusal here (a permission not given yet) mustn't end the chat.
@@ -1245,8 +1247,70 @@
       followers: d.follower_mode ? Number(d.follower_mode_duration ?? d.follower_mode_duration_minutes) || 0 : -1,
       emote: !!d.emote_mode, sub: !!d.subscriber_mode, unique: !!d.unique_chat_mode,
     });
+    // ----- Ad breaks ------------------------------------------------------------------------
+    // Your next ad break, from Twitch (your own channel only): when, how long, and how many
+    // snoozes are left. Asked about once a minute, and again just after an ad's due, so the
+    // countdown (dock.js draws it, for you and your mods) stays right.
+    let ads = null; // { next, last, dur, snoozes, refresh, preroll }: times in ms, dur in seconds
+    let adTimer = 0;
+    let adsAsked = false;
+    const when = (v) => {
+      if (v === null || v === undefined || v === "") return 0;
+      const n = Number(v);
+      if (Number.isFinite(n)) return n > 1e12 ? n : n * 1000;
+      return Date.parse(v) || 0;
+    };
+    const adsFrom = (d, was = {}) => ({
+      next: "next_ad_at" in d ? when(d.next_ad_at) : was.next || 0,
+      last: "last_ad_at" in d ? when(d.last_ad_at) : was.last || 0,
+      dur: "duration" in d ? Number(d.duration) || 0 : was.dur || 0,
+      snoozes: "snooze_count" in d ? Number(d.snooze_count) || 0 : was.snoozes || 0,
+      refresh: "snooze_refresh_at" in d ? when(d.snooze_refresh_at) : was.refresh || 0,
+      preroll: "preroll_free_time" in d ? Number(d.preroll_free_time) || 0 : was.preroll || 0,
+    });
+    async function loadAds() {
+      clearTimeout(adTimer);
+      if (channel !== me.login || stopped) return;
+      if (!canTool("channel:read:ads") && !canTool("channel:manage:ads")) {
+        // Once per sign-in: the button to allow it (it's part of Mod tools' permission).
+        let seen = false;
+        try { seen = localStorage.getItem("adsAsked") === "1"; } catch {}
+        if (!adsAsked && !seen && host.onSignIn) {
+          adsAsked = true;
+          try { localStorage.setItem("adsAsked", "1"); } catch {}
+          addSystem("See your next ad break here, with a countdown and Snooze (your mods too). Twitch needs your OK once.", { label: "Allow", run: () => host.onSignIn() });
+        }
+        return;
+      }
+      try {
+        const r = await call(`/channels/ads?broadcaster_id=${encodeURIComponent(broadcasterId)}`);
+        if (r.ok) {
+          ads = adsFrom((await r.json()).data?.[0] || {});
+          toolsChanged();
+        }
+      } catch {}
+      let wait = 60000;
+      const now = Date.now();
+      if (ads?.next > now) wait = Math.min(wait, Math.max(3000, ads.next - now + 3000));
+      if (ads?.last && ads.last + ads.dur * 1000 > now) wait = Math.min(wait, Math.max(3000, ads.last + ads.dur * 1000 - now + 3000));
+      if (!stopped) adTimer = setTimeout(loadAds, wait);
+    }
+    async function snoozeAd(by) {
+      const no = needsOK("channel:manage:ads", "ad snoozing");
+      if (no) return no;
+      if (ads && !ads.snoozes) return { ok: false, say: "No snoozes left right now. Twitch gives another one back over time." };
+      const r = await call(`/channels/ads/schedule/snooze?broadcaster_id=${encodeURIComponent(broadcasterId)}`, { method: "POST" });
+      if (!r.ok) return { ok: false, say: await why(r, "Twitch didn't snooze the ad.") };
+      try { ads = adsFrom((await r.json()).data?.[0] || {}, ads || {}); } catch {}
+      toolsChanged();
+      setTimeout(loadAds, 2000);
+      if (by !== me.login) addSystem(`${by} snoozed the next ad break by 5 minutes.`);
+      return { ok: true, say: "The next ad break is snoozed by 5 minutes." };
+    }
+
     async function loadTools() {
       if (channel !== me.login || stopped) return;
+      loadAds();
       try {
         const r = await call(`/chat/settings?broadcaster_id=${encodeURIComponent(broadcasterId)}`);
         if (r.ok) chatModes = modesFrom((await r.json()).data?.[0] || {});
@@ -1319,6 +1383,7 @@
         addSystem(`${by} turned ${NAMES[x.k].toLowerCase()} ${on ? "on" : "off"}.`);
         return { ok: true, say: `${NAMES[x.k]} is ${on ? "on" : "off"}.` };
       }
+      if (a === "snooze") return snoozeAd(by);
       if (a === "unraid") {
         const no = needsOK("channel:manage:raids", "raids");
         if (no) return no;
@@ -2904,9 +2969,11 @@
       },
       // Mod tools (dock.js): what Mod tools shows, a mod's request, and a raid once OK'd.
       tools: { state: toolsState, run: runTool, raid: startRaid },
+      adSlot, // where dock.js puts the ad break timer
       // Closes everything and hands back anything typed but not sent.
       stop() {
         stopped = true;
+        clearTimeout(adTimer);
         timers.forEach(clearInterval);
         clearTimeout(retryTimer);
         clearTimeout(noteTimer);

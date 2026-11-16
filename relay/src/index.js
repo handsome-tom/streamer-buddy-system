@@ -189,7 +189,7 @@ const MAX_FLAGGED_LEN = 500; // a whole Twitch chat message
 const PIN_MS = 5 * 60 * 1000;
 const SENT_FLASH_MS = 3 * 60 * 1000; // how long a quick note or !vanish can be taken back
 const MAX_PIN_EMOTES = 30;
-const TOOL_ACTIONS = ["refund", "fulfill", "raid", "unraid", "mode"]; // what a mod may ask the streamer's dock to do
+const TOOL_ACTIONS = ["refund", "fulfill", "raid", "unraid", "mode", "snooze"]; // what a mod may ask the streamer's dock to do
 const TOOL_MODES = ["slow", "followers", "emote", "sub", "unique"];
 const MAX_TOOL_REDEMPTIONS = 25;
 const EMOTE_HOSTS = ["static-cdn.jtvnw.net", "cdn.betterttv.net", "cdn.frankerfacez.com", "cdn.7tv.app"];
@@ -1345,7 +1345,12 @@ function cleanTools(raw) {
       emote: !!md.emote, sub: !!md.sub, unique: !!md.unique,
     },
     raid: /^[a-z0-9_]{2,25}$/.test(raidTo) ? { to: raidTo, at: num(raw.raid.at), by: str(raw.raid.by, 25) } : null,
-    can: { points: !!can.points, raid: !!can.raid, modes: !!can.modes },
+    // The next ad break (times in ms, dur in seconds), for the ad countdown and Snooze.
+    ad: raw.ad && typeof raw.ad === "object" ? {
+      next: num(raw.ad.next), last: num(raw.ad.last), dur: Math.max(0, Math.min(600, num(raw.ad.dur))),
+      snoozes: Math.max(0, Math.min(10, num(raw.ad.snoozes))), refresh: num(raw.ad.refresh), preroll: Math.max(0, num(raw.ad.preroll)),
+    } : null,
+    can: { points: !!can.points, raid: !!can.raid, modes: !!can.modes, ads: !!can.ads },
     at: Date.now(),
   };
 }

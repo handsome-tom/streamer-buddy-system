@@ -11,7 +11,7 @@
 // window.SANDBOX is what the two panels use (demo/sandbox.js): Socket, fetch and seed.
 // The demo page's own buttons use the same sockets, as the pretend people.
 
-import { Hub } from "../relay/src/index.js?v=319"; // the number: bump it when the relay changes, so browsers fetch the new one (and bump hub.js?v= in play.html)
+import { Hub } from "../relay/src/index.js?v=320"; // the number: bump it when the relay changes, so browsers fetch the new one (and bump hub.js?v= in play.html)
 
 // ===== Sockets ================================================================================
 // One object per connection, on the page's side, shaped like a browser WebSocket (on*
@@ -593,7 +593,20 @@ const twitch = (() => {
   const OWN_REWARDS = ["rw-hydrate", "rw-posture", "rw-song"];
   let chatSettings = { emote_mode: false, follower_mode: false, follower_mode_duration: null, slow_mode: false, slow_mode_wait_time: null, subscriber_mode: false, unique_chat_mode: false };
   let raidTimer = 0;
-  const SCOPES = ["channel:manage:redemptions", "channel:manage:raids", "moderator:manage:chat_settings", "user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod", "moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions", "user:manage:whispers", "channel:read:redemptions"];
+  const SCOPES = ["channel:manage:redemptions", "channel:manage:raids", "moderator:manage:chat_settings", "user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod", "moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions", "user:manage:whispers", "channel:read:redemptions", "channel:read:ads", "channel:manage:ads"];
+  // Pretend ad breaks: the first a couple of minutes in, 90 seconds long, then one every
+  // 8 minutes after that; three snoozes, each pushing the next one back 5 minutes.
+  const pretendAds = { next: Date.now() + 150000, last: 0, dur: 90, snoozes: 3 };
+  function adsNow() {
+    const a = pretendAds;
+    while (a.next && Date.now() >= a.next) {
+      a.last = a.next;
+      a.next = a.last + a.dur * 1000 + 8 * 60000;
+      a.snoozes = Math.min(3, a.snoozes + 1);
+    }
+    const sec = (t) => (t ? Math.floor(t / 1000) : null);
+    return { next_ad_at: sec(a.next), last_ad_at: sec(a.last), duration: a.dur, preroll_free_time: 0, snooze_count: a.snoozes, snooze_refresh_at: sec(Date.now() + 10 * 60000) };
+  }
   const json = (status, body) => new Response(status === 204 ? null : JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
   async function api(url, init = {}) {
     const u = new URL(url);
@@ -704,6 +717,19 @@ const twitch = (() => {
         event("channel.chat_settings.update", { broadcaster_user_id: "1", emote_mode: s.emote_mode, follower_mode: s.follower_mode, follower_mode_duration_minutes: s.follower_mode_duration, slow_mode: s.slow_mode, slow_mode_wait_time_seconds: s.slow_mode_wait_time, subscriber_mode: s.subscriber_mode, unique_chat_mode: s.unique_chat_mode });
       }
       return json(200, { data: [{ broadcaster_id: "1", ...chatSettings }] });
+    }
+    if (route === "/channels/ads") {
+      if (!scopesNow().includes("channel:read:ads")) return json(401, { message: "Missing scope: channel:read:ads" });
+      return json(200, { data: [adsNow()] });
+    }
+    if (route === "/channels/ads/schedule/snooze") {
+      if (!scopesNow().includes("channel:manage:ads")) return json(401, { message: "Missing scope: channel:manage:ads" });
+      adsNow();
+      if (!pretendAds.snoozes) return json(429, { message: "No snoozes left" });
+      pretendAds.snoozes--;
+      pretendAds.next += 5 * 60000;
+      const d = adsNow();
+      return json(200, { data: [{ snooze_count: d.snooze_count, snooze_refresh_at: d.snooze_refresh_at, next_ad_at: d.next_ad_at }] });
     }
     if (route === "/raids") {
       if (!scopesNow().includes("channel:manage:raids")) return json(401, { message: "Missing scope: channel:manage:raids" });
