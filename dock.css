@@ -6480,3 +6480,12 @@ html :is(body, body.has-space.has-space) :is(
   border-radius: 0;
   background: repeating-linear-gradient(180deg, var(--bar) 0 4px, transparent 4px 6px);
 }
+
+/* Fonts on the chat's event cards: the big numbers in Plus Jakarta Sans (extra bold), and
+   Chakra Petch, the runner-up, for the words beside them, the small tags (Resub, First-time
+   sub) and the countdowns on polls, predictions and hype trains. */
+html :is(body, body.has-space.has-space) .oc-line.oc-event .oc-event__value { font-family: "Plus Jakarta Sans", Inter, sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+html :is(body, body.has-space.has-space) :is(.oc-event__label, .oc-top .oc-topcard__time) {
+  font-family: "Chakra Petch", "Plus Jakarta Sans", sans-serif; font-weight: 600; letter-spacing: 0.06em; font-variant-numeric: tabular-nums;
+}
+html :is(body, body.has-space.has-space) .oc-top .oc-topcard__time { font-size: 15px; letter-spacing: 0.02em; }

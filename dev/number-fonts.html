@@ -35,7 +35,7 @@
 (() => {
   // [name, CSS font-family, weight, Google Fonts family (none: the site already has it), what it's like]
   const FONTS = [
-    ["Archivo Black", '"Archivo Black"', 400, "", "Heavy and wide. What it is now."],
+    ["Archivo Black", '"Archivo Black"', 400, "", "Heavy and wide. What it was."],
     ["Plus Jakarta Sans", '"Plus Jakarta Sans"', 800, "", "The site's own text font, extra bold."],
     ["Pixelify Sans", '"Pixelify Sans"', 700, "", "Pixel, matches the pixel icons."],
     ["Silkscreen", "Silkscreen", 400, "", "Blocky pixel, like the labels."],
@@ -70,7 +70,7 @@
   for (const [name, family, weight, , note] of FONTS) {
     const row = document.createElement("div");
     row.className = "opt";
-    row.innerHTML = `<div class="opt__name">${esc(name)}<small>${esc(note)}</small>${name === "Archivo Black" ? '<span class="opt__now">Now</span>' : ""}</div>`;
+    row.innerHTML = `<div class="opt__name">${esc(name)}<small>${esc(note)}</small>${name === "Plus Jakarta Sans" ? '<span class="opt__now">Now</span>' : ""}</div>`;
     const cards = document.createElement("div");
     cards.className = "cards";
     for (const i of items) {
