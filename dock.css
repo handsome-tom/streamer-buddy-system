@@ -6291,3 +6291,11 @@ body.embed .bar #modBtn[data-status="online"] { color: var(--honey); }
 body.embed .bar #modBtn[data-status="idle"] { color: var(--yellow); }
 body.embed .bar #modBtn[data-status="offline"] { color: var(--muted); }
 body .bar .mod-btn svg { width: 16px; height: 16px; }
+/* Mod tools' sword-and-gear: the sword at the same pixel size as Mod's, the gear beside it. */
+body.embed .bar #toolsBtn svg.tools-ico { width: 24px; height: 24px; }
+/* Mod looks and behaves like Mod tools: green sword (or your status's person) on gray. */
+body.embed .bar #modBtn:hover:not(:disabled) { background: #3a3a44; }
+body.embed .bar #modBtn svg path { fill: currentColor; }
+/* The bar's people icons on the sword's chunky pixel grid (2px a pixel): sized to it. */
+body .bar #msgBtn svg.px-icon { width: 14px; height: 16px; }
+body .bar #peopleBtn svg.px-icon { width: 18px; height: 16px; }

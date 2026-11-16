@@ -179,11 +179,11 @@
   // The pixel sword (8×8): Mod shows it while you're modding.
   const PIXEL_SWORD_D = "M6 0h2v1h-2zM5 1h3v1h-3zM4 2h3v1h-3zM1 3h1v1h-1zM3 3h3v1h-3zM2 4h3v1h-3zM2 5h2v1h-2zM1 6h1v1h-1zM4 6h1v1h-1zM0 7h1v1h-1z";
   const BAR_SWORD = `<svg viewBox="0 0 8 8" width="16" height="16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="${PIXEL_SWORD_D}"/></svg>`;
-  // A pixel person (14×16), as in the status menu: Mod shows it, in your status's color,
+  // A pixel person (7×8, the sword's chunky pixels), as in the status menu: Mod shows it, in your status's color,
   // when you're not modding (online, idle, invisible).
-  const PIXEL_PERSON = '<svg viewBox="0 0 14 16" width="16" height="16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M5 2h4v1h-4zM4 3h6v1h-6zM4 4h6v1h-6zM4 5h6v1h-6zM4 6h6v1h-6zM5 7h4v1h-4zM2 9h10v1h-10zM1 10h12v1h-12zM1 11h12v1h-12zM1 12h12v1h-12zM1 13h12v1h-12z"/></svg>';
+  const PIXEL_PERSON = '<svg viewBox="0 0 7 8" width="14" height="16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M2 0h3v1h-3zM1 1h5v1h-5zM1 2h5v1h-5zM2 3h3v1h-3zM1 5h5v1h-5zM0 6h7v1h-7zM0 7h7v1h-7z"/></svg>';
   // Mod tools: the sword with a little gear in its free corner, green, between Mod and Messages.
-  const TOOLS_SWORD = `<svg viewBox="0 0 16 16" width="16" height="16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" transform="scale(2)" d="${PIXEL_SWORD_D}"/><path fill="currentColor" d="M10 10h1v1h-1zM12 10h2v1h-2zM15 10h1v1h-1zM11 11h4v1h-4zM10 12h2v1h-2zM14 12h2v1h-2zM10 13h2v1h-2zM14 13h2v1h-2zM11 14h4v1h-4zM10 15h1v1h-1zM12 15h2v1h-2zM15 15h1v1h-1z"/></svg>`;
+  const TOOLS_SWORD = `<svg class="tools-ico" viewBox="0 0 12 12" width="24" height="24" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="${PIXEL_SWORD_D}"/><path fill="currentColor" d="M6 6h1v1h-1zM8 6h2v1h-2zM11 6h1v1h-1zM7 7h4v1h-4zM6 8h2v1h-2zM10 8h2v1h-2zM6 9h2v1h-2zM10 9h2v1h-2zM7 10h4v1h-4zM6 11h1v1h-1zM8 11h2v1h-2zM11 11h1v1h-1z"/></svg>`;
   const toolsBtn = document.getElementById("toolsBtn") || (() => {
     const b = document.createElement("button");
     b.className = "pill pill--icon tools-btn";
