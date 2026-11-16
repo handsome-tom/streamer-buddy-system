@@ -722,6 +722,7 @@
     loadPics(); // pictures for the channels you mod too (Mod view's top bar)
     syncModGroups();
     shareModFor();
+    shareView(); // your mods' list goes with Streamer View (Mod's list of mods)
     render();
   }
 
@@ -777,6 +778,27 @@
     if (!u) return null;
     remember(u);
     return { login: u.login };
+  }
+
+  // Pictures for people shown somewhere without one yet (the Mods list): asked for together,
+  // once each, a moment after they're first wanted.
+  const picWanted = new Set();
+  const picAsked = new Set();
+  let picTimer = 0;
+  function wantPic(login) {
+    if (DEV || DEMO || picAsked.has(login)) return;
+    picWanted.add(login);
+    clearTimeout(picTimer);
+    picTimer = setTimeout(async () => {
+      const logins = [...picWanted].slice(0, 100);
+      picWanted.clear();
+      logins.forEach((l) => picAsked.add(l));
+      try {
+        const r = await helix(`/users?${logins.map((l) => `login=${encodeURIComponent(l)}`).join("&")}`);
+        for (const u of (await r.json()).data || []) remember(u);
+        render();
+      } catch {}
+    }, 300);
   }
 
   // Profile pictures and chat colors for the dots, once per load (people change them).
@@ -1587,7 +1609,7 @@
       .slice(0, MAX_VIEW_ITEMS)
       .map((id) => ({ id, to: sent[id].to, text: sent[id].text, said: said(sent[id].answer), code: sent[id].answer.code, at: sent[id].answer.at }));
     const notes = [...onScreen.values()].slice(-MAX_VIEW_ITEMS);
-    return { glow: dndOn() ? 0 : glowNow, waiting, answers, notes, chat: LIVECHAT ? "livechat" : "dock", dnd: dndOn() ? get("dndUntil", 0) : 0, leads: get("leads", []) };
+    return { glow: dndOn() ? 0 : glowNow, waiting, answers, notes, chat: LIVECHAT ? "livechat" : "dock", dnd: dndOn() ? get("dndUntil", 0) : 0, leads: get("leads", []), mods: modLists?.mods || [] };
   }
 
   // The streamer's side: send it when it changes (gathered for a moment, as a burst of
@@ -4087,6 +4109,46 @@
 
     // The rest of your thread with them: private chat, what's waiting from them, history.
     panel.append(personPanel(owner, true));
+
+    // Their mods: everyone who mods this channel (the streamer's dock shares Twitch's list;
+    // your connections who mod here are on it either way). Whoever's active right now is lit
+    // up and first; everyone else is gray.
+    const modNames = new Set([...(views[owner]?.mods || []), ...connections.filter((x) => (x.modFor || []).includes(owner)).map((x) => x.login)]);
+    if (me && modFor.includes(owner)) modNames.add(me.login);
+    modNames.delete(owner);
+    if (modNames.size) {
+      const stateOfMod = (login) => {
+        if (me && login === me.login) return myStatus === "offline" ? "off" : myStatus === "idle" ? "idle" : myStatus === "modding" ? "modding" : "on";
+        const x = conn(login);
+        if (!x?.mutual || !x.online) return "off";
+        return x.idle ? "idle" : x.modding ? "modding" : "on";
+      };
+      const WORDS = { modding: "Available mod", on: "online", idle: "idle", off: "" };
+      const RANK = { modding: 0, on: 1, idle: 2, off: 3 };
+      const list = [...modNames].map((login) => ({ login, st: stateOfMod(login) })).sort((a, b) => RANK[a.st] - RANK[b.st] || a.login.localeCompare(b.login));
+      const here = list.filter((m) => m.st !== "off").length;
+      const sec = el("div", "mod__team");
+      sec.append(el("div", "mod__label", `Mods · ${here} of ${list.length} active`));
+      const grid = el("div", "mod__teamlist");
+      for (const { login, st } of list) {
+        const row = el("div", `mod__mate mod__mate--${st}`);
+        const face = pics[login] ? el("img", "mod__matepic") : el("span", "mod__matepic mod__matepic--letter", login[0].toUpperCase());
+        if (pics[login]) {
+          face.src = pics[login];
+          face.alt = "";
+        } else wantPic(login);
+        const words = el("span", "mod__matewords");
+        const name = el("span", "mod__matename", login === me?.login ? `${login} (you)` : login);
+        if (st !== "off" && colorOf(login)) name.style.color = colorOf(login);
+        words.append(name);
+        if (WORDS[st]) words.append(el("span", "mod__matestate", WORDS[st]));
+        row.title = `${login}${WORDS[st] ? ` · ${WORDS[st]}` : " · not active"}`;
+        row.append(face, words);
+        grid.append(row);
+      }
+      sec.append(grid);
+      panel.append(sec);
+    }
 
     const others = Object.keys(inbox).filter((id) => inbox[id].from !== owner && !inbox[id].done).sort((a, b) => inbox[b].at - inbox[a].at);
     if (others.length) {

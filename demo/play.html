@@ -1300,7 +1300,7 @@
   }
 </script>
 <script type="module">
-  import { Socket, pretendTwitch } from "./hub.js?v=135"; // the number: bump it when hub.js changes, so browsers fetch the new one
+  import { Socket, pretendTwitch } from "./hub.js?v=136"; // the number: bump it when hub.js changes, so browsers fetch the new one
 
   const said = (text) => (document.getElementById("said").textContent = text);
   const pick = (list) => list[Math.floor(Math.random() * list.length)];
@@ -1972,7 +1972,7 @@
     send("mod2", { t: "say", owner: "@mod1+mod2", text: "I'll take timeouts tonight if you watch for the raid" });
     await wait(60);
     document.getElementById("mod").src = "../?dev=mod1&embed=ext&watch=streamer&modfor=streamer,streamer2&sandbox";
-    document.getElementById("obs").src = "../?dev=streamer&livechat&ownchat&mock&lightms=6000&mods=mod1,mod2&sandbox";
+    document.getElementById("obs").src = "../?dev=streamer&livechat&ownchat&mock&lightms=6000&mods=mod1,mod2,nightowlmod,pixelpatrol,quietkeeper&sandbox";
     const twitchChat = document.getElementById("twitch"); // the playground's pretend Twitch chat
     if (twitchChat) twitchChat.src = twitchChat.dataset.src;
     // Chat comes alive on its own once the streamer's dock is up, so the screens are never empty;

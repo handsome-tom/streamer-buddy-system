@@ -6305,3 +6305,26 @@ body.embed .bar #modBtn.bar-btn--here, body.embed .bar #modBtn.bar-btn--here:hov
 body.embed .bar #modBtn.bar-btn--here[data-status="online"] { --st: var(--honey); }
 body.embed .bar #modBtn.bar-btn--here[data-status="idle"] { --st: var(--yellow); }
 body.embed .bar #modBtn.bar-btn--here[data-status="offline"] { --st: var(--muted); }
+
+/* Mod: the direct-message link under Their reactions, without its box. */
+.mod .person__chat--dm, .mod .person__chat--dm:hover:not(:disabled) { padding-left: 0; background: none; border-color: transparent; box-shadow: none; }
+.mod .person__chat--dm:hover:not(:disabled) .person__chat-name { text-decoration: underline; }
+
+/* Mod: every mod of the channel. Active ones lit up (a ring in their status's color), the
+   rest gray. */
+.mod__team { margin-top: 14px; }
+.mod__teamlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 12px; }
+.mod__mate { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 3px 0; }
+.mod__matepic { flex: none; width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+.mod__matepic--letter { display: grid; place-items: center; background: #2f2f35; color: #fff; font-size: 12px; font-weight: 800; }
+.mod__matewords { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.mod__matename { overflow: hidden; font-family: var(--label); font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.mod__matestate { font-size: 11px; color: var(--muted); }
+.mod__mate { --st: var(--good); }
+.mod__mate--on { --st: var(--honey); }
+.mod__mate--idle { --st: var(--yellow); }
+.mod__mate:not(.mod__mate--off) .mod__matepic { box-shadow: 0 0 0 2px #0b0c10, 0 0 0 3.5px var(--st), 0 0 12px color-mix(in srgb, var(--st) 45%, transparent); }
+.mod__mate:not(.mod__mate--off) .mod__matestate { color: var(--st); }
+.mod__mate--off { opacity: 0.45; }
+.mod__mate--off .mod__matepic { filter: grayscale(1); }
+.mod__mate--off .mod__matename { color: var(--muted); }
