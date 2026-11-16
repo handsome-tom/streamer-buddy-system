@@ -772,14 +772,36 @@
   html.cols .twrow .scr-tw { grid-area: tw; }
   html.cols .twrow .twlive { grid-area: live; }
   html.cols .twrow .pg--tw { grid-area: twbtn; }
-  /* A real, live Twitch stream: watch-only (muted, can't be clicked into, nothing to type in). */
-  .twlive { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-  .twlive .screen__label { color: #bf94ff; }
-  .twlive__box { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; background: #000; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(145, 71, 255, 0.25); }
-  .twlive__box iframe, .twlive__player { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; border: 0; border-radius: 0; box-shadow: none; pointer-events: none; }
+  /* A stand-in for a Twitch stream: a muted YouTube video (credited under it) cropped to fill
+     its spot, with Twitch's bar under the player faked around it. The whole thing fades out to
+     the left, so the eye goes to the chat. Watch-only: nothing in it can be clicked. */
+  .twlive { display: flex; flex-direction: column; gap: 8px; min-width: 0; align-self: stretch; }
+  .twlive .screen__label { color: #bf94ff; text-align: right; }
+  .twlive__fade { flex: 1; display: flex; flex-direction: column; min-height: 0; -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.35) 30%, #000 72%); mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.35) 30%, #000 72%); }
+  .twlive__box { position: relative; flex: 1; min-height: 0; aspect-ratio: 16 / 9; container-type: size; overflow: hidden; border-radius: 10px 10px 0 0; background: #000; }
+  html.cols .twrow .twlive__box { aspect-ratio: auto; min-height: 240px; }
+  /* "Cover": as big as it needs to be to fill the spot, kept 16:9, centered, the rest cropped;
+     then a little bigger again, so YouTube's title bar and "More videos" fall outside the spot. */
+  .twlive__box iframe { position: absolute; left: 50%; top: 50%; width: calc(1.3 * max(100cqw, 177.78cqh)); height: calc(1.3 * max(100cqh, 56.25cqw)); min-height: 0; transform: translate(-50%, -50%); border: 0; border-radius: 0; box-shadow: none; pointer-events: none; }
+  /* Covers the video so it can't be clicked; also fades it into the page on the left, in case
+     a browser draws the video layer without the mask above. */
+  .twlive__shield { position: absolute; inset: 0; background: linear-gradient(90deg, #04050b 0%, rgba(4, 5, 11, 0.6) 30%, rgba(4, 5, 11, 0) 70%); }
   .twlive__wait { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; color: #8d8d97; }
   .twlive__wait[hidden] { display: none; }
-  .twlive__note { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: #8d8d97; }
+  /* Twitch's bar under the player, pretend: nothing here does anything. */
+  .twbar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 10px 0 0; font: 600 13px/1 Inter, system-ui, sans-serif; color: #efeff1; user-select: none; }
+  .twbar__btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 6px; background: rgba(83, 83, 95, 0.38); white-space: nowrap; }
+  .twbar__btn--sq { width: 30px; padding: 0; justify-content: center; }
+  .twbar__btn--sub { background: #9147ff; color: #fff; }
+  .twbar__btn svg { width: 16px; height: 16px; flex: none; }
+  .twbar__stats { display: flex; align-items: center; justify-content: flex-end; gap: 14px; padding: 9px 0 0; font: 600 13px/1 Inter, system-ui, sans-serif; color: #adadb8; }
+  .twbar__viewers { display: inline-flex; align-items: center; gap: 5px; color: #ff8280; }
+  .twbar__viewers svg { width: 15px; height: 15px; }
+  .twbar__tags { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; padding: 9px 0 0; }
+  .twbar__tags span { padding: 4px 8px; border-radius: 99px; background: rgba(83, 83, 95, 0.32); font: 600 11.5px/1 Inter, system-ui, sans-serif; color: #adadb8; }
+  .twlive__note { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: #8d8d97; text-align: right; }
+  .twlive__note a { color: #bf94ff; text-decoration: none; }
+  .twlive__note a:hover { text-decoration: underline; }
   .twnote .eyebrow { color: #bf94ff; }
   .twnote h3 { margin: 6px 0 8px; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; color: #fff; }
   .twnote p { margin: 0; font-size: 14px; line-height: 1.55; color: #c6c6d0; }
@@ -795,6 +817,7 @@
   }
   @media (max-width: 920px) {
     html.cols .twrow { grid-template-columns: minmax(0, 420px); grid-template-areas: "twnote" "live" "tw" "twbtn"; }
+    html.cols .twrow .twlive__box { aspect-ratio: 16 / 9; min-height: 0; }
   }
   /* Far right: on top, "On plain Twitch", a picture of what Twitch's own chat shows for the
      last streamer-side button pressed; under it, the pretend Twitch chat. */
@@ -1058,9 +1081,25 @@
     row.innerHTML = `<div class="twnote"><p class="eyebrow">And on Twitch itself</p><h3>The tools come along into Twitch's chat.</h3>
       <p>This is Twitch's own chat on twitch.tv, as BlazeMod420 sees it with StreamSpace. Point at a line to flag it or leave a note on it, right-click a name to remember who they are, and anything you flag lights up in the streamer's chat above.</p>
       <p>Viewers get these too: notes on people, quick phrases, and your name boxed so you never miss a mention.</p></div>
-      <div class="twlive"><div class="screen__label">Live on Twitch <small class="twlive__who">a popular stream, right now</small></div>
-        <div class="twlive__box"><p class="twlive__wait">Finding someone live…</p></div>
-        <p class="twlive__note">A real stream, live right now and muted, to show where the chat lives. The chat beside it is the demo's own: everyone in it is pretend.</p></div>
+      <div class="twlive"><div class="screen__label">Live on Twitch <small>a stand-in stream</small></div>
+        <div class="twlive__fade" aria-hidden="true">
+          <div class="twlive__box"><p class="twlive__wait">Loading the stream…</p><div class="twlive__shield"></div></div>
+          <div class="twbar">
+            <span class="twbar__btn twbar__btn--sq"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 17.5 3.6 11.2a4.2 4.2 0 0 1 6-6l.4.4.4-.4a4.2 4.2 0 0 1 6 6Z"/></svg></span>
+            <span class="twbar__btn"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2.5a5 5 0 0 0-5 5v3.6L3.5 14h13L15 11.1V7.5a5 5 0 0 0-5-5Zm-2 13a2 2 0 0 0 4 0Z"/></svg><svg viewBox="0 0 20 20" fill="currentColor" style="width:10px"><path d="m5 8 5 5 5-5Z"/></svg></span>
+            <span class="twbar__btn"><svg viewBox="0 0 20 20" fill="currentColor"><path d="m10 2 6 7-6 9-6-9Z"/></svg>Bits</span>
+            <span class="twbar__btn"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M3 8h14v3H3Zm1 3h12v6H4Zm5-3h2v9H9ZM10 8C8 4 5 4 5.5 6.5S10 8 10 8s4-1 4.5-1.5S12 4 10 8Z"/></svg>Gift a Sub<svg viewBox="0 0 20 20" fill="currentColor" style="width:10px"><path d="m5 8 5 5 5-5Z"/></svg></span>
+            <span class="twbar__btn twbar__btn--sub"><svg viewBox="0 0 20 20" fill="currentColor"><path d="m10 2 2.4 5 5.4.6-4 3.7 1.1 5.4L10 14l-4.9 2.7 1.1-5.4-4-3.7 5.4-.6Z"/></svg>Resubscribe<svg viewBox="0 0 20 20" fill="currentColor" style="width:10px"><path d="m5 8 5 5 5-5Z"/></svg></span>
+          </div>
+          <div class="twbar__stats">
+            <span class="twbar__viewers"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 9a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-6 8a6 6 0 0 1 12 0Z"/></svg><b class="twbar__count">31</b></span>
+            <span class="twbar__up">1:54:02</span>
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M11 3v4C5 7 3 11 3 16c2-3 4-4 8-4v4l6-6.5Z"/></svg>
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><circle cx="10" cy="4" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="10" cy="16" r="1.6"/></svg>
+          </div>
+          <div class="twbar__tags"><span>English</span><span>SafeSpace</span><span>CozyChaos</span><span>NoGenAI</span><span>DropsEnabled</span></div>
+        </div>
+        <p class="twlive__note">Stand-in stream: <a href="https://www.youtube.com/watch?v=KL1c7OAIsJc" target="_blank" rel="noopener">&ldquo;What happens if you pass the 99 skill check roll against The Absolute&rdquo;</a> by <a href="https://www.youtube.com/@PerfectParadox" target="_blank" rel="noopener">PerfectParadox</a> on YouTube, muted. The chat beside it is the demo's own: everyone in it is pretend.</p></div>
       <div class="screen scr-tw"><div class="screen__label">Twitch chat <small>on twitch.tv, with StreamSpace</small></div></div>`;
     const chat = document.createElement("iframe");
     chat.id = "twitch";
@@ -1103,45 +1142,27 @@
       io.observe(box);
     } else twLive(box);
   }
-  // A real live stream, watch-only, through Twitch's own embed player (twlive.js says how
-  // and why). Twitch won't start a player it can't see whole, so it plays on a layer of its
-  // own on top of the page, lined up over this box: in the front page's frame, the front
-  // page plays it (this says where the box is, and shows who's live when told); opened on
-  // its own, this page does.
+  // The stand-in stream: a YouTube video, muted and looping, that can't be clicked (a shield
+  // covers it and the frame ignores the pointer). The uptime ticks on like a live stream's.
   function twLive(box) {
-    const who = box.parentElement.querySelector(".twlive__who");
-    const wait = box.querySelector(".twlive__wait");
-    const show = (m) => {
-      const on = m.state === "live";
-      who.textContent = on ? `${m.channel}, live right now` : "";
-      wait.hidden = on;
-      wait.textContent = m.state === "none" ? "No live stream to show right now." : m.state === "error" ? "Twitch's player didn't load." : "Finding someone live…";
-    };
-    if (window.parent !== window && document.documentElement.classList.contains("embedded")) {
-      addEventListener("message", (e) => {
-        if (e.source === parent && e.origin === location.origin && e.data?.t === "twlive-status") show(e.data);
-      });
-      const send = () => {
-        const r = box.getBoundingClientRect();
-        parent.postMessage({ t: "twlive-slot", x: r.left + scrollX, y: r.top + scrollY, w: r.width, h: r.height }, location.origin);
-      };
-      const ro = new ResizeObserver(send);
-      ro.observe(document.body);
-      ro.observe(box);
-      send();
-      return;
-    }
-    const s = document.createElement("script");
-    s.src = "twlive.js?v=3";
-    s.onload = () => {
-      const place = window.ssLiveOver(() => {
-        const r = box.getBoundingClientRect();
-        return { x: r.left + scrollX, y: r.top + scrollY, w: r.width, h: r.height };
-      }, show);
-      new ResizeObserver(() => place()).observe(document.body);
-    };
-    s.onerror = () => show({ state: "error" });
-    document.head.append(s);
+    const ID = "KL1c7OAIsJc";
+    const f = document.createElement("iframe");
+    f.title = "Stand-in stream (YouTube, muted)";
+    f.tabIndex = -1;
+    f.allow = "autoplay; encrypted-media; picture-in-picture";
+    f.referrerPolicy = "strict-origin-when-cross-origin";
+    f.src = `https://www.youtube-nocookie.com/embed/${ID}?autoplay=1&mute=1&loop=1&playlist=${ID}&controls=0&disablekb=1&fs=0&iv_load_policy=3&modestbranding=1&playsinline=1&rel=0`;
+    f.addEventListener("load", () => { box.querySelector(".twlive__wait").hidden = true; }, { once: true });
+    box.prepend(f);
+    const up = box.closest(".twlive").querySelector(".twbar__up");
+    const count = box.closest(".twlive").querySelector(".twbar__count");
+    const t0 = Date.now() - (1 * 3600 + 54 * 60 + 2) * 1000;
+    const pad = (n) => String(n).padStart(2, "0");
+    setInterval(() => {
+      const s = Math.floor((Date.now() - t0) / 1000);
+      up.textContent = `${Math.floor(s / 3600)}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
+      if (Math.random() < 0.04) count.textContent = Math.max(24, +count.textContent + (Math.random() < 0.55 ? 1 : -1));
+    }, 1000);
   }
   const twSay = (text) => { const n = document.getElementById("twSaid"); if (n) n.textContent = text; };
   const twPause = (ms) => new Promise((r) => setTimeout(r, ms));

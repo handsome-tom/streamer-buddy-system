@@ -792,33 +792,6 @@
       frame.style.height = `${Math.ceil(e.data.h)}px`;
       document.getElementById("demoWait").hidden = true;
     });
-    // The live stream in the demo's Twitch section plays here, laid exactly over its spot in
-    // the demo (the demo says where; twlive.js says why it can't play inside the frame).
-    let place = null, spot = null, liveSaid = null;
-    const tell = (m) => { liveSaid = m; frame.contentWindow?.postMessage({ t: "twlive-status", ...m }, location.origin); };
-    const where = () => {
-      if (!spot) return null;
-      const f = frame.getBoundingClientRect();
-      return { x: f.left + scrollX + spot.x, y: f.top + scrollY + spot.y, w: spot.w, h: spot.h };
-    };
-    addEventListener("message", (e) => {
-      if (e.source !== frame.contentWindow || e.origin !== location.origin || e.data?.t !== "twlive-slot") return;
-      spot = e.data;
-      if (place) {
-        place();
-        if (liveSaid) tell(liveSaid); // the demo was started over: it asks again
-        return;
-      }
-      place = () => {};
-      const s = document.createElement("script");
-      s.src = "twlive.js?v=3";
-      s.onload = () => {
-        place = window.ssLiveOver(where, tell, { under: document.querySelector("header.top")?.offsetHeight || 0 });
-        new ResizeObserver(() => place()).observe(document.body);
-      };
-      s.onerror = () => tell({ state: "error" });
-      document.head.append(s);
-    });
     let started = false;
     const start = () => {
       if (started) return;
