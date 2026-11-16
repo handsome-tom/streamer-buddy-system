@@ -1365,12 +1365,16 @@
       if (y > 62 && Math.abs(x) > 48) return 1; // ears
       return 0;
     }
+    // How big he and his flag are (1 = as first made): kept tiny, a little thing to spot.
+    // Shrinking keeps his feet where they were, on top of the planet.
+    const SIZE = 0.5;
     // In canvas units (H = canvas height): the planet's middle and size, his scale, and the flag.
     const geo = () => {
       const R = H * 2.0833, cy0 = H * 2.9583; // planet radius, and its centre below the canvas
-      const sc = H * 0.42 / 127, ox = W / 2, oy = H * 0.5;
+      const ground = cy0 - R; // the top of the planet, under him
+      const sc = H * 0.42 / 127 * SIZE, ox = W / 2, oy = ground - (ground - H * 0.5) * SIZE;
       const fx = 150 * sc, th = fx / R, base = cy0 - R * Math.cos(th); // the pole stands on the curve
-      return { R, cy0, sc, ox, oy, fx, base, top: base - H * 0.78 };
+      return { R, cy0, sc, ox, oy, fx, base, top: base - H * 0.78 * SIZE, s: H / 100 * SIZE };
     };
     function flag(g, t, yaw, behind) {
       const cyw = Math.cos(yaw), sx = g.ox + g.fx * cyw;
@@ -1378,7 +1382,7 @@
       if (behind) { // round the far side: the planet hides its foot
         ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.arc(W / 2, g.cy0, g.R, 0, Math.PI * 2, true); ctx.clip("evenodd");
       }
-      const s = H / 100;
+      const s = g.s;
       ctx.lineCap = "round"; ctx.strokeStyle = "#cfd8ea"; ctx.lineWidth = Math.max(1, 1.3 * s);
       ctx.beginPath(); ctx.moveTo(sx, g.base); ctx.lineTo(sx, g.top); ctx.stroke();
       ctx.fillStyle = "#eef3ff"; ctx.beginPath(); ctx.arc(sx, g.top, Math.max(1.2, 1.8 * s), 0, Math.PI * 2); ctx.fill();
@@ -1426,7 +1430,7 @@
       }
       order.sort((p, q) => depth[p] - depth[q]);
       bx.fillStyle = "rgba(4, 10, 30, 0.35)"; // a soft shadow where he sits
-      bx.beginPath(); bx.ellipse(g.ox, g.oy + 127 * g.sc, H * 0.26, H * 0.045, 0, 0, Math.PI * 2); bx.fill();
+      bx.beginPath(); bx.ellipse(g.ox, g.oy + 127 * g.sc, H * 0.26 * SIZE, H * 0.045 * SIZE, 0, 0, Math.PI * 2); bx.fill();
       // Triangles in a row with the same color and shade go in one path (fewer, bigger draws: much faster).
       bx.lineWidth = 0.6; // the outline closes hairline gaps between triangles
       let style = "";
