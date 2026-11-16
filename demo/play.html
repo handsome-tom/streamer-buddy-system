@@ -1838,7 +1838,23 @@
     if (typeof tour !== "undefined" && tour.waiting) return box.classList.add("callout--stay");
     setTimeout(() => box.classList.add("callout--out"), 6500);
     setTimeout(() => box.remove(), 7000);
-    if (COLS) holdChat(target, box);
+    if (COLS) { holdChat(target, box); dismissOnClick(box); }
+  }
+  // Nobody should have to wait out the dimmed note: a real click or tap anywhere (on the page or
+  // inside either panel), or Escape, fades it straight away. The click still does its own thing.
+  function dismissOnClick(box) {
+    const docs = [document, ...[...document.querySelectorAll("iframe")].map((f) => { try { return f.contentDocument; } catch { return null; } }).filter(Boolean)];
+    const opts = { capture: true };
+    const off = () => docs.forEach((d) => { d.removeEventListener("pointerdown", go, opts); d.removeEventListener("keydown", key, opts); });
+    function go(e) {
+      if (!e.isTrusted) return; // the chat-hold's own pretend press doesn't count
+      off();
+      if (!box.isConnected || box.classList.contains("callout--out")) return;
+      box.style.transition = "opacity 0.2s"; box.classList.add("callout--out"); setTimeout(() => box.remove(), 200);
+    }
+    const key = (e) => { if (e.key === "Escape") go(e); };
+    setTimeout(() => docs.forEach((d) => { d.addEventListener("pointerdown", go, opts); d.addEventListener("keydown", key, opts); }), 0);
+    setTimeout(off, 7100);
   }
   // While a note points at something in the streamer's chat, chat holds still (the dock's own
   // "you clicked in chat" pause), so a raid's crowd can't push the card away mid-read. If the
