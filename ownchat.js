@@ -34,7 +34,12 @@
   const EXTRA_SCOPES = ["moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions", "user:manage:whispers", "channel:read:redemptions"]; // redemptions: your own channel only // whispers: Whisper on a name's card
   // Mod tools (the side panel's sword): what the streamer's mods may ask this dock to do with
   // the streamer's sign-in. Asked for at sign-in, but nothing else waits on them.
-  const TOOL_SCOPES = ["channel:manage:redemptions", "channel:manage:raids", "moderator:manage:chat_settings", "channel:read:ads", "channel:manage:ads"]; // ads: the next ad break, and Snooze
+  const TOOL_SCOPES = ["channel:manage:redemptions", "channel:manage:raids", "moderator:manage:chat_settings", "channel:read:ads", "channel:manage:ads", // ads: the next ad break, and Snooze
+    // More Mod tools: blocked terms, AutoMod's level, unban requests, polls, predictions, the
+    // title and category, VIPs, clips and markers, an ad now; and the mod log (Twitch's
+    // channel.moderate events, which also need to read who's a mod and who's a VIP).
+    "moderator:manage:blocked_terms", "moderator:manage:automod_settings", "moderator:manage:unban_requests", "moderator:read:moderators", "moderator:read:vips",
+    "channel:manage:polls", "channel:manage:predictions", "channel:manage:broadcast", "channel:manage:vips", "clips:edit", "channel:edit:commercial"];
   const CHATTERS_EVERY_MS = 2 * 60 * 1000;
   const PIN_LENGTHS = [["1 minute", 60], ["5 minutes", 300], ["10 minutes", 600], ["30 minutes", 1800], ["Until the stream ends", 0]];
   const TIMEOUTS = [["1m", 60], ["10m", 600], ["1h", 3600], ["24h", 86400]];
@@ -391,6 +396,7 @@
         extra("channel.chat_settings.update", ["1"], asMe); // chat modes (Mod tools)
         extra("channel.raid", ["1"], { from_broadcaster_user_id: broadcasterId }); // a raid out went (Mod tools)
         extra("channel.ad_break.begin", ["1"], own); // an ad break started (the ad timer)
+        extra("channel.moderate", ["2"], asMod); // the mod log (Mod tools)
         extra("channel.channel_points_automatic_reward_redemption.add", ["2", "1"], own);
         ["channel.poll.begin", "channel.poll.progress", "channel.poll.end", "channel.prediction.begin", "channel.prediction.progress", "channel.prediction.lock", "channel.prediction.end"].forEach((type) => extra(type, ["1"], own));
       }
@@ -1269,9 +1275,23 @@
     let raidTimer = 0;
     let toolsAsked = false; // the "allow Mod tools" line in chat, once
     const canTool = (scope) => granted.includes(scope);
+    const modLog = []; // { at, by, what }, newest first: every mod action on the channel (channel.moderate)
+    let blockedTerms = null; // [{ id, text }], or null until Twitch says
+    let automodLevel = null; // 0 (off) to 4 (strictest); null: unknown or set up by category on Twitch
+    let unbanReqs = []; // [{ id, user, text, at }], waiting
+    let pollNow = null; // { id, title, choices: [{ title, votes }], ends }: the poll running now
+    let predNow = null; // { id, title, status, outcomes: [{ id, title, users, points }], locks }
+    let chanInfo = null; // { title, game }
+    let isLive = false;
     const toolsState = () => ({
       reds: toolReds.slice(0, 20), modes: chatModes, raid: raidOut, ad: ads,
-      can: { points: canTool("channel:manage:redemptions"), raid: canTool("channel:manage:raids"), modes: canTool("moderator:manage:chat_settings"), ads: canTool("channel:manage:ads") },
+      log: modLog.slice(0, 25), terms: blockedTerms, automod: automodLevel, unbans: unbanReqs.slice(0, 10), poll: pollNow, pred: predNow, info: chanInfo, live: isLive,
+      can: {
+        points: canTool("channel:manage:redemptions"), raid: canTool("channel:manage:raids"), modes: canTool("moderator:manage:chat_settings"), ads: canTool("channel:manage:ads"),
+        terms: canTool("moderator:manage:blocked_terms"), automod: canTool("moderator:manage:automod_settings"), unbans: canTool("moderator:manage:unban_requests"),
+        polls: canTool("channel:manage:polls"), preds: canTool("channel:manage:predictions"), info: canTool("channel:manage:broadcast"), vips: canTool("channel:manage:vips"),
+        clips: canTool("clips:edit"), commercial: canTool("channel:edit:commercial"), log: canTool("moderator:read:moderators") && canTool("moderator:read:vips"),
+      },
     });
     const toolsChanged = () => channel === me.login && host.onTools?.(toolsState());
     // Not api(): a refusal here (a permission not given yet) mustn't end the chat.
@@ -1288,6 +1308,7 @@
     // snoozes are left. Asked about once a minute, and again just after an ad's due, so the
     // countdown (dock.js draws it, for you and your mods) stays right.
     let ads = null; // { next, last, dur, snoozes, refresh, preroll }: times in ms, dur in seconds
+    let infoAt = 0; // when the title, category and live status were last asked about
     let adTimer = 0;
     let adsAsked = false;
     const when = (v) => {
@@ -1325,6 +1346,7 @@
           toolsChanged();
         }
       } catch {}
+      if (Date.now() - infoAt > 55000) { infoAt = Date.now(); loadInfo().then(toolsChanged); } // live yet? (clips, markers, ads)
       let wait = host.pretend ? 3000 : 60000; // the demo: often, so its Ad break button shows at once
       const now = Date.now();
       if (ads?.next > now) wait = Math.min(wait, Math.max(3000, ads.next - now + 3000));
@@ -1358,6 +1380,104 @@
           for (const red of toolReds) red.own = ownRewards.has(red.rid);
         } catch {}
       }
+      await Promise.all([loadTerms(), loadAutomod(), loadUnbans(), loadPollPred(), loadInfo()]);
+      toolsChanged();
+    }
+    const asModQ = () => `broadcaster_id=${encodeURIComponent(broadcasterId)}&moderator_id=${encodeURIComponent(me.id)}`;
+    async function loadTerms() {
+      if (!canTool("moderator:manage:blocked_terms")) return;
+      try {
+        const r = await call(`/moderation/blocked_terms?${asModQ()}&first=100`);
+        if (r.ok) blockedTerms = ((await r.json()).data || []).map((t) => ({ id: t.id, text: t.text }));
+      } catch {}
+    }
+    async function loadAutomod() {
+      if (!canTool("moderator:manage:automod_settings")) return;
+      try {
+        const r = await call(`/moderation/automod/settings?${asModQ()}`);
+        if (r.ok) {
+          const lv = (await r.json()).data?.[0]?.overall_level;
+          automodLevel = typeof lv === "number" ? lv : null;
+        }
+      } catch {}
+    }
+    async function loadUnbans() {
+      if (!canTool("moderator:manage:unban_requests")) return;
+      try {
+        const r = await call(`/moderation/unban_requests?${asModQ()}&status=pending&first=10`);
+        if (r.ok) unbanReqs = ((await r.json()).data || []).map((u) => ({ id: u.id, user: u.user_name || u.user_login, text: u.text || "", at: Date.parse(u.created_at) || Date.now() }));
+      } catch {}
+    }
+    async function loadPollPred() {
+      const b = encodeURIComponent(broadcasterId);
+      if (canTool("channel:manage:polls") || canTool("channel:read:polls")) {
+        try {
+          const r = await call(`/polls?broadcaster_id=${b}&first=1`);
+          if (r.ok) {
+            const p = (await r.json()).data?.[0];
+            pollNow = p && p.status === "ACTIVE"
+              ? { id: p.id, title: p.title, choices: (p.choices || []).map((c) => ({ title: c.title, votes: Number(c.votes) || 0 })), ends: (Date.parse(p.started_at) || Date.now()) + (Number(p.duration) || 0) * 1000 }
+              : null;
+          }
+        } catch {}
+      }
+      if (canTool("channel:manage:predictions") || canTool("channel:read:predictions")) {
+        try {
+          const r = await call(`/predictions?broadcaster_id=${b}&first=1`);
+          if (r.ok) {
+            const p = (await r.json()).data?.[0];
+            predNow = p && (p.status === "ACTIVE" || p.status === "LOCKED")
+              ? { id: p.id, title: p.title, status: p.status.toLowerCase(), outcomes: (p.outcomes || []).map((o) => ({ id: o.id, title: o.title, users: Number(o.users) || 0, points: Number(o.channel_points) || 0 })), locks: (Date.parse(p.created_at) || Date.now()) + (Number(p.prediction_window) || 0) * 1000 }
+              : null;
+          }
+        } catch {}
+      }
+    }
+    let pollPredTimer = 0;
+    const pollPredSoon = () => { clearTimeout(pollPredTimer); pollPredTimer = setTimeout(async () => { await loadPollPred(); toolsChanged(); }, 800); };
+    async function loadInfo() {
+      const b = encodeURIComponent(broadcasterId);
+      try {
+        const r = await call(`/channels?broadcaster_id=${b}`);
+        if (r.ok) { const c = (await r.json()).data?.[0]; if (c) chanInfo = { title: c.title || "", game: c.game_name || "" }; }
+      } catch {}
+      try {
+        const r = await call(`/streams?user_id=${b}&first=1`);
+        if (r.ok) isLive = ((await r.json()).data || []).length > 0;
+      } catch {}
+    }
+    // The mod log: what every mod (and the streamer) does on the channel, in plain words.
+    function logMod(e) {
+      const o = e[e.action] || e[String(e.action).replace(/_/g, "")] || {};
+      const who = o.user_name || o.user_login || "someone";
+      const mins = (t) => { const m = Math.round((Date.parse(t) - Date.now()) / 60000); return m >= 60 ? ` for ${Math.round(m / 60)}h` : m > 0 ? ` for ${m}m` : ""; };
+      const terms = (e.automod_terms?.terms || []).map((t) => `“${t}”`).join(", ");
+      const req = e.unban_request || {};
+      const W = {
+        ban: () => `banned ${who}${o.reason ? ` (${o.reason})` : ""}`,
+        timeout: () => `timed out ${who}${mins(o.expires_at)}${o.reason ? ` (${o.reason})` : ""}`,
+        unban: () => `unbanned ${who}`, untimeout: () => `took ${who}'s timeout off`,
+        delete: () => `deleted ${who}'s message${o.message_body ? `: “${String(o.message_body).slice(0, 60)}”` : ""}`,
+        clear: () => "cleared the chat", warn: () => `warned ${who}${o.reason ? ` (${o.reason})` : ""}`,
+        vip: () => `made ${who} a VIP`, unvip: () => `took VIP off ${who}`, mod: () => `made ${who} a mod`, unmod: () => `took mod off ${who}`,
+        add_blocked_term: () => `blocked ${terms || "a term"}`, remove_blocked_term: () => `unblocked ${terms || "a term"}`,
+        add_permitted_term: () => `allowed ${terms || "a term"}`, remove_permitted_term: () => `stopped allowing ${terms || "a term"}`,
+        approve_unban_request: () => `approved ${req.user_name || "an"} unban request`, deny_unban_request: () => `denied ${req.user_name || "an"} unban request`,
+        slow: () => `turned on slow mode${e.slow?.wait_time_seconds ? ` (${e.slow.wait_time_seconds}s)` : ""}`, slowoff: () => "turned off slow mode",
+        followers: () => "turned on followers-only chat", followersoff: () => "turned off followers-only chat",
+        subscribers: () => "turned on subscriber-only chat", subscribersoff: () => "turned off subscriber-only chat",
+        emoteonly: () => "turned on emote-only chat", emoteonlyoff: () => "turned off emote-only chat",
+        uniquechat: () => "turned on unique chat", uniquechatoff: () => "turned off unique chat",
+        raid: () => `started a raid to ${who}`, unraid: () => "called off the raid",
+      };
+      let what = (W[e.action] || (() => String(e.action || "did something").replace(/_/g, " ")))();
+      if (what.endsWith(" an unban request") === false) what = what.replace(/ (\S+) unban request$/, (m, n) => ` ${n}'s unban request`);
+      let modBy = e.moderator_user_name || e.moderator_user_login || "A mod";
+      if (String(e.moderator_user_login || "").toLowerCase() === me.login && toolBy && Date.now() - toolBy.at < 8000 && toolBy.by && toolBy.by !== me.login) modBy = toolBy.by;
+      modLog.unshift({ at: Date.now(), by: modBy, what });
+      modLog.splice(40);
+      if (/blocked|allowed|term/.test(e.action)) loadTerms().then(toolsChanged);
+      if (/unban_request/.test(e.action)) loadUnbans().then(toolsChanged);
       toolsChanged();
     }
     function toolRedeemed(e) {
@@ -1374,12 +1494,16 @@
       if (canTool(scope)) return null;
       if (!toolsAsked && host.onSignIn) {
         toolsAsked = true;
-        addSystem("Your mods want to use Mod tools (raids, channel point refunds and chat modes). Twitch needs your OK once.", { label: "Allow", run: () => host.onSignIn() });
+        addSystem("Your mods want to use Mod tools (raids, polls, chat modes, blocked words and more). Twitch needs your OK once.", { label: "Allow", run: () => host.onSignIn() });
       }
       return { ok: false, say: `${me.login} needs to allow ${what} once. They've been asked in their chat.` };
     }
+    // Who asked for the last Mod tools action: Twitch logs it as the streamer (their sign-in
+    // did it), so the mod log credits the mod who asked instead.
+    let toolBy = null;
     async function runTool(a, x, by) {
       if (channel !== me.login) return { ok: false, say: "Only the streamer's own chat dock can do that." };
+      toolBy = { by, at: Date.now() };
       if (a === "refund" || a === "fulfill") {
         const no = needsOK("channel:manage:redemptions", "channel point refunds");
         if (no) return no;
@@ -1420,6 +1544,170 @@
         return { ok: true, say: `${NAMES[x.k]} is ${on ? "on" : "off"}.` };
       }
       if (a === "snooze") return snoozeAd(by);
+      const b = encodeURIComponent(broadcasterId);
+      const done = (say, chatSay) => { toolsChanged(); if (chatSay) addSystem(chatSay); return { ok: true, say }; };
+      const clean = (v, max) => String(v || "").replace(/\s+/g, " ").trim().slice(0, max);
+      const userId = async (login) => { try { return (await (await call(`/users?login=${encodeURIComponent(login)}`)).json()).data?.[0] || null; } catch { return null; } };
+      if (a === "clear") {
+        const no = needsOK("moderator:manage:chat_messages", "clearing chat");
+        if (no) return no;
+        const r = await call(`/moderation/chat?${asModQ()}`, { method: "DELETE" });
+        if (!r.ok) return { ok: false, say: await why(r, "Twitch didn't clear the chat.") };
+        return done("Chat cleared.", `${by} cleared the chat.`);
+      }
+      if (a === "term") {
+        const no = needsOK("moderator:manage:blocked_terms", "blocked terms");
+        if (no) return no;
+        if (x.add) {
+          const text = clean(x.add, 500);
+          if (text.length < 2) return { ok: false, say: "A blocked term needs at least 2 characters." };
+          const r = await call(`/moderation/blocked_terms?${asModQ()}`, { method: "POST", body: JSON.stringify({ text }) });
+          if (!r.ok) return { ok: false, say: await why(r, "Twitch didn't block that.") };
+          try { const t = (await r.json()).data?.[0]; if (t) blockedTerms = [{ id: t.id, text: t.text }, ...(blockedTerms || []).filter((x2) => x2.id !== t.id)]; } catch {}
+          return done(`“${text}” is blocked now.`, `${by} blocked the term “${text}”.`);
+        }
+        if (x.remove) {
+          const r = await call(`/moderation/blocked_terms?${asModQ()}&id=${encodeURIComponent(x.remove)}`, { method: "DELETE" });
+          if (!r.ok) return { ok: false, say: await why(r, "Twitch didn't unblock that.") };
+          const t = (blockedTerms || []).find((x2) => x2.id === x.remove);
+          blockedTerms = (blockedTerms || []).filter((x2) => x2.id !== x.remove);
+          return done(`${t ? `“${t.text}”` : "That term"} isn't blocked anymore.`, `${by} unblocked ${t ? `“${t.text}”` : "a term"}.`);
+        }
+        return { ok: false, say: "Which term?" };
+      }
+      if (a === "automod") {
+        const no = needsOK("moderator:manage:automod_settings", "AutoMod's level");
+        if (no) return no;
+        const level = Math.max(0, Math.min(4, Math.round(Number(x.level))));
+        if (!Number.isFinite(level)) return { ok: false, say: "Pick a level from 0 to 4." };
+        const r = await call(`/moderation/automod/settings?${asModQ()}`, { method: "PUT", body: JSON.stringify({ overall_level: level }) });
+        if (!r.ok) return { ok: false, say: await why(r, "Twitch didn't change AutoMod.") };
+        automodLevel = level;
+        const NAME = ["off", "level 1 (less filtering)", "level 2", "level 3", "level 4 (most filtering)"][level];
+        return done(`AutoMod is ${NAME}.`, `${by} set AutoMod to ${NAME}.`);
+      }
+      if (a === "unbanreq") {
+        const no = needsOK("moderator:manage:unban_requests", "unban requests");
+        if (no) return no;
+        const req = unbanReqs.find((u) => u.id === x.id);
+        const status = x.ok ? "approved" : "denied";
+        const r = await call(`/moderation/unban_requests?${asModQ()}&unban_request_id=${encodeURIComponent(x.id || "")}&status=${status}`, { method: "PATCH" });
+        if (!r.ok) return { ok: false, say: await why(r, "Twitch didn't answer that unban request.") };
+        unbanReqs = unbanReqs.filter((u) => u.id !== x.id);
+        const name = req?.user || "their";
+        return done(`${x.ok ? "Approved" : "Denied"} ${req ? `${name}'s` : "the"} unban request.`, `${by} ${status} ${req ? `${name}'s` : "an"} unban request.`);
+      }
+      if (a === "poll") {
+        const no = needsOK("channel:manage:polls", "polls");
+        if (no) return no;
+        const title = clean(x.title, 60);
+        const choices = (x.choices || []).map((c) => clean(c, 25)).filter(Boolean).slice(0, 5);
+        const duration = Math.max(15, Math.min(1800, Math.round(Number(x.dur) || 120)));
+        if (!title || choices.length < 2) return { ok: false, say: "A poll needs a question and at least 2 choices." };
+        const r = await call("/polls", { method: "POST", body: JSON.stringify({ broadcaster_id: broadcasterId, title, choices: choices.map((t) => ({ title: t })), duration }) });
+        if (!r.ok) return { ok: false, say: await why(r, "Twitch didn't start the poll.") };
+        await loadPollPred();
+        return done(`Poll started: ${title}`, `${by} started a poll: ${title}`);
+      }
+      if (a === "endpoll") {
+        const no = needsOK("channel:manage:polls", "polls");
+        if (no) return no;
+        const r = await call("/polls", { method: "PATCH", body: JSON.stringify({ broadcaster_id: broadcasterId, id: x.id || pollNow?.id, status: "TERMINATED" }) });
+        if (!r.ok) return { ok: false, say: await why(r, "Twitch didn't end the poll.") };
+        pollNow = null;
+        pollPredSoon();
+        return done("Poll ended.", `${by} ended the poll.`);
+      }
+      if (a === "pred") {
+        const no = needsOK("channel:manage:predictions", "predictions");
+        if (no) return no;
+        const title = clean(x.title, 45);
+        const outcomes = (x.outcomes || []).map((c) => clean(c, 25)).filter(Boolean).slice(0, 10);
+        const win = Math.max(30, Math.min(1800, Math.round(Number(x.window) || 120)));
+        if (!title || outcomes.length < 2) return { ok: false, say: "A prediction needs a question and at least 2 outcomes." };
+        const r = await call("/predictions", { method: "POST", body: JSON.stringify({ broadcaster_id: broadcasterId, title, outcomes: outcomes.map((t) => ({ title: t })), prediction_window: win }) });
+        if (!r.ok) return { ok: false, say: await why(r, "Twitch didn't start the prediction.") };
+        await loadPollPred();
+        return done(`Prediction started: ${title}`, `${by} started a prediction: ${title}`);
+      }
+      if (a === "predlock" || a === "predwin" || a === "predcancel") {
+        const no = needsOK("channel:manage:predictions", "predictions");
+        if (no) return no;
+        const id = x.id || predNow?.id;
+        const body = { broadcaster_id: broadcasterId, id, status: a === "predlock" ? "LOCKED" : a === "predwin" ? "RESOLVED" : "CANCELED", ...(a === "predwin" ? { winning_outcome_id: x.winner } : {}) };
+        const r = await call("/predictions", { method: "PATCH", body: JSON.stringify(body) });
+        if (!r.ok) return { ok: false, say: await why(r, "Twitch didn't change the prediction.") };
+        const winner = predNow?.outcomes.find((o) => o.id === x.winner)?.title;
+        await loadPollPred();
+        if (a === "predlock") return done("Prediction locked: no more points in.", `${by} locked the prediction.`);
+        if (a === "predwin") return done(`${winner || "That outcome"} wins the prediction.`, `${by} picked the winner: ${winner || "an outcome"}.`);
+        return done("Prediction canceled: everyone got their points back.", `${by} canceled the prediction (points back).`);
+      }
+      if (a === "info") {
+        const no = needsOK("channel:manage:broadcast", "the title and category");
+        if (no) return no;
+        const body = {};
+        let gameName = "";
+        if (x.title != null) {
+          body.title = clean(x.title, 140);
+          if (!body.title) return { ok: false, say: "The title can't be empty." };
+        }
+        if (x.game) {
+          let g = null;
+          try { g = (await (await call(`/search/categories?query=${encodeURIComponent(clean(x.game, 100))}&first=1`)).json()).data?.[0]; } catch {}
+          if (!g) return { ok: false, say: `Twitch doesn't have a category like “${x.game}”.` };
+          body.game_id = g.id;
+          gameName = g.name;
+        }
+        if (!Object.keys(body).length) return { ok: false, say: "Nothing to change." };
+        const r = await call(`/channels?broadcaster_id=${b}`, { method: "PATCH", body: JSON.stringify(body) });
+        if (!r.ok) return { ok: false, say: await why(r, "Twitch didn't change the stream info.") };
+        chanInfo = { title: body.title ?? chanInfo?.title ?? "", game: gameName || chanInfo?.game || "" };
+        const said = [body.title ? `title: ${body.title}` : "", gameName ? `category: ${gameName}` : ""].filter(Boolean).join(", ");
+        return done(`Changed the ${said}.`, `${by} changed the ${said}.`);
+      }
+      if (a === "vip") {
+        const no = needsOK("channel:manage:vips", "VIPs");
+        if (no) return no;
+        const login = clean(x.login, 25).replace(/^@/, "").toLowerCase();
+        const u = await userId(login);
+        if (!u) return { ok: false, say: `Twitch doesn't know anyone called ${login}.` };
+        const r = await call(`/channels/vips?broadcaster_id=${b}&user_id=${encodeURIComponent(u.id)}`, { method: x.on ? "POST" : "DELETE" });
+        if (!r.ok) {
+          if (r.status === 422) return { ok: false, say: x.on ? `${u.display_name} is already a VIP (or a mod).` : `${u.display_name} isn't a VIP.` };
+          if (r.status === 409) return { ok: false, say: "No VIP spots left. Twitch gives more as the channel grows." };
+          return { ok: false, say: await why(r, "Twitch didn't change that VIP.") };
+        }
+        return done(x.on ? `${u.display_name} is a VIP now.` : `${u.display_name} isn't a VIP anymore.`, `${by} ${x.on ? "made" : "took VIP off"} ${u.display_name}${x.on ? " a VIP" : ""}.`);
+      }
+      if (a === "clip") {
+        const no = needsOK("clips:edit", "clips");
+        if (no) return no;
+        const r = await call(`/clips?broadcaster_id=${b}`, { method: "POST" });
+        if (!r.ok) return { ok: false, say: r.status === 404 ? "Clips only work while the stream is live." : await why(r, "Twitch didn't make a clip.") };
+        let id = "";
+        try { id = (await r.json()).data?.[0]?.id || ""; } catch {}
+        return done(`Clip made: the last 30 seconds.${id ? ` clips.twitch.tv/${id}` : ""}`, `${by} made a clip of the last 30 seconds.`);
+      }
+      if (a === "marker") {
+        const no = needsOK("channel:manage:broadcast", "stream markers");
+        if (no) return no;
+        const description = clean(x.note, 140);
+        const r = await call("/streams/markers", { method: "POST", body: JSON.stringify({ user_id: broadcasterId, ...(description ? { description } : {}) }) });
+        if (!r.ok) return { ok: false, say: r.status === 404 ? "Markers only work while the stream is live (with past broadcasts turned on)." : await why(r, "Twitch didn't add a marker.") };
+        return done(`Marker added${description ? `: ${description}` : ""}. It shows in the past broadcast.`, `${by} dropped a stream marker${description ? `: ${description}` : ""}.`);
+      }
+      if (a === "commercial") {
+        const no = needsOK("channel:edit:commercial", "running an ad");
+        if (no) return no;
+        const length = [30, 60, 90, 120, 150, 180].includes(Number(x.length)) ? Number(x.length) : 60;
+        const r = await call("/channels/commercial", { method: "POST", body: JSON.stringify({ broadcaster_id: broadcasterId, length }) });
+        if (!r.ok) return { ok: false, say: r.status === 404 ? "Ads only run while the stream is live." : await why(r, "Twitch didn't run an ad.") };
+        let msg = "";
+        try { msg = (await r.json()).data?.[0]?.message || ""; } catch {}
+        setTimeout(loadAds, 2000);
+        return done(`Running a ${length}-second ad now.${msg ? ` ${msg}` : ""}`, `${by} ran a ${length}-second ad.`);
+      }
       if (a === "unraid") {
         const no = needsOK("channel:manage:raids", "raids");
         if (no) return no;
@@ -1436,6 +1724,7 @@
     }
     // A raid, once the streamer has OK'd it (dock.js asks them in chat).
     async function startRaid(to, by) {
+      toolBy = { by, at: Date.now() };
       const no = needsOK("channel:manage:raids", "raids");
       if (no) return no;
       if (raidOut) return { ok: false, say: `A raid to ${raidOut.to} is already on its way.` };
@@ -1935,8 +2224,9 @@
           addLine(redemptionLine(e.user_name, AUTO_REWARDS[kind] || kind.replace(/_/g, " ") || "a reward", e.reward?.channel_points ?? e.reward?.cost, e.message?.text || e.user_input));
         }
       } else if (type.startsWith("channel.hype_train.")) hypeCard(type.split(".").pop(), e);
-      else if (type.startsWith("channel.poll.")) pollCard(type.split(".").pop(), e);
-      else if (type.startsWith("channel.prediction.")) predictionCard(type.split(".").pop(), e);
+      else if (type.startsWith("channel.poll.")) { pollCard(type.split(".").pop(), e); if (channel === me.login) pollPredSoon(); }
+      else if (type.startsWith("channel.prediction.")) { predictionCard(type.split(".").pop(), e); if (channel === me.login) pollPredSoon(); }
+      else if (type === "channel.moderate") logMod(e);
       else if (type === "channel.warning.send") {
         const mine = myWarns.get(e.user_id);
         myWarns.delete(e.user_id);

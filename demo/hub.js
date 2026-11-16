@@ -11,7 +11,7 @@
 // window.SANDBOX is what the two panels use (demo/sandbox.js): Socket, fetch and seed.
 // The demo page's own buttons use the same sockets, as the pretend people.
 
-import { Hub } from "../relay/src/index.js?v=320"; // the number: bump it when the relay changes, so browsers fetch the new one (and bump hub.js?v= in play.html)
+import { Hub } from "../relay/src/index.js?v=321"; // the number: bump it when the relay changes, so browsers fetch the new one (and bump hub.js?v= in play.html)
 
 // ===== Sockets ================================================================================
 // One object per connection, on the page's side, shaped like a browser WebSocket (on*
@@ -400,50 +400,9 @@ const twitch = (() => {
       hypeTimer = setTimeout(step, 2000);
     },
     // A poll: votes come in for a while, then it ends with a winner.
-    poll() {
-      clearTimeout(pollTimer);
-      const id = `p${++n}`;
-      const choices = [{ id: "a", title: "Boss fight now", votes: 0 }, { id: "b", title: "Explore first", votes: 0 }, { id: "c", title: "Snack break", votes: 0 }];
-      const ends = new Date(Date.now() + 30000).toISOString();
-      const send = (stage, extra = {}) => event(`channel.poll.${stage}`, { id, broadcaster_user_id: "1", title: "What should we do next?", choices: choices.map((c) => ({ ...c })), ends_at: ends, ...extra });
-      send("begin");
-      let ticks = 0;
-      const tick = () => {
-        ticks++;
-        for (const c of choices) c.votes += Math.floor(Math.random() * (c.id === "a" ? 9 : 6));
-        if (ticks < 10) {
-          send("progress");
-          pollTimer = setTimeout(tick, 3000);
-        } else send("end", { status: "completed", ended_at: new Date().toISOString() });
-      };
-      pollTimer = setTimeout(tick, 1500);
-    },
+    poll() { startPoll("What should we do next?", ["Boss fight now", "Explore first", "Snack break"], 30); },
     // A prediction: people put points on a side, it locks, then a side wins.
-    prediction() {
-      clearTimeout(predTimer);
-      const id = `r${++n}`;
-      const outcomes = [{ id: "w", title: "We win this fight", color: "blue", users: 0, channel_points: 0 }, { id: "l", title: "We lose", color: "pink", users: 0, channel_points: 0 }];
-      const locks = new Date(Date.now() + 20000).toISOString();
-      const send = (stage, extra = {}) => event(`channel.prediction.${stage}`, { id, broadcaster_user_id: "1", title: "Will we beat the boss?", outcomes: outcomes.map((o) => ({ ...o })), locks_at: locks, ...extra });
-      send("begin");
-      let ticks = 0;
-      const tick = () => {
-        ticks++;
-        for (const o of outcomes) {
-          const people = Math.floor(Math.random() * 4);
-          o.users += people;
-          o.channel_points += people * (50 + Math.floor(Math.random() * 950));
-        }
-        if (ticks < 7) {
-          send("progress");
-          predTimer = setTimeout(tick, 2500);
-        } else {
-          send("lock", { locked_at: new Date().toISOString() });
-          predTimer = setTimeout(() => send("end", { status: "resolved", winning_outcome_id: Math.random() < 0.6 ? "w" : "l", ended_at: new Date().toISOString() }), 6000);
-        }
-      };
-      predTimer = setTimeout(tick, 1500);
-    },
+    prediction() { startPred("Will we beat the boss?", ["We win this fight", "We lose"], 20, true); },
     // A channel points redemption: a custom reward (some with words typed in), or now and
     // then one of Twitch's own (unlocking an emote).
     redeem() {
@@ -606,7 +565,9 @@ const twitch = (() => {
   const OWN_REWARDS = ["rw-hydrate", "rw-posture", "rw-song"];
   let chatSettings = { emote_mode: false, follower_mode: false, follower_mode_duration: null, slow_mode: false, slow_mode_wait_time: null, subscriber_mode: false, unique_chat_mode: false };
   let raidTimer = 0;
-  const SCOPES = ["channel:manage:redemptions", "channel:manage:raids", "moderator:manage:chat_settings", "user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod", "moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions", "user:manage:whispers", "channel:read:redemptions", "channel:read:ads", "channel:manage:ads"];
+  const SCOPES = ["channel:manage:redemptions", "channel:manage:raids", "moderator:manage:chat_settings", "user:read:chat", "user:write:chat", "user:read:emotes", "moderator:manage:banned_users", "moderator:manage:chat_messages", "moderator:manage:automod", "moderator:read:chatters", "moderator:read:followers", "moderator:manage:warnings", "channel:read:hype_train", "channel:read:polls", "channel:read:predictions", "user:manage:whispers", "channel:read:redemptions", "channel:read:ads", "channel:manage:ads",
+    "moderator:manage:blocked_terms", "moderator:manage:automod_settings", "moderator:manage:unban_requests", "moderator:read:moderators", "moderator:read:vips",
+    "channel:manage:polls", "channel:manage:predictions", "channel:manage:broadcast", "channel:manage:vips", "clips:edit", "channel:edit:commercial"];
   // Pretend ad breaks: the first a couple of minutes in, 90 seconds long, then one every
   // 8 minutes after that; three snoozes, each pushing the next one back 5 minutes.
   const pretendAds = { next: Date.now() + 150000, last: 0, dur: 90, snoozes: 3 };
@@ -620,6 +581,64 @@ const twitch = (() => {
     const sec = (t) => (t ? Math.floor(t / 1000) : null);
     return { next_ad_at: sec(a.next), last_ad_at: sec(a.last), duration: a.dur, preroll_free_time: 0, snooze_count: a.snoozes, snooze_refresh_at: sec(Date.now() + 10 * 60000) };
   }
+  // The poll and prediction running now (the demo's buttons and Mod tools share them).
+  let curPoll = null, curPred = null;
+  function startPoll(title, titles, seconds) {
+    clearTimeout(pollTimer);
+    const id = `p${++n}`;
+    const choices = titles.map((t, i) => ({ id: `c${i}`, title: t, votes: 0 }));
+    const ends = new Date(Date.now() + seconds * 1000).toISOString();
+    curPoll = { id, title, choices, started_at: new Date().toISOString(), duration: seconds, status: "ACTIVE" };
+    const send = (stage, extra = {}) => event(`channel.poll.${stage}`, { id, broadcaster_user_id: "1", title, choices: choices.map((c) => ({ ...c })), ends_at: ends, ...extra });
+    curPoll.end = (status) => { clearTimeout(pollTimer); curPoll = null; send("end", { status, ended_at: new Date().toISOString() }); };
+    send("begin");
+    const tick = () => {
+      if (!curPoll || curPoll.id !== id) return;
+      choices.forEach((c, i) => (c.votes += Math.floor(Math.random() * (i === 0 ? 9 : 6))));
+      if (Date.now() < Date.parse(ends)) { send("progress"); pollTimer = setTimeout(tick, 3000); }
+      else curPoll.end("completed");
+    };
+    pollTimer = setTimeout(tick, 1500);
+    return curPoll;
+  }
+  function startPred(title, titles, seconds, autoResolve) {
+    clearTimeout(predTimer);
+    const id = `r${++n}`;
+    const COLORS = ["blue", "pink", "blue", "pink", "blue"];
+    const outcomes = titles.map((t, i) => ({ id: `o${i}`, title: t, color: COLORS[i], users: 0, channel_points: 0 }));
+    const locks = new Date(Date.now() + seconds * 1000).toISOString();
+    curPred = { id, title, outcomes, created_at: new Date().toISOString(), prediction_window: seconds, status: "ACTIVE" };
+    const send = (stage, extra = {}) => event(`channel.prediction.${stage}`, { id, broadcaster_user_id: "1", title, outcomes: outcomes.map((o) => ({ ...o })), locks_at: locks, ...extra });
+    curPred.lock = () => { clearTimeout(predTimer); if (curPred) curPred.status = "LOCKED"; send("lock", { locked_at: new Date().toISOString() }); };
+    curPred.end = (status, winner) => { clearTimeout(predTimer); curPred = null; send("end", { status, ...(winner ? { winning_outcome_id: winner } : {}), ended_at: new Date().toISOString() }); };
+    send("begin");
+    const tick = () => {
+      if (!curPred || curPred.id !== id || curPred.status !== "ACTIVE") return;
+      for (const o of outcomes) {
+        const people = Math.floor(Math.random() * 4);
+        o.users += people;
+        o.channel_points += people * (50 + Math.floor(Math.random() * 950));
+      }
+      if (Date.now() < Date.parse(locks)) { send("progress"); predTimer = setTimeout(tick, 2500); }
+      else {
+        curPred.lock();
+        if (autoResolve) predTimer = setTimeout(() => curPred?.end("resolved", Math.random() < 0.6 ? outcomes[0].id : outcomes[1].id), 6000);
+      }
+    };
+    predTimer = setTimeout(tick, 1500);
+    return curPred;
+  }
+  const pollOut = (p) => p && { id: p.id, title: p.title, status: p.status, started_at: p.started_at, duration: p.duration, choices: p.choices.map((c) => ({ ...c })) };
+  const predOut = (p) => p && { id: p.id, title: p.title, status: p.status, created_at: p.created_at, prediction_window: p.prediction_window, outcomes: p.outcomes.map((o) => ({ ...o })) };
+  // The rest of Mod tools: blocked words, AutoMod's level, an unban request waiting, the
+  // title and category, VIPs. Every mod action also goes in the mod log (channel.moderate).
+  let blocked = [{ id: "bt1", text: "spoilers" }, { id: "bt2", text: "buy followers" }];
+  let automodLevel = 1;
+  let unbanReqs = [{ id: "ub1", user_id: "u-Gr1efer99", user_login: "gr1efer99", user_name: "Gr1efer99", text: "sorry, it was a joke and it won't happen again", created_at: new Date(Date.now() - 40 * 60000).toISOString() }];
+  const vips = new Set(["HoneyBuddy"]);
+  let chanTitle = "chill vibes and one very rude boss", chanGame = "Elden Ring";
+  const modded = (action, extra = {}) => event("channel.moderate", { broadcaster_user_id: "1", moderator_user_id: "1", moderator_user_login: "streamer", moderator_user_name: "streamer", action, ...extra });
+  const nameOf = (id) => String(id || "").replace(/^u-/, "");
   const json = (status, body) => new Response(status === 204 ? null : JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
   async function api(url, init = {}) {
     const u = new URL(url);
@@ -652,12 +671,28 @@ const twitch = (() => {
       if (!scopesNow().includes("moderator:read:followers")) return json(200, { data: [], total: 1 });
       return json(200, { data: p.followedAt ? [{ user_id: p.id, user_login: p.login, user_name: p.display_name, followed_at: p.followedAt }] : [], total: 1 });
     }
+    if (route === "/channels" && init.method === "PATCH") {
+      if (!scopesNow().includes("channel:manage:broadcast")) return json(401, { message: "Missing scope: channel:manage:broadcast" });
+      const b = JSON.parse(body || "{}");
+      if (b.title != null) chanTitle = b.title;
+      if (b.game_id) chanGame = String(b.game_id).replace(/^g-/, "");
+      return json(204, {});
+    }
+    if (route === "/channels" && u.searchParams.get("broadcaster_id") === "1") {
+      const p = person("streamer");
+      return json(200, { data: [{ broadcaster_id: "1", broadcaster_name: p.display_name, game_name: chanGame, title: chanTitle, tags: p.tags }] });
+    }
     if (route === "/channels") {
       const bid = u.searchParams.get("broadcaster_id");
       const p = person(bid === "1" ? "streamer" : bid.replace(/^u-/, "")); // "1" is the pretend streamer's own channel
       return json(200, { data: [{ broadcaster_id: p.id, broadcaster_name: p.display_name, game_name: p.game, title: "", tags: p.tags }] });
     }
     if (route === "/moderation/chat") {
+      if (!u.searchParams.get("message_id")) {
+        event("channel.chat.clear", { broadcaster_user_id: "1" });
+        modded("clear");
+        return json(204, {});
+      }
       event("channel.chat.message_delete", { message_id: u.searchParams.get("message_id"), target_user_id: "x" });
       return json(204, {});
     }
@@ -665,6 +700,10 @@ const twitch = (() => {
       if ((init.method || "GET") === "POST") {
         const id = JSON.parse(body || "{}").data?.user_id || "";
         event("channel.chat.clear_user_messages", { target_user_id: id, target_user_name: id.replace(/^u-/, ""), target_user_login: id.replace(/^u-/, "").toLowerCase() });
+        const d = JSON.parse(body || "{}").data || {};
+        const who = { user_id: id, user_login: nameOf(id).toLowerCase(), user_name: nameOf(id), reason: d.reason || "" };
+        if (d.duration) modded("timeout", { timeout: { ...who, expires_at: new Date(Date.now() + d.duration * 1000).toISOString() } });
+        else modded("ban", { ban: who });
       }
       return json(200, { data: [{}] });
     }
@@ -721,6 +760,9 @@ const twitch = (() => {
     }
     if (route === "/chat/settings") {
       if (init.method === "PATCH") {
+        const asked = JSON.parse(body || "{}");
+        const pairs = { slow_mode: "slow", follower_mode: "followers", subscriber_mode: "subscribers", emote_mode: "emoteonly", unique_chat_mode: "uniquechat" };
+        for (const [k, act] of Object.entries(pairs)) if (k in asked) setTimeout(() => modded(asked[k] ? act : `${act}off`, act === "slow" && asked[k] ? { slow: { wait_time_seconds: asked.slow_mode_wait_time || 30 } } : {}), 50);
         if (!scopesNow().includes("moderator:manage:chat_settings")) return json(401, { message: "Missing scope: moderator:manage:chat_settings" });
         const want = JSON.parse(body || "{}");
         chatSettings = { ...chatSettings, ...want };
@@ -752,6 +794,113 @@ const twitch = (() => {
       const to = (u.searchParams.get("to_broadcaster_id") || "").replace(/^u-/, "");
       raidTimer = setTimeout(() => event("channel.raid", { from_broadcaster_user_id: "1", from_broadcaster_user_name: "streamer", to_broadcaster_user_id: `u-${to}`, to_broadcaster_user_name: to, viewers: 42 }), 20000);
       return json(200, { data: [{ created_at: new Date().toISOString(), is_mature: false }] });
+    }
+    // ----- More Mod tools -----
+    const need = (scope) => !scopesNow().includes(scope) && json(401, { message: `Missing scope: ${scope}` });
+    const M = init.method || "GET";
+    if (route === "/moderation/blocked_terms") {
+      const no = need("moderator:manage:blocked_terms"); if (no) return no;
+      if (M === "POST") {
+        const text = JSON.parse(body || "{}").text || "";
+        const t = { id: `bt${++n}`, text };
+        blocked.unshift(t);
+        modded("add_blocked_term", { automod_terms: { action: "add", list: "blocked", terms: [text], from_automod: false } });
+        return json(200, { data: [t] });
+      }
+      if (M === "DELETE") {
+        const t = blocked.find((x) => x.id === u.searchParams.get("id"));
+        blocked = blocked.filter((x) => x !== t);
+        if (t) modded("remove_blocked_term", { automod_terms: { action: "remove", list: "blocked", terms: [t.text], from_automod: false } });
+        return json(204, {});
+      }
+      return json(200, { data: blocked });
+    }
+    if (route === "/moderation/automod/settings") {
+      const no = need("moderator:manage:automod_settings"); if (no) return no;
+      if (M === "PUT") automodLevel = JSON.parse(body || "{}").overall_level ?? automodLevel;
+      return json(200, { data: [{ broadcaster_id: "1", overall_level: automodLevel }] });
+    }
+    if (route === "/moderation/unban_requests") {
+      const no = need("moderator:manage:unban_requests"); if (no) return no;
+      if (M === "PATCH") {
+        const req = unbanReqs.find((x) => x.id === u.searchParams.get("unban_request_id"));
+        if (!req) return json(404, { message: "That unban request was already answered." });
+        unbanReqs = unbanReqs.filter((x) => x !== req);
+        const ok = u.searchParams.get("status") === "approved";
+        modded(ok ? "approve_unban_request" : "deny_unban_request", { unban_request: { is_approved: ok, user_id: req.user_id, user_login: req.user_login, user_name: req.user_name, moderator_message: "" } });
+        return json(200, { data: [{ ...req, status: ok ? "approved" : "denied" }] });
+      }
+      return json(200, { data: unbanReqs });
+    }
+    if (route === "/polls") {
+      if (M === "POST") {
+        const no = need("channel:manage:polls"); if (no) return no;
+        const b = JSON.parse(body || "{}");
+        return json(200, { data: [pollOut(startPoll(b.title, (b.choices || []).map((c) => c.title), b.duration || 120))] });
+      }
+      if (M === "PATCH") {
+        const no = need("channel:manage:polls"); if (no) return no;
+        curPoll?.end("terminated");
+        return json(200, { data: [] });
+      }
+      return json(200, { data: curPoll ? [pollOut(curPoll)] : [] });
+    }
+    if (route === "/predictions") {
+      if (M === "POST") {
+        const no = need("channel:manage:predictions"); if (no) return no;
+        const b = JSON.parse(body || "{}");
+        return json(200, { data: [predOut(startPred(b.title, (b.outcomes || []).map((o) => o.title), b.prediction_window || 120, false))] });
+      }
+      if (M === "PATCH") {
+        const no = need("channel:manage:predictions"); if (no) return no;
+        const b = JSON.parse(body || "{}");
+        if (!curPred) return json(404, { message: "That prediction already ended." });
+        if (b.status === "LOCKED") curPred.lock();
+        else if (b.status === "RESOLVED") curPred.end("resolved", b.winning_outcome_id);
+        else curPred.end("canceled");
+        return json(200, { data: [] });
+      }
+      return json(200, { data: curPred ? [predOut(curPred)] : [] });
+    }
+    if (route === "/search/categories") {
+      const q = (u.searchParams.get("query") || "").trim();
+      const name = q.replace(/\b\w/g, (c) => c.toUpperCase());
+      return json(200, { data: q ? [{ id: `g-${name}`, name }] : [] });
+    }
+    if (route === "/streams") return json(200, { data: [{ id: "s1", user_id: "1", type: "live", started_at: new Date(Date.now() - 3600000).toISOString() }] });
+    if (route === "/channels/vips") {
+      const no = need("channel:manage:vips"); if (no) return no;
+      const name = nameOf(u.searchParams.get("user_id"));
+      if (M === "POST") {
+        if (vips.has(name)) return json(422, { message: "already a VIP" });
+        vips.add(name);
+        modded("vip", { vip: { user_id: `u-${name}`, user_login: name.toLowerCase(), user_name: name } });
+        return json(204, {});
+      }
+      if (M === "DELETE") {
+        if (!vips.delete(name)) return json(422, { message: "not a VIP" });
+        modded("unvip", { unvip: { user_id: `u-${name}`, user_login: name.toLowerCase(), user_name: name } });
+        return json(204, {});
+      }
+      return json(200, { data: [...vips].map((v) => ({ user_id: `u-${v}`, user_name: v })) });
+    }
+    if (route === "/clips") {
+      const no = need("clips:edit"); if (no) return no;
+      const id = `DemoClip${++n}`;
+      return json(202, { data: [{ id, edit_url: `https://clips.twitch.tv/${id}/edit` }] });
+    }
+    if (route === "/streams/markers") {
+      const no = need("channel:manage:broadcast"); if (no) return no;
+      return json(200, { data: [{ id: `m${++n}`, created_at: new Date().toISOString(), description: JSON.parse(body || "{}").description || "", position_seconds: 3600 }] });
+    }
+    if (route === "/channels/commercial") {
+      const no = need("channel:edit:commercial"); if (no) return no;
+      const length = JSON.parse(body || "{}").length || 60;
+      pretendAds.last = Date.now();
+      pretendAds.dur = length;
+      pretendAds.next = Date.now() + length * 1000 + 8 * 60000;
+      event("channel.ad_break.begin", { broadcaster_user_id: "1", duration_seconds: length, started_at: new Date().toISOString(), is_automatic: false });
+      return json(200, { data: [{ length, message: "", retry_after: 480 }] });
     }
     // Twitch's list of who's in the chat: the regulars and the lurkers (not raiders yet).
     if (route === "/chat/chatters") return json(200, { data: [...CHATTERS, ...NEWBIES, "mod1", "mod2"].map((c) => ({ user_login: c.toLowerCase(), user_name: c })), pagination: {} });

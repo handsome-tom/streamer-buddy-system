@@ -189,7 +189,8 @@ const MAX_FLAGGED_LEN = 500; // a whole Twitch chat message
 const PIN_MS = 5 * 60 * 1000;
 const SENT_FLASH_MS = 3 * 60 * 1000; // how long a quick note or !vanish can be taken back
 const MAX_PIN_EMOTES = 30;
-const TOOL_ACTIONS = ["refund", "fulfill", "raid", "unraid", "mode", "snooze"]; // what a mod may ask the streamer's dock to do
+const TOOL_ACTIONS = ["refund", "fulfill", "raid", "unraid", "mode", "snooze", // what a mod may ask the streamer's dock to do
+  "clear", "term", "automod", "unbanreq", "poll", "endpoll", "pred", "predlock", "predwin", "predcancel", "info", "vip", "clip", "marker", "commercial"];
 const TOOL_MODES = ["slow", "followers", "emote", "sub", "unique"];
 const MAX_TOOL_REDEMPTIONS = 25;
 const EMOTE_HOSTS = ["static-cdn.jtvnw.net", "cdn.betterttv.net", "cdn.frankerfacez.com", "cdn.7tv.app"];
@@ -1322,6 +1323,26 @@ function cleanToolArgs(raw) {
   if (TOOL_MODES.includes(x.k)) out.k = x.k;
   if (typeof x.v === "boolean") out.v = x.v;
   else if (Number.isFinite(x.v)) out.v = Math.max(0, Math.min(129600, Math.round(x.v)));
+  // The rest of Mod tools: each kept to its own size.
+  const text = (v, n) => String(v ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, n);
+  const texts = (v, max, n) => (Array.isArray(v) ? v.slice(0, max).map((t) => text(t, n)).filter((t) => t.trim()) : undefined);
+  const int = (v, lo, hi) => (Number.isFinite(v) ? Math.max(lo, Math.min(hi, Math.round(v))) : undefined);
+  if (x.add != null) out.add = text(x.add, 500);
+  if (x.remove != null) out.remove = id(x.remove);
+  if (x.level != null) out.level = int(x.level, 0, 4);
+  if (typeof x.ok === "boolean") out.ok = x.ok;
+  if (typeof x.on === "boolean") out.on = x.on;
+  if (x.title != null) out.title = text(x.title, 140);
+  if (x.game != null) out.game = text(x.game, 100);
+  if (x.note != null) out.note = text(x.note, 140);
+  if (x.choices) out.choices = texts(x.choices, 5, 25);
+  if (x.outcomes) out.outcomes = texts(x.outcomes, 10, 25);
+  if (x.dur != null) out.dur = int(x.dur, 15, 1800);
+  if (x.window != null) out.window = int(x.window, 30, 1800);
+  if (x.length != null) out.length = int(x.length, 30, 180);
+  if (x.winner != null) out.winner = id(x.winner);
+  const login = String(x.login || "").toLowerCase().replace(/^@/, "");
+  if (/^[a-z0-9_]{2,25}$/.test(login)) out.login = login;
   return out;
 }
 
@@ -1350,7 +1371,26 @@ function cleanTools(raw) {
       next: num(raw.ad.next), last: num(raw.ad.last), dur: Math.max(0, Math.min(600, num(raw.ad.dur))),
       snoozes: Math.max(0, Math.min(10, num(raw.ad.snoozes))), refresh: num(raw.ad.refresh), preroll: Math.max(0, num(raw.ad.preroll)),
     } : null,
-    can: { points: !!can.points, raid: !!can.raid, modes: !!can.modes, ads: !!can.ads },
+    // The rest of Mod tools: the mod log, blocked words, AutoMod's level, unban requests, the
+    // poll and prediction running now, the title and category, and whether they're live.
+    log: (Array.isArray(raw.log) ? raw.log : []).slice(0, 40).map((l) => ({ at: num(l.at), by: str(l.by, 40), what: str(l.what, 240) })),
+    terms: Array.isArray(raw.terms) ? raw.terms.slice(0, 100).map((t) => ({ id: str(t.id, 60), text: str(t.text, 100) })) : null,
+    automod: Number.isInteger(raw.automod) && raw.automod >= 0 && raw.automod <= 4 ? raw.automod : null,
+    unbans: (Array.isArray(raw.unbans) ? raw.unbans : []).slice(0, 10).map((u) => ({ id: str(u.id, 60), user: str(u.user, 40), text: str(u.text, 300), at: num(u.at) })),
+    poll: raw.poll && typeof raw.poll === "object" ? {
+      id: str(raw.poll.id, 60), title: str(raw.poll.title, 60), ends: num(raw.poll.ends),
+      choices: (Array.isArray(raw.poll.choices) ? raw.poll.choices : []).slice(0, 5).map((c) => ({ title: str(c.title, 25), votes: num(c.votes) })),
+    } : null,
+    pred: raw.pred && typeof raw.pred === "object" ? {
+      id: str(raw.pred.id, 60), title: str(raw.pred.title, 45), status: raw.pred.status === "locked" ? "locked" : "active", locks: num(raw.pred.locks),
+      outcomes: (Array.isArray(raw.pred.outcomes) ? raw.pred.outcomes : []).slice(0, 10).map((o) => ({ id: str(o.id, 60), title: str(o.title, 25), users: num(o.users), points: num(o.points) })),
+    } : null,
+    info: raw.info && typeof raw.info === "object" ? { title: str(raw.info.title, 140), game: str(raw.info.game, 100) } : null,
+    live: !!raw.live,
+    can: {
+      points: !!can.points, raid: !!can.raid, modes: !!can.modes, ads: !!can.ads, terms: !!can.terms, automod: !!can.automod, unbans: !!can.unbans,
+      polls: !!can.polls, preds: !!can.preds, info: !!can.info, vips: !!can.vips, clips: !!can.clips, commercial: !!can.commercial, log: !!can.log,
+    },
     at: Date.now(),
   };
 }

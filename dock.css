@@ -6546,3 +6546,31 @@ html :is(body, body.has-space.has-space) .oc-line.oc-mod.oc-mod--bright.oc-mod--
 .stopalert--float { position: fixed; top: 8px; right: 8px; z-index: 1001; }
 @keyframes stopalert-in { from { opacity: 0; transform: scale(0.9); } }
 @media (prefers-reduced-motion: reduce) { .stopalert, .stopalert__dot { animation: none; } }
+
+/* ===== More Mod tools (the side panel's sword): the stream's title and category, clips,
+   markers and ads, polls, predictions, chat safety, VIPs, unban requests and the mod log. ===== */
+.tools__stack { display: flex; flex-direction: column; gap: 6px; }
+.tools__row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tools__stack + .tools__row, .tools__stack + .tools__field, .tools__field + .tools__row { margin-top: 6px; }
+.tools__row > .tools__field { flex: 1 1 140px; }
+.tools__select { height: 34px; padding: 0 8px; font: inherit; font-size: 12.5px; color: var(--text); background: rgba(0, 0, 0, 0.35); border: 0; border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+.tools__select:disabled { opacity: 0.5; }
+.tools__now { margin: 0 0 8px; font-size: 13px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
+.tools__label { margin: 12px 0 6px; font-size: 11.5px; font-weight: 700; color: var(--muted); }
+.tools__btn--sure { color: #fff; background: #e5484d; box-shadow: 0 0 0 2px #fff; }
+.tools__bars { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.tools__bar { position: relative; display: flex; align-items: center; gap: 8px; padding: 7px 10px; overflow: hidden; border-radius: 8px; font-size: 13px; background: rgba(255, 255, 255, 0.04); }
+.tools__bar::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--pct, 0%); background: color-mix(in srgb, var(--good) 22%, transparent); pointer-events: none; transition: width 0.4s; }
+.tools__barname { position: relative; flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.tools__barnum { position: relative; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.tools__bar .tools__btn { position: relative; }
+.tools__seg { display: flex; gap: 4px; }
+.tools__seg .tools__btn { flex: 1; height: 30px; }
+.tools__seg .tools__segon { color: #04160e; background: var(--good); }
+.tools__chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.tools__chip { display: inline-flex; align-items: center; gap: 2px; padding: 0 2px 0 9px; height: 24px; font-size: 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); overflow-wrap: anywhere; }
+.tools__chipx { height: 20px; min-width: 20px; padding: 0 5px; font-size: 13px; line-height: 1; border-radius: 999px; background: transparent; color: var(--muted); }
+.tools__chipx:hover:not(:disabled) { color: var(--text); }
+.tools__log { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; }
+.tools__logrow { font-size: 12.5px; line-height: 1.4; overflow-wrap: anywhere; }
+.tools__logrow .tools__ago { display: inline; margin-right: 6px; }
