@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notification gallery</title>
+<!--
+  Every notification StreamSpace draws, laid out to look at as design elements.
+  It loads the demo out of sight, presses each of its buttons in turn (Twitch events, mods'
+  messages, the ad timer), and copies what appears onto this page, each in a frame with the
+  real stylesheet and the page classes of the side it came from. So it always shows the
+  current designs. On this Mac only (dev/ isn't served on the live site).
+-->
+<style>
+  :root { color-scheme: dark; --bg: #0b0c10; --text: #efeff1; --muted: #9a9aa6; --line: rgba(255, 255, 255, 0.06); }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 28px 24px 60px; font: 14px/1.45 Inter, "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--text); background: var(--bg); }
+  h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.01em; }
+  .lead { margin: 0 0 22px; color: var(--muted); max-width: 720px; }
+  .status { margin: 0 0 22px; color: #bf94ff; font-weight: 600; }
+  h2 { margin: 34px 0 12px; font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 26px 22px; align-items: start; }
+  .item { min-width: 0; }
+  .item__label { display: flex; justify-content: space-between; gap: 8px; margin: 0 0 7px 2px; font-size: 13px; font-weight: 700; }
+  .item__label small { font-weight: 500; color: var(--muted); }
+  .item iframe { display: block; width: 100%; border: 0; border-radius: 10px; background: #0e0e10; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--line); }
+  #demo { position: fixed; left: -3000px; top: 0; width: 1400px; height: 900px; border: 0; visibility: hidden; }
+  .again { margin-left: 10px; padding: 5px 12px; font: inherit; font-size: 12px; font-weight: 700; color: #fff; background: #9147ff; border: 0; border-radius: 6px; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>Notification gallery</h1>
+<p class="lead">Every notification as it looks right now, taken from the live demo with the real stylesheet. The streamer's OBS chat dock first, then the mod's Chrome side panel. Animations play once when a frame loads; reload a frame (right-click → Reload frame) to see one again.</p>
+<p class="status" id="status">Loading the demo…</p>
+<div id="out"></div>
+<iframe id="demo" src="../demo/play.html" title="The demo, used to make each notification"></iframe>
+<script>
+(async () => {
+  const status = document.getElementById("status");
+  const out = document.getElementById("out");
+  const demo = document.getElementById("demo");
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  await new Promise((r) => (demo.contentDocument?.readyState === "complete" ? r() : demo.addEventListener("load", r, { once: true })));
+  status.textContent = "Starting the demo…";
+  await wait(7000);
+  const top = demo.contentWindow;
+  const D = top.document;
+  // Calm: no pretend chatter while collecting.
+  const feed = D.getElementById("feed");
+  if (feed && /on/i.test(feed.textContent)) feed.click();
+  const sides = { obs: D.getElementById("obs").contentWindow, mod: D.getElementById("mod").contentWindow };
+  const SEL = {
+    obs: ".oc-list > *, .oc-top > *, .oc-adslot > *, .oc-stuck > *, .pins > *, .flashes > *, .peek-list > *",
+    mod: ".pins > *, .flashes > *, .ilist > *, .twad, .peek-list > *",
+  };
+  const items = [];
+  const chain = (e) => {
+    const list = [];
+    for (let p = e.parentElement; p && p.tagName !== "BODY"; p = p.parentElement) list.unshift({ tag: p.tagName.toLowerCase(), cls: typeof p.className === "string" ? p.className : "", id: p.id || "" });
+    return list;
+  };
+  const add = (label, side, e) => {
+    if (!e) return;
+    // A raid brings its card and then the raiders' first lines: name those for what they are.
+    if (label === "Raid" && e.matches(".oc-line[data-login]")) label = "Raider's first chat line";
+    items.push({ label, side, html: e.outerHTML, chain: chain(e), w: Math.round(e.getBoundingClientRect().width) });
+  };
+  const snap = () => Object.fromEntries(Object.entries(sides).map(([k, w]) => [k, new Set(w.document.querySelectorAll(SEL[k]))]));
+  const press = (id) => (D.getElementById(id) || D.querySelector(`[data-click="${id}"]`))?.click();
+  async function grab(label, id, ms = 3000, keep = () => true, most = 4) {
+    status.textContent = `Collecting: ${label}…`;
+    const before = snap();
+    press(id);
+    await wait(ms);
+    for (const [k, w] of Object.entries(sides)) {
+      [...w.document.querySelectorAll(SEL[k])].filter((e) => !before[k].has(e) && e.offsetHeight > 0 && keep(e)).slice(0, most).forEach((e) => add(label, k, e));
+    }
+  }
+
+  // The ad timer is already counting down when the demo starts.
+  for (const k of Object.keys(sides)) add("Ad break coming up", k, sides[k].document.querySelector(".twad"));
+  add("Plain chat line (for comparison)", "obs", [...sides.obs.document.querySelectorAll(".oc-line[data-login]")].filter((e) => !/oc-event|--first|--raider/.test(e.className)).pop());
+
+  const TWITCH = [
+    ["Raid", "tRaid", 3500, () => true, 3],
+    ["First-time chatter", "tFirst", 3000, (e) => e.classList.contains("oc-line--first") && !e.classList.contains("oc-line--raider"), 1],
+    ["First-time sub", "tFirstSub", 2500, (e) => e.classList.contains("oc-event--first"), 1],
+    ["Resub", "tSub", 2500],
+    ["Watch streak", "tStreak", 2500],
+    ["Cheer", "tCheer", 2500],
+    ["Bits badge", "tBadge", 2500],
+    ["Channel points redemption", "tRedeem", 2500],
+    ["Highlighted message", "tHighlight", 2500],
+    ["Announcement", "tAnnounce", 2500],
+    ["Pinned message", "tPin", 2500],
+    ["!command and its answer", "tCmd", 3000],
+    ["Poll", "tPoll", 3000],
+    ["Prediction", "tPred", 3000],
+    ["Hype train", "tHype", 3000],
+    ["Gift bomb", "tGift", 8000, (e) => /oc-topcard|oc-event--bomb/.test(e.className), 2],
+  ];
+  for (const t of TWITCH) await grab(...t);
+  const MODS = [
+    ["A mod's question", "modAsk", 3500],
+    ["Quick info", "modNote", 3500],
+    ["!vanish note", "modVanish", 3500],
+    ["Nudged question", "modNudge", 3000],
+    ["Streamer asks a mod", "streamerAsk", 3500],
+    ["Panic button", "modWarn", 3000],
+  ];
+  for (const t of MODS) await grab(...t);
+  // These change a line already in the chat, so the line itself is taken.
+  status.textContent = "Collecting: flags and notes…";
+  press("modFlag");
+  await wait(3500);
+  add("Flagged chat line", "obs", [...sides.obs.document.querySelectorAll(".oc-line--flagged")].pop());
+  add("Flagged chat line (mod's panel)", "mod", [...sides.mod.document.querySelectorAll(".pins > *")].pop());
+  press("modChatNote");
+  await wait(3500);
+  add("Mod's note on a chat line", "obs", [...sides.obs.document.querySelectorAll(".oc-line--noted")].pop());
+
+  // Draw them: one frame each, with the real stylesheet and that side's page classes.
+  status.textContent = "";
+  const css = [...sides.obs.document.querySelectorAll('link[rel="stylesheet"]')].map((l) => l.getAttribute("href")).find((h) => /dock\.css/.test(h)) || "dock.css";
+  const pageOf = { obs: { html: sides.obs.document.documentElement.className, body: sides.obs.document.body.className }, mod: { html: sides.mod.document.documentElement.className, body: sides.mod.document.body.className } };
+  const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  const SECTIONS = [["obs", "The streamer's OBS chat dock"], ["mod", "The mod's Chrome side panel"]];
+  for (const [side, title] of SECTIONS) {
+    const list = items.filter((i) => i.side === side);
+    if (!list.length) continue;
+    const h = document.createElement("h2");
+    h.textContent = title;
+    const grid = document.createElement("div");
+    grid.className = "grid";
+    out.append(h, grid);
+    for (const i of list) {
+      const box = document.createElement("div");
+      box.className = "item";
+      const label = document.createElement("div");
+      label.className = "item__label";
+      label.innerHTML = `<span>${esc(i.label)}</span><small>${i.w}px wide</small>`;
+      const f = document.createElement("iframe");
+      f.title = i.label;
+      // The parents it sat in, rebuilt (empty), so selectors that depend on them still match;
+      // let loose from their fixed heights and scrolling so the piece shows whole.
+      const open = i.chain.map((p) => `<${p.tag} class="${esc(p.cls)}"${p.id ? ` id="${esc(p.id)}"` : ""} style="position:static;inset:auto;height:auto;min-height:0;max-height:none;overflow:visible;transform:none;margin:0;padding:0;border:0;box-shadow:none">`).join("");
+      const close = i.chain.slice().reverse().map((p) => `</${p.tag}>`).join("");
+      f.srcdoc = `<!doctype html><html class="${esc(pageOf[side].html)}"><head><base href="${location.origin}/"><meta charset="utf-8"><link rel="stylesheet" href="${esc(css)}"><style>html,body{height:auto!important;min-height:0!important;overflow:visible!important}body{margin:0;padding:14px;background:#0e0e10}.glow,.space,.bar{display:none!important}</style></head><body class="${esc(pageOf[side].body)}"><div style="width:${Math.max(240, i.w)}px;max-width:100%">${open}${i.html}${close}</div></body></html>`;
+      f.addEventListener("load", () => {
+        const fit = () => (f.style.height = `${Math.ceil(f.contentDocument.body.getBoundingClientRect().height) + 1}px`);
+        fit();
+        setTimeout(fit, 400);
+        setTimeout(fit, 1500);
+      });
+      box.append(label, f);
+      grid.append(box);
+    }
+  }
+  const again = document.createElement("button");
+  again.className = "again";
+  again.textContent = "Collect again";
+  again.addEventListener("click", () => location.reload());
+  status.append(`${items.length} notifications collected.`, again);
+  demo.remove();
+})().catch((e) => (document.getElementById("status").textContent = `Something went wrong: ${e.message}`));
+</script>
+</body>
+</html>
