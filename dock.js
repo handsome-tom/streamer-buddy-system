@@ -4138,7 +4138,15 @@
       sec.append(el("div", "mod__label", `Mods · ${here} of ${list.length} active`));
       const grid = el("div", "mod__teamlist");
       for (const { login, st } of list) {
-        const row = el("div", `mod__mate mod__mate--${st}`);
+        // A connection: click for your direct messages with them (or their page, if you
+        // haven't got a chat yet). Not for yourself, or mods who aren't connections.
+        const mate = login !== me?.login && conn(login)?.mutual ? conn(login) : null;
+        const direct = mate && directWith(login);
+        const row = el(mate ? "button" : "div", `mod__mate mod__mate--${st}${mate ? " mod__mate--go" : ""}`);
+        if (mate) {
+          row.type = "button";
+          row.addEventListener("click", () => (direct ? show("chat", direct.owner) : show("person", login)));
+        }
         const face = pics[login] ? el("img", "mod__matepic") : el("span", "mod__matepic mod__matepic--letter", login[0].toUpperCase());
         if (pics[login]) {
           face.src = pics[login];
@@ -4149,7 +4157,7 @@
         if (st !== "off" && colorOf(login)) name.style.color = colorOf(login);
         words.append(name);
         if (WORDS[st]) words.append(el("span", "mod__matestate", WORDS[st]));
-        row.title = `${login}${WORDS[st] ? ` · ${WORDS[st]}` : " · not active"}`;
+        row.title = `${login}${WORDS[st] ? ` · ${WORDS[st]}` : " · not active"}${mate ? ` · click to message ${login}` : ""}`;
         row.append(face, words);
         grid.append(row);
       }

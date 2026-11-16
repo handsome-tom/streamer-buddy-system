@@ -6333,3 +6333,6 @@ body.embed .bar #modBtn.bar-btn--here[data-status="offline"] { --st: var(--muted
 .log__head--fold { padding: 6px 8px 6px 10px; }
 .log__head--closed .log__toggle::before { transform: rotate(-45deg); }
 .log__head--fold { margin: 2px 0 0; color: var(--text); } .log__head--fold .sv__says { text-transform: none; letter-spacing: 0; font-weight: 400; }
+/* A mod you're connected with: the row opens your messages with them. */
+.mod__mate--go { width: 100%; margin: 0; padding: 3px 6px 3px 0; font: inherit; color: inherit; text-align: left; background: none; border: 0; border-radius: 20px; cursor: pointer; }
+.mod__mate--go:hover .mod__matename { text-decoration: underline; }
