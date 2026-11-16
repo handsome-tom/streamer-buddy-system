@@ -2690,12 +2690,17 @@
       });
       return dot;
     });
-    // The chat dock: your mods who aren't on Streamer Buddy yet, too, dimmed with the
-    // broken chain (as on a mod's Streamers bar).
+    // The chat dock: your mods who aren't on Streamer Buddy yet, too, with the broken chain,
+    // by the same rule as everyone here: only while they're in the chat, or have been this
+    // stream (gray once they've left, gone after LIVE_GONE_MINUTES away).
     if (LIVECHAT && me) {
       const known = new Set(connections.map((c) => c.login));
       for (const login of (modLists?.mods || []).filter((l) => !known.has(l) && l !== me.login)) {
-        const dot = el("button", "dot dot--chan dot--off dot--absent");
+        const light = liveLight(login);
+        if (!light.away) liveSeenNow(login);
+        const longGone = light.away && Date.now() - liveSeenAt(login) > LIVE_GONE_MINUTES * LIGHT_MINUTE;
+        if (!liveWasHere(login) || longGone) continue;
+        const dot = el("button", `dot dot--chan dot--absent${light.away ? " dot--off" : " dot--here"}`);
         dot.type = "button";
         if (pics[login]) {
           const img = el("img");
@@ -2708,7 +2713,7 @@
         const x = el("span", "dot__unlinked");
         x.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.2 5.6 L9.6 4.2 a3.3 3.3 0 0 1 4.7 4.7 L12.9 10.3"/><path d="M11.8 14.4 L10.4 15.8 a3.3 3.3 0 0 1 -4.7 -4.7 L7.1 9.7"/><path d="M3.2 3.2 L5 5 M15 15 L16.8 16.8 M2.6 7.4 H4.4 M15.6 12.6 H17.4"/></g></svg>';
         dot.append(x);
-        dot.title = `${login} · your mod · not on Streamer Buddy yet`;
+        dot.title = `${login} · your mod · ${light.says} · not on Streamer Buddy yet`;
         dot.dataset.order = `2${login}`;
         dots.push(dot);
       }
