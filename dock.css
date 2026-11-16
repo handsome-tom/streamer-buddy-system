@@ -6299,3 +6299,9 @@ body.embed .bar #modBtn svg path { fill: currentColor; }
 /* The bar's people icons on the sword's chunky pixel grid (2px a pixel): sized to it. */
 body .bar #msgBtn svg.px-icon { width: 14px; height: 16px; }
 body .bar #peopleBtn svg.px-icon { width: 18px; height: 16px; }
+/* Mod, when it's the page you're on: filled like Mod tools when it's on (green, white sword),
+   or in your status's color while you're not modding. */
+body.embed .bar #modBtn.bar-btn--here, body.embed .bar #modBtn.bar-btn--here:hover:not(:disabled) { --st: var(--good); color: #fff; background: color-mix(in srgb, var(--st) 70%, #1a1a1d); box-shadow: 0 0 10px color-mix(in srgb, var(--st) 45%, transparent); }
+body.embed .bar #modBtn.bar-btn--here[data-status="online"] { --st: var(--honey); }
+body.embed .bar #modBtn.bar-btn--here[data-status="idle"] { --st: var(--yellow); }
+body.embed .bar #modBtn.bar-btn--here[data-status="offline"] { --st: var(--muted); }
