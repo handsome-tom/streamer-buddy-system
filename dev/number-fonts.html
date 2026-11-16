@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Number fonts</title>
+<!--
+  Options for the big number on chat event cards (bits badge, cheer, watch streak, resub),
+  side by side. The cards are the real ones the notification gallery collected
+  (notifications.html keeps them in this browser); each row swaps just the number's font.
+  On this Mac only.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+  :root { color-scheme: dark; --bg: #0b0c10; --text: #efeff1; --muted: #9a9aa6; --line: rgba(255, 255, 255, 0.06); }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 28px 24px 60px; font: 14px/1.45 Inter, "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--text); background: var(--bg); }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  .lead { margin: 0 0 24px; color: var(--muted); max-width: 760px; }
+  .opt { display: grid; grid-template-columns: 200px 1fr; gap: 18px; align-items: center; padding: 16px 0; border-top: 1px solid var(--line); }
+  .opt__name { font-size: 15px; font-weight: 700; }
+  .opt__name small { display: block; margin-top: 2px; font-weight: 500; color: var(--muted); }
+  .opt__now { display: inline-block; margin-top: 6px; padding: 1px 7px; font-size: 11px; font-weight: 700; color: #fff; background: #772ce8; border-radius: 3px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 10px 14px; }
+  .cards iframe { display: block; width: 100%; border: 0; border-radius: 8px; background: #0e0e10; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--line); }
+  .empty { color: #ff8a8a; }
+</style>
+</head>
+<body>
+<h1>Number fonts</h1>
+<p class="lead">The big number on chat event cards, in each option. Same cards, same size and color; only the number's font changes. Tell Claude the name of the one you like.</p>
+<div id="out"></div>
+<script>
+(() => {
+  // [name, CSS font-family, weight, Google Fonts family (none: the site already has it), what it's like]
+  const FONTS = [
+    ["Archivo Black", '"Archivo Black"', 400, "", "Heavy and wide. What it is now."],
+    ["Plus Jakarta Sans", '"Plus Jakarta Sans"', 800, "", "The site's own text font, extra bold."],
+    ["Pixelify Sans", '"Pixelify Sans"', 700, "", "Pixel, matches the pixel icons."],
+    ["Silkscreen", "Silkscreen", 400, "", "Blocky pixel, like the labels."],
+    ["Chakra Petch", '"Chakra Petch"', 600, "", "Squared-off, a bit techy."],
+    ["Inter", "Inter", 800, "Inter:wght@800", "Clean, close to Twitch's own."],
+    ["Rubik", "Rubik", 800, "Rubik:wght@800", "Soft, rounded corners."],
+    ["Space Grotesk", '"Space Grotesk"', 700, "Space+Grotesk:wght@700", "Quirky, modern."],
+    ["Unbounded", "Unbounded", 800, "Unbounded:wght@800", "Very wide, rounded, loud."],
+    ["Bebas Neue", '"Bebas Neue"', 400, "Bebas+Neue", "Tall and condensed, scoreboard-like."],
+    ["Barlow Condensed", '"Barlow Condensed"', 800, "Barlow+Condensed:wght@800", "Condensed, sporty."],
+    ["Oswald", "Oswald", 700, "Oswald:wght@700", "Condensed, a little classic."],
+    ["Orbitron", "Orbitron", 800, "Orbitron:wght@800", "Sci-fi, geometric."],
+    ["Press Start 2P", '"Press Start 2P"', 400, "Press+Start+2P", "Arcade pixel, chunky."],
+    ["VT323", "VT323", 400, "VT323", "Old terminal pixel, thin."],
+    ["JetBrains Mono", '"JetBrains Mono"', 800, "JetBrains+Mono:wght@800", "Monospace, every digit the same width."],
+  ];
+  const out = document.getElementById("out");
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem("notificationGallery")); } catch {}
+  const WANT = ["Bits badge", "Cheer", "Watch streak", "Resub"];
+  const items = (saved?.items || []).filter((i) => WANT.includes(i.label) && i.side === "obs");
+  if (!items.length) {
+    out.innerHTML = '<p class="empty">Open the notification gallery once first (it collects the cards), then come back here.</p>';
+    return;
+  }
+  items.sort((a, b) => WANT.indexOf(a.label) - WANT.indexOf(b.label));
+  const google = FONTS.map((f) => f[3]).filter(Boolean).map((f) => `family=${f}`).join("&");
+  const fontLink = `https://fonts.googleapis.com/css2?${google}&display=swap`;
+  const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  const page = saved.pageOf.obs;
+  const css = `dock.css?fresh=${Date.now()}`;
+  for (const [name, family, weight, , note] of FONTS) {
+    const row = document.createElement("div");
+    row.className = "opt";
+    row.innerHTML = `<div class="opt__name">${esc(name)}<small>${esc(note)}</small>${name === "Archivo Black" ? '<span class="opt__now">Now</span>' : ""}</div>`;
+    const cards = document.createElement("div");
+    cards.className = "cards";
+    for (const i of items) {
+      const f = document.createElement("iframe");
+      f.title = `${i.label} in ${name}`;
+      const open = i.chain.map((p) => `<${p.tag} class="${esc(p.cls)}" style="${p.disp && p.disp !== "contents" ? `display:${p.disp};` : ""}position:static;inset:auto;height:auto;min-height:0;max-height:none;overflow:visible;transform:none;margin:0;padding:0;border:0;box-shadow:none">`).join("");
+      const close = i.chain.slice().reverse().map((p) => `</${p.tag}>`).join("");
+      f.srcdoc = `<!doctype html><html class="${esc(page.html)}"><head><base href="${location.origin}/"><meta charset="utf-8"><link rel="stylesheet" href="${esc(css)}"><link rel="stylesheet" href="${esc(fontLink)}"><style>html,body{height:auto!important;min-height:0!important;overflow:visible!important}body{margin:0;padding:10px;background:#0e0e10}.oc-event__value{font-family:${family},sans-serif!important;font-weight:${weight}!important;letter-spacing:0!important}.oc-spark,.oc-event--first::after{animation:none!important}</style></head><body class="${esc(page.body)}"><div style="width:${Math.max(300, i.w)}px;max-width:100%">${open}${i.html}${close}</div></body></html>`;
+      f.addEventListener("load", () => {
+        const fit = () => (f.style.height = `${Math.ceil(f.contentDocument.body.getBoundingClientRect().height) + 1}px`);
+        fit();
+        f.contentDocument.fonts?.ready.then(fit);
+        setTimeout(fit, 1200);
+      });
+      cards.append(f);
+    }
+    row.append(cards);
+    out.append(row);
+  }
+})();
+</script>
+</body>
+</html>

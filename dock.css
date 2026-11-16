@@ -6469,3 +6469,14 @@ html :is(body, body.has-space.has-space) .oc-event--first .oc-event__icon svg { 
 html :is(body, body.has-space.has-space) .oc-event--first .oc-event__label { color: #fff; text-shadow: none; background: #772ce8; }
 .oc-event--first .oc-spark { background: #fff; box-shadow: 0 0 6px rgba(255, 255, 255, 0.8); }
 .oc-event--first .oc-event__who { color: rgba(255, 255, 255, 0.78); }
+
+/* The line down the left of every chat card, pixelated: a column of 4px pixels with 2px
+   gaps (square, no rounding), like the pixel icons. */
+html :is(body, body.has-space.has-space) :is(
+  .oc-line.oc-event, .oc-line.oc-notice, .oc-line.oc-cheerline, .oc-line.oc-redeem, .oc-line.oc-giftline,
+  .oc-line.oc-line--first, .oc-line.oc-line--raider, .oc-line.oc-line--highlight, .oc-line.oc-line--connection,
+  .oc-line.oc-line--flagged, .oc-line.oc-mod, .oc-top .oc-topcard
+):not(.oc-line--marked)::before {
+  border-radius: 0;
+  background: repeating-linear-gradient(180deg, var(--bar) 0 4px, transparent 4px 6px);
+}
