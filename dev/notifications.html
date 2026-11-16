@@ -62,7 +62,7 @@
   const items = [];
   const chain = (e) => {
     const list = [];
-    for (let p = e.parentElement; p && p.tagName !== "BODY"; p = p.parentElement) list.unshift({ tag: p.tagName.toLowerCase(), cls: typeof p.className === "string" ? p.className : "", id: p.id || "" });
+    for (let p = e.parentElement; p && p.tagName !== "BODY"; p = p.parentElement) list.unshift({ tag: p.tagName.toLowerCase(), cls: typeof p.className === "string" ? p.className : "", id: p.id || "", disp: p.ownerDocument.defaultView.getComputedStyle(p).display });
     return list;
   };
   const add = (label, side, e) => {
@@ -112,7 +112,6 @@
     ["!vanish note", "modVanish", 3500],
     ["Nudged question", "modNudge", 3000],
     ["Streamer asks a mod", "streamerAsk", 3500],
-    ["Panic button", "modWarn", 3000],
   ];
   for (const t of MODS) await grab(...t);
   // These change a line already in the chat, so the line itself is taken.
@@ -158,7 +157,7 @@
       f.title = i.label;
       // The parents it sat in, rebuilt (empty), so selectors that depend on them still match;
       // let loose from their fixed heights and scrolling so the piece shows whole.
-      const open = i.chain.map((p) => `<${p.tag} class="${esc(p.cls)}"${p.id ? ` id="${esc(p.id)}"` : ""} style="position:static;inset:auto;height:auto;min-height:0;max-height:none;overflow:visible;transform:none;margin:0;padding:0;border:0;box-shadow:none">`).join("");
+      const open = i.chain.map((p) => `<${p.tag} class="${esc(p.cls)}"${p.id ? ` id="${esc(p.id)}"` : ""} style="${p.disp && p.disp !== "contents" ? `display:${p.disp};` : ""}position:static;inset:auto;height:auto;min-height:0;max-height:none;overflow:visible;transform:none;margin:0;padding:0;border:0;box-shadow:none">`).join("");
       const close = i.chain.slice().reverse().map((p) => `</${p.tag}>`).join("");
       f.srcdoc = `<!doctype html><html class="${esc(pageOf[side].html)}"><head><base href="${location.origin}/"><meta charset="utf-8"><link rel="stylesheet" href="${esc(css)}"><style>html,body{height:auto!important;min-height:0!important;overflow:visible!important}body{margin:0;padding:14px;background:#0e0e10}.glow,.space,.bar{display:none!important}</style></head><body class="${esc(pageOf[side].body)}"><div style="width:${Math.max(240, i.w)}px;max-width:100%">${open}${i.html}${close}</div></body></html>`;
       f.addEventListener("load", () => {

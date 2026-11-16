@@ -120,6 +120,22 @@
     const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
     return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#18181b" : "#fff";
   };
+  // A note bubble's words: white or dark, whichever keeps the most contrast over the whole
+  // bubble. It's a gradient (the name color, a little lighter at the top and darker at the
+  // bottom: dock.css), so both ends are checked and the weaker end decides.
+  const noteInk = (hex) => {
+    const rgb = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    const lum = (c) => {
+      const [r, g, b] = c.map((v) => v / 255).map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const top = lum(rgb.map((v) => v * 0.85 + 255 * 0.15));
+    const bottom = lum(rgb.map((v) => v * 0.85));
+    const dark = lum([24, 24, 27]);
+    const onWhite = Math.min(1.05 / (top + 0.05), 1.05 / (bottom + 0.05));
+    const onDark = Math.min((top + 0.05) / (dark + 0.05), (bottom + 0.05) / (dark + 0.05));
+    return onDark > onWhite ? "#18181b" : "#fff";
+  };
   const glyph = (name, size = 18) =>
     `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" fill="currentColor">${GLYPH[name] || ICON[name]}</svg>`;
   const icon = (name, size = 15) =>
@@ -1029,7 +1045,7 @@
       const c = safeColor(n.color) || nameColor(n.from);
       if (c) {
         b.style.setProperty("--note-c", c);
-        if (inkFor(c) !== "#fff") b.classList.add("oc-notebub--light");
+        if (noteInk(c) !== "#fff") b.classList.add("oc-notebub--light");
       }
       const pic = el("span", "oc-notebub__pic");
       if (n.pic) {

@@ -5482,7 +5482,7 @@ body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; 
 .oc-notebub { --note-c: #3f7dd8; display: flex; max-width: 88%; color: #efeff1; animation: oc-note-up 0.32s ease-out; }
 .oc-notebub--mine { align-self: flex-end; }
 @keyframes oc-note-up { from { opacity: 0; transform: translateY(10px); } }
-.oc-notebub__main { position: relative; min-width: 0; padding: 6px 12px; border-radius: 18px; background: linear-gradient(180deg, color-mix(in srgb, var(--note-c) 75%, #fff), color-mix(in srgb, var(--note-c) 75%, #000)); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); text-shadow: none; overflow-wrap: anywhere; }
+.oc-notebub__main { position: relative; min-width: 0; padding: 6px 12px; border-radius: 18px; background: linear-gradient(180deg, color-mix(in srgb, var(--note-c) 85%, #fff), color-mix(in srgb, var(--note-c) 85%, #000)); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); text-shadow: none; overflow-wrap: anywhere; }
 .oc-notebub--mine .oc-notebub__main { box-shadow: 0 10px 30px color-mix(in srgb, var(--note-c) 35%, transparent); }
 .oc-notebub__head { display: inline; margin-right: 5px; } /* picture, name, then the note on the same line */
 .oc-notebub__pic { vertical-align: -5px; margin: 0 5px 0 -4px; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; overflow: hidden; background: color-mix(in srgb, var(--note-c) 60%, #000); color: #fff; font-size: 10px; font-weight: 600; }
@@ -5494,7 +5494,7 @@ body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; 
 .oc-notebub--light .oc-notebub__main, .oc-notebub--light .oc-notebub__who { color: #18181b; } /* a light name color: dark text on it */
 .oc-notebub--light .oc-notebub__time { color: rgba(24, 24, 27, 0.7); }
 /* The bottom bubble's curled tail, like a text message's. The line it's about is lit faintly. */
-.oc-notes > .oc-notebub:last-child .oc-notebub__main::after { content: ""; position: absolute; left: -5px; bottom: 0; width: 16px; height: 18px; background: color-mix(in srgb, var(--note-c) 75%, #000); clip-path: path("M6 0 Q6 14 0 18 Q10 18 16 12 L16 0 Z"); }
+.oc-notes > .oc-notebub:last-child .oc-notebub__main::after { content: ""; position: absolute; left: -5px; bottom: 0; width: 16px; height: 18px; background: color-mix(in srgb, var(--note-c) 85%, #000); clip-path: path("M6 0 Q6 14 0 18 Q10 18 16 12 L16 0 Z"); }
 .oc-notes > .oc-notebub--mine:last-child .oc-notebub__main::after { left: auto; right: -5px; clip-path: path("M10 0 Q10 14 16 18 Q6 18 0 12 L0 0 Z"); }
 .oc-line.oc-line--noted { border-radius: 6px; background: linear-gradient(90deg, rgba(63, 125, 216, 0.22), rgba(63, 125, 216, 0.06) 70%, transparent); box-shadow: none; }
 
@@ -6457,3 +6457,15 @@ html :is(body, body.has-space.has-space) .oc-line.oc-mod:is(.oc-mod--info, .oc-m
 :is(.oc-mod--info, .oc-mod--love) .oc-mod__body { font-size: 14px; }
 :is(.oc-mod--info, .oc-mod--love) .oc-mod__tag { color: var(--kind); font-size: 11px; }
 .oc-mod__kind { display: inline-grid; place-items: center; margin-right: 4px; vertical-align: -2px; color: var(--kind); }
+
+/* First-time sub, take two: white instead of gold (the line, the ring round the star, the
+   star, the sparkles), the tag in Twitch purple with white words, and a more solid card. */
+html :is(body, body.has-space.has-space) .oc-line.oc-event.oc-event--first {
+  --bar: #fff;
+  background: linear-gradient(90deg, color-mix(in srgb, #9147ff 55%, #1b1b20), color-mix(in srgb, #9147ff 28%, #1b1b20));
+}
+html :is(body, body.has-space.has-space) .oc-line.oc-event.oc-event--first .oc-event__icon { color: #fff; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 16px rgba(145, 71, 255, 0.8); }
+html :is(body, body.has-space.has-space) .oc-event--first .oc-event__icon svg { color: #fff; }
+html :is(body, body.has-space.has-space) .oc-event--first .oc-event__label { color: #fff; text-shadow: none; background: #772ce8; }
+.oc-event--first .oc-spark { background: #fff; box-shadow: 0 0 6px rgba(255, 255, 255, 0.8); }
+.oc-event--first .oc-event__who { color: rgba(255, 255, 255, 0.78); }
