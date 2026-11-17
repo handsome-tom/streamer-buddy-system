@@ -1828,6 +1828,9 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
    dock keeps the same room: dock.css .oc-line--flagged). */
 .chat-line__message.tbc-flagged {
   padding-right: 34px !important;
+  padding-top: 9px !important; /* more room above and below than an ordinary line, so it stands out */
+  padding-bottom: 9px !important;
+  margin: 4px 0;
   border-radius: 6px;
 }
 /* While a line glows, the flagger's small picture sits at its right end; pointing at the

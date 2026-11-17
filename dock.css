@@ -6797,3 +6797,13 @@ html :is(body, body.has-space.has-space) .oc-line.oc-line--noted {
 }
 html :is(body, body.has-space.has-space) .oc-line.oc-line--noted:not(.oc-line--marked)::before { content: none; }
 html body.no-chatnotes.no-chatnotes .oc-line.oc-line--noted { background: none; box-shadow: none; } /* notes switched off: no block */
+
+/* ===== The dotted pixel line down the left of chat cards: a little softer, so it says what
+   kind of card it is without shouting. (Progress bars, like the ad timer, polls and hype
+   trains, are not this line and stay at full strength.) ===== */
+html :is(body, body.has-space.has-space) :is(
+  .oc-line.oc-event, .oc-line.oc-notice, .oc-line.oc-cheerline, .oc-line.oc-redeem, .oc-line.oc-giftline,
+  .oc-line.oc-line--first, .oc-line.oc-line--raider, .oc-line.oc-line--highlight, .oc-line.oc-line--connection,
+  .oc-line.oc-line--flagged, .oc-line.oc-mod, .oc-top .oc-topcard
+):not(.oc-line--marked)::before { opacity: 0.55; }
+.qflash:not(.qflash--love):not(.qflash--seen)::after { opacity: 0.55; }

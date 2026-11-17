@@ -15,9 +15,17 @@ const tbcFeatures = []; // [{ key, label }], in the order the scripts load
 let tbcOff = null;      // keys switched off, once loaded
 const tbcWaiting = [];
 
-chrome.storage.local.get(["featuresOff", "featureList"], (d) => {
+// The tester copy (build-tester.py sets TBC_TESTER to true) keeps every feature off until the
+// tester has agreed to the tester agreement (agree.html saves "testerAgreed" { v, name, at }).
+// Until then, Twitch shows a small bar that opens it. Agreeing turns everything on, no reload.
+const TBC_TESTER = false;
+const TBC_AGREEMENT = "1"; // also in agree.js; a new number asks everyone again
+const tbcAgreed = (a) => !TBC_TESTER || (!!a && a.v === TBC_AGREEMENT);
+
+chrome.storage.local.get(["featuresOff", "featureList", "testerAgreed"], (d) => {
   tbcOff = d.featuresOff || [];
-  tbcWaiting.splice(0).forEach((go) => go());
+  if (tbcAgreed(d.testerAgreed)) tbcWaiting.splice(0).forEach((go) => go());
+  else tbcAwaitAgreement();
   // Every script has registered by now (they all run before this answer comes back).
   if ((window.top === window || !!window.TWITCH_ME) && JSON.stringify(d.featureList) !== JSON.stringify(tbcFeatures)) {
     chrome.storage.local.set({ featureList: tbcFeatures });
@@ -41,7 +49,38 @@ function whenOn(key, label, start) {
       tbcStarting = "";
     }
   };
-  tbcOff ? go() : tbcWaiting.push(go);
+  tbcOff && tbcReady ? go() : tbcWaiting.push(go);
+}
+
+let tbcReady = true; // false while the tester agreement is waiting (the tester copy)
+
+function tbcAwaitAgreement() {
+  tbcReady = false;
+  let bar = null;
+  if ((window.top === window || !!window.TWITCH_ME) && location.hostname === "www.twitch.tv") {
+    bar = document.createElement("div");
+    bar.className = "tbc-agreebar";
+    bar.setAttribute("role", "status");
+    bar.style.cssText = "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:2147483647;display:flex;gap:14px;align-items:center;" +
+      "padding:10px 10px 10px 18px;border-radius:999px;background:#1f1f2b;color:#efeff1;font:14px/1.3 system-ui,-apple-system,'Segoe UI',sans-serif;" +
+      "box-shadow:0 12px 40px rgba(0,0,0,.55),0 0 0 1px rgba(156,124,244,.35)";
+    const text = document.createElement("span");
+    text.textContent = "StreamSpace is off until you agree to the tester agreement.";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "Read and agree";
+    btn.style.cssText = "border:0;border-radius:999px;padding:8px 16px;background:#9c7cf4;color:#fff;font:600 14px/1 system-ui,-apple-system,'Segoe UI',sans-serif;cursor:pointer";
+    btn.addEventListener("click", () => tbcAlive() && chrome.runtime.sendMessage({ type: "openAgreement" }));
+    bar.append(text, btn);
+    (document.body || document.documentElement).append(bar);
+  }
+  chrome.storage.onChanged.addListener(function on(changes, area) {
+    if (area !== "local" || !changes.testerAgreed || !tbcAgreed(changes.testerAgreed.newValue)) return;
+    chrome.storage.onChanged.removeListener(on);
+    bar?.remove();
+    tbcReady = true;
+    tbcWaiting.splice(0).forEach((go) => go());
+  });
 }
 
 // ===== One page watcher for every script =====================================
