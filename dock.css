@@ -6436,7 +6436,7 @@ html :is(body, body.has-space.has-space) .oc-line.oc-event.oc-event--first { --b
 html :is(body, body.has-space.has-space) .oc-line.oc-cheerline { --bar: var(--ev); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
 html :is(body, body.has-space.has-space) .oc-line.oc-giftline { --bar: var(--ev); box-shadow: none; }
 html :is(body, body.has-space.has-space) .oc-line.oc-notice:not(.oc-event) { --bar: var(--notice, #9147ff); }
-html :is(body, body.has-space.has-space) .oc-line.oc-notice--raid { --bar: var(--raid, #ff6a00); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
+html :is(body, body.has-space.has-space) .oc-line.oc-notice.oc-notice--raid { --bar: var(--raid, #ff6a00); /* the raider's own color (beats the plain notice rule above) */ box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
 html :is(body, body.has-space.has-space) .oc-line.oc-notice--announcement { --bar: var(--notice, #9147ff); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
 html :is(body, body.has-space.has-space) .oc-line.oc-redeem { --bar: var(--k-points, #31c4f3); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
 html :is(body, body.has-space.has-space) .oc-line.oc-line--first { --bar: var(--k-first, #3ce59f); box-shadow: none; }
