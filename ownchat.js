@@ -2105,8 +2105,10 @@
         // A small tag under the big line when the number alone doesn't say what it is (Resub).
         if (ev.label) words.append(el("div", "oc-event__label", ev.label));
         const whoLine = el("div", "oc-event__who");
-        // Who gave the gift subs stands out: their name bold and white, the rest as before.
-        if (ev.gifter && ev.who.startsWith(ev.gifter)) whoLine.append(el("b", "oc-event__gifter", ev.gifter), ev.who.slice(ev.gifter.length));
+        // Whoever subscribed or gave (subs, resubs, gifts, upgrades, bits badges, donations)
+        // stands out: their name bold and white, the rest as before. They gave you money.
+        const giver = ev.gifter || (e.chatter_is_anonymous ? "Anonymous" : e.chatter_user_name || "");
+        if (giver && ev.who.startsWith(giver)) whoLine.append(el("b", "oc-event__gifter", giver), ev.who.slice(giver.length));
         else whoLine.textContent = ev.who;
         words.append(whoLine);
         if (e.message?.text) {
