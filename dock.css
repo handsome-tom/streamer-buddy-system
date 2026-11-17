@@ -6751,3 +6751,23 @@ html :is(body, body.has-space.has-space) .oc-topcard__time { font-weight: 800; }
 /* The ad timer's bar: Twitch's green (the moderator-badge green), the whole bar, as pixel dashes. */
 .twad__bar { background: repeating-linear-gradient(90deg, rgba(0, 173, 3, 0.28) 0 4px, transparent 4px 6px); }
 .twad__fill { background: repeating-linear-gradient(90deg, #00ad03 0 4px, transparent 4px 6px); }
+
+/* ===== The ad timer, all in Twitch's green (the moderator-badge green, #00ad03): a green card
+   with white words, the icon and Snooze on darker green, and the bar in light pixel dashes
+   over a dark green track, so it reads like Twitch's own notice. ===== */
+html :is(body, body.has-space.has-space) .twad {
+  color: #fff;
+  background: linear-gradient(180deg, #00b904, #008f02);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5), 0 0 18px rgba(0, 173, 3, 0.25);
+}
+html :is(body, body.has-space.has-space) .twad__title { font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); }
+html :is(body, body.has-space.has-space) .twad__sub { color: rgba(255, 255, 255, 0.88); }
+html :is(body, body.has-space.has-space) .twad__icon,
+html :is(body, body.has-space.has-space) .twad--run .twad__icon { color: #fff; background: rgba(0, 60, 1, 0.35); }
+html :is(body, body.has-space.has-space) .twad__snooze { color: #fff; font-weight: 700; background: rgba(0, 60, 1, 0.4); }
+html :is(body, body.has-space.has-space) .twad__snooze:hover:not(:disabled) { background: rgba(0, 60, 1, 0.6); }
+html :is(body, body.has-space.has-space) .twad__x { color: rgba(255, 255, 255, 0.85); }
+html :is(body, body.has-space.has-space) .twad__x:hover { color: #fff; background: rgba(0, 60, 1, 0.4); }
+html :is(body, body.has-space.has-space) .twad__note { color: #eaffea; }
+html :is(body, body.has-space.has-space) .twad__bar { background: repeating-linear-gradient(90deg, rgba(0, 50, 1, 0.55) 0 4px, transparent 4px 6px); }
+html :is(body, body.has-space.has-space) .twad__fill { background: repeating-linear-gradient(90deg, #fff 0 4px, transparent 4px 6px); }
