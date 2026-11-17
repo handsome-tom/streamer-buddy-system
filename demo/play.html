@@ -1902,22 +1902,26 @@
     setTimeout(() => docs.forEach((d) => { d.addEventListener("pointerdown", go, opts); d.addEventListener("keydown", key, opts); }), 0);
     setTimeout(off, 7100);
   }
-  // While a note points at something in the streamer's chat, chat holds still (the dock's own
-  // "you clicked in chat" pause), so a raid's crowd can't push the card away mid-read. If the
-  // card had already slid partly up, chat scrolls back to it, and to the newest line after.
+  // While a note shows on the streamer's dock, its chat holds still (the dock's own "you
+  // clicked in chat" pause), so a raid's crowd can't push the card away mid-read. If the card
+  // had already slid partly up, chat scrolls back to it. When the note goes (it fades, or a
+  // click or Escape closes it), chat restarts for sure: the demo presses the dock's own
+  // "back to newest" button, which also undoes any scrolling done while the note was up.
   function holdChat(target, box) {
-    const list = target.closest?.(".oc-list");
+    const doc = target.ownerDocument;
+    const list = target.closest?.(".oc-list") || doc?.querySelector(".oc-list");
     if (!list) return;
     const hold = () => list.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
     hold();
-    const above = target.getBoundingClientRect().top - list.getBoundingClientRect().top - 8;
-    const moved = above < 0;
-    if (moved) list.scrollTop += above;
+    if (list.contains(target)) {
+      const above = target.getBoundingClientRect().top - list.getBoundingClientRect().top - 8;
+      if (above < 0) list.scrollTop += above;
+    }
     const timer = setInterval(() => {
       if (box.isConnected && !box.classList.contains("callout--out")) return hold();
       clearInterval(timer);
-      if (moved) list.scrollTop = list.scrollHeight;
-    }, 1000);
+      doc.querySelector(".oc-more")?.click(); // back to the newest line, chat moving again
+    }, 500);
   }
   function calloutFor(id) {
     if (!firstTime(id)) return;
