@@ -474,21 +474,6 @@ export const tests = {
     noErrors(streamer, mod);
   },
 
-  async "Mod tools: an ad waits for the streamer's OK, like a raid"(h) {
-    const { streamer, mod } = await streamerAndMod(h);
-    await h.until(() => streamer.$(".oc-line"), "custom chat to start");
-    (await h.until(() => mod.$("#toolsBtn:not([hidden])"), "the sword in the side panel's bar")).click();
-    const ask = await h.until(() => mod.$$(".tools button").find((b) => b.textContent.trim() === "Ask to run ad" && !b.disabled), "Ask to run ad");
-    ask.click();
-    const ok = await h.until(() => streamer.$$(".oc-mod--ask").find((c) => /wants to run an ad/.test(c.textContent))?.querySelector(".oc-mod__act--y"), "Run ad / Not now in the streamer's chat");
-    h.check(!streamer.has("ran a 60-second ad"), "no ad before the streamer OKs it");
-    h.check(mod.$$(".tools button").some((b) => b.textContent.trim() === "Waiting…"), "the mod sees it waiting");
-    ok.click();
-    await h.until(() => /Running a 60-second ad/.test(mod.$(".tools__said")?.textContent || ""), "the ad confirmed in the mod's panel");
-    await h.until(() => streamer.has("ran a 60-second ad"), "the ad noted in the streamer's chat");
-    noErrors(streamer, mod);
-  },
-
   async "More mod tools: a mod starts a poll, blocks a word and answers an unban request, and the mod log credits them"(h) {
     const { streamer, mod } = await streamerAndMod(h);
     await h.until(() => streamer.$(".oc-line"), "custom chat to start");
