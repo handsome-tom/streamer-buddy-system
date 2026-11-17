@@ -201,20 +201,13 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
     // with dark text on a light color so it stays readable.
     const paint = (c) => {
       if (!/^#[0-9a-f]{6}$/i.test(c || "")) return false;
-      // White or dark words, whichever keeps the most contrast over the whole bubble: it's a
-      // gradient (a little lighter at the top, darker at the bottom), so both ends are checked.
+      // White words, unless the color itself is light (yellow, spring green, pale
+      // colors): only then dark words, so mid colors like blue or purple stay white.
       const rgb = [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
-      const lum = (x) => {
-        const [r, g, bl] = x.map((v) => v / 255).map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
-        return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
-      };
-      const top = lum(rgb.map((v) => v * 0.85 + 255 * 0.15));
-      const bottom = lum(rgb.map((v) => v * 0.85));
-      const dark = lum([24, 24, 27]);
-      const onWhite = Math.min(1.05 / (top + 0.05), 1.05 / (bottom + 0.05));
-      const onDark = Math.min((top + 0.05) / (dark + 0.05), (bottom + 0.05) / (dark + 0.05));
+      const [r, g, bl] = rgb.map((v) => v / 255).map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+      const light = 0.2126 * r + 0.7152 * g + 0.0722 * bl > 0.4;
       b.style.setProperty("--note-c", c);
-      b.classList.toggle("tbc-note--light", onDark > onWhite);
+      b.classList.toggle("tbc-note--light", light);
       return true;
     };
     const painted = paint(n.color);
