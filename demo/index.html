@@ -1015,16 +1015,22 @@
     </div>
   </footer>
 <script>
-  // "Created by": on every other visit (1st, 3rd, 5th...), the first time it scrolls into view,
+  // "Created by": always the first time someone ever scrolls to it, then every other visit, the first time it scrolls into view,
   // Tom glitches out to the real face for a second, then glitches back. Only if that picture
   // loads; never more than once a visit.
   (() => {
     const pic = document.querySelector(".thanks__pic"), real = pic?.querySelector(".thanks__real");
     if (!pic || !real) return;
-    let visit = 1;
-    try { visit = Number(localStorage.getItem("tomRealVisits") || 0) + 1; localStorage.setItem("tomRealVisits", String(visit)); } catch {}
-    if (visit % 2 === 0) return;
+    // Always the first time someone ever scrolls down to it; after that, every other visit.
+    let visit = 1, played = false;
+    try {
+      visit = Number(localStorage.getItem("tomRealVisits") || 0) + 1;
+      localStorage.setItem("tomRealVisits", String(visit));
+      played = localStorage.getItem("tomRealPlayed") === "1";
+    } catch {}
+    if (played && visit % 2 === 0) return;
     const go = () => {
+      try { localStorage.setItem("tomRealPlayed", "1"); } catch {}
       const glitch = () => { pic.classList.remove("is-glitch"); void pic.offsetWidth; pic.classList.add("is-glitch"); setTimeout(() => pic.classList.remove("is-glitch"), 240); };
       setTimeout(() => { glitch(); setTimeout(() => pic.classList.add("is-real"), 110); }, 500);
       setTimeout(() => { glitch(); setTimeout(() => pic.classList.remove("is-real"), 110); }, 500 + 1110);
@@ -1114,14 +1120,21 @@
 
 <script>
   // The way in: the retro page shows for a moment, glitches, and the real site is underneath.
-  // On the first load, then again every third reload after that (loads 1, 4, 7...); never for
-  // reduced motion or a link straight to a section; a click skips it.
+  // Always on someone's very first visit, then every third load after that (4, 7...); never for
+  // reduced motion; a click skips it.
   (() => {
     const r = document.getElementById("retro");
-    let loads = 1;
-    try { loads = Number(localStorage.getItem("retroLoads") || 0) + 1; localStorage.setItem("retroLoads", String(loads)); } catch {}
-    const due = (loads - 1) % 3 === 0;
-    if (!due || matchMedia("(prefers-reduced-motion: reduce)").matches || location.hash) return;
+    // Always the very first time someone visits (even arriving on a link to a section); after
+    // that, every third load (4, 7, 10...), and not on links to a section.
+    let loads = 1, seen = false;
+    try {
+      loads = Number(localStorage.getItem("retroLoads") || 0) + 1;
+      localStorage.setItem("retroLoads", String(loads));
+      seen = localStorage.getItem("retroSeen") === "1";
+    } catch {}
+    const due = !seen || ((loads - 1) % 3 === 0 && !location.hash);
+    if (!due || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    try { localStorage.setItem("retroSeen", "1"); } catch {}
     r.hidden = false;
     let done = false;
     const glitch = () => {
