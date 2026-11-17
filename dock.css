@@ -6771,3 +6771,17 @@ html :is(body, body.has-space.has-space) .twad__x:hover { color: #fff; backgroun
 html :is(body, body.has-space.has-space) .twad__note { color: #eaffea; }
 html :is(body, body.has-space.has-space) .twad__bar { background: repeating-linear-gradient(90deg, rgba(0, 50, 1, 0.55) 0 4px, transparent 4px 6px); }
 html :is(body, body.has-space.has-space) .twad__fill { background: repeating-linear-gradient(90deg, #fff 0 4px, transparent 4px 6px); }
+
+/* ===== A flagged line stands out: an outline in the flagger's color with a soft glow, a faint
+   tint of that color, and more room around it than an ordinary line (the flagger's picture
+   keeps its spot at the end). ===== */
+html :is(body, body.has-space.has-space) .oc-line.oc-line--flagged {
+  margin: 8px 6px; padding-top: 10px; padding-bottom: 10px; padding-right: 38px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--flag, #3fb2ff) 16%, transparent), color-mix(in srgb, var(--flag, #3fb2ff) 6%, transparent));
+  box-shadow: inset 0 0 0 1.5px var(--flag, #3fb2ff), 0 0 14px color-mix(in srgb, var(--flag, #3fb2ff) 60%, transparent), 0 0 30px color-mix(in srgb, var(--flag, #3fb2ff) 25%, transparent);
+  animation: ocFlagLand2 1.2s ease-out;
+}
+@keyframes ocFlagLand2 { 0% { box-shadow: inset 0 0 0 2px var(--flag, #3fb2ff), 0 0 30px var(--flag, #3fb2ff), 0 0 50px color-mix(in srgb, var(--flag, #3fb2ff) 45%, transparent); } }
+html :is(body, body.has-space.has-space) .oc-line.oc-line--flagged .oc-flagpic { right: 10px; bottom: auto; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; box-shadow: 0 0 0 2px var(--flag, #3fb2ff); }
+@media (prefers-reduced-motion: reduce) { html :is(body, body.has-space.has-space) .oc-line.oc-line--flagged { animation: none; } }
