@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StreamSpace · Welcome, tester</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="../icons/ts-mark.svg" type="image/svg+xml">
+<!--
+  The tester welcome packet: how testing StreamSpace works, start to finish, for testers and for
+  Alex. streamspace.tv/testers.html (the front page's rewrite serves demo/ files from the top level).
+  The same words, as posts to paste into the testers' Discord channel, are in
+  "twitch extesion/Tester kit/". Change the round's try-this lists in both places.
+  The ticks in "Try this" are kept in this browser only (localStorage), just for the tester.
+-->
+<style>
+  @font-face { font-family: "Plus Jakarta Sans"; font-weight: 400 800; font-display: swap; src: url("../fonts/plus-jakarta-sans.woff2") format("woff2"); }
+  @font-face { font-family: "Silkscreen"; font-weight: 400; font-display: swap; src: url("../fonts/silkscreen.woff2") format("woff2"); }
+  :root {
+    color-scheme: dark;
+    --brand: #5865f2; --brand-light: #7db0ef; --muted: #a3a3ad; --text: #e6e6ea;
+    --streamer: #a970ff; --streamer-rgb: 169, 112, 255;
+    --mod: #3fc98e; --mod-rgb: 63, 201, 142;
+    --viewer: #f0a330; --viewer-rgb: 240, 163, 48;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; color: var(--text); font: 16px/1.65 "Plus Jakarta Sans", system-ui, sans-serif;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(88, 101, 242, 0.22), transparent 60%),
+      radial-gradient(900px 500px at 95% 20%, rgba(169, 112, 255, 0.14), transparent 60%),
+      radial-gradient(900px 600px at 10% 75%, rgba(63, 201, 142, 0.08), transparent 60%),
+      #05060c;
+    background-attachment: fixed;
+  }
+  /* A few still stars, so it feels like the rest of the site without its moving backdrop. */
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.5;
+    background-image: radial-gradient(1px 1px at 20px 30px, #fff, transparent), radial-gradient(1px 1px at 140px 90px, #cfd8ff, transparent), radial-gradient(1px 1px at 260px 40px, #fff, transparent), radial-gradient(1px 1px at 330px 160px, #cfd8ff, transparent);
+    background-size: 380px 220px;
+  }
+  a { color: var(--brand-light); }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 20px; }
+  .top { position: sticky; top: 0; z-index: 10; background: rgba(5, 6, 12, 0.78); backdrop-filter: blur(10px); }
+  .top .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .top img { height: 26px; display: block; }
+  .top nav { display: flex; gap: 18px; }
+  .top nav a { font-family: "Silkscreen", monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #c6c6d0; text-decoration: none; }
+  .top nav a:hover { color: #fff; }
+  .px { font-family: "Silkscreen", "Plus Jakarta Sans", monospace; font-weight: 400; letter-spacing: 0.14em; text-transform: uppercase; }
+
+  /* Hero */
+  .hero { padding: 72px 0 40px; text-align: center; }
+  .hero .px { margin: 0 0 14px; font-size: 12px; color: var(--brand-light); }
+  .hero h1 { margin: 0 0 16px; font-size: clamp(34px, 6vw, 56px); line-height: 1.05; letter-spacing: -0.02em; font-weight: 800; color: #fff; }
+  .hero h1 span { color: var(--brand-light); }
+  .hero p { max-width: 620px; margin: 0 auto; font-size: 17px; color: #c6c6d0; }
+  .hero .heart { color: #ff6b8b; }
+
+  main { overflow-x: clip; } /* the soft glows may spread past the edge; never let them make the page scroll sideways */
+  section { padding: 48px 0; }
+  h2 { margin: 0 0 6px; font-size: clamp(24px, 3.4vw, 32px); line-height: 1.15; letter-spacing: -0.015em; font-weight: 800; color: #fff; }
+  h2::after { content: ""; display: block; width: 44px; height: 3px; margin-top: 12px; border-radius: 2px; background: var(--brand); box-shadow: 0 0 12px rgba(88, 101, 242, 0.6); }
+  .lead { max-width: 640px; margin: 14px 0 24px; color: var(--muted); }
+
+  /* How it works: numbered steps joined by a soft line (like "How do I get it?" on the front page) */
+  .steps { margin: 0; padding: 0; list-style: none; counter-reset: s; }
+  .steps li { position: relative; padding: 0 0 26px 48px; counter-increment: s; }
+  .steps li::before { content: counter(s); position: absolute; left: 0; top: 0; display: grid; place-items: center; width: 30px; height: 30px; font-family: "Silkscreen", monospace; font-size: 13px; color: #fff; background: rgba(88, 101, 242, 0.32); border-radius: 50%; box-shadow: 0 0 0 2px #7983f5, 0 0 14px rgba(88, 101, 242, 0.45); }
+  .steps li:not(:last-child)::after { content: ""; position: absolute; left: 14px; top: 34px; bottom: 4px; width: 2px; background: linear-gradient(180deg, rgba(121, 131, 245, 0.55), rgba(121, 131, 245, 0.08)); }
+  .steps b { display: block; margin-bottom: 2px; color: #fff; font-size: 16.5px; }
+  .steps span { color: var(--muted); }
+
+  /* Three roles side by side, each in its own color, no boxes: a soft glow from the top. */
+  .roles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  .role { --c: var(--brand); --c-rgb: 88, 101, 242; position: relative; padding: 18px 4px 0; }
+  .role::before { content: ""; position: absolute; inset: -20px -30px auto; height: 180px; z-index: -1; background: radial-gradient(closest-side, rgba(var(--c-rgb), 0.16), transparent); }
+  .role--streamer { --c: var(--streamer); --c-rgb: var(--streamer-rgb); }
+  .role--mod { --c: var(--mod); --c-rgb: var(--mod-rgb); }
+  .role--viewer { --c: var(--viewer); --c-rgb: var(--viewer-rgb); }
+  .role h3 { margin: 0 0 4px; font-size: 18px; color: #fff; }
+  .role .px { display: block; margin-bottom: 8px; font-size: 11px; color: var(--c); }
+  .role p { margin: 0 0 12px; font-size: 14.5px; color: var(--muted); }
+  .role ol, .role ul { margin: 0; padding-left: 20px; font-size: 14.5px; }
+  .role li { margin: 5px 0; }
+  .role li::marker { color: var(--c); }
+
+  /* Try this: tick boxes, remembered in this browser */
+  .checks { margin: 0; padding: 0; list-style: none; }
+  .checks label { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; font-size: 14.5px; cursor: pointer; }
+  .checks input { flex: none; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--c); cursor: pointer; }
+  .checks input:checked + span { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(var(--c-rgb), 0.7); }
+  .role .ask { margin: 12px 0 0; font-size: 14px; font-style: italic; color: #c6c6d0; }
+  .both { margin: 26px 0 0; color: var(--muted); font-size: 14.5px; }
+  .both b { color: #fff; }
+
+  /* Simple lists */
+  .ticks { margin: 0; padding: 0; list-style: none; }
+  .ticks li { position: relative; padding: 6px 0 6px 28px; }
+  .ticks li::before { content: ""; position: absolute; left: 4px; top: 15px; width: 10px; height: 10px; border-radius: 2px; background: var(--brand-light); box-shadow: 0 0 10px rgba(125, 176, 239, 0.6); }
+  .ticks b { color: #fff; }
+
+  /* The bug template, ready to copy */
+  .tpl { position: relative; margin: 8px 0 0; }
+  .tpl pre { margin: 0; padding: 18px 20px; overflow-x: auto; font: 14px/1.7 ui-monospace, "SF Mono", Menlo, monospace; color: #e6e6ea; background: rgba(255, 255, 255, 0.045); border-radius: 12px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35); }
+  .copy { position: absolute; top: 10px; right: 10px; padding: 7px 14px; font: 600 13px "Plus Jakarta Sans", sans-serif; color: #fff; background: var(--brand); border: 0; border-radius: 999px; cursor: pointer; box-shadow: 0 8px 22px rgba(88, 101, 242, 0.35); }
+  .copy:hover { background: #6d78f4; }
+  .note { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; }
+  .two h3 { margin: 0 0 8px; font-size: 18px; color: #fff; }
+
+  /* The streamer section: a purple glow, purple numbers. */
+  .streamer { position: relative; }
+  .streamer::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(70% 60% at 20% 30%, rgba(var(--streamer-rgb), 0.12), transparent 70%); }
+  .streamer__tag { margin: 0 0 10px; font-size: 12px; color: var(--streamer); }
+  .streamer h2::after { background: var(--streamer); box-shadow: 0 0 12px rgba(var(--streamer-rgb), 0.6); }
+  .steps--streamer li::before { background: rgba(var(--streamer-rgb), 0.3); box-shadow: 0 0 0 2px var(--streamer), 0 0 14px rgba(var(--streamer-rgb), 0.45); }
+  .steps--streamer li:not(:last-child)::after { background: linear-gradient(180deg, rgba(var(--streamer-rgb), 0.55), rgba(var(--streamer-rgb), 0.08)); }
+  .steps--streamer li { padding-bottom: 20px; }
+  .steps--streamer b { font-size: 15.5px; }
+  .steps--streamer span b { display: inline; font-size: inherit; margin: 0; }
+  .streamer__pitch { margin: 0 0 10px; color: #c6c6d0; }
+  .two h3 .logo { width: 22px; height: 22px; vertical-align: -5px; margin-right: 4px; }
+  .streamer .ticks li::before { background: var(--streamer); box-shadow: 0 0 10px rgba(var(--streamer-rgb), 0.6); }
+  footer { padding: 40px 0 70px; text-align: center; font-size: 14px; color: #8d8d97; }
+  footer a { color: #c6c6d0; margin: 0 8px; }
+  footer p { margin: 0 0 12px; }
+  footer .heart { color: #ff6b8b; }
+
+  @media (max-width: 760px) {
+    .roles, .two { grid-template-columns: 1fr; gap: 30px; }
+    .top nav { display: none; }
+    .hero { padding-top: 52px; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a href="/" aria-label="StreamSpace home"><img src="../icons/ts-wordmark.svg" alt="StreamSpace"></a>
+    <nav><a href="#how">How it works</a><a href="#setup">Set up</a><a href="#obs">Streamers</a><a href="#try">Try this</a><a href="#tell">Tell me</a></nav>
+  </div>
+</header>
+
+<main>
+  <div class="hero wrap">
+    <p class="px">Round one: the Top 8</p>
+    <h1>Welcome, <span>tester.</span></h1>
+    <p>You're one of the first eight to try StreamSpace. Thank you for doing this out of the love of your heart. <span class="heart" aria-hidden="true">&#9829;</span> Here's everything you need, start to finish.</p>
+  </div>
+
+  <section id="how">
+    <div class="wrap">
+      <h2>How testing works</h2>
+      <p class="lead">A test round is a few weeks of using StreamSpace on real streams, telling me what happens, then a short survey. Then I fix things, and we go again.</p>
+      <ol class="steps">
+        <li><b>Ask to join</b><span>On streamspace.tv, pick which one you are, add your Twitch name and message me on Discord.</span></li>
+        <li><b>Get picked</b><span>Testers are hand-picked so each round has a good mix of streamers, mods and viewers.</span></li>
+        <li><b>Join the testers' channel</b><span>You get the StreamSpace Tester role in Discord, which opens a private channel just for testers.</span></li>
+        <li><b>Install and sign in</b><span>I DM you the install link (and the OBS dock link if you stream). The steps are below.</span></li>
+        <li><b>Use it, and try this round's list</b><span>Stream, mod or hang out like you normally would, and tick off the things on the list.</span></li>
+        <li><b>Tell me what happens</b><span>Bugs, confusion, things you love, things that annoy you. All of it helps.</span></li>
+        <li><b>Wrap-up survey</b><span>About five minutes at the end of the round. Then you can stay on for round two if you'd like.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="setup">
+    <div class="wrap">
+      <h2>Getting set up</h2>
+      <p class="lead">Takes about five minutes. Everyone starts with the browser extension. Streamers add one more thing in OBS.</p>
+      <div class="roles">
+        <div class="role role--streamer">
+          <span class="px">If you stream</span>
+          <h3>Extension + OBS dock</h3>
+          <ol>
+            <li>Install StreamSpace from the link I DM'd you (Chrome or Brave).</li>
+            <li>Agree to the tester agreement when it pops up.</li>
+            <li>Sign in with Twitch when it asks.</li>
+            <li>Add the StreamSpace dock in OBS. <a href="#obs">Step by step below.</a></li>
+          </ol>
+        </div>
+        <div class="role role--mod">
+          <span class="px">If you mod</span>
+          <h3>Extension + panel</h3>
+          <ol>
+            <li>Install StreamSpace from the link I DM'd you (Chrome or Brave).</li>
+            <li>Agree to the tester agreement when it pops up.</li>
+            <li>Sign in with Twitch when it asks.</li>
+            <li>Click the StreamSpace button in your browser's toolbar to open your panel next to Twitch.</li>
+          </ol>
+        </div>
+        <div class="role role--viewer">
+          <span class="px">If you watch</span>
+          <h3>Just the extension</h3>
+          <ol>
+            <li>Install StreamSpace from the link I DM'd you (Chrome or Brave).</li>
+            <li>Agree to the tester agreement when it pops up.</li>
+            <li>Open or refresh any twitch.tv tab. That's it.</li>
+          </ol>
+        </div>
+      </div>
+      <p class="both">Then post in the testers' channel that you're in, so I can connect you with the right people. <b>Stream and mod?</b> Do the streamer setup; your panel works too.</p>
+    </div>
+  </section>
+
+  <section id="obs" class="streamer">
+    <div class="wrap">
+      <p class="px streamer__tag">For streamers</p>
+      <h2>Your OBS dock</h2>
+      <p class="lead">The dock is where your mods' questions, Twitch's events and (if you like) your chat show up, right inside OBS, so you never have to leave your stream to check on things.</p>
+      <div class="two">
+        <div>
+          <h3><img class="logo" src="brand/logo-obs.png" alt="" width="22" height="22"> Add it to OBS</h3>
+          <ol class="steps steps--streamer">
+            <li><b>Open Custom Browser Docks</b><span>In OBS's menu bar: <b>Docks → Custom Browser Docks…</b></span></li>
+            <li><b>Add the dock</b><span>Name it StreamSpace, paste the dock link I DM'd you, then click <b>Apply</b>.</span></li>
+            <li><b>Put it where you'll see it</b><span>Drag the new panel next to your chat, or anywhere that's easy to glance at while you're live.</span></li>
+            <li><b>Sign in with Twitch</b><span>Click <b>Sign in with Twitch</b> in the dock and allow it.</span></li>
+            <li><b>Add your mods</b><span>Open <b>Connections</b> in the dock and add your mods' Twitch names. They show up once they've added you back.</span></li>
+            <li><b>Allow mod tools when asked</b><span>The first time a mod uses a tool like a poll or slow mode, the dock asks you to allow it. One tap.</span></li>
+          </ol>
+          <p class="note">Want your Twitch chat inside the same dock? Ask me for the chat version of the link, then you can close OBS's own chat dock.</p>
+        </div>
+        <div>
+          <h3><img class="logo" src="brand/logo-chrome.png" alt="" width="22" height="22"><img class="logo" src="brand/logo-brave.png" alt="" width="22" height="22"> Get the extension too</h3>
+          <p class="streamer__pitch">The dock covers you while you're live. The extension covers you the rest of the time, and it's worth having even if you never mod for anyone.</p>
+          <ul class="ticks">
+            <li><b>The Cat Signal:</b> a green cat spins on the StreamSpace icon when a channel you mod for goes live.</li>
+            <li><b>Split screen:</b> watch two streams side by side, each with its own chat.</li>
+            <li><b>Notes on people:</b> right-click a name to remember where you know them from.</li>
+            <li><b>Quick phrases and pinned emotes:</b> for the things you type every stream.</li>
+            <li><b>Bookmarks on your VODs:</b> mark moments to clip or come back to later.</li>
+            <li><b>Your Twitch, tidied:</b> pinned channels, clear all notifications, watch streaks.</li>
+          </ul>
+          <p class="note">Same install link as everyone else. One extension does it all.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="try">
+    <div class="wrap">
+      <h2>Round one: try this</h2>
+      <p class="lead">Use StreamSpace the way you normally would, and try these along the way. Your ticks are saved in this browser, just for you.</p>
+      <div class="roles">
+        <div class="role role--streamer">
+          <span class="px">If you stream</span>
+          <ul class="checks" data-list="streamer">
+            <li><label><input type="checkbox"><span>Keep the StreamSpace dock open in OBS for a whole stream</span></label></li>
+            <li><label><input type="checkbox"><span>Answer a mod's question from the dock with one tap</span></label></li>
+            <li><label><input type="checkbox"><span>Let a mod run a mod tool for you (a poll, slow mode or a clip)</span></label></li>
+            <li><label><input type="checkbox"><span>Get raided or raid out, and check what the raid card shows</span></label></li>
+            <li><label><input type="checkbox"><span>Ask your mods something from the dock</span></label></li>
+            <li><label><input type="checkbox"><span>Notice if anything in the dock ever distracts you mid-stream</span></label></li>
+          </ul>
+          <p class="ask">Then tell me: what did you actually use, and what did you ignore?</p>
+        </div>
+        <div class="role role--mod">
+          <span class="px">If you mod</span>
+          <ul class="checks" data-list="mod">
+            <li><label><input type="checkbox"><span>Ask the streamer something from the panel instead of in chat</span></label></li>
+            <li><label><input type="checkbox"><span>Nudge a question that's been waiting</span></label></li>
+            <li><label><input type="checkbox"><span>Flag a chat line, and leave a note on one</span></label></li>
+            <li><label><input type="checkbox"><span>Run a mod tool (poll, chat mode, clip or channel points refund)</span></label></li>
+            <li><label><input type="checkbox"><span>Check Streamer View to see what's on the streamer's dock</span></label></li>
+            <li><label><input type="checkbox"><span>Watch for the Cat Signal when someone you mod for goes live</span></label></li>
+            <li><label><input type="checkbox"><span>Use a mod room or a private chat with the other mods</span></label></li>
+          </ul>
+          <p class="ask">Then tell me: what saved you time, and what got in the way?</p>
+        </div>
+        <div class="role role--viewer">
+          <span class="px">If you watch</span>
+          <ul class="checks" data-list="viewer">
+            <li><label><input type="checkbox"><span>Right-click a name and leave yourself a note about them</span></label></li>
+            <li><label><input type="checkbox"><span>Save a quick phrase you type a lot</span></label></li>
+            <li><label><input type="checkbox"><span>Pin a few favorite emotes</span></label></li>
+            <li><label><input type="checkbox"><span>Drop a bookmark on a stream or VOD (right-click the seek bar)</span></label></li>
+            <li><label><input type="checkbox"><span>Check your watch streak flame</span></label></li>
+            <li><label><input type="checkbox"><span>Pin a channel to the top of your sidebar</span></label></li>
+          </ul>
+          <p class="ask">Then tell me: which of these would you miss if they went away?</p>
+        </div>
+      </div>
+      <p class="both"><b>Stream and mod?</b> Do both lists, and tell me how switching between the two felt.</p>
+    </div>
+  </section>
+
+  <section id="tell">
+    <div class="wrap">
+      <h2>Telling me things</h2>
+      <p class="lead">"I didn't get what this button does" is just as useful as a crash. Three ways, pick whichever's easiest:</p>
+      <ul class="ticks">
+        <li><b>Something broke:</b> copy the template below, fill it in and post it in the testers' channel.</li>
+        <li><b>Quick thoughts:</b> just post them in the testers' channel.</li>
+        <li><b>From inside StreamSpace:</b> Settings → Send feedback comes straight to me.</li>
+      </ul>
+      <div class="tpl">
+        <button type="button" class="copy" id="copyTpl">Copy</button>
+        <pre id="tpl">What happened:
+What I expected:
+What I clicked right before:
+Where: (OBS dock / Chrome panel / on twitch.tv / the website)
+Whose channel:
+Browser: (Chrome / Brave)   Computer: (Mac / Windows)
+Did it happen again when I tried?: (yes / no / didn't try)</pre>
+      </div>
+      <p class="note">A screenshot or a short clip helps a lot. Don't stress about every line; half a report beats no report.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap two">
+      <div>
+        <h3>What I'm asking</h3>
+        <ul class="ticks">
+          <li>Use it on real streams, the way you normally would.</li>
+          <li>Try the things on this round's list.</li>
+          <li>Tell me when something breaks, confuses you or annoys you.</li>
+          <li>Keep it between us for now: no screenshots or clips in public yet.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Good to know</h3>
+        <ul class="ticks">
+          <li>It's a test, so things will break sometimes.</li>
+          <li>Nothing you do can hurt your channel.</li>
+          <li>You can turn any feature off, or remove the extension, whenever you like.</li>
+          <li>Testers get credited on streamspace.tv, and a say in what gets built next.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Thank you for testing. <span class="heart" aria-hidden="true">&#9829;</span></p>
+    <p><a href="/">streamspace.tv</a><a href="/tester-agreement.html">Tester agreement</a><a href="/privacy.html">Privacy</a></p>
+  </div>
+</footer>
+
+<script>
+  // Ticks in "Try this", kept in this browser only; the page works the same without them.
+  (() => {
+    const KEY = "testerTicks:round1";
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch {}
+    for (const list of document.querySelectorAll(".checks")) {
+      const boxes = [...list.querySelectorAll("input")];
+      boxes.forEach((b, i) => {
+        const id = `${list.dataset.list}:${i}`;
+        b.checked = !!saved[id];
+        b.addEventListener("change", () => {
+          saved[id] = b.checked;
+          try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch {}
+        });
+      });
+    }
+  })();
+  // Copy the bug template.
+  document.getElementById("copyTpl").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    try {
+      await navigator.clipboard.writeText(document.getElementById("tpl").textContent);
+      btn.textContent = "Copied!";
+    } catch {
+      const r = document.createRange();
+      r.selectNodeContents(document.getElementById("tpl"));
+      const sel = getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
+      btn.textContent = "Selected: press Copy";
+    }
+    setTimeout(() => (btn.textContent = "Copy"), 2200);
+  });
+</script>
+</body>
+</html>
