@@ -1031,9 +1031,18 @@
     let role = "";
     const nameBox = document.getElementById("twitchName");
     const shown = document.getElementById("requestMsg");
-    const request = () => `Hi! I'd like to test StreamSpace.\nI'm: ${role}\nMy Twitch name: ${nameBox.value.trim().replace(/^@/, "") || "(add it here)"}`;
+    const request = () => `Hi! I'd like to test StreamSpace.\nI'm: ${role}\nMy Twitch name: ${twitchName()}`;
+    const twitchName = () => nameBox.value.trim().replace(/^@/, "");
+    const ready = () => !!(role && twitchName());
+    // The request is logged on the relay (the owner sees it in the dock), then they message on Discord.
+    const JOIN_URL = location.hostname === "localhost" ? "http://localhost:8788/api/join" : "https://streamer-buddy-relay.handsome-tom.workers.dev/api/join";
+    const logRequest = () => {
+      try {
+        fetch(JOIN_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: twitchName(), role }), keepalive: true }).catch(() => {});
+      } catch {}
+    };
     const lock = () => {
-      for (const b of [discord, mail]) b.setAttribute("aria-disabled", role ? "false" : "true");
+      for (const b of [discord, mail]) b.setAttribute("aria-disabled", ready() ? "false" : "true");
       if (mail.dataset.email) {
         mail.hidden = false;
         mail.href = role ? `mailto:${mail.dataset.email}?subject=${encodeURIComponent(`StreamSpace tester request (${role})`)}&body=${encodeURIComponent(request())}` : "#";
@@ -1045,16 +1054,23 @@
       hint.textContent = "";
       lock();
     });
+    nameBox.addEventListener("input", () => { hint.textContent = ""; lock(); });
     const pickFirst = (e) => {
-      if (role) return false;
+      if (ready()) return false;
       e.preventDefault();
-      hint.textContent = "Pick which one you are first, so I know how to fit you in.";
-      opts[0].focus();
+      if (!role) {
+        hint.textContent = "Pick which one you are first, so I know how to fit you in.";
+        opts[0].focus();
+      } else {
+        hint.textContent = "Add your Twitch name too, so I know who's asking.";
+        nameBox.focus();
+      }
       return true;
     };
     mail.addEventListener("click", (e) => pickFirst(e));
     discord.addEventListener("click", async (e) => {
       if (pickFirst(e)) return;
+      logRequest();
       const user = discord.dataset.user;
       let copied = false;
       try { await navigator.clipboard.writeText(request()); copied = true; } catch {}

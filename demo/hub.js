@@ -158,7 +158,13 @@ const relay = (() => {
     store.clear();
     hub = new Hub(ctx, { ...ENV, ...extra });
   }
-  return { connect, reset };
+  // A page posting to the relay's web address (the tests use it for /api/join and /api/agree).
+  async function post(path, body, origin = "https://streamspace.tv") {
+    const req = { method: "POST", url: `https://relay${path}`, headers: new Headers({ Origin: origin }), text: async () => JSON.stringify(body) };
+    const res = path === "/api/join" ? await hub.join(req) : await hub.agree(req);
+    return { status: res.status, body: res.status === 204 ? null : await res.json() };
+  }
+  return { connect, reset, post };
 })();
 
 // ===== The pretend Twitch =====================================================================
@@ -930,3 +936,4 @@ function seed(login) {
 window.SANDBOX = { Socket, fetch: (url, init) => twitch.api(url, init), seed, say: (who, text) => twitch.controls.say(who, text) };
 export const pretendTwitch = twitch.controls;
 export const resetRelay = (extra) => relay.reset(extra);
+export const relayPost = (path, body, origin) => relay.post(path, body, origin);

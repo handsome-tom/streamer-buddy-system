@@ -377,6 +377,33 @@ export const tests = {
     noErrors(dock, tomsPanel);
   }),
 
+  "a tester request from the website reaches the owner's log, and only the owner": withAllowList(async (h) => {
+    const tom = h.person("tom");
+    await tom.ready;
+    tom.send({ t: "allow", login: "streamer", on: true });
+    await tom.next("state", (m) => (m.allowed || []).some((a) => (a.login || a) === "streamer"));
+    const streamer = h.person("streamer");
+    await streamer.ready;
+    const ok = await h.relayPost("/api/join", { name: "@INeverDie", role: "Stream and mod" });
+    h.check(ok.status === 200, `the request should be saved (got ${ok.status})`);
+    const bad = await h.relayPost("/api/join", { name: "x", role: "Hacker" });
+    h.check(bad.status === 400, "a made-up role should be turned away");
+    const elsewhere = await h.relayPost("/api/join", { name: "x", role: "Mod only" }, "https://example.com");
+    h.check(elsewhere.status === 403, "a request from another website should be turned away");
+    await h.until(() => tom.state.reports === 1, "the owner to see 1 new item");
+    tom.send({ t: "reports" });
+    const { joins } = await tom.next("reports");
+    h.check(joins.length === 1 && joins[0].name === "INeverDie" && joins[0].role === "Stream and mod", "the owner should get the request, @ taken off");
+    streamer.send({ t: "reports" });
+    await new Promise((r) => setTimeout(r, 300));
+    h.check(!streamer.seen("reports"), "only the owner should get the requests");
+    const tomsPanel = await h.panel("tom", "ext");
+    (await h.until(() => tomsPanel.$("#peopleBtn:not([hidden])"), "the owner's Connections button")).click();
+    (await h.until(() => tomsPanel.$(".cx__reports .cx__allowhead"), "the Testers, feedback & problems card")).click();
+    await h.until(() => tomsPanel.has("INeverDie · Stream and mod"), "the request in the owner's panel");
+    noErrors(tomsPanel);
+  }),
+
   "an error in the dock is reported to the owner once, without what anyone typed": withAllowList(async (h) => {
     const tom = h.person("tom");
     await tom.ready;
@@ -444,6 +471,21 @@ export const tests = {
     h.check(!mod.$(".tools__raiding"), "no raid before the streamer OKs it");
     ok.click();
     await h.until(() => /Raiding lumpthegreen/.test(mod.$(".tools__raiding")?.textContent || ""), "the raid shown in the mod's panel");
+    noErrors(streamer, mod);
+  },
+
+  async "Mod tools: an ad waits for the streamer's OK, like a raid"(h) {
+    const { streamer, mod } = await streamerAndMod(h);
+    await h.until(() => streamer.$(".oc-line"), "custom chat to start");
+    (await h.until(() => mod.$("#toolsBtn:not([hidden])"), "the sword in the side panel's bar")).click();
+    const ask = await h.until(() => mod.$$(".tools button").find((b) => b.textContent.trim() === "Ask to run ad" && !b.disabled), "Ask to run ad");
+    ask.click();
+    const ok = await h.until(() => streamer.$$(".oc-mod--ask").find((c) => /wants to run an ad/.test(c.textContent))?.querySelector(".oc-mod__act--y"), "Run ad / Not now in the streamer's chat");
+    h.check(!streamer.has("ran a 60-second ad"), "no ad before the streamer OKs it");
+    h.check(mod.$$(".tools button").some((b) => b.textContent.trim() === "Waiting…"), "the mod sees it waiting");
+    ok.click();
+    await h.until(() => /Running a 60-second ad/.test(mod.$(".tools__said")?.textContent || ""), "the ad confirmed in the mod's panel");
+    await h.until(() => streamer.has("ran a 60-second ad"), "the ad noted in the streamer's chat");
     noErrors(streamer, mod);
   },
 
