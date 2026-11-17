@@ -1487,7 +1487,7 @@
   document.getElementById("modFlag").addEventListener("click", () => {
     const line = pretendTwitch.recentLine();
     if (!line) return said("Nothing in chat to flag yet: turn the chat feed on, or have someone talk");
-    send(me, { t: "flash", kind: "chat", to: "streamer", channel: "streamer", chatter: line.who.toLowerCase(), chatterName: line.who, chatterColor: line.color, text: line.text, color: "#3fb2ff" });
+    send(me, { t: "flash", kind: "chat", to: "streamer", channel: "streamer", chatter: line.who.toLowerCase(), chatterName: line.who, chatterColor: line.color, text: line.text, color: "#3fc98e" }); // flags glow in the flagger's color (BlazeMod420's green)
     said(`${me} flagged ${line.who}'s line: it glows in the streamer's chat`);
   });
 

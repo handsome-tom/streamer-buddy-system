@@ -1084,6 +1084,9 @@
       b.title = `${n.fromName || n.from}'s note on ${n.chatterName || n.chatter}'s message`;
       stack.append(b);
       line.classList.add("oc-line--noted");
+      // The whole block (notes and the message) takes the newest note writer's color, so it
+      // reads as one: the note is about this line.
+      if (c) line.style.setProperty("--note-line", c);
       return true;
     }
     timers.push(setInterval(() => notes.forEach(placeNote), 1000));
