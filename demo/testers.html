@@ -8,7 +8,9 @@
 <link rel="icon" href="../icons/ts-mark.svg" type="image/svg+xml">
 <!--
   The tester welcome packet: how testing StreamSpace works, start to finish, for testers and for
-  Alex. streamspace.tv/testers.html (the front page's rewrite serves demo/ files from the top level).
+  Alex. It's the test site's home page, test.streamspace.tv (.htaccess), behind the tester agreement
+  screen (tester-gate.js), so everyone agrees before they read on; streamspace.tv/testers.html sends
+  people here.
   The same words, as posts to paste into the testers' Discord channel, are in
   "twitch extesion/Tester kit/". Change the round's try-this lists in both places.
   The ticks in "Try this" are kept in this browser only (localStorage), just for the tester.
@@ -140,11 +142,12 @@
     .hero { padding-top: 52px; }
   }
 </style>
+<script src="/tester-gate.js"></script>
 </head>
 <body>
 <header class="top">
   <div class="wrap">
-    <a href="/" aria-label="StreamSpace home"><img src="../icons/ts-wordmark.svg" alt="StreamSpace"></a>
+    <a href="https://streamspace.tv/" aria-label="StreamSpace home"><img src="../icons/ts-wordmark.svg" alt="StreamSpace"></a>
     <nav><a href="#how">How it works</a><a href="#setup">Set up</a><a href="#obs">Streamers</a><a href="#try">Try this</a><a href="#tell">Tell me</a></nav>
   </div>
 </header>
@@ -175,15 +178,14 @@
   <section id="setup">
     <div class="wrap">
       <h2>Getting set up</h2>
-      <p class="lead">Takes about five minutes. Everyone starts with the browser extension. Streamers add one more thing in OBS.</p>
+      <p class="lead">Takes about five minutes. You already agreed to the tester agreement to open this page; StreamSpace asks once more when you sign in with Twitch. Everyone starts with the browser extension. Streamers add one more thing in OBS.</p>
       <div class="roles">
         <div class="role role--streamer">
           <span class="px">If you stream</span>
           <h3>Extension + OBS dock</h3>
           <ol>
             <li>Install StreamSpace from the link I DM'd you (Chrome or Brave).</li>
-            <li>Agree to the tester agreement when it pops up.</li>
-            <li>Sign in with Twitch when it asks.</li>
+            <li>Sign in with Twitch when it asks, then agree to the tester agreement when it pops up.</li>
             <li>Add the StreamSpace dock in OBS. <a href="#obs">Step by step below.</a></li>
           </ol>
         </div>
@@ -192,8 +194,7 @@
           <h3>Extension + panel</h3>
           <ol>
             <li>Install StreamSpace from the link I DM'd you (Chrome or Brave).</li>
-            <li>Agree to the tester agreement when it pops up.</li>
-            <li>Sign in with Twitch when it asks.</li>
+            <li>Sign in with Twitch when it asks, then agree to the tester agreement when it pops up.</li>
             <li>Click the StreamSpace button in your browser's toolbar to open your panel next to Twitch.</li>
           </ol>
         </div>
@@ -202,7 +203,6 @@
           <h3>Just the extension</h3>
           <ol>
             <li>Install StreamSpace from the link I DM'd you (Chrome or Brave).</li>
-            <li>Agree to the tester agreement when it pops up.</li>
             <li>Open or refresh any twitch.tv tab. That's it.</li>
           </ol>
         </div>
@@ -226,7 +226,7 @@
               <span class="link__alt">Your Twitch chat comes inside the dock, so you can close OBS's own chat dock.</span>
             </li>
             <li><b>Put it where you'll see it</b><span>Drag the new panel next to your chat, or anywhere that's easy to glance at while you're live.</span></li>
-            <li><b>Sign in with Twitch</b><span>Click <b>Sign in with Twitch</b> in the dock and allow it.</span></li>
+            <li><b>Sign in with Twitch</b><span>Click <b>Sign in with Twitch</b> in the dock and allow it. The tester agreement pops up once: read it, tick the box and press <b>I agree</b>.</span></li>
             <li><b>Add your mods</b><span>Your mods need to be in the testing program too, with StreamSpace installed. Then open <b>Connections</b> in the dock and add their Twitch names. They show up once they've added you back.</span></li>
             <li><b>Allow mod tools when asked</b><span>The first time a mod uses a tool like a poll or slow mode, the dock asks you to allow it. One tap.</span></li>
           </ol>
@@ -337,7 +337,7 @@ Did it happen again when I tried?: (yes / no / didn't try)</pre>
 <footer>
   <div class="wrap">
     <p>Thank you for testing. <span class="heart" aria-hidden="true">&#9829;</span></p>
-    <p><a href="/">streamspace.tv</a><a href="/tester-agreement.html">Tester agreement</a><a href="/privacy.html">Privacy</a></p>
+    <p><a href="https://streamspace.tv/">streamspace.tv</a><a href="/agreement">Tester agreement</a><a href="https://streamspace.tv/privacy.html">Privacy</a></p>
   </div>
 </footer>
 

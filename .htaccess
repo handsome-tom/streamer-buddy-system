@@ -19,11 +19,22 @@ RewriteRule ^ - [F,L]
 RewriteRule ^(\.git|\.githooks|dev|tests)(/|$) - [F,L]
 RewriteRule ^(README\.md|\.gitignore|relay/wrangler\.toml)$ - [F,L]
 
-# The test site (test.streamspace.tv) opens on the Testing Playground (the demo's two panels,
-# nothing else), and its copy of the website's front page is at test.streamspace.tv/demo/.
+# The test site (test.streamspace.tv) opens on the tester instructions (demo/testers.html, behind
+# the tester agreement screen); the Testing Playground (the demo's two panels, nothing else) is at
+# test.streamspace.tv/playground, and its copy of the website's front page at /demo/.
 RewriteCond %{HTTP_HOST} ^test\. [NC]
 RewriteCond %{QUERY_STRING} ^$
-RewriteRule ^$ demo/playground.html [L]
+RewriteRule ^$ demo/testers.html [L]
+RewriteCond %{HTTP_HOST} ^test\. [NC]
+RewriteRule ^playground/$ /playground [R=301,L]
+RewriteCond %{HTTP_HOST} ^test\. [NC]
+RewriteRule ^playground$ demo/playground.html [L]
+# The tester agreement's short address, on both sites: /agreement.
+RewriteRule ^agreement/$ /agreement [R=301,L]
+RewriteRule ^agreement$ tester-agreement.html [L]
+# The instructions live on the test site; the old address on streamspace.tv sends people there.
+RewriteCond %{HTTP_HOST} !^test\. [NC]
+RewriteRule ^testers\.html$ https://test.streamspace.tv/ [R=302,L]
 
 # The demo is the front page: streamspace.tv/ shows demo/index.html.
 # Typed or linked /demo/ goes to / so there's one address for it (not on the test site).

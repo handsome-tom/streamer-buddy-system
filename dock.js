@@ -615,6 +615,81 @@
     }
   }
 
+  // ===== The tester agreement, when you connect to Twitch ===================================
+  // StreamSpace is in testing, and the store copy of the extension doesn't ask testers to agree,
+  // so the dock does: right after signing in with Twitch, before anything else, it shows the
+  // tester agreement (tester-agreement.html) to read through, with a tick box and I agree. That
+  // goes to the relay's agreement log (POST /api/agree, the owner sees it in Connections), and
+  // this browser remembers it for this Twitch name, so it only asks again when the agreement's
+  // version changes. AGREEMENT_VERSION is also in tester-agreement.html, tester-gate.js and the
+  // extension's agree.html. Skipped in the demo and the automatic tests (DEV / SANDBOX).
+  const AGREEMENT_VERSION = "1";
+  const AGREE_URL = location.hostname === "localhost" ? "http://localhost:8788/api/agree" : "https://streamer-buddy-relay.handsome-tom.workers.dev/api/agree";
+  function testerAgreement(login) {
+    const KEY = "ssTesterAgreedDock";
+    try {
+      const had = JSON.parse(localStorage.getItem(KEY) || "null");
+      if (had && had.v === AGREEMENT_VERSION && had.login === login) return Promise.resolve();
+    } catch {}
+    return new Promise((done) => {
+      const where = EMBED ? "side panel" : LIVECHAT ? "OBS dock" : "dock";
+      const box = el("div", "agree");
+      box.setAttribute("role", "dialog");
+      box.setAttribute("aria-modal", "true");
+      const card = el("form", "agree__card");
+      const title = el("h2", "agree__title", "Before you start testing");
+      title.id = "agreeTitle";
+      box.setAttribute("aria-labelledby", "agreeTitle");
+      const lead = el("p", "agree__lead", "StreamSpace is still in testing. Please read the tester agreement. In short: use it, break it, tell us what you think, but don't copy it or share it.");
+      const frame = el("iframe", "agree__doc");
+      frame.src = "tester-agreement.html?bare";
+      frame.title = "StreamSpace tester agreement";
+      const own = el("a", "agree__own", "Open the agreement in its own tab");
+      own.href = "https://streamspace.tv/agreement";
+      own.target = "_blank";
+      own.rel = "noopener";
+      const tick = el("label", "agree__tick");
+      const cb = el("input");
+      cb.type = "checkbox";
+      tick.append(cb, el("span", null, `I've read the tester agreement and agree to it, as ${login}.`));
+      const err = el("p", "agree__err");
+      err.setAttribute("aria-live", "polite");
+      const go = el("button", "agree__go", "I agree");
+      go.type = "submit";
+      go.disabled = true;
+      const out = el("button", "agree__out", "Not now (sign out)");
+      out.type = "button";
+      out.addEventListener("click", signOut);
+      const row = el("div", "agree__row");
+      row.append(go, out);
+      cb.addEventListener("change", () => (go.disabled = !cb.checked));
+      card.append(title, lead, frame, own, tick, err, row);
+      card.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!cb.checked) return;
+        go.disabled = true;
+        err.textContent = "";
+        try {
+          const res = await fetch(AGREE_URL, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ name: login, where, version: AGREEMENT_VERSION, build: window.DOCK_VERSION ? `build ${window.DOCK_VERSION}` : "" }),
+          });
+          if (!res.ok) throw new Error(String(res.status));
+          try { localStorage.setItem(KEY, JSON.stringify({ v: AGREEMENT_VERSION, login, at: Date.now() })); } catch {}
+          box.remove();
+          done();
+        } catch {
+          err.textContent = "Couldn't reach StreamSpace's server to save that. Check your connection and press I agree again.";
+          go.disabled = false;
+        }
+      });
+      box.append(card);
+      document.body.append(box);
+      cb.focus();
+    });
+  }
+
   async function validate() {
     const token = get("token");
     if (!token) return null;
@@ -5846,7 +5921,7 @@
     const rows = [["Twitch name", "Agreed (your time)", "Agreed (UTC)", "Where", "Agreement version", "Build", "Country"]];
     for (const g of list) {
       const at = new Date(g.at);
-      rows.push([g.name, at.toLocaleString(), at.toISOString(), g.where === "test site" ? "test site" : "extension", g.version, g.build, g.country]);
+      rows.push([g.name, at.toLocaleString(), at.toISOString(), g.where || "extension", g.version, g.build, g.country]);
     }
     const blob = new Blob([rows.map((r) => r.map(cell).join(",")).join("\r\n")], { type: "text/csv" });
     const a = el("a");
@@ -5917,7 +5992,7 @@
     for (const g of agreements) {
       const row = el("div", "rep");
       const when = new Date(g.at).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
-      row.append(el("div", "rep__text", g.name), el("div", "rep__who", `${when} · ${g.where === "test site" ? "test site" : "extension"} · agreement ${g.version || "?"}${g.build ? ` · ${g.build}` : ""}${g.country ? ` · ${g.country}` : ""}`));
+      row.append(el("div", "rep__text", g.name), el("div", "rep__who", `${when} · ${g.where || "extension"} · agreement ${g.version || "?"}${g.build ? ` · ${g.build}` : ""}${g.country ? ` · ${g.country}` : ""}`));
       card.append(row);
     }
     card.append(el("div", "cx__label", `Feedback · ${feedback.length}`));
@@ -7178,6 +7253,8 @@
     }
     if (!TWITCH_CLIENT_ID) return showMessage("Not set up yet", "Put the Twitch app's Client ID in config.js.");
     let error = "";
+    // On this Mac only: ?agreetest=<name> shows the tester agreement screen (no Twitch needed).
+    if (TESTING && params.has("agreetest")) await testerAgreement(params.get("agreetest") || "tester");
     if (DEV) {
       // ?expires=<minutes> pretends the sign-in runs out then (testing the warning).
       me = { login: DEV.toLowerCase(), expiresAt: params.has("expires") ? Date.now() + Number(params.get("expires")) * 60000 : 0 };
@@ -7191,6 +7268,7 @@
       }
     }
     if (!me) return showSignedOut(error ? `Twitch said: ${error}` : "");
+    if (!DEV && !SANDBOX) await testerAgreement(me.login);
     askBtn.hidden = peopleBtn.hidden = false;
     shareSignin(get("token"));
     setStatus("Connecting…", "wait");
