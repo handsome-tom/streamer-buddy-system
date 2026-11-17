@@ -8,9 +8,9 @@
 <link rel="icon" href="../icons/ts-mark.svg" type="image/svg+xml">
 <!--
   The tester welcome packet: how testing StreamSpace works, start to finish, for testers and for
-  Alex. It's the test site's home page, test.streamspace.tv (.htaccess), behind the tester agreement
-  screen (tester-gate.js), so everyone agrees before they read on; streamspace.tv/testers.html sends
-  people here.
+  Alex. It's the test site's home page, test.streamspace.tv (.htaccess), open to read without
+  agreeing first (the agreement is at /agreement, and the dock asks for it at Twitch sign-in);
+  streamspace.tv/testers.html sends people here.
   The same words, as posts to paste into the testers' Discord channel, are in
   "twitch extesion/Tester kit/". Change the round's try-this lists in both places.
   The ticks in "Try this" are kept in this browser only (localStorage), just for the tester.
@@ -142,7 +142,6 @@
     .hero { padding-top: 52px; }
   }
 </style>
-<script src="/tester-gate.js"></script>
 </head>
 <body>
 <header class="top">
@@ -178,7 +177,7 @@
   <section id="setup">
     <div class="wrap">
       <h2>Getting set up</h2>
-      <p class="lead">Takes about five minutes. You already agreed to the tester agreement to open this page; StreamSpace asks once more when you sign in with Twitch. Everyone starts with the browser extension. Streamers add one more thing in OBS.</p>
+      <p class="lead">Takes about five minutes. StreamSpace asks you to agree to the <a href="/agreement">tester agreement</a> when you sign in with Twitch; you can read it any time. Everyone starts with the browser extension. Streamers add one more thing in OBS.</p>
       <div class="roles">
         <div class="role role--streamer">
           <span class="px">If you stream</span>
