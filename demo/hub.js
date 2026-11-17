@@ -322,8 +322,6 @@ const twitch = (() => {
       chat(cmd, who);
       return { who, cmd };
     },
-    // A sub, as Twitch posts them: with Prime or at a tier, new or coming back (how many
-    // months, the streak if they've kept it going), sometimes with a message.
     // Someone subscribing for the very first time (Twitch's "sub"; coming back is "resub").
     firstSub() {
       const who = pick(NEWBIES.length ? NEWBIES : CHATTERS);
@@ -332,13 +330,15 @@ const twitch = (() => {
       notice("sub", { who, system: `${who} subscribed at Tier ${tier[0]}.`, fields: { sub: { sub_tier: tier, is_prime: false, duration_months: 1 } } });
       return who;
     },
+    // A resub, as Twitch posts them: with Prime or at a tier, how many months, the streak if
+    // they've kept it going, sometimes with a message.
     sub() {
       const who = pick(CHATTERS);
       const prime = Math.random() < 0.4;
       const tier = prime ? "1000" : pick(["1000", "1000", "1000", "2000", "3000"]);
       const how = prime ? "with Prime" : `at Tier ${tier[0]}`;
-      if (Math.random() < 0.35) notice("sub", { who, system: `${who} subscribed ${how}.`, fields: { sub: { sub_tier: tier, is_prime: prime, duration_months: 1 } } });
-      else {
+      // Always someone coming back (the Resub button); a first-time sub is firstSub().
+      {
         const months = 2 + Math.floor(Math.random() * 60);
         const streak = Math.random() < 0.6 ? Math.max(2, months - Math.floor(Math.random() * 4)) : 0;
         const text = pick(["love this community", "", "happy to be here o7", "another month LETSGO", "", "best stream on twitch"]);

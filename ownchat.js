@@ -1163,8 +1163,8 @@
         codeError(err);
       }
       // A cheer is a block of its own, like Twitch's: the gem and the amount big on top, the
-      // message under it. Its color climbs with the amount, as Twitch's cheer gems do
-      // (gray, purple, green, blue, red), and the biggest ones get bigger.
+      // message under it. Always the same pink-purple (not Twitch's color-by-size gems); the
+      // bigger the cheer, the more room it takes, and the biggest glow.
       if (m.bits) {
         const n = Number(m.bits) || 0;
         const tier = n >= 10000 ? 5 : n >= 5000 ? 4 : n >= 1000 ? 3 : n >= 100 ? 2 : 1;
@@ -1854,12 +1854,12 @@
       if (kind === "sub_gift") {
         const g = e.sub_gift || {};
         const total = g.cumulative_total ? ` · ${plural(g.cumulative_total, "gift", "gifts")} in this channel` : "";
-        return { icon: "giftfill", tone: "gift", value: "", what: `Gifted a ${tierName(g.sub_tier)} sub to ${g.recipient_user_name || "someone"}`, who: `${name}${total}` };
+        return { icon: "giftfill", tone: "gift", value: "", what: `Gifted a ${tierName(g.sub_tier)} sub to ${g.recipient_user_name || "someone"}`, who: `${name}${total}`, gifter: name };
       }
       if (kind === "community_sub_gift") {
         const g = e.community_sub_gift || {};
         const total = g.cumulative_total ? ` · ${plural(g.cumulative_total, "gift", "gifts")} in this channel` : "";
-        return { icon: "giftfill", tone: "gift", value: String(g.total || ""), what: `${tierName(g.sub_tier)} gift ${g.total === 1 ? "sub" : "subs"}`, who: `${name} is gifting to the community${total}` };
+        return { icon: "giftfill", tone: "gift", value: String(g.total || ""), what: `${tierName(g.sub_tier)} gift ${g.total === 1 ? "sub" : "subs"}`, who: `${name} is gifting to the community${total}`, gifter: name };
       }
       if (kind === "gift_paid_upgrade" || kind === "prime_paid_upgrade") {
         return { icon: "star", tone: "sub", value: "", what: "Kept their sub going", who: sys || `${name} upgraded their sub` };
@@ -2099,7 +2099,11 @@
         words.append(big);
         // A small tag under the big line when the number alone doesn't say what it is (Resub).
         if (ev.label) words.append(el("div", "oc-event__label", ev.label));
-        words.append(el("div", "oc-event__who", ev.who));
+        const whoLine = el("div", "oc-event__who");
+        // Who gave the gift subs stands out: their name bold and white, the rest as before.
+        if (ev.gifter && ev.who.startsWith(ev.gifter)) whoLine.append(el("b", "oc-event__gifter", ev.gifter), ev.who.slice(ev.gifter.length));
+        else whoLine.textContent = ev.who;
+        words.append(whoLine);
         if (e.message?.text) {
           const body = el("div", "oc-body oc-event__msg");
           drawMessage(body, e.message.fragments, e.message.text);
@@ -2546,6 +2550,12 @@
       const key = `gift-${id}`;
       const c = topCard(key, "gift", 45 * 1000);
       topHead(c, key, `${g.from} is gifting ${g.total} ${g.total === 1 ? "sub" : "subs"}!`, null, null, "giftfill");
+      // The gifter's name in white, so who gave them stands out.
+      const giftLabel = c.querySelector(".oc-topcard__label");
+      if (giftLabel && g.from) {
+        giftLabel.textContent = "";
+        giftLabel.append(el("b", "oc-topcard__gifter", g.from), ` is gifting ${g.total} ${g.total === 1 ? "sub" : "subs"}!`);
+      }
       meter(c, g.total ? g.landed / g.total : 0);
       const last = g.names.slice(-3).join(", ");
       c.append(el("div", "oc-topcard__note", `${Math.min(g.landed, g.total)} of ${g.total} given${last ? ` · ${last}` : ""}`));
