@@ -6727,3 +6727,13 @@ html :is(body, body.has-space.has-space) .oc-line.oc-event.oc-event--first { --b
 /* ===== The ad timer's bar: Twitch's green, drawn as the same squared pixel dashes. ===== */
 .twad__bar { height: 4px; background: repeating-linear-gradient(90deg, rgba(83, 83, 95, 0.55) 0 4px, transparent 4px 6px); border-radius: 0; }
 .twad__fill { border-radius: 0; background: repeating-linear-gradient(90deg, #00f593 0 4px, transparent 4px 6px); }
+
+/* Text bubbles: the sender's full color along the top edge, fading down into the softer
+   color (so it still reads, with the white words on their shadow). */
+html :is(body, body.has-space.has-space) .oc-line.oc-mod,
+html :is(body, body.has-space.has-space) .oc-line.oc-mod:is(.oc-mod--info, .oc-mod--love, .oc-mod--ask, .oc-mod--stuck, .oc-mod--bright, .oc-mod--light) {
+  background: linear-gradient(180deg, var(--mc) 0%, color-mix(in srgb, var(--mc) 44%, rgba(24, 24, 28, 0.9)) 48%, color-mix(in srgb, var(--mc) 32%, rgba(16, 16, 20, 0.92)) 100%) !important;
+}
+.oc-notebub__main, .oc-notebub--light .oc-notebub__main {
+  background: linear-gradient(180deg, var(--note-c) 0%, color-mix(in srgb, var(--note-c) 44%, rgba(24, 24, 28, 0.9)) 48%, color-mix(in srgb, var(--note-c) 32%, rgba(16, 16, 20, 0.92)) 100%);
+}
