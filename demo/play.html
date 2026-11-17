@@ -1032,7 +1032,7 @@
           </div>
         </div>
         <div class="pane" role="tabpanel" id="paneMods" aria-labelledby="tabMods">
-        <button id="modAsk" type="button" class="chip" data-tip="mod1 asks the streamer a yes-or-no question. It waits under the streamer's bar with thank-you, ✓, ✗ and ? buttons.">Ask a question</button>
+        <button id="modAsk" type="button" class="chip" data-tip="mod1 asks the streamer a yes-or-no question. It waits under the streamer's bar with ♥ ✓ ✗ ? buttons.">Ask a question</button>
         <button id="modSay" type="button" class="chip" data-tip="A message that doesn't need an answer, just a Seen.">Send a message</button>
         <button id="modNote" type="button" class="chip" data-tip="A heads-up on the streamer's bar with a lightning bolt. It goes after 2 minutes.">Quick info</button>
         <button id="modVanish" type="button" class="chip" data-tip="A short kind note with a little devil. It goes after 30 seconds.">!vanish</button>
@@ -1815,11 +1815,12 @@
     tFirstSub: { on: "obs", from: "twitch", find: ".oc-event--first", say: () => "A first-time sub gets a little celebration: a new supporter worth a thank-you." },
     tAd: { on: "obs", from: "twitch", find: ".twad", say: () => "Twitch's ad timer, above your chat: Snooze pushes the break back 5 minutes. Your mods see it too, and can snooze it for you." },
   };
-  // Tom with hearts stands in for a heart emoji wherever the demo writes words on screen.
+  // Tom with hearts stands in for a decorative heart emoji where the demo writes words on screen.
   function withTom(node, text) {
     node.textContent = "";
-    String(text).split(/(♥|💜)/).forEach((part) => {
-      if (part === "♥" || part === "💜") node.append(Object.assign(document.createElement("img"), { className: "tomheart", src: "../icons/tom-heart.png", alt: "heart" }));
+    // (Not ♥: that's the heart answer button, which stays a heart.)
+    String(text).split(/(💜)/).forEach((part) => {
+      if (part === "💜") node.append(Object.assign(document.createElement("img"), { className: "tomheart", src: "../icons/tom-heart.png", alt: "heart" }));
       else if (part) node.append(part);
     });
   }
