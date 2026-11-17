@@ -610,6 +610,25 @@
   .getit__mail { padding: 13px 22px; font-size: 15px; color: #fff; text-decoration: none; background: rgba(255, 255, 255, 0.08); }
   .getit__mail:hover { background: rgba(255, 255, 255, 0.14); }
   .getit__mail[hidden] { display: none; }
+  /* ===== How do I get it? (reworked): one wider column; the intro and the Top 8 centered, then
+     three numbered steps, left-aligned, so it reads top to bottom. ===== */
+  .getit .getit__lead { max-width: 640px; }
+  .getit__heart { color: #ff6b8b; }
+  .getit__round { max-width: 640px; margin: 0 auto 40px; }
+  .getit__steps { max-width: 600px; margin: 0 auto; padding: 0; list-style: none; counter-reset: step; text-align: left; }
+  .getit__step { position: relative; padding: 0 0 26px 46px; counter-increment: step; }
+  .getit__step::before { content: counter(step); position: absolute; left: 0; top: -2px; display: grid; place-items: center; width: 28px; height: 28px; font-family: "Silkscreen", "Pixelify Sans", monospace; font-size: 13px; color: #fff; background: rgba(88, 101, 242, 0.32); border-radius: 50%; box-shadow: 0 0 0 2px #7983f5, 0 0 14px rgba(88, 101, 242, 0.45); }
+  /* A soft line down from each number to the next. */
+  .getit__step:not(:last-child)::after { content: ""; position: absolute; left: 13px; top: 32px; bottom: 6px; width: 2px; background: linear-gradient(180deg, rgba(121, 131, 245, 0.55), rgba(121, 131, 245, 0.08)); }
+  .getit__step-label { display: block; margin: 0 0 10px; font-size: 15.5px; font-weight: 700; color: #efeff1; }
+  .getit__step-text { margin: -4px 0 14px; font-size: 14.5px; line-height: 1.55; color: #b9b9c3; }
+  .getit__step .getit__role-opts { justify-content: flex-start; }
+  .getit__step.getit__role { max-width: none; margin: 0; }
+  .getit__name { width: min(260px, 100%); padding: 9px 14px; font: inherit; font-size: 14.5px; color: #fff; background: rgba(255, 255, 255, 0.06); border: 0; border-radius: 999px; outline: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1); }
+  .getit__name:focus { box-shadow: inset 0 0 0 2px #7983f5; }
+  .getit__step .getit__ctas { justify-content: flex-start; }
+  .getit__step .getit__hint { text-align: left; }
+  .getit__step .getit__msg { margin-left: 0; }
   .getit__ctas { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px 20px; }
   .getit__btn { padding: 13px 22px; font-size: 15px; color: #fff; background: #5865f2; border-color: #7983f5; box-shadow: 0 10px 30px rgba(88, 101, 242, 0.35); }
   .getit__btn:hover { background: #6d78f4; }
@@ -930,32 +949,40 @@
   <section class="getit" id="get">
     <div class="wrap">
       <h2 class="getit__title">How do I get it?</h2>
-      <p class="getit__lead">StreamSpace isn't in the Chrome Web Store for everyone yet. For now, just message me on Discord and I'll get you set up, whether you stream, mod or just hang out in chat.</p>
-      <p class="getit__testers">We're looking for testers, but we ain't hiring. You'd have to do this out of the love of your heart. <span aria-hidden="true">&#9829;</span></p>
+      <p class="getit__lead">StreamSpace isn't in the Chrome Web Store for everyone yet. We're looking for testers, but we ain't hiring. You'd have to do this out of the love of your heart. <span class="getit__heart" aria-hidden="true">&#9829;</span></p>
       <div class="getit__round">
         <p class="getit__round-tag">Round one: the Top 8</p>
-        <p class="getit__round-text">The first group of testers is capped at <b>8</b> (get it). But once we work out some of the rough edges, we'll open it back up to more friends.</p>
-        <p class="getit__round-text">Anyone can ask to join, but testers are hand-picked so we get a good mix of streamers, mods and viewers.</p>
+        <p class="getit__round-text">The first group of testers is capped at <b>8</b> (get it). Anyone can ask to join, but testers are hand-picked so we get a good mix of streamers, mods and viewers. Once we work out some of the rough edges, we'll open it back up to more friends.</p>
       </div>
-      <div class="getit__role" role="radiogroup" aria-labelledby="roleLabel">
-        <p class="getit__role-label" id="roleLabel">First, which one are you?</p>
-        <div class="getit__role-opts">
-          <button type="button" role="radio" aria-checked="false" data-role="Stream only">Stream only</button>
-          <button type="button" role="radio" aria-checked="false" data-role="Mod only">Mod only</button>
-          <button type="button" role="radio" aria-checked="false" data-role="Just a viewer">Just a viewer</button>
-          <button type="button" role="radio" aria-checked="false" data-role="Stream and mod">Stream and mod</button>
-        </div>
-        <label class="getit__twitch">Your Twitch name <input id="twitchName" type="text" autocomplete="username" spellcheck="false" maxlength="25" placeholder="e.g. tallglassofbees"></label>
-      </div>
-      <div class="getit__ctas">
-        <button type="button" class="btn btn--main getit__btn" id="discordBtn" data-user="myspacetomunofficial">
+      <!-- Asking to test, in three steps: which one you are, your Twitch name, then Discord. -->
+      <ol class="getit__steps">
+        <li class="getit__step getit__role" role="radiogroup" aria-labelledby="roleLabel">
+          <p class="getit__step-label" id="roleLabel">Which one are you?</p>
+          <div class="getit__role-opts">
+            <button type="button" role="radio" aria-checked="false" data-role="Stream only">Stream only</button>
+            <button type="button" role="radio" aria-checked="false" data-role="Mod only">Mod only</button>
+            <button type="button" role="radio" aria-checked="false" data-role="Just a viewer">Just a viewer</button>
+            <button type="button" role="radio" aria-checked="false" data-role="Stream and mod">Stream and mod</button>
+          </div>
+        </li>
+        <li class="getit__step">
+          <label class="getit__step-label" for="twitchName">Your Twitch name</label>
+          <input class="getit__name" id="twitchName" type="text" autocomplete="username" spellcheck="false" maxlength="25" placeholder="e.g. TomAnderson">
+        </li>
+        <li class="getit__step">
+          <p class="getit__step-label">Message me on Discord</p>
+          <p class="getit__step-text">I'll get you set up, whether you stream, mod or just hang out in chat.</p>
+          <div class="getit__ctas">
+            <button type="button" class="btn btn--main getit__btn" id="discordBtn" data-user="myspacetomunofficial">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M19.5 5.3A17 17 0 0 0 15.3 4l-.5 1a15.6 15.6 0 0 0-5.6 0l-.5-1a17 17 0 0 0-4.2 1.3C1.8 9.3 1.1 13.2 1.4 17a17 17 0 0 0 5.2 2.6l1.1-1.8a11 11 0 0 1-1.7-.8l.4-.3a12.2 12.2 0 0 0 11.2 0l.4.3c-.5.3-1.1.6-1.7.8l1.1 1.8a17 17 0 0 0 5.2-2.6c.4-4.4-.7-8.3-3.1-11.7ZM8.7 14.7c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1Zm6.6 0c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1Z"/></svg>
           Message me on Discord</button>
-        <a class="btn getit__mail" id="mailBtn" data-email="" hidden>Send an email</a>
-        <span class="getit__user">I'm <b>myspacetomunofficial</b> on Discord</span>
-      </div>
-      <p class="getit__hint" id="discordHint" aria-live="polite"></p>
-      <p class="getit__msg" id="requestMsg" hidden></p>
+            <a class="btn getit__mail" id="mailBtn" data-email="" hidden>Send an email</a>
+            <span class="getit__user">I'm <b>myspacetomunofficial</b> on Discord</span>
+          </div>
+          <p class="getit__hint" id="discordHint" aria-live="polite"></p>
+          <p class="getit__msg" id="requestMsg" hidden></p>
+        </li>
+      </ol>
     </div>
   </section>
 
