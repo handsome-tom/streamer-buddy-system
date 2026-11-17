@@ -131,6 +131,18 @@
   .streamer__pitch { margin: 0 0 10px; color: #c6c6d0; }
   .two h3 .logo { width: 22px; height: 22px; vertical-align: -5px; margin-right: 4px; }
   .streamer .ticks li::before { background: var(--streamer); box-shadow: 0 0 10px rgba(var(--streamer-rgb), 0.6); }
+  /* "If anything goes wrong mid-stream": the way back to Twitch's own chat, with a picture of the
+     dock's chat bar, a ring round Use Twitch chat and an arrow pointing up at it. */
+  .safety { margin: 8px 0 0; padding: 16px 0 0; }
+  .safety__head { margin: 0 0 4px; font-size: 16px; font-weight: 800; color: #fff; }
+  .safety__text { margin: 0 0 14px; font-size: 14.5px; color: #c6c6d0; }
+  .safety__text b { color: #fff; }
+  .safety__shot { position: relative; margin: 0 0 46px; }
+  .safety__shot img { display: block; width: 100%; height: auto; border-radius: 8px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5); }
+  .safety__ring { position: absolute; left: 78.5%; top: 62%; width: 20.5%; height: 33%; border-radius: 6px; box-shadow: 0 0 0 2px #ffd34d, 0 0 16px rgba(255, 211, 77, 0.6); pointer-events: none; }
+  .safety__arrow { position: absolute; right: 2%; top: calc(100% + 4px); display: flex; align-items: center; gap: 6px; color: #ffd34d; font-size: 13px; }
+  .safety__arrow svg { flex: none; }
+  .safety__arrow b { font-weight: 800; }
   footer { padding: 40px 0 70px; text-align: center; font-size: 14px; color: #8d8d97; }
   footer a { color: #c6c6d0; margin: 0 8px; }
   footer p { margin: 0 0 12px; }
@@ -228,6 +240,15 @@
             <li><b>Add your mods</b><span>Your mods need to be in the testing program too, with StreamSpace installed. Then open <b>Connections</b> in the dock and add their Twitch names. They show up once they've added you back.</span></li>
             <li><b>Allow mod tools when asked</b><span>The first time a mod uses a tool like a poll or slow mode, the dock asks you to allow it. One tap.</span></li>
           </ol>
+          <div class="safety">
+            <p class="safety__head">If anything goes wrong mid-stream</p>
+            <p class="safety__text">Tap <b>Use Twitch chat</b>, at the top right of the chat in your dock. It switches straight back to Twitch's own, normal chat, so your stream carries on as usual. You can switch back to custom chat whenever you like.</p>
+            <figure class="safety__shot">
+              <img src="brand/use-twitch-chat.png" alt="The top of the StreamSpace dock: quick buttons, then the Custom chat line with the Use Twitch chat button at its right end" width="834" height="124">
+              <span class="safety__ring" aria-hidden="true"></span>
+              <span class="safety__arrow" aria-hidden="true"><svg viewBox="0 0 40 56" width="28" height="40"><path d="M20 54V8M8 20 20 6l12 14" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg><b>Tap this</b></span>
+            </figure>
+          </div>
         </div>
         <div>
           <h3><img class="logo" src="brand/logo-chrome.png" alt="" width="22" height="22"><img class="logo" src="brand/logo-brave.png" alt="" width="22" height="22"> Get the extension too</h3>
