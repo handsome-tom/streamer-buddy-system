@@ -577,7 +577,9 @@ const twitch = (() => {
     "channel:manage:polls", "channel:manage:predictions", "channel:manage:broadcast", "channel:manage:vips", "clips:edit", "channel:edit:commercial"];
   // Pretend ad breaks: the first a couple of minutes in, 90 seconds long, then one every
   // 8 minutes after that; three snoozes, each pushing the next one back 5 minutes.
-  const pretendAds = { next: Date.now() + 150000, last: 0, dur: 90, snoozes: 3 };
+  // The first ad is 7.5 minutes out, so its card (shown once an ad is under 5 minutes away)
+  // pops up about 2.5 minutes into the demo, not the moment the page opens.
+  const pretendAds = { next: Date.now() + 450000, last: 0, dur: 90, snoozes: 3 };
   function adsNow() {
     const a = pretendAds;
     while (a.next && Date.now() >= a.next) {
