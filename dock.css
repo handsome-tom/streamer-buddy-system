@@ -6644,3 +6644,6 @@ main.main--tools { position: relative; z-index: 1; min-height: calc(100vh - 43px
 .agree__go { padding: 10px 22px; border: 0; border-radius: 999px; font: inherit; font-weight: 700; color: #fff; background: #3f7dd8; cursor: pointer; }
 .agree__go:disabled { opacity: 0.4; cursor: default; }
 .agree__out { padding: 0; border: 0; font: inherit; font-size: 13px; color: #a3a3ad; background: none; cursor: pointer; text-decoration: underline; }
+
+/* Tom with hearts, in place of a heart emoji (the heart answer and its hint). */
+.tomheart { display: inline-block; width: 1.5em; height: 1.5em; margin: -0.3em 0.05em -0.25em; vertical-align: middle; }

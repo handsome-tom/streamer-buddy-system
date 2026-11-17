@@ -489,6 +489,7 @@
   @keyframes calloutRing { 50% { box-shadow: 0 0 0 2px var(--brand-light), 0 0 26px 6px rgba(125, 176, 239, 0.25); } }
   /* A plain black tooltip (not a chat bubble, so it can't be mistaken for a mod's note), with a
      small arrow pointing at what it explains; --ax is where the arrow sits along it. */
+  .tomheart { display: inline-block; width: 1.6em; height: 1.6em; margin: -0.35em 0.05em -0.3em; vertical-align: middle; }
   .callout__text { position: absolute; margin: 0; padding: 9px 13px 10px; font-size: 12.5px; line-height: 1.45; color: #efeff1; background: #000; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 14px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6); text-shadow: none; }
   .callout__text::after { content: ""; position: absolute; left: var(--ax, 50%); top: -6px; width: 10px; height: 10px; margin-left: -5px; background: #000; border: 1px solid rgba(255, 255, 255, 0.14); border-right: 0; border-bottom: 0; transform: rotate(45deg); }
   .callout__text--above::after { top: auto; bottom: -6px; transform: rotate(225deg); }
@@ -1031,7 +1032,7 @@
           </div>
         </div>
         <div class="pane" role="tabpanel" id="paneMods" aria-labelledby="tabMods">
-        <button id="modAsk" type="button" class="chip" data-tip="mod1 asks the streamer a yes-or-no question. It waits under the streamer's bar with ♥ ✓ ✗ ? buttons.">Ask a question</button>
+        <button id="modAsk" type="button" class="chip" data-tip="mod1 asks the streamer a yes-or-no question. It waits under the streamer's bar with thank-you, ✓, ✗ and ? buttons.">Ask a question</button>
         <button id="modSay" type="button" class="chip" data-tip="A message that doesn't need an answer, just a Seen.">Send a message</button>
         <button id="modNote" type="button" class="chip" data-tip="A heads-up on the streamer's bar with a lightning bolt. It goes after 2 minutes.">Quick info</button>
         <button id="modVanish" type="button" class="chip" data-tip="A short kind note with a little devil. It goes after 30 seconds.">!vanish</button>
@@ -1702,7 +1703,7 @@
       document.getElementById("tour").classList.remove("guide--yourturn");
       document.getElementById("tour").style.setProperty("--tour-progress", ((this.at + 1) / STEPS.length).toFixed(3));
       document.getElementById("tourTitle").textContent = asMe(st.title);
-      document.getElementById("tourText").textContent = asMe(st.text);
+      withTom(document.getElementById("tourText"), asMe(st.text));
       const go = document.getElementById("tourDo");
       go.textContent = asMe(st.button);
       go.className = "btn btn--main";
@@ -1729,7 +1730,7 @@
       if (!st.waitFor) return this.show(this.at + 1);
       this.waiting = st.waitFor;
       document.getElementById("tour").classList.add("guide--yourturn");
-      document.getElementById("tourText").textContent = asMe(st.then);
+      withTom(document.getElementById("tourText"), asMe(st.then));
       const go = document.getElementById("tourDo");
       go.textContent = "Skip this →";
       go.className = "guide__link";
@@ -1814,6 +1815,14 @@
     tFirstSub: { on: "obs", from: "twitch", find: ".oc-event--first", say: () => "A first-time sub gets a little celebration: a new supporter worth a thank-you." },
     tAd: { on: "obs", from: "twitch", find: ".twad", say: () => "Twitch's ad timer, above your chat: Snooze pushes the break back 5 minutes. Your mods see it too, and can snooze it for you." },
   };
+  // Tom with hearts stands in for a heart emoji wherever the demo writes words on screen.
+  function withTom(node, text) {
+    node.textContent = "";
+    String(text).split(/(♥|💜)/).forEach((part) => {
+      if (part === "♥" || part === "💜") node.append(Object.assign(document.createElement("img"), { className: "tomheart", src: "../icons/tom-heart.png", alt: "heart" }));
+      else if (part) node.append(part);
+    });
+  }
   const panelDoc = (id) => { try { return document.getElementById(id).contentDocument; } catch { return null; } };
   let callout = null;
   // The public demo (cols): each note shows the first time its button is pressed, over a dimmed
@@ -1832,7 +1841,7 @@
     const pic = from === "twitch" || from === "guide" ? "brand/mark.svg" : `pics/${who}.webp`;
     box.innerHTML = `<span class="callout__ring"></span><span class="callout__point"></span><p class="callout__text"><span class="callout__head"><span class="callout__pic"><img src="${pic}" alt=""></span><b class="callout__who"></b></span><span class="callout__say"></span></p>`;
     box.querySelector(".callout__who").textContent = who;
-    box.querySelector(".callout__say").textContent = text;
+    withTom(box.querySelector(".callout__say"), text);
     // The tour is waiting for a click right here (answering): say so beside the ring.
     const waitingHere = typeof tour !== "undefined" && tour.waiting && (tour.waiting === "answer" ? on === "obs" : on === "mod");
     if (waitingHere) box.insertAdjacentHTML("beforeend", `<span class="clickhint callout__hint">Click here to answer</span>`);
@@ -2037,7 +2046,7 @@
     send("streamer", { t: "room", tag: "Mod squad" });
     await wait(150);
     for (const [login, text] of [
-      ["streamer", "Thanks for modding tonight, you two 💜"],
+      ["streamer", "Thanks for modding tonight, you two <3"],
       ["mod2", "Happy to! Raid plan still the same?"],
       ["streamer", "Yep, we raid after the boss fight"],
       ["mod2", "I'll have the !raid message ready"],

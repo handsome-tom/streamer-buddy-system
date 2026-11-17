@@ -58,7 +58,7 @@
   .hero h1 { margin: 0 0 16px; font-size: clamp(34px, 6vw, 56px); line-height: 1.05; letter-spacing: -0.02em; font-weight: 800; color: #fff; }
   .hero h1 span { color: var(--brand-light); }
   .hero p { max-width: 620px; margin: 0 auto; font-size: 17px; color: #c6c6d0; }
-  .hero .heart { color: #ff6b8b; }
+  .tomheart { display: inline-block; width: 1.75em; height: 1.75em; margin: -0.4em 0 -0.35em 0.1em; vertical-align: middle; } /* Tom with hearts, in place of a heart emoji */
 
   main { overflow-x: clip; } /* the soft glows may spread past the edge; never let them make the page scroll sideways */
   section { padding: 48px 0; }
@@ -134,7 +134,6 @@
   footer { padding: 40px 0 70px; text-align: center; font-size: 14px; color: #8d8d97; }
   footer a { color: #c6c6d0; margin: 0 8px; }
   footer p { margin: 0 0 12px; }
-  footer .heart { color: #ff6b8b; }
 
   @media (max-width: 760px) {
     .roles, .two, .streamer .two { grid-template-columns: minmax(0, 1fr); gap: 30px; }
@@ -155,7 +154,7 @@
   <div class="hero wrap">
     <p class="px">Round one: the Top 8</p>
     <h1>Welcome, <span>tester.</span></h1>
-    <p>You're one of the first eight to try StreamSpace. Thank you for doing this out of the love of your heart. <span class="heart" aria-hidden="true">&#9829;</span> Here's everything you need, start to finish.</p>
+    <p>You're one of the first eight to try StreamSpace. Thank you for doing this out of the love of your heart. <img class="tomheart" src="../icons/tom-heart.png" alt="" width="28" height="28"> Here's everything you need, start to finish.</p>
   </div>
 
   <section id="how">
@@ -335,7 +334,7 @@ Did it happen again when I tried?: (yes / no / didn't try)</pre>
 
 <footer>
   <div class="wrap">
-    <p>Thank you for testing. <span class="heart" aria-hidden="true">&#9829;</span></p>
+    <p>Thank you for testing. <img class="tomheart" src="../icons/tom-heart.png" alt="" width="28" height="28"></p>
     <p><a href="https://streamspace.tv/">streamspace.tv</a><a href="/agreement">Tester agreement</a><a href="https://streamspace.tv/privacy.html">Privacy</a></p>
   </div>
 </footer>

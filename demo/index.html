@@ -613,7 +613,8 @@
   /* ===== How do I get it? (reworked): one wider column; the intro and the Top 8 centered, then
      three numbered steps, left-aligned, so it reads top to bottom. ===== */
   .getit .getit__lead { max-width: 640px; }
-  .getit__heart { color: #ff6b8b; }
+  /* Tom with hearts, in place of a heart emoji, everywhere on the site. */
+  .tomheart { display: inline-block; width: 1.75em; height: 1.75em; margin: -0.4em 0 -0.35em 0.1em; vertical-align: middle; }
   .getit__more { font-weight: 700; color: var(--brand-light); text-decoration: none; }
   .getit__more:hover { color: #fff; text-decoration: underline; }
   .getit__round { max-width: 640px; margin: 0 auto 40px; }
@@ -951,7 +952,7 @@
   <section class="getit" id="get">
     <div class="wrap">
       <h2 class="getit__title">How do I get it?</h2>
-      <p class="getit__lead">StreamSpace isn't in the Chrome Web Store for everyone yet. We're looking for testers, but we ain't hiring. You'd have to do this out of the love of your heart. <span class="getit__heart" aria-hidden="true">&#9829;</span></p>
+      <p class="getit__lead">StreamSpace isn't in the Chrome Web Store for everyone yet. We're looking for testers, but we ain't hiring. You'd have to do this out of the love of your heart. <img class="tomheart" src="../icons/tom-heart.png" alt="" width="28" height="28"></p>
       <div class="getit__round">
         <p class="getit__round-tag">Round one: the Top 8</p>
         <p class="getit__round-text">The first group of testers is capped at <b>8</b> (get it). Anyone can ask to join, but testers are hand-picked so we get a good mix of streamers, mods and viewers. Once we work out some of the rough edges, we'll open it back up to more friends.</p>

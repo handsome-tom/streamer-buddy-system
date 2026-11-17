@@ -116,7 +116,7 @@
     m: { label: "Maybe", icon: `<path d="M7 7.2a3 3 0 1 1 4.2 2.8c-.8.4-1.2 1-1.2 1.8v.7" ${LINE} stroke-width="2.2"/><circle cx="10" cy="15.6" r="1.3" fill="currentColor"/>` },
     s: { label: "Soon", icon: `<path d="M5 2.5h10M5 17.5h10M6 2.5c0 4 8 4.5 8 7.5s-8 3.5-8 7.5M14 2.5c0 4-8 4.5-8 7.5s8 3.5 8 7.5" ${LINE} stroke-width="1.8"/>` },
     o: { label: "OK", icon: '<path d="M7 9l3-6c1.2 0 2 .8 2 2v3h3.5a1.5 1.5 0 0 1 1.5 1.8l-1.1 6A1.5 1.5 0 0 1 14.4 17H7zM3 9h3v8H3z" fill="currentColor"/>' },
-    t: { label: "Thank you", icon: '<path d="M10 17s-6.5-4-6.5-8.6A3.6 3.6 0 0 1 10 6.2a3.6 3.6 0 0 1 6.5 2.2C16.5 13 10 17 10 17z" fill="currentColor"/>' },
+    t: { label: "Thank you", icon: '<image href="icons/tom-heart.png" x="-2" y="-2" width="24" height="24"/>' }, // Tom with hearts (the heart answer)
     c: { label: "Replied", icon: `<path d="M3 4h14v9H8l-4 3v-3H3z" ${LINE} stroke-width="1.8"/>` }, // a typed reply
     x: { label: "", icon: `<path d="M3 10.6V4a1 1 0 0 1 1-1h6.6l6.7 6.7a1 1 0 0 1 0 1.4l-5.6 5.6a1 1 0 0 1-1.4 0z" ${LINE} stroke-width="1.7"/><circle cx="7" cy="7" r="1.3" fill="currentColor"/>` }, // one of the asker's own options
   };
@@ -402,7 +402,8 @@
   function el(tag, className, text) {
     const e = document.createElement(tag);
     if (className) e.className = className;
-    if (text != null) e.textContent = text;
+    if (text instanceof Node) e.append(text); // words with a picture in them (answerHint)
+    else if (text != null) e.textContent = text;
     return e;
   }
 
@@ -688,6 +689,16 @@
       document.body.append(box);
       cb.focus();
     });
+  }
+
+  // "They answer with (Tom) ✓ ✗ or ?": Tom with hearts is the heart answer.
+  function answerHint() {
+    const p = document.createDocumentFragment();
+    const tom = el("img", "tomheart");
+    tom.src = "icons/tom-heart.png";
+    tom.alt = "heart";
+    p.append("They answer with ", tom, ", ✓, ✗ or ? (maybe), or type a reply.");
+    return p;
   }
 
   async function validate() {
@@ -3813,7 +3824,7 @@
     box.append(el("p", "ask__hint", askDraft.sent === mode ? "Sent ✓"
       : mode === "love" ? "Shows on their bar with your name, then disappears after 30 seconds."
       : mode === "info" ? "For things like incoming raids or minor technical difficulties. Shows on their bar with your name for 2 minutes. Only reaches people who are online."
-      : "They answer with ♥, ✓, ✗ or ? (maybe), or type a reply."));
+      : answerHint()));
     if (askDraft.note) box.append(el("p", "ask__note", askDraft.note));
     return box;
   }
