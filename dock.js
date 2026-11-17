@@ -3924,16 +3924,19 @@
     if (owner === modOwner()) drawAd();
     if (view === "tools" && owner === modOwner()) render();
   }
+  // Mod tools that only happen once the streamer OKs them in their own dock: it's their show.
+  const ASKS_STREAMER = { raid: "raid", commercial: "ad" };
   function sendTool(owner, a, x) {
     const id = `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
     if (!relay({ t: "tool", to: owner, id, a, x })) return;
     toolWait.set(id, { owner, a, x, at: Date.now() });
-    // A raid waits for the streamer (two minutes); anything else, for their dock.
+    // A raid or an ad waits for the streamer to OK it (two minutes); anything else, for their dock.
+    const asks = ASKS_STREAMER[a];
     setTimeout(() => {
       if (!toolWait.delete(id)) return;
-      toolSaid = { owner, text: a === "raid" ? `${owner} didn't answer, so there's no raid.` : `${owner}'s dock didn't answer. Is it open in OBS?`, ok: false, at: Date.now() };
+      toolSaid = { owner, text: asks ? `${owner} didn't answer, so there's no ${asks}.` : `${owner}'s dock didn't answer. Is it open in OBS?`, ok: false, at: Date.now() };
       if (view === "tools") render();
-    }, a === "raid" ? 130000 : 15000);
+    }, asks ? 130000 : 15000);
     if (view === "tools") render();
   }
   function gotToolDone(m) {
@@ -3981,6 +3984,7 @@
     if (!ownChat?.tools) return reply(false, `${me.login}'s dock is using Twitch's plain chat right now, so Mod tools can't run.`);
     if (!(await twitchSaysMod(m.from))) return reply(false, `Twitch doesn't list ${m.from} as a mod for ${me.login}.`);
     if (m.a === "raid") return askRaid(m, reply);
+    if (m.a === "commercial") return askAd(m, reply);
     const r = await ownChat.tools.run(m.a, m.x || {}, m.from).catch(() => ({ ok: false, say: "Something went wrong in their dock." }));
     reply(r.ok, r.say);
   }
@@ -4005,6 +4009,33 @@
         { label: `Raid ${to}`, kind: "y", html: `${svg(ANSWERS.y.icon, 14)}<span>Raid</span>`, run: async () => {
           const r = await ownChat.tools.raid(to, m.from).catch(() => ({ ok: false, say: "Something went wrong." }));
           finish(r.ok, r.ok ? `${me.login} OK'd it. ${r.say}` : r.say, r.ok ? `Raiding ${to}` : "Couldn't raid");
+        } },
+        { label: "Not now", kind: "dismiss", html: svg(`<path d="M6 6l8 8M14 6l-8 8" ${LINE} stroke-width="2"/>`, 12), run: () => finish(false, `${me.login} said not now.`, "Not now") },
+      ],
+    });
+  }
+
+  // An ad break works the same way: Run ad / Not now in the streamer's chat, since an ad
+  // interrupts their stream and only they should say when.
+  function askAd(m, reply) {
+    const length = [30, 60, 90, 120, 150, 180].includes(Number(m.x?.length)) ? Number(m.x.length) : 60;
+    const label = { 30: "30-second", 60: "1-minute", 90: "90-second", 120: "2-minute", 150: "150-second", 180: "3-minute" }[length];
+    const id = `ad-${m.id}`;
+    let done = false;
+    const finish = (ok, say, text) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      ownChat?.modAnswer?.(id, text);
+      reply(ok, say);
+    };
+    const timer = setTimeout(() => finish(false, `${me.login} didn't answer, so there's no ad.`, "No answer"), 120000);
+    toChat({
+      id, kind: "ask", from: m.from, fromName: m.from, tag: "wants to run an ad", toName: "", text: `${label} ad break`, answer: "", stickUntil: Date.now() + 120000,
+      actions: [
+        { label: "Run ad", kind: "y", html: `${svg(ANSWERS.y.icon, 14)}<span>Run ad</span>`, run: async () => {
+          const r = await ownChat.tools.run("commercial", { length }, m.from).catch(() => ({ ok: false, say: "Something went wrong." }));
+          finish(r.ok, r.ok ? `${me.login} OK'd it. ${r.say}` : r.say, r.ok ? "Ad running" : "Couldn't run the ad");
         } },
         { label: "Not now", kind: "dismiss", html: svg(`<path d="M6 6l8 8M14 6l-8 8" ${LINE} stroke-width="2"/>`, 12), run: () => finish(false, `${me.login} said not now.`, "Not now") },
       ],
@@ -4178,11 +4209,12 @@
     const adRow = el("div", "tools__row");
     const len = toolSelect("adLen", [["30", "30 seconds"], ["60", "1 minute"], ["90", "90 seconds"], ["120", "2 minutes"], ["180", "3 minutes"]], "60", "How long");
     const lenLabel = { 30: "30s", 60: "1 min", 90: "90s", 120: "2 min", 180: "3 min" }[toolDrafts.adLen || 60];
-    const ad = sureButton(owner, "ad", busyTool(owner, "commercial") ? "…" : "Run ad", `Sure? Run a ${lenLabel} ad`, "tools__btn--warn", () => sendTool(owner, "commercial", { length: Number(toolDrafts.adLen || 60) }), "Start an ad break now");
+    const adWaiting = waitingOn(owner, (w) => w.a === "commercial");
+    const ad = toolButton(adWaiting ? "Waiting…" : "Ask to run ad", "", () => sendTool(owner, "commercial", { length: Number(toolDrafts.adLen || 60) }), `${owner} gets Run ad / Not now (${lenLabel}) in their dock`);
     ad.disabled = off || busyTool(owner, "commercial");
     len.disabled = off;
     adRow.append(len, ad);
-    adBox.append(el("p", "tools__label", "Ad break"), adRow);
+    adBox.append(el("p", "tools__label", "Ad break"), adRow, el("p", "tools__note", adWaiting ? `Waiting for ${owner} to OK it in their dock.` : `${owner} gets Run ad / Not now in their dock; nothing happens unless they OK it.`));
     sec.append(moment, adBox);
     if (s && off) sec.append(el("p", "tools__note", `Clips, markers and ads work while ${owner} is live.`));
     return sec;
@@ -5855,12 +5887,27 @@
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 60000);
   }
+  // The tester request log (from the website's "How do I get it?"), saved as a .csv file.
+  function saveJoins(list) {
+    const cell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const rows = [["Twitch name", "Which one", "Asked (your time)", "Asked (UTC)", "Country"]];
+    for (const j of list) {
+      const at = new Date(j.at);
+      rows.push([j.name, j.role, at.toLocaleString(), at.toISOString(), j.country]);
+    }
+    const blob = new Blob([rows.map((r) => r.map(cell).join(",")).join("\r\n")], { type: "text/csv" });
+    const a = el("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `StreamSpace tester requests ${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  }
   // The owner's feedback and problem reports (only the owner's page gets them).
   function reportsCard() {
     const card = el("section", "cx__card cx__reports");
     const head = el("button", "cx__allowhead");
     head.type = "button";
-    head.append(el("span", "cx__label", "Agreements, feedback & problems"), el("span", "cx__allowtoggle", reportsOpen ? "Hide" : "Show"));
+    head.append(el("span", "cx__label", "Testers, feedback & problems"), el("span", "cx__allowtoggle", reportsOpen ? "Hide" : "Show"));
     if (reportsNew) head.querySelector(".cx__label").after(el("span", "cx__askcount", `${reportsNew} new`));
     head.addEventListener("click", () => {
       reportsOpen = !reportsOpen;
@@ -5870,7 +5917,24 @@
     card.append(head);
     if (!reportsOpen) return card;
     if (!reportsData) return card.append(el("p", "cx__hint", "Loading…")), card;
-    const { feedback = [], oops = [], agreements = [] } = reportsData;
+    const { feedback = [], oops = [], agreements = [], joins = [] } = reportsData;
+    // Who asked to test, and which one they are (stream only, mod only, viewer, stream and mod).
+    const joinHead = el("div", "cx__label cx__agreedhead", `Tester requests · ${joins.length}`);
+    if (joins.length) {
+      const save = el("button", "cx__savelog", "Save a copy");
+      save.type = "button";
+      save.title = "Download every tester request here as a spreadsheet file";
+      save.addEventListener("click", () => saveJoins(joins));
+      joinHead.append(save);
+    }
+    card.append(joinHead);
+    if (!joins.length) card.append(el("p", "cx__hint", "No one has asked yet."));
+    for (const j of joins) {
+      const row = el("div", "rep");
+      const when = new Date(j.at).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+      row.append(el("div", "rep__text", `${j.name} · ${j.role}`), el("div", "rep__who", `${when}${j.country ? ` · ${j.country}` : ""}`));
+      card.append(row);
+    }
     const agreedHead = el("div", "cx__label cx__agreedhead", `Tester agreements · ${agreements.length}`);
     if (agreements.length) {
       // The log as a spreadsheet file (opens in Numbers, Excel or Google Sheets), to keep a copy.
