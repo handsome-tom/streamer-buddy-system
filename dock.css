@@ -6737,3 +6737,17 @@ html :is(body, body.has-space.has-space) .oc-line.oc-mod:is(.oc-mod--info, .oc-m
 .oc-notebub__main, .oc-notebub--light .oc-notebub__main {
   background: linear-gradient(180deg, var(--note-c) 0%, color-mix(in srgb, var(--note-c) 44%, rgba(24, 24, 28, 0.9)) 48%, color-mix(in srgb, var(--note-c) 32%, rgba(16, 16, 20, 0.92)) 100%);
 }
+
+/* ===== Top cards (poll, prediction, hype train, gift bomb): bigger, bolder, whiter headings. ===== */
+html :is(body, body.has-space.has-space) .oc-top .oc-topcard:not(.oc-topcard--pin) .oc-topcard__label {
+  font-size: 13.5px; font-weight: 800; letter-spacing: 0.03em; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+html :is(body, body.has-space.has-space) .oc-topcard__gifter { font-weight: 800; }
+html :is(body, body.has-space.has-space) .oc-topcard__time { font-weight: 800; }
+
+/* A chat note's time, white so it reads. */
+.oc-notebub__time, .oc-notebub--mine .oc-notebub__time, .oc-notebub--light .oc-notebub__time { color: #fff; opacity: 0.9; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+
+/* The ad timer's bar: Twitch's green (the moderator-badge green), the whole bar, as pixel dashes. */
+.twad__bar { background: repeating-linear-gradient(90deg, rgba(0, 173, 3, 0.28) 0 4px, transparent 4px 6px); }
+.twad__fill { background: repeating-linear-gradient(90deg, #00ad03 0 4px, transparent 4px 6px); }
