@@ -6649,3 +6649,81 @@ main.main--tools { position: relative; z-index: 1; min-height: calc(100vh - 43px
 
 /* Tom with hearts, in place of a heart emoji (the heart answer and its hint). */
 .tomheart { display: inline-block; width: 1.5em; height: 1.5em; margin: -0.3em 0.05em -0.25em; vertical-align: middle; }
+
+/* ===== Bits badge unlocked (ownchat.js eventLook): a badge, not a cheer coming in. The cheers'
+   pink-purple; the words "Bits badge unlocked" are the big line, growing a little with the
+   tier; the tier is the small tag under it; who unlocked it is bold and white. ===== */
+:is(body, body.has-space.has-space) .oc-line.oc-event.oc-event--badge { --ev: #c86bff; }
+html :is(body, body.has-space.has-space) .oc-line.oc-event.oc-event--badge .oc-event__what {
+  font-family: "Plus Jakarta Sans", Inter, sans-serif; font-size: calc(17px + 9px * var(--s, 0)); font-weight: 800;
+  letter-spacing: -0.01em; text-transform: none; line-height: 1.15; color: #fff;
+}
+html :is(body, body.has-space.has-space) .oc-line.oc-event.oc-event--badge .oc-event__label { color: #fff; background: color-mix(in srgb, var(--ev) 70%, transparent); }
+
+/* The bits gem (ownchat.js gem()) keeps its own purple facets: no colored disc behind it. */
+:is(body, body.has-space.has-space) .oc-cheerline__gem { width: auto; height: auto; background: none; box-shadow: none; filter: drop-shadow(0 0 6px rgba(160, 110, 255, 0.55)); }
+.oc-gem { display: block; flex: none; }
+:is(body, body.has-space.has-space) .oc-event--badge .oc-event__icon .oc-gem { filter: drop-shadow(0 0 6px rgba(160, 110, 255, 0.55)); }
+
+/* ===== Easier to read: every text bubble (a mod's question, message, quick info, !vanish, the
+   streamer's own, and notes on chat lines) is the sender's chat color at lower strength over the
+   dark chat, never the full bright color, with white words on a soft shadow. ===== */
+html :is(body, body.has-space.has-space) .oc-line.oc-mod,
+html :is(body, body.has-space.has-space) .oc-line.oc-mod:is(.oc-mod--info, .oc-mod--love, .oc-mod--ask, .oc-mod--stuck, .oc-mod--bright, .oc-mod--light) {
+  --ink: #fff; --ink-soft: rgba(255, 255, 255, 0.8);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--mc) 44%, rgba(24, 24, 28, 0.9)), color-mix(in srgb, var(--mc) 32%, rgba(16, 16, 20, 0.92))) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mc) 40%, transparent), 0 10px 26px rgba(0, 0, 0, 0.45);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65), 0 0 8px rgba(0, 0, 0, 0.35);
+}
+html :is(body, body.has-space.has-space) .oc-line.oc-mod::after,
+html :is(body, body.has-space.has-space) .oc-line.oc-mod.oc-mod--bright::after { background: color-mix(in srgb, var(--mc) 32%, rgba(16, 16, 20, 0.92)); }
+html :is(body, body.has-space.has-space) .oc-line.oc-mod.oc-mod--mine { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mc) 40%, transparent), 0 10px 26px color-mix(in srgb, var(--mc) 18%, transparent); }
+html :is(body, body.has-space.has-space) .oc-line.oc-mod .oc-mod__act { text-shadow: none; }
+.oc-notebub__main, .oc-notebub--light .oc-notebub__main {
+  color: #fff;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--note-c) 44%, rgba(24, 24, 28, 0.9)), color-mix(in srgb, var(--note-c) 32%, rgba(16, 16, 20, 0.92)));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--note-c) 40%, transparent), 0 10px 26px rgba(0, 0, 0, 0.45);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65), 0 0 8px rgba(0, 0, 0, 0.35);
+}
+.oc-notebub--light .oc-notebub__who, .oc-notebub--light .oc-notebub__main { color: #fff; }
+.oc-notes > .oc-notebub:last-child .oc-notebub__main::after { background: color-mix(in srgb, var(--note-c) 32%, rgba(16, 16, 20, 0.92)); }
+
+/* ===== Easier to read: card headings ("HYPE TRAIN · LEVEL 1", "… IS GIFTING 5 SUBS!", "TIER 1
+   GIFT SUBS", "5 OF 5 GIFTED", poll and prediction titles, raid titles) in the site's main font,
+   extra bold, still in capitals, with a soft shadow; poll and prediction choices bolder too. ===== */
+html :is(body, body.has-space.has-space) :is(.oc-firsttag, .oc-raid__title, .oc-notice--raid .oc-raid__title, .oc-topcard__label, .oc-topcard--pin .oc-topcard__label, .oc-notice__head, .oc-giftees__count, .oc-event__what) {
+  font-family: "Plus Jakarta Sans", Inter, sans-serif; font-weight: 800; font-synthesis: none;
+  letter-spacing: 0.05em; -webkit-font-smoothing: antialiased;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+html :is(body, body.has-space.has-space) :is(.oc-topcard__label, .oc-notice__head, .oc-giftees__count, .oc-event__what) { text-transform: uppercase; }
+html :is(body, body.has-space.has-space) .oc-topcard__choice { font-weight: 700; color: #efeff1; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55); }
+html :is(body, body.has-space.has-space) .oc-topcard__num { font-weight: 800; color: #fff; }
+/* (A pinned message's own words stay ordinary text, as before.) */
+html :is(body, body.has-space.has-space) .oc-topcard--pin .oc-topcard__label { font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: #adadb8; text-shadow: none; }
+
+/* ===== Sub cards (first-time sub, resub): no white ring around the icon, and the first-time
+   sub's dotted edge in its purple rather than white. ===== */
+html :is(body, body.has-space.has-space) .oc-line.oc-event:is(.oc-event--first, .oc-event--sub) .oc-event__icon { border: 0; outline: 0; }
+html :is(body, body.has-space.has-space) .oc-line.oc-event.oc-event--first .oc-event__icon { box-shadow: 0 0 16px rgba(145, 71, 255, 0.8); }
+html :is(body, body.has-space.has-space) .oc-line.oc-event.oc-event--sub .oc-event__icon { box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55); }
+html :is(body, body.has-space.has-space) .oc-line.oc-event:is(.oc-event--first, .oc-event--sub) .oc-event__icon::before,
+html :is(body, body.has-space.has-space) .oc-line.oc-event:is(.oc-event--first, .oc-event--sub) .oc-event__icon::after { box-shadow: none; border: 0; }
+html :is(body, body.has-space.has-space) .oc-line.oc-event.oc-event--first { --bar: #a970ff; }
+
+/* ===== The mod panel's flagged chat line (and quick notes): like every other card in the brand,
+   no hard outline or glow ring: a soft tint of the sender's color fading to dark, a soft dark
+   shadow, and the squared, dashed pixel line down the left in their color. ===== */
+.qflash:not(.qflash--love):not(.qflash--seen) {
+  position: relative; padding-left: 16px; border: 0; border-radius: 3px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--c) 22%, #1b1b20), color-mix(in srgb, var(--c) 6%, #1b1b20));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+.qflash:not(.qflash--love):not(.qflash--seen)::after {
+  content: ""; position: absolute; left: 6px; top: 5px; bottom: 5px; width: 4px; pointer-events: none;
+  background: repeating-linear-gradient(180deg, var(--c) 0 4px, transparent 4px 6px);
+}
+
+/* ===== The ad timer's bar: Twitch's green, drawn as the same squared pixel dashes. ===== */
+.twad__bar { height: 4px; background: repeating-linear-gradient(90deg, rgba(83, 83, 95, 0.55) 0 4px, transparent 4px 6px); border-radius: 0; }
+.twad__fill { border-radius: 0; background: repeating-linear-gradient(90deg, #00f593 0 4px, transparent 4px 6px); }

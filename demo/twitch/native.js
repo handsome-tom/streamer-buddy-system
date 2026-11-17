@@ -56,11 +56,11 @@
     },
     tCheer: {
       title: "Cheer",
-      html: line("SneakySneaky", "#2e8b57", `<span class="nt-cheer">${svg("gem", "#9c3ee8", 18)}<b style="color:#9c3ee8">100</b></span> GGEZ`, badge("#9c3ee8", "◆")),
+      html: line("SneakySneaky", "#2e8b57", `<span class="nt-cheer"><svg viewBox="0 0 20 24" width="15" height="18" aria-hidden="true"><path d="M10 0 0 16 10 8.8z" fill="#7b2cf0"/><path d="M10 0 10 8.8 20 16z" fill="#a47ef4"/><path d="M0 16 10 8.8 10 24z" fill="#a78bf8"/><path d="M10 8.8 20 16 10 24z" fill="#cbbcfd"/></svg><b style="color:#9c3ee8">100</b></span> GGEZ`, badge("#9c3ee8", "◆")),
     },
     tBadge: {
       title: "Bits badge",
-      html: notice(svg("gem", "#9c3ee8"), "<b>SneakySneaky</b> just earned a new <b>1K Bits badge</b>!", "", "#9c3ee8"),
+      html: notice('<svg viewBox="0 0 20 24" width="17" height="20" aria-hidden="true"><path d="M10 0 0 16 10 8.8z" fill="#7b2cf0"/><path d="M10 0 10 8.8 20 16z" fill="#a47ef4"/><path d="M0 16 10 8.8 10 24z" fill="#a78bf8"/><path d="M10 8.8 20 16 10 24z" fill="#cbbcfd"/></svg>', "<b>SneakySneaky</b> just earned a new <b>1K Bits badge</b>!", "", "#9c3ee8"),
     },
     tRedeem: {
       title: "Redemption",

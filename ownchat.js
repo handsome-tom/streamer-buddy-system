@@ -105,6 +105,9 @@
   };
   // 8-bit outline versions of the event icons (made from the line icons above on a 16-pixel
   // grid), to match the StreamSpace site: outlined, pixelated, drawn in the event's color.
+  // The bits gem, the same everywhere bits show (cheers, bits badges): a faceted purple gem,
+  // a point on top, wide in the middle, four facets from dark to light.
+  const gem = (h) => `<svg class="oc-gem" viewBox="0 0 20 24" width="${Math.round(h * 20 / 24)}" height="${h}" aria-hidden="true"><path d="M10 0 0 16 10 8.8z" fill="#7b2cf0"/><path d="M10 0 10 8.8 20 16z" fill="#a47ef4"/><path d="M0 16 10 8.8 10 24z" fill="#a78bf8"/><path d="M10 8.8 20 16 10 24z" fill="#cbbcfd"/></svg>`;
   const PIXEL = {
     flame: "M6 2h3v1h-3zM6 3h3v1h-3zM6 4h1v1h-1zM8 4h2v1h-2zM6 5h1v1h-1zM9 5h2v1h-2zM6 6h2v1h-2zM10 6h2v1h-2zM6 7h2v1h-2zM11 7h2v1h-2zM3 8h2v1h-2zM6 8h2v1h-2zM12 8h1v1h-1zM3 9h4v1h-4zM12 9h1v1h-1zM3 10h1v1h-1zM12 10h1v1h-1zM3 11h1v1h-1zM12 11h1v1h-1zM3 12h2v1h-2zM11 12h2v1h-2zM4 13h2v1h-2zM10 13h2v1h-2zM5 14h6v1h-6z",
     star: "M7 1h2v1h-2zM6 2h4v1h-4zM6 3h4v1h-4zM5 4h2v1h-2zM9 4h2v1h-2zM1 5h5v1h-5zM10 5h5v1h-5zM1 6h2v1h-2zM13 6h2v1h-2zM1 7h2v1h-2zM13 7h2v1h-2zM2 8h2v1h-2zM12 8h2v1h-2zM3 9h2v1h-2zM11 9h2v1h-2zM4 10h1v1h-1zM11 10h1v1h-1zM3 11h2v1h-2zM11 11h2v1h-2zM3 12h2v1h-2zM6 12h4v1h-4zM11 12h2v1h-2zM3 13h4v1h-4zM9 13h4v1h-4zM3 14h2v1h-2zM11 14h2v1h-2z",
@@ -1171,9 +1174,9 @@
         line.classList.add("oc-cheerline", `oc-cheerline--t${tier}`);
         line.style.setProperty("--s", sizeBy(n, 25000).toFixed(2)); // room it takes, as for subs
         const head = el("div", "oc-cheerline__head");
-        const gem = el("span", "oc-cheerline__gem");
-        gem.innerHTML = icon("gem", 16);
-        head.append(gem, el("b", "oc-cheerline__value", n.toLocaleString()), el("span", "oc-cheerline__what", n === 1 ? "bit" : "bits"));
+        const gemEl = el("span", "oc-cheerline__gem");
+        gemEl.innerHTML = gem(22);
+        head.append(gemEl, el("b", "oc-cheerline__value", n.toLocaleString()), el("span", "oc-cheerline__what", n === 1 ? "bit" : "bits"));
         line.prepend(head);
       }
       // Twitch only tells the channel owner which reward it was.
@@ -1867,7 +1870,9 @@
       if (kind === "pay_it_forward") return { icon: "giftfill", tone: "gift", value: "", what: "Paid it forward", who: sys || name };
       if (kind === "bits_badge_tier") {
         const tier = e.bits_badge_tier?.tier || Number(sys.match(/(\d[\d,]*) bits/i)?.[1]?.replace(/,/g, "")) || 0;
-        return { icon: "gem", tone: "bits", value: tier ? Number(tier).toLocaleString() : "", what: "bits badge unlocked", who: name };
+        // A badge unlocked, not bits arriving: "Bits badge unlocked" is the headline, the tier
+        // a small tag ("10,000 bits"), in the cheers' pink-purple, and who unlocked it bold.
+        return { icon: "gem", tone: "badge", value: "", what: "Bits badge unlocked", label: tier ? `${Number(tier).toLocaleString()} bits` : "", who: name, gifter: name };
       }
       if (kind === "charity_donation") {
         const c = e.charity_donation || {};
@@ -2086,7 +2091,7 @@
         line.classList.add("oc-event", `oc-event--${ev.tone}`);
         line.style.setProperty("--s", eventSize(kind, e).toFixed(2));
         const art = el("span", "oc-event__icon");
-        art.innerHTML = pixel(ev.icon, 20);
+        art.innerHTML = ev.icon === "gem" ? gem(24) : pixel(ev.icon, 20);
         if (ev.first) {
           line.classList.add("oc-event--first");
           for (let i = 0; i < 4; i++) art.append(el("i", `oc-spark oc-spark--${i}`));
