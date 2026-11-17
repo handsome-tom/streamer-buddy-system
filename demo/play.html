@@ -788,7 +788,7 @@
      its spot, with Twitch's bar under the player faked around it. The whole thing fades out to
      the left, so the eye goes to the chat. Watch-only: nothing in it can be clicked. */
   .twlive { display: flex; flex-direction: column; gap: 8px; min-width: 0; align-self: stretch; }
-  .twlive .screen__label { color: #bf94ff; text-align: right; }
+  html.cols .twlive { padding-top: 32px; } /* no label of its own any more: start level with the chat box beside it, under its label */
   .twlive__fade { flex: 1; display: flex; flex-direction: column; min-height: 0; -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.35) 30%, #000 72%); mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.35) 30%, #000 72%); }
   .twlive__box { position: relative; flex: 1; min-height: 0; aspect-ratio: 16 / 9; container-type: size; overflow: hidden; border-radius: 10px 10px 0 0; background: #000; }
   html.cols .twrow .twlive__box { aspect-ratio: auto; min-height: 240px; }
@@ -1132,7 +1132,7 @@
     row.innerHTML = `<div class="twnote"><p class="eyebrow">And on Twitch itself</p><h3>The tools come along into Twitch's chat.</h3>
       <p>This is Twitch's own chat on twitch.tv, as BlazeMod420 sees it with StreamSpace. Point at a line to flag it or leave a note on it, right-click a name to remember who they are, and anything you flag lights up in the streamer's chat above.</p>
       <p>Viewers get these too: notes on people, quick phrases, and your name boxed so you never miss a mention.</p></div>
-      <div class="twlive"><div class="screen__label">Live on Twitch <small>a stand-in stream</small></div>
+      <div class="twlive">
         <div class="twlive__fade" aria-hidden="true">
           <div class="twlive__box"><p class="twlive__wait">Loading the stream…</p><div class="twlive__shield"></div></div>
           <div class="twbar">
