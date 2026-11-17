@@ -108,7 +108,8 @@
   .copy:hover { background: #6d78f4; }
   .note { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
 
-  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 36px; }
+  .streamer .two { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 44px; }
   .two h3 { margin: 0 0 8px; font-size: 18px; color: #fff; }
 
   /* The streamer section: a purple glow, purple numbers. */
@@ -121,6 +122,10 @@
   .steps--streamer li { padding-bottom: 20px; }
   .steps--streamer b { font-size: 15.5px; }
   .steps--streamer span b { display: inline; font-size: inherit; margin: 0; }
+  .link { display: flex; align-items: center; gap: 8px; margin: 8px 0 10px; }
+  .link code { flex: 1; min-width: 0; overflow-x: auto; padding: 8px 12px; font: 13px/1.4 ui-monospace, "SF Mono", Menlo, monospace; color: #fff; overflow-wrap: anywhere; background: rgba(255, 255, 255, 0.06); border-radius: 8px; user-select: all; }
+  .copy--small { position: static; flex: none; padding: 6px 12px; font-size: 12.5px; }
+  .link__alt { display: block; margin-top: 4px; font-size: 14px; }
   .streamer__pitch { margin: 0 0 10px; color: #c6c6d0; }
   .two h3 .logo { width: 22px; height: 22px; vertical-align: -5px; margin-right: 4px; }
   .streamer .ticks li::before { background: var(--streamer); box-shadow: 0 0 10px rgba(var(--streamer-rgb), 0.6); }
@@ -130,7 +135,7 @@
   footer .heart { color: #ff6b8b; }
 
   @media (max-width: 760px) {
-    .roles, .two { grid-template-columns: 1fr; gap: 30px; }
+    .roles, .two, .streamer .two { grid-template-columns: minmax(0, 1fr); gap: 30px; }
     .top nav { display: none; }
     .hero { padding-top: 52px; }
   }
@@ -159,7 +164,7 @@
         <li><b>Ask to join</b><span>On streamspace.tv, pick which one you are, add your Twitch name and message me on Discord.</span></li>
         <li><b>Get picked</b><span>Testers are hand-picked so each round has a good mix of streamers, mods and viewers.</span></li>
         <li><b>Join the testers' channel</b><span>You get the StreamSpace Tester role in Discord, which opens a private channel just for testers.</span></li>
-        <li><b>Install and sign in</b><span>I DM you the install link (and the OBS dock link if you stream). The steps are below.</span></li>
+        <li><b>Install and sign in</b><span>I DM you the install link. Streamers, the OBS dock link is right on this page. The steps are below.</span></li>
         <li><b>Use it, and try this round's list</b><span>Stream, mod or hang out like you normally would, and tick off the things on the list.</span></li>
         <li><b>Tell me what happens</b><span>Bugs, confusion, things you love, things that annoy you. All of it helps.</span></li>
         <li><b>Wrap-up survey</b><span>About five minutes at the end of the round. Then you can stay on for round two if you'd like.</span></li>
@@ -216,26 +221,21 @@
           <h3><img class="logo" src="brand/logo-obs.png" alt="" width="22" height="22"> Add it to OBS</h3>
           <ol class="steps steps--streamer">
             <li><b>Open Custom Browser Docks</b><span>In OBS's menu bar: <b>Docks → Custom Browser Docks…</b></span></li>
-            <li><b>Add the dock</b><span>Name it StreamSpace, paste the dock link I DM'd you, then click <b>Apply</b>.</span></li>
+            <li><b>Add the dock</b><span>In the empty row, type <b>StreamSpace</b> as the name, paste this as the URL, then click <b>Apply</b>:</span>
+              <div class="link"><code id="dockUrl">https://handsome-tom.github.io/streamer-buddy-system/</code><button type="button" class="copy copy--small" data-copy="dockUrl">Copy</button></div>
+              <span class="link__alt">Want your Twitch chat inside the same dock? Use this URL instead, then you can close OBS's own chat dock:</span>
+              <div class="link"><code id="dockChatUrl">https://handsome-tom.github.io/streamer-buddy-system/?livechat</code><button type="button" class="copy copy--small" data-copy="dockChatUrl">Copy</button></div>
+            </li>
             <li><b>Put it where you'll see it</b><span>Drag the new panel next to your chat, or anywhere that's easy to glance at while you're live.</span></li>
             <li><b>Sign in with Twitch</b><span>Click <b>Sign in with Twitch</b> in the dock and allow it.</span></li>
             <li><b>Add your mods</b><span>Open <b>Connections</b> in the dock and add your mods' Twitch names. They show up once they've added you back.</span></li>
             <li><b>Allow mod tools when asked</b><span>The first time a mod uses a tool like a poll or slow mode, the dock asks you to allow it. One tap.</span></li>
           </ol>
-          <p class="note">Want your Twitch chat inside the same dock? Ask me for the chat version of the link, then you can close OBS's own chat dock.</p>
         </div>
         <div>
           <h3><img class="logo" src="brand/logo-chrome.png" alt="" width="22" height="22"><img class="logo" src="brand/logo-brave.png" alt="" width="22" height="22"> Get the extension too</h3>
-          <p class="streamer__pitch">The dock covers you while you're live. The extension covers you the rest of the time, and it's worth having even if you never mod for anyone.</p>
-          <ul class="ticks">
-            <li><b>The Cat Signal:</b> a green cat spins on the StreamSpace icon when a channel you mod for goes live.</li>
-            <li><b>Split screen:</b> watch two streams side by side, each with its own chat.</li>
-            <li><b>Notes on people:</b> right-click a name to remember where you know them from.</li>
-            <li><b>Quick phrases and pinned emotes:</b> for the things you type every stream.</li>
-            <li><b>Bookmarks on your VODs:</b> mark moments to clip or come back to later.</li>
-            <li><b>Your Twitch, tidied:</b> pinned channels, clear all notifications, watch streaks.</li>
-          </ul>
-          <p class="note">Same install link as everyone else. One extension does it all.</p>
+          <p class="streamer__pitch">The dock is your side. Install the StreamSpace extension in Chrome or Brave too, so you get the other side of the coin and see it the way your mods and viewers do.</p>
+          <p class="note">Same install link I DM'd you, same as everyone else.</p>
         </div>
       </div>
     </div>
@@ -360,6 +360,23 @@ Did it happen again when I tried?: (yes / no / didn't try)</pre>
       });
     }
   })();
+  // Copy the OBS dock links.
+  for (const btn of document.querySelectorAll("[data-copy]")) {
+    btn.addEventListener("click", async () => {
+      const code = document.getElementById(btn.dataset.copy);
+      try {
+        await navigator.clipboard.writeText(code.textContent);
+        btn.textContent = "Copied!";
+      } catch {
+        const r = document.createRange();
+        r.selectNodeContents(code);
+        getSelection().removeAllRanges();
+        getSelection().addRange(r);
+        btn.textContent = "Selected";
+      }
+      setTimeout(() => (btn.textContent = "Copy"), 2000);
+    });
+  }
   // Copy the bug template.
   document.getElementById("copyTpl").addEventListener("click", async (e) => {
     const btn = e.currentTarget;
