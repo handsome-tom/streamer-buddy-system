@@ -681,6 +681,7 @@
   .thanks__bit { margin: 4px 0 0; font-size: 14px; color: #a3a3ad; }
   .thanks__aside { margin: 2px 0 0; font-size: 12px; font-style: italic; color: #75757f; }
   .thanks__head { margin-top: 48px; font-size: 13px; }
+  #credits { scroll-margin-top: 70px; } /* "Credits" in the top menu lands here, clear of the menu bar */
   .thanks__end { white-space: nowrap; } /* the quote's last word and "— Tom" always share a line */
   .thanks__sign { display: inline-block; white-space: nowrap; font-style: normal; font-weight: 700; color: #efeff1; }
   .thanks__note { max-width: 520px; margin: 0 auto 26px; font-size: 15px; line-height: 1.6; color: #c6c6d0; }
@@ -835,6 +836,7 @@
         <a href="#mods" class="top__sec top__sec--mods">Mods</a>
         <a href="#viewers" class="top__sec top__sec--viewers">Viewers</a>
         <a href="#get" class="top__sec">Get it</a>
+        <a href="#credits" class="top__sec">Credits</a>
         <a href="#demo" class="cta">Try the demo</a>
       </nav>
     </div>
@@ -884,10 +886,15 @@
 <script>
   (() => {
     const frame = document.getElementById("demoFrame");
+    let aimedAt = location.hash ? Date.now() : 0; // when a section was last picked (menu or link)
+    addEventListener("hashchange", () => (aimedAt = Date.now()));
     addEventListener("message", (e) => {
       if (e.source !== frame.contentWindow || e.origin !== location.origin || e.data?.t !== "demo-height") return;
       frame.style.height = `${Math.ceil(e.data.h)}px`;
       document.getElementById("demoWait").hidden = true;
+      // The demo growing to its full height moves everything below it. If someone just picked a
+      // section from the menu (or arrived on a link to one), land them there anyway.
+      if (location.hash.length > 1 && Date.now() - aimedAt < 5000) document.querySelector(location.hash)?.scrollIntoView({ behavior: "instant" });
     });
     let started = false;
     const start = () => {
@@ -1007,7 +1014,7 @@
     </div>
   </section>
 
-  <footer class="thanks">
+  <footer class="thanks" id="credits">
     <div class="wrap">
       <p class="thanks__eyebrow">Created by</p>
       <div class="thanks__me">
