@@ -6807,57 +6807,105 @@ html :is(body, body.has-space.has-space) :is(
 ):not(.oc-line--marked)::before { opacity: 0.55; }
 .qflash:not(.qflash--love):not(.qflash--seen)::after { opacity: 0.55; }
 
-/* ===== Messages' top: your profile, after an old MySpace page, over the space backdrop =====
+/* ===== Messages' top: your profile, a modern take on an old MySpace page, over the space backdrop =====
    (dock.js, mySpace.) The sheet lets the stars show through behind your profile and Top 8,
-   then darkens for the lists under them. No boxes: your picture glows in your status's
-   color (Available mod green, Online orange, Idle yellow, Invisible gray). */
+   then darkens for the lists under them. This one part gets colorful edges: MySpace blue
+   into violet, pink and orange, fading out rather than hard lines. Pictures are round, as
+   on Twitch. */
 main.main--msgs.main--myspace {
-  background: linear-gradient(180deg, rgba(2, 3, 8, 0.25) 0, rgba(2, 3, 8, 0.45) 240px, rgba(2, 3, 8, 0.88) 470px, rgba(2, 3, 8, 0.95) 100%);
+  --ms-blue: #3b82f6;
+  --ms-violet: #8b5cf6;
+  --ms-pink: #ec4899;
+  --ms-orange: #f59e0b;
+  --ms-ring: conic-gradient(from 200deg, var(--ms-blue), var(--ms-violet), var(--ms-pink), var(--ms-orange), var(--ms-blue));
+  background: linear-gradient(180deg, rgba(2, 3, 8, 0.25) 0, rgba(2, 3, 8, 0.45) 240px, rgba(2, 3, 8, 0.88) 500px, rgba(2, 3, 8, 0.95) 100%);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-.myspace { --glow: var(--good); position: relative; padding: 2px 2px 4px; }
-.myspace--online { --glow: var(--honey); }
-.myspace--idle { --glow: var(--yellow); }
-.myspace--offline { --glow: var(--muted); }
-/* A soft light behind you, in your status's color, fading out (no edge). */
-.myspace::before { content: ""; position: absolute; z-index: -1; left: -40px; top: -30px; width: 260px; height: 220px; background: radial-gradient(closest-side, color-mix(in srgb, var(--glow) 14%, transparent), transparent); pointer-events: none; }
-.myspace__name { margin: 4px 0 10px; color: var(--msg-text); font-family: "Pixelify Sans", "Plus Jakarta Sans", sans-serif; font-size: 24px; font-weight: 600; line-height: 1.1; letter-spacing: 0.01em; overflow-wrap: anywhere; text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7); }
+/* With the blur off, the planet's ring and Tom's meteor tail read as sharp streaks behind
+   the profile: they sit this page out (the stars stay). */
+body:has(main.main--myspace) :is(.space__planet, .space__tom) { opacity: 0; transition: opacity 0.3s; }
+
+/* A slow turn of the colorful rings. */
+@property --ms-turn { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@keyframes ms-turn { to { --ms-turn: 360deg; } }
+
+.myspace { position: relative; padding: 2px 0 4px; }
+/* Your profile: a soft tinted card whose edge is the MySpace gradient, brightest at the
+   top-left and fading out toward the bottom-right. */
+.myspace__card { position: relative; padding: 14px 14px 16px; border-radius: 20px; background: radial-gradient(120% 90% at 0% 0%, rgba(59, 130, 246, 0.16), transparent 60%), radial-gradient(90% 80% at 100% 100%, rgba(236, 72, 153, 0.12), transparent 65%), rgba(8, 10, 22, 0.45); box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45), 0 0 40px rgba(139, 92, 246, 0.08); }
+.myspace__card::before { content: ""; position: absolute; inset: 0; padding: 1.5px; border-radius: inherit; background: linear-gradient(135deg, var(--ms-blue), var(--ms-violet) 35%, var(--ms-pink) 65%, rgba(245, 158, 11, 0.15)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: 0.75; pointer-events: none; }
+.myspace__name { margin: 0 0 12px; color: var(--msg-text); font-family: "Pixelify Sans", "Plus Jakarta Sans", sans-serif; font-size: 24px; font-weight: 600; line-height: 1.1; letter-spacing: 0.01em; overflow-wrap: anywhere; text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7); }
 .myspace__body { display: flex; align-items: flex-start; gap: 14px; }
-.myspace__pic { flex: none; display: grid; place-items: center; width: 112px; height: 112px; overflow: hidden; background: #1b1d26; border-radius: 14px; box-shadow: 0 0 0 2px var(--glow), 0 0 26px color-mix(in srgb, var(--glow) 40%, transparent), 0 12px 30px rgba(0, 0, 0, 0.6); }
-.myspace--offline .myspace__pic { filter: grayscale(0.5); }
+/* Your picture: round, in a turning ring of the MySpace colors with a thin dark gap.
+   Idle: the ring goes amber. Invisible: gray, and the picture fades a little. */
+.myspace__ring { --ms-ringfill: conic-gradient(from var(--ms-turn), var(--ms-blue), var(--ms-violet), var(--ms-pink), var(--ms-orange), var(--ms-blue)); position: relative; flex: none; padding: 3px; border-radius: 50%; background: var(--ms-ringfill); box-shadow: 0 0 24px rgba(139, 92, 246, 0.35), 0 0 40px rgba(236, 72, 153, 0.15); animation: ms-turn 14s linear infinite; }
+.myspace--idle .myspace__ring { --ms-ringfill: conic-gradient(from var(--ms-turn), var(--yellow), var(--amber), var(--yellow)); box-shadow: 0 0 22px rgba(255, 179, 26, 0.3); }
+.myspace--offline .myspace__ring { --ms-ringfill: rgba(173, 173, 184, 0.45); box-shadow: none; animation: none; }
+.myspace__pic { display: grid; place-items: center; width: 108px; height: 108px; overflow: hidden; background: #1b1d26; border: 3px solid #070912; border-radius: 50%; }
+.myspace--offline .myspace__pic { filter: grayscale(0.5); opacity: 0.8; }
 .myspace__pic img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .myspace__letter { color: var(--msg-text); font-size: 48px; font-weight: 800; }
-.myspace__about { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 0; padding-top: 2px; }
-/* How you're showing: a button, it opens the same menu as your status in the bar. */
-.myspace__status { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin: -4px -6px 3px; padding: 4px 6px; color: var(--glow); font: inherit; text-align: left; background: none; border: 0; border-radius: 10px; cursor: pointer; }
+.myspace__about { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 0; padding-top: 4px; }
+/* How you're showing: a button, it opens the same menu as your status in the bar. Its
+   color is your status's, as in the bar (Available mod green, Online orange, Idle yellow,
+   Invisible gray). */
+.myspace__status { --st: var(--good); display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin: -4px -6px 2px; padding: 4px 6px; color: var(--st); font: inherit; text-align: left; background: none; border: 0; border-radius: 10px; cursor: pointer; }
+.myspace--online .myspace__status { --st: var(--honey); }
+.myspace--idle .myspace__status { --st: var(--yellow); }
+.myspace--offline .myspace__status { --st: var(--muted); }
 .myspace__status:hover { background: radial-gradient(closest-side, rgba(255, 255, 255, 0.07), transparent); }
 .myspace__status .presence { font-family: "Pixelify Sans", "Plus Jakarta Sans", sans-serif; font-size: 17px; font-weight: 600; letter-spacing: 0.01em; }
-.myspace--online .myspace__status .presence, .myspace--modding .myspace__status .presence { text-shadow: 0 0 12px color-mix(in srgb, var(--glow) 55%, transparent); }
+.myspace--online .myspace__status .presence, .myspace--modding .myspace__status .presence { text-shadow: 0 0 12px color-mix(in srgb, var(--st) 55%, transparent); }
 .myspace__more { padding-left: 20px; color: var(--msg-muted); font-size: 11.5px; font-weight: 600; }
 .myspace--modding .myspace__more { padding-left: 30px; color: var(--good); opacity: 0.85; }
-.myspace__fact { display: flex; gap: 5px; min-width: 0; font-size: 12px; line-height: 1.35; }
+.myspace__fact { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; line-height: 1.35; }
 .myspace__label { flex: none; color: var(--msg-muted); }
 .myspace__label::after { content: ":"; }
 .myspace__value { min-width: 0; overflow: hidden; color: var(--msg-text); font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+/* The channels you mod for: little round pictures in a row, with a thin colorful ring. */
+.myspace__fact--chans { flex-direction: column; align-items: flex-start; gap: 5px; } /* the label above, the pictures wrapping under it */
+.myspace__chans { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; padding-left: 2px; }
+.myspace__chan { position: relative; display: grid; place-items: center; flex: none; width: 26px; height: 26px; color: var(--msg-text); font-size: 11px; font-weight: 800; background: #1b1d26; border-radius: 50%; box-shadow: 0 0 0 1.5px #070912, 0 0 0 3px rgba(139, 92, 246, 0.55); cursor: default; outline: none; }
+.myspace__chan img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.myspace__chan:hover, .myspace__chan:focus-visible { box-shadow: 0 0 0 1.5px #070912, 0 0 0 3px var(--ms-pink), 0 0 12px rgba(236, 72, 153, 0.5); }
+.myspace__chan--more { font-size: 10px; letter-spacing: -0.02em; }
+.myspace__chanletter { font-size: 12px; font-weight: 800; }
+/* Its name, as soon as you point at it: a small dark tip above, with a colorful edge. It
+   opens leftward from the picture (the pictures sit on the panel's right side, so it stays
+   inside), and only exists while shown, so a hidden one can't make the panel scroll sideways. */
+.myspace__chan::after { content: attr(data-tip); position: absolute; z-index: 5; right: -6px; bottom: calc(100% + 8px); display: none; padding: 4px 9px; color: #fff; font-size: 11.5px; font-weight: 700; line-height: 1.3; white-space: nowrap; background: rgba(12, 14, 28, 0.96); border-radius: 8px; box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.6), 0 6px 18px rgba(0, 0, 0, 0.55); pointer-events: none; }
+.myspace__chan:hover::after, .myspace__chan:focus-visible::after { display: block; animation: ms-tip 0.12s ease-out; }
+@keyframes ms-tip { from { opacity: 0; transform: translateY(3px); } }
 
-/* Your Friend Space: the Top 8, four across, the name above the picture as MySpace had it. */
-.myspace .msgs__sechead { margin-top: 20px; }
-.fspace__count { margin: -2px 2px 10px; color: var(--msg-muted); font-size: 12px; }
+/* Your Friend Space: a MySpace header bar (its blue, into violet, fading out to the right),
+   then the Top 8, four across, the name above the picture as MySpace had it. */
+.fspace__bar { position: relative; display: flex; align-items: center; gap: 8px; margin: 18px 0 8px; padding: 7px 8px 7px 12px; border-radius: 12px; background: linear-gradient(90deg, rgba(59, 130, 246, 0.42), rgba(139, 92, 246, 0.24) 55%, rgba(236, 72, 153, 0.06) 85%, transparent); box-shadow: inset 3px 0 0 var(--ms-blue); }
+.fspace__title { color: #fff; font-family: "Pixelify Sans", "Plus Jakarta Sans", sans-serif; font-size: 16px; font-weight: 600; letter-spacing: 0.01em; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5); }
+.fspace__chip { padding: 1px 8px; color: #fff; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; background: linear-gradient(90deg, var(--ms-pink), var(--ms-orange)); border-radius: 999px; box-shadow: 0 0 12px rgba(236, 72, 153, 0.4); }
+.fspace__all { margin-left: auto; height: 24px; padding: 0 11px; color: #fff; font: inherit; font-size: 11.5px; font-weight: 700; background: rgba(255, 255, 255, 0.08); border: 0; border-radius: 12px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18); cursor: pointer; }
+.fspace__all:hover { background: linear-gradient(90deg, var(--ms-violet), var(--ms-pink)); box-shadow: 0 0 14px rgba(236, 72, 153, 0.45); }
+.fspace__count { margin: 0 4px 10px; color: var(--msg-muted); font-size: 12px; }
 .fspace__count span { color: var(--msg-text); font-weight: 700; }
 .fspace { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 6px; }
-.fspace__friend { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 0; padding: 4px 2px 6px; color: var(--msg-text); font: inherit; background: none; border: 0; border-radius: 12px; cursor: pointer; }
-.fspace__friend:hover { background: radial-gradient(closest-side, rgba(255, 255, 255, 0.07), transparent); }
+.fspace__friend { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; padding: 4px 2px 6px; color: var(--msg-text); font: inherit; background: none; border: 0; border-radius: 14px; cursor: pointer; }
+.fspace__friend:hover { background: radial-gradient(closest-side, rgba(139, 92, 246, 0.14), transparent); }
 .fspace__friend:hover .fspace__name { text-decoration: underline; text-underline-offset: 3px; }
 .fspace__name { max-width: 100%; overflow: hidden; font-family: "Pixelify Sans", "Plus Jakarta Sans", sans-serif; font-size: 12.5px; font-weight: 600; line-height: 16px; white-space: nowrap; text-overflow: ellipsis; }
-.fspace .people__pic { position: relative; overflow: visible; width: 100%; max-width: 76px; height: auto; aspect-ratio: 1; background: #1b1d26; border-radius: 12px; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.55); }
-.fspace .people__pic img, .fspace .people__pic:has(.rank--corner) img { border-radius: 12px; }
-.fspace .people__pic.cx__pic--on { box-shadow: 0 0 0 2px var(--good), 0 0 16px rgba(0, 194, 122, 0.35), 0 8px 18px rgba(0, 0, 0, 0.55); }
-.fspace .people__pic.cx__pic--idle { box-shadow: 0 0 0 2px var(--amber), 0 0 16px rgba(255, 179, 26, 0.3), 0 8px 18px rgba(0, 0, 0, 0.55); }
+/* Each picture sits in a ring that says how they are: online green into teal, idle amber,
+   off a faint gray (and the picture dims, as everywhere). */
+.fspace__ring { position: relative; display: block; width: 100%; max-width: 74px; aspect-ratio: 1; padding: 2.5px; border-radius: 50%; background: rgba(173, 173, 184, 0.18); box-sizing: border-box; }
+.fspace__ring--on { background: conic-gradient(from 200deg, #00c27a, #34d399, #22d3ee, #00c27a); box-shadow: 0 0 16px rgba(0, 194, 122, 0.3); }
+.fspace__ring--idle { background: conic-gradient(from 200deg, var(--amber), var(--yellow), var(--amber)); box-shadow: 0 0 14px rgba(255, 179, 26, 0.25); }
+.fspace__friend:hover .fspace__ring--off { background: linear-gradient(135deg, var(--ms-blue), var(--ms-violet), var(--ms-pink)); }
+.fspace .people__pic { position: relative; overflow: visible; width: 100%; height: 100%; background: #1b1d26; border: 2.5px solid #070912; border-radius: 50%; box-sizing: border-box; box-shadow: none; }
+.fspace .people__pic img, .fspace .people__pic:has(.rank--corner) img { border-radius: 50%; }
 .fspace .dot__letter { font-size: 26px; }
-.fspace .rank-pair { right: -5px; bottom: -5px; }
+.fspace .rank-pair { right: -4px; bottom: -2px; }
 .fspace .rank-pair .rank { width: 17px; height: 17px; }
 .fspace .rank-pair .rank svg { width: 9px; height: 9px; }
-.fspace .msgs__facecount { top: -6px; right: -6px; }
-/* A free spot: just a faint glow where a picture would go. */
-.fspace__free { justify-self: center; width: 100%; max-width: 76px; aspect-ratio: 1; margin-top: 25px; background: radial-gradient(closest-side, rgba(125, 176, 239, 0.13), rgba(125, 176, 239, 0.04) 70%, transparent); border-radius: 50%; }
+.fspace .msgs__facecount { top: -4px; right: -4px; }
+/* A free spot: a faint round glow in a thin, faint ring of the MySpace colors. */
+.fspace__free { position: relative; justify-self: center; width: 100%; max-width: 74px; aspect-ratio: 1; margin-top: 26px; background: radial-gradient(closest-side, rgba(139, 92, 246, 0.1), transparent); border-radius: 50%; }
+.fspace__free::before { content: ""; position: absolute; inset: 0; padding: 1.5px; border-radius: 50%; background: var(--ms-ring); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: 0.22; }
+@media (prefers-reduced-motion: reduce) { .myspace__ring { animation: none; } }

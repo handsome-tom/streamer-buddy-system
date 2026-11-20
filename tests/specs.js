@@ -201,6 +201,7 @@ export const tests = {
     await h.until(() => panel.$$(".fspace__friend").length === 8, "eight people in the Top 8");
     h.check(panel.$(".myspace__name")?.textContent === "streamer", "the profile at the top should be yours");
     h.check(/Online Now!/.test(panel.$(".myspace__status")?.textContent || ""), "your profile should say Online Now!");
+    h.check(!/online since/i.test(panel.$(".myspace").innerText), "your profile shouldn't say when you came online");
     const top = panel.$$(".fspace__name").map((n) => n.textContent);
     h.check(top.join() === mods.join(), `the Top 8 should be mod1 to mod8 in the order added, got: ${top}`);
     h.check(streamer.connectedTo("tom"), "the owner should still be one of your connections (just not in a spot)");

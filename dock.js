@@ -5497,9 +5497,11 @@
     return panel;
   }
 
-  // The top of Messages, after an old MySpace profile, over the space backdrop:
-  //   you, big: your name, your picture, and how your connections see you ("Online Now!",
-  //     with the sword while you're an Available mod); a click on it changes it;
+  // The top of Messages, a modern take on an old MySpace profile, over the space backdrop:
+  //   you, big: your name, your round picture in a colorful ring, and how your connections
+  //     see you ("Online Now!", with the sword while you're an Available mod); a click on
+  //     it changes it. The channels you mod for are little round pictures, each saying
+  //     whose it is when you point at it;
   //   your Friend Space: your Top 8, your first eight connections in the order you added
   //     them (the relay keeps them in that order), the eight spots your sign-in comes
   //     with. Everyone else is in the lists under it, as before.
@@ -5510,14 +5512,33 @@
     offline: { says: "Invisible", more: "Others see you as offline" },
   };
   const TOP_EIGHT = 8;
+  const MOD_FOR_SHOWN = 6; // channels you mod, as pictures; past that a "+n"
+  // A round picture (or first letter) with its name in a tooltip that shows as soon as
+  // you point at it (or tab to it).
+  function tipPic(login, cls) {
+    const pic = el("span", cls);
+    pic.tabIndex = 0;
+    pic.setAttribute("role", "img");
+    pic.ariaLabel = login;
+    pic.dataset.tip = login;
+    if (pics[login]) {
+      const img = el("img");
+      img.src = pics[login];
+      img.alt = "";
+      pic.append(img);
+    } else pic.append(el("span", "myspace__chanletter", login[0].toUpperCase()));
+    return pic;
+  }
   function mySpace() {
     const login = me.login;
     const box = el("section", `myspace myspace--${myStatus}`);
+    const card = el("div", "myspace__card");
     const name = el("h2", "myspace__name", login);
     if (colorOf(login)) name.style.color = colorOf(login);
-    box.append(name);
+    card.append(name);
 
     const body = el("div", "myspace__body");
+    const ring = el("div", "myspace__ring");
     const pic = el("div", "myspace__pic");
     if (pics[login]) {
       const img = el("img");
@@ -5525,6 +5546,7 @@
       img.alt = "";
       pic.append(img);
     } else pic.append(el("span", "myspace__letter", login[0].toUpperCase()));
+    ring.append(pic);
 
     const about = el("div", "myspace__about");
     const now = MYSPACE_STATUS[myStatus] || MYSPACE_STATUS.modding;
@@ -5538,25 +5560,40 @@
       openPresence(presenceMenu.hidden);
     });
     about.append(status);
-    // A few lines about you, quiet label first, as a profile would have them.
-    const fact = (label, value) => {
-      const line = el("div", "myspace__fact");
-      line.append(el("span", "myspace__label", label), el("span", "myspace__value", value));
-      about.append(line);
-    };
+    // The channels you mod for: their round pictures, names on hover.
     const modFor = (modLists?.modFor || []).filter((l) => l !== login);
-    if (modFor.length) fact("Mod for", modFor.length > 3 ? `${modFor.slice(0, 3).join(", ")} +${modFor.length - 3}` : modFor.join(", "));
-    if (myStatus !== "offline" && mySince) fact("Online since", clock(mySince));
+    if (modFor.length) {
+      const line = el("div", "myspace__fact myspace__fact--chans");
+      const chans = el("span", "myspace__chans");
+      for (const l of modFor.slice(0, MOD_FOR_SHOWN)) chans.append(tipPic(l, "myspace__chan"));
+      if (modFor.length > MOD_FOR_SHOWN) {
+        const more = el("span", "myspace__chan myspace__chan--more", `+${modFor.length - MOD_FOR_SHOWN}`);
+        more.tabIndex = 0;
+        more.dataset.tip = modFor.length - MOD_FOR_SHOWN > 4 ? `${modFor.slice(MOD_FOR_SHOWN, MOD_FOR_SHOWN + 4).join(", ")} and more` : modFor.slice(MOD_FOR_SHOWN).join(", ");
+        more.ariaLabel = more.dataset.tip;
+        chans.append(more);
+      }
+      line.append(el("span", "myspace__label", "Mod for"), chans);
+      about.append(line);
+    }
     const friends = connections.filter((c) => c.mutual);
-    fact("Connections", String(friends.length));
-    body.append(pic, about);
-    box.append(body);
+    const count = el("div", "myspace__fact");
+    count.append(el("span", "myspace__label", "Connections"), el("span", "myspace__value", String(friends.length)));
+    about.append(count);
+    body.append(ring, about);
+    card.append(body);
+    box.append(card);
 
-    // ----- Your Friend Space: the Top 8.
-    const all = el("button", "msgs__new", "View all");
-    all.type = "button";
-    all.title = "All your connections";
-    all.addEventListener("click", () => show("people"));
+    // ----- Your Friend Space: the Top 8, under a MySpace-style header bar.
+    const bar = el("div", "fspace__bar");
+    bar.append(el("span", "fspace__title", "Friend Space"), el("span", "fspace__chip", "Top 8"));
+    if (friends.length) {
+      const all = el("button", "fspace__all", "View all");
+      all.type = "button";
+      all.title = "All your connections";
+      all.addEventListener("click", () => show("people"));
+      bar.append(all);
+    }
     const top = el("div", "fspace");
     // The owner (everyone's first connection, as Tom was on MySpace) takes none of your
     // eight spots (Connections' "Top 8 · n of 8 spots used"), so isn't one of them here.
@@ -5568,21 +5605,24 @@
       b.title = `${c.login} (${state === "on" ? "online" : state === "idle" ? "idle" : "offline"})`;
       const who = nameBit(c.login, "fspace__name");
       if (colorOf(c.login)) who.style.color = colorOf(c.login);
+      // The ring says how they are: green online, amber idle, faint when they're off.
+      const around = el("span", `fspace__ring fspace__ring--${state}`);
       const face = ringedPic(c.login);
       const badges = roleBadges(c.login);
       if (badges) face.append(badges);
       const direct = directWith(c.login);
       const n = direct ? unread(direct.owner) : 0;
       if (n) face.append(el("span", "msgs__facecount", String(n)));
-      b.append(who, face);
+      around.append(face);
+      b.append(who, around);
       b.addEventListener("click", () => (direct ? openChat(direct.owner) : show("person", c.login)));
       top.append(b);
     }
     // The spots still free, faint, so it reads as eight.
     for (let i = first.length; i < TOP_EIGHT; i++) top.append(el("span", "fspace__free"));
-    const count = el("p", "fspace__count");
-    count.append(el("span", null, login), ` has ${friends.length} ${friends.length === 1 ? "connection" : "connections"}.`);
-    box.append(msgsHead("Friend Space · Top 8", friends.length ? all : null), count, top);
+    const said = el("p", "fspace__count");
+    said.append(el("span", null, login), ` has ${friends.length} ${friends.length === 1 ? "connection" : "connections"}.`);
+    box.append(bar, said, top);
     return box;
   }
 
