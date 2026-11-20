@@ -1937,6 +1937,69 @@ html.tbc-flagging .tbc-notedot--live {
 .tbc-notedot:hover {
   box-shadow: 0 6px 26px rgba(63, 125, 216, 0.85), 0 0 0 2px rgba(4, 5, 11, 0.9);
 }
+
+/* Live chat: the note dot and the flag sit outside the words, down the line's left edge:
+   the blue dot on top, level with the top of Twitch's reply button on the right, and the
+   green flag under it, 4px apart. So they never cover the reply button, the buttons mods
+   get beside it, or the "Replying to" row. 24px circles. They still show and hide with
+   the line, exactly as before. While either can show, chat lines get a slightly wider
+   left edge to hold them. */
+html.tbc-flagging .chat-line__message,
+html.tbc-noting .chat-line__message {
+  padding-left: 32px !important;
+}
+.tbc-flagbtn,
+.tbc-flagx,
+.tbc-notedot--live,
+html.tbc-flagging .tbc-notedot--live {
+  top: -11px;
+  right: auto;
+  left: 4px;
+  width: 24px;
+  height: 24px;
+}
+html.tbc-noting .tbc-flagbtn,
+html.tbc-noting .tbc-flagx {
+  top: 17px;
+}
+/* An invisible strip over the 4px gap, so moving from the dot down to the flag never
+   counts as pointing at the next line. */
+html.tbc-noting .tbc-flagbtn::before,
+html.tbc-noting .tbc-flagx::before {
+  content: "";
+  position: absolute;
+  inset: -5px 0 0;
+}
+.tbc-flagbtn,
+.tbc-notedot--live {
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5), 0 0 0 1.5px rgba(4, 5, 11, 0.9);
+}
+.tbc-flagbtn:hover {
+  box-shadow: 0 4px 16px rgba(0, 173, 3, 0.85), 0 0 0 1.5px rgba(4, 5, 11, 0.9);
+}
+.tbc-notedot--live:hover {
+  box-shadow: 0 4px 16px rgba(63, 125, 216, 0.85), 0 0 0 1.5px rgba(4, 5, 11, 0.9);
+}
+.tbc-flagbtn svg,
+.tbc-notedot--live svg {
+  width: 14px;
+  height: 14px;
+}
+.tbc-flagx {
+  font-size: 16px;
+  line-height: 24px;
+}
+
+/* Never on the "Replying to" box above the chat box: Twitch draws the message there
+   with the same markup as a chat line. */
+.chat-input .tbc-notedot,
+.chat-input .tbc-flagbtn,
+.chat-input .tbc-flagx,
+[class*="chat-input-tray"] .tbc-notedot,
+[class*="chat-input-tray"] .tbc-flagbtn,
+[class*="chat-input-tray"] .tbc-flagx {
+  display: none !important;
+}
 /* Notes above their line, as text-message bubbles in StreamSpace's look (space black,
    navy glass, its brand blue): others' on the left, yours on the right in blue, each
    with its writer's picture. */

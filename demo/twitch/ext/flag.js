@@ -210,7 +210,7 @@ whenOn("flag", "Flag chat lines to the streamer", () => {
 
   document.addEventListener("mouseover", (e) => {
     const line = e.target.closest?.(LINE);
-    if (!line) return;
+    if (!line || line.closest('.chat-input, [class*="chat-input-tray"]')) return; // not the "Replying to" box
     if (showFlagging() && button.parentElement !== line) line.append(button);
   });
   setInterval(showFlagging, 1000); // Twitch changes channel without loading a new page

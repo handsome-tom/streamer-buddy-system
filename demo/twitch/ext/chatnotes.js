@@ -27,6 +27,7 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
 
   const LIVE_LINE = ".chat-line__message";
   const VOD_LINE = ".vod-message";
+  const REPLY_BOX = '.chat-input, [class*="chat-input-tray"]';
   const HOVER_MS = 0; // shows the moment you point at a line, with Twitch's reply button
   const NEAR_RIGHT = 0; // anywhere on the line, as Twitch's reply button does
   const LIVE_LOOKBACK_MS = 12 * 60 * 60 * 1000; // notes asked for on opening a live channel
@@ -437,6 +438,7 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
     if (vodId() || !canNote()) return;
     const line = e.target.closest?.(LIVE_LINE);
     if (!line || e.target.closest(".tbc-notes") || dot.parentElement === line) return;
+    if (line.closest(REPLY_BOX)) return; // the "Replying to" box above the chat box
     dot.classList.add("tbc-notedot--live");
     dot.style.left = dot.style.top = "";
     line.classList.add("tbc-notehost");
@@ -470,6 +472,8 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
   }
   document.addEventListener("scroll", stillUnder, { capture: true, passive: true });
   tbcWatch(stillUnder, 100);
+  // Live chat lines get room on their left for the dot (styles.css) while it can show.
+  tbcWatch(() => document.documentElement.classList.toggle("tbc-noting", !vodId() && canNote()), 1000);
 
   dot.addEventListener("click", (e) => {
     e.preventDefault();

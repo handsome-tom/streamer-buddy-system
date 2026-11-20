@@ -5,7 +5,7 @@
 #   sh dev/sync-extension.sh
 set -e
 cd "$(dirname "$0")/.."
-SRC="${EXTENSION_DIR:-../twitch extesion/v2-hover}"
+SRC="${EXTENSION_DIR:-../Twitch extension/v2-hover}" # both live in Claude Projects/Twitch since 2026-11-19
 [ -f "$SRC/manifest.json" ] || { echo "Can't find the extension at $SRC (set EXTENSION_DIR)"; exit 1; }
 for f in backup.js settings.js lookup.js people.js myname.js phrases.js hub.js flag.js chatnotes.js styles.css; do
   cp "$SRC/$f" demo/twitch/ext/
