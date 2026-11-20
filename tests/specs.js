@@ -188,6 +188,27 @@ export const tests = {
     noErrors(panel);
   },
 
+  "Messages opens on your profile and your Top 8: your first eight connections in order, the owner not taking a spot": withAllowList(async (h) => {
+    const tom = h.person("tom");
+    await tom.ready;
+    const mods = Array.from({ length: 8 }, (_, i) => `mod${i + 1}`);
+    for (const l of ["streamer", ...mods]) tom.send({ t: "allow", login: l, on: true });
+    await tom.next("state", (m) => (m.allowed || []).length >= 9);
+    const streamer = h.person("streamer");
+    for (const l of mods) await h.friends(streamer, h.person(l));
+    const panel = await h.panel("streamer", "ext");
+    (await h.until(() => panel.$("#msgBtn:not([hidden])"), "the Messages button")).click();
+    await h.until(() => panel.$$(".fspace__friend").length === 8, "eight people in the Top 8");
+    h.check(panel.$(".myspace__name")?.textContent === "streamer", "the profile at the top should be yours");
+    h.check(/Online Now!/.test(panel.$(".myspace__status")?.textContent || ""), "your profile should say Online Now!");
+    const top = panel.$$(".fspace__name").map((n) => n.textContent);
+    h.check(top.join() === mods.join(), `the Top 8 should be mod1 to mod8 in the order added, got: ${top}`);
+    h.check(streamer.connectedTo("tom"), "the owner should still be one of your connections (just not in a spot)");
+    h.check(!panel.$$(".fspace__free").length, "a full Top 8 has no free spots");
+    h.check(panel.$$(".msgs__sechead").some((s) => /Direct messages/.test(s.textContent)), "the usual lists should still be under it");
+    noErrors(panel);
+  }),
+
   async "groups live in Messages, not Connections: make one, open its page, start its group chat"(h) {
     const mod1 = h.person("mod1");
     const mod2 = h.person("mod2");
