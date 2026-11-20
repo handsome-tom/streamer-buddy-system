@@ -1786,12 +1786,20 @@
         if (!r.ok) return;
         const scopes = (await r.json()).scopes || [];
         granted = scopes;
-        loadTools();
         canListChatters = EXTRA_SCOPES.every((sc) => scopes.includes(sc));
+        // Your own channel, and this sign-in is missing any Mod tools permission: say so every
+        // time the chat opens, with the button, until it's allowed. No waiting for a mod to
+        // try a tool first. (One line covers it all, so the ad-break and mod-tools asks stay quiet.)
+        const toolsMissing = channel === me.login && TOOL_SCOPES.some((sc) => !scopes.includes(sc));
+        if (toolsMissing && host.onSignIn) {
+          toolsAsked = adsAsked = true;
+          addSystem("New Mod tools are ready for your mods (raids, polls, chat modes, ad breaks and more). Twitch needs your OK once.", { label: "Allow", run: () => host.onSignIn() });
+        }
+        loadTools();
         if (canListChatters) {
           listChatters();
           timers.push(setInterval(listChatters, CHATTERS_EVERY_MS));
-        } else if (host.onSignIn) {
+        } else if (host.onSignIn && !toolsMissing) { // the Mod tools Allow above signs in for these too
           addSystem("Sign in once more to turn on the rest of custom chat: warn, whispers, follow dates, spotting raiders, and (on your own channel) channel points, hype trains, polls and predictions.", { label: "Sign in", run: () => host.onSignIn() });
         }
       } catch {}
