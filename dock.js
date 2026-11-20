@@ -5497,12 +5497,13 @@
     return panel;
   }
 
-  // The top of Messages, a modern take on an old MySpace profile, over the space backdrop:
-  //   you, big: your name, your round picture in a colorful ring, and how your connections
-  //     see you ("Online Now!", with the sword while you're an Available mod); a click on
-  //     it changes it. The channels you mod for are little round pictures, each saying
-  //     whose it is when you point at it;
-  //   your Friend Space: your Top 8, your first eight connections in the order you added
+  // The top of Messages, modeled on MySpace's 2008 front page, in the dark: hard-edged boxes,
+  // each under a MySpace-blue header bar, square framed pictures, bold blue links.
+  //   Your profile: your name in the bar, your picture, and how your connections see you
+  //     ("Online Now!", with the sword while you're an Available mod); a click on it
+  //     changes it. The channels you mod for are little square pictures, each saying whose
+  //     it is when you point at it.
+  //   Your Friend Space: your Top 8, your first eight connections in the order you added
   //     them (the relay keeps them in that order), the eight spots your sign-in comes
   //     with. Everyone else is in the lists under it, as before.
   const MYSPACE_STATUS = {
@@ -5513,8 +5514,8 @@
   };
   const TOP_EIGHT = 8;
   const MOD_FOR_SHOWN = 6; // channels you mod, as pictures; past that a "+n"
-  // A round picture (or first letter) with its name in a tooltip that shows as soon as
-  // you point at it (or tab to it).
+  // A picture (or first letter) with its name in a tooltip that shows as soon as you
+  // point at it (or tab to it).
   function tipPic(login, cls) {
     const pic = el("span", cls);
     pic.tabIndex = 0;
@@ -5529,16 +5530,22 @@
     } else pic.append(el("span", "myspace__chanletter", login[0].toUpperCase()));
     return pic;
   }
+  // One MySpace box: a blue header bar with its title, then what's in it.
+  function msBox(cls, title) {
+    const box = el("div", `msbox ${cls}`);
+    const bar = el("div", "msbox__bar");
+    bar.append(title);
+    const inside = el("div", "msbox__in");
+    box.append(bar, inside);
+    return { box, inside };
+  }
   function mySpace() {
     const login = me.login;
-    const box = el("section", `myspace myspace--${myStatus}`);
-    const card = el("div", "myspace__card");
-    const name = el("h2", "myspace__name", login);
-    if (colorOf(login)) name.style.color = colorOf(login);
-    card.append(name);
+    const wrap = el("section", `myspace myspace--${myStatus}`);
 
-    const body = el("div", "myspace__body");
-    const ring = el("div", "myspace__ring");
+    // ----- Your profile
+    const { box: card, inside: body } = msBox("myspace__card", el("h2", "msbox__title myspace__name", login));
+    body.classList.add("myspace__body");
     const pic = el("div", "myspace__pic");
     if (pics[login]) {
       const img = el("img");
@@ -5546,7 +5553,6 @@
       img.alt = "";
       pic.append(img);
     } else pic.append(el("span", "myspace__letter", login[0].toUpperCase()));
-    ring.append(pic);
 
     const about = el("div", "myspace__about");
     const now = MYSPACE_STATUS[myStatus] || MYSPACE_STATUS.modding;
@@ -5560,7 +5566,7 @@
       openPresence(presenceMenu.hidden);
     });
     about.append(status);
-    // The channels you mod for: their round pictures, names on hover.
+    // The channels you mod for: their pictures, names on hover.
     const modFor = (modLists?.modFor || []).filter((l) => l !== login);
     if (modFor.length) {
       const line = el("div", "myspace__fact myspace__fact--chans");
@@ -5580,20 +5586,14 @@
     const count = el("div", "myspace__fact");
     count.append(el("span", "myspace__label", "Connections"), el("span", "myspace__value", String(friends.length)));
     about.append(count);
-    body.append(ring, about);
-    card.append(body);
-    box.append(card);
+    body.append(pic, about);
 
-    // ----- Your Friend Space: the Top 8, under a MySpace-style header bar.
-    const bar = el("div", "fspace__bar");
-    bar.append(el("span", "fspace__title", "Friend Space"), el("span", "fspace__chip", "Top 8"));
-    if (friends.length) {
-      const all = el("button", "fspace__all", "View all");
-      all.type = "button";
-      all.title = "All your connections";
-      all.addEventListener("click", () => show("people"));
-      bar.append(all);
-    }
+    // ----- Your Friend Space: the Top 8, names above the pictures as MySpace had them.
+    const title = el("h3", "msbox__title fspace__title");
+    title.append(el("span", "fspace__who", login), el("span", null, "'s Friend Space"));
+    const { box: fbox, inside } = msBox("fspace__box", title);
+    const said = el("p", "fspace__count");
+    said.append(el("b", null, login), " has ", el("b", "fspace__num", String(friends.length)), ` ${friends.length === 1 ? "connection" : "connections"}.`);
     const top = el("div", "fspace");
     // The owner (everyone's first connection, as Tom was on MySpace) takes none of your
     // eight spots (Connections' "Top 8 · n of 8 spots used"), so isn't one of them here.
@@ -5603,27 +5603,33 @@
       b.type = "button";
       const state = stateOf(c.login);
       b.title = `${c.login} (${state === "on" ? "online" : state === "idle" ? "idle" : "offline"})`;
-      const who = nameBit(c.login, "fspace__name");
-      if (colorOf(c.login)) who.style.color = colorOf(c.login);
-      // The ring says how they are: green online, amber idle, faint when they're off.
-      const around = el("span", `fspace__ring fspace__ring--${state}`);
+      // The frame's edge says how they are: green online, amber idle, plain when they're off.
+      const frame = el("span", `fspace__frame fspace__frame--${state}`);
       const face = ringedPic(c.login);
       const badges = roleBadges(c.login);
       if (badges) face.append(badges);
       const direct = directWith(c.login);
       const n = direct ? unread(direct.owner) : 0;
       if (n) face.append(el("span", "msgs__facecount", String(n)));
-      around.append(face);
-      b.append(who, around);
+      frame.append(face);
+      b.append(nameBit(c.login, "fspace__name"), frame);
       b.addEventListener("click", () => (direct ? openChat(direct.owner) : show("person", c.login)));
       top.append(b);
     }
-    // The spots still free, faint, so it reads as eight.
+    // The spots still free: empty frames, so it reads as eight.
     for (let i = first.length; i < TOP_EIGHT; i++) top.append(el("span", "fspace__free"));
-    const said = el("p", "fspace__count");
-    said.append(el("span", null, login), ` has ${friends.length} ${friends.length === 1 ? "connection" : "connections"}.`);
-    box.append(bar, said, top);
-    return box;
+    inside.append(said, top);
+    if (friends.length) {
+      // MySpace's pale bottom strip ("Take the full tour »"): here, to all your connections.
+      const foot = el("div", "msbox__foot");
+      const all = el("button", "fspace__all", "View all connections »");
+      all.type = "button";
+      all.addEventListener("click", () => show("people"));
+      foot.append(all);
+      fbox.append(foot);
+    }
+    wrap.append(card, fbox);
+    return wrap;
   }
 
   function messagesPanel() {
