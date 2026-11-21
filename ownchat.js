@@ -1035,6 +1035,12 @@
         const st = stickies.get(id);
         if (!st || !e.target.isConnected || !e.boundingClientRect.height) continue;
         st.above = !e.isIntersecting && e.boundingClientRect.bottom <= (e.rootBounds?.top ?? 0) + 1;
+        // Quick info and !vanish: their few seconds at the top start when they first stick.
+        if (st.above && st.stickFor && !st.stuckAt) {
+          st.stuckAt = Date.now();
+          st.until = st.stuckAt + st.stickFor;
+          setTimeout(drawStuck, st.stickFor + 50);
+        }
       }
       drawStuck();
     }, { root: list });
@@ -3427,8 +3433,12 @@
         }
         addLine(line);
         if (m.answer) settleMod(m.id, m.answer);
-        else if (m.actions?.length && m.stickUntil > Date.now()) {
-          stickies.set(m.id, { until: m.stickUntil, above: false });
+        else if ((m.actions?.length && m.stickUntil > Date.now()) || m.stickFor > 0) {
+          // A quick info or !vanish note (m.stickFor) sticks for that long once it scrolls up;
+          // if chat is so slow it never does within 10 minutes, it's let go.
+          stickies.set(m.id, m.stickFor > 0
+            ? { until: Date.now() + 10 * 60 * 1000, stickFor: m.stickFor, stuckAt: 0, above: false }
+            : { until: m.stickUntil, above: false });
           setTimeout(() => modLines.get(m.id) && stickies.has(m.id) && stickWatch.observe(line), 300);
         }
         return true;

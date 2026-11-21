@@ -1131,6 +1131,7 @@
   // find again without taking up the top for long.
   const FLASH_MS = { info: 120000, chat: 300000, love: 30000, seen: 5000 }; // "Seen" is just a quick tick
   const PIN_STICK_MS = 10 * 1000;
+  const FLASH_STICK_MS = { info: 40 * 1000, love: 6 * 1000 }; // at the top of chat, once scrolled up
   const flashMs = (kind) => (kind === "chat" && LIVECHAT ? PIN_STICK_MS : FLASH_MS[kind]);
   const FUZZ_MS = 1400;
   const FLASH_ICONS = {
@@ -1182,7 +1183,9 @@
     seenFlashes.add(f.id);
     const late = Date.now() - (f.at || Date.now());
     if (mine && (f.kind === "info" || f.kind === "love") && (late < 5000 || f.released)) {
-      toChat({ id: f.id, kind: f.kind, from: f.from, tag: f.kind === "love" ? "!vanish" : "quick info", text: f.text, color: f.color });
+      // Once it scrolls up out of sight it sticks at the top of chat for a moment:
+      // quick info for 40 seconds, a !vanish note for 6 (ownchat.js modLine stickFor).
+      toChat({ id: f.id, kind: f.kind, from: f.from, tag: f.kind === "love" ? "!vanish" : "quick info", text: f.text, color: f.color, stickFor: FLASH_STICK_MS[f.kind] });
     }
     if (f.kind === "chat" && LIVECHAT && f.channel === liveChannel) {
       try {

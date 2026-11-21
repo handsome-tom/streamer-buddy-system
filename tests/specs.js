@@ -162,6 +162,22 @@ export const tests = {
     noErrors(streamer);
   },
 
+  async "quick info and a !vanish note stick at the top of chat once they scroll up, the !vanish one only briefly"(h) {
+    const { streamer, modWatch } = await streamerAndMod(h);
+    await h.until(() => streamer.$(".oc-line"), "custom chat to start");
+    modWatch.send({ t: "flash", kind: "info", to: "streamer", text: "Ad in 2" });
+    modWatch.send({ t: "flash", kind: "love", to: "streamer", text: "You're doing great" });
+    await h.until(() => streamer.$(".oc-mod--love:not(.oc-mod--stuck)") && streamer.$(".oc-mod--info:not(.oc-mod--stuck)"), "both lines in chat");
+    await h.wait(400);
+    for (let i = 0; i < 60; i++) h.pretendTwitch.say(`chatter${i % 5}`, `filler line ${i} to push things up`);
+    const stuck = (k) => streamer.$(`.oc-stuck .oc-mod--${k}`);
+    await h.until(() => stuck("info") && stuck("love"), "both stuck at the top once scrolled up");
+    await h.wait(7000);
+    h.check(!stuck("love"), "the !vanish note should be gone from the top after 6 seconds");
+    h.check(stuck("info"), "quick info should still be at the top (it stays 40 seconds)");
+    noErrors(streamer);
+  },
+
   async "a question sent while OBS is closed is waiting when the dock opens"(h) {
     const mod = h.person("mod1");
     const streamer = h.person("streamer");
