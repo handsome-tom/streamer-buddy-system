@@ -15,7 +15,7 @@ async function streamerAndMod(h) {
   const streamer = await h.panel("streamer", "obs");
   const mod = await h.panel("mod1", "ext");
   await h.until(() => streamer.$("#quickTo option[value='mod1']"), "the dock to list mod1");
-  await h.until(() => mod.$(".send__bar .ask__input"), "the side panel's ask box");
+  await h.until(() => mod.$(".panel.mod .modfeed"), "the side panel's Mod section");
   return { streamer, mod, streamerWatch, modWatch };
 }
 
@@ -40,14 +40,37 @@ export const tests = {
 
   async "a mod asks, the question shows on the streamer's dock, and their Yes goes back"(h) {
     const { streamer, mod, modWatch } = await streamerAndMod(h);
-    h.typeAndSend(mod.$(".send__bar .ask__input"), "Can I run the poll now?");
+    modWatch.send({ t: "ask", to: "streamer", text: "Can I run the poll now?", options: ["t", "y", "n"] });
     await h.until(() => streamer.has("Can I run the poll now?"), "the question on the streamer's dock");
     const yes = await h.until(() => streamer.$(".pill--answer.answer--y"), "a Yes button on the dock");
     yes.click();
     await h.until(() => Object.values(modWatch.questions).some((q) => q.text === "Can I run the poll now?" && q.answer?.code === "y"), "the relay to have the answer");
-    await h.until(() => /Yes[\s\S]*Can I run the poll now\?/.test(mod.text()), "Yes in the mod's panel");
+    await h.until(() => mod.$$(".modfeed__item").some((x) => x.textContent.includes("Can I run the poll now?") && /Yes/.test(x.querySelector(".modfeed__answer")?.textContent || "")), "Yes under the question in the mod's This stream feed");
     await h.until(() => !streamer.hasOnTop("Can I run the poll now?"), "the question to leave the streamer's bar");
     noErrors(streamer, mod);
+  },
+
+  async "Mod: no ask box; this stream's comments under the streamer's feed, ones over 30 minutes folded away; then DMs"(h) {
+    const { mod, modWatch } = await streamerAndMod(h);
+    h.check(!mod.$(".panel.mod .send__bar"), "no ask box in the Mod section");
+    h.check(!mod.$(".panel.mod .log__head"), "no History in the Mod section");
+    h.check(mod.$(".panel.mod .sv") && mod.$(".panel.mod .sv").compareDocumentPosition(mod.$(".panel.mod .modfeed")) & Node.DOCUMENT_POSITION_FOLLOWING, "the comments under the streamer's feed");
+    // A question to the streamer, a note on a chat line now, and one from 40 minutes ago.
+    modWatch.send({ t: "ask", to: "streamer", text: "Timeout the spammer?", options: ["t", "y", "n"] });
+    modWatch.send({ t: "note", channel: "streamer", chatter: "sunchaser", chatterName: "SunChaser", text: "o7 everyone", body: "Keep an eye on this one" });
+    modWatch.send({ t: "note", channel: "streamer", chatter: "bigdog15", chatterName: "BigDog15", text: "first!", body: "An old note", at: Date.now() - 40 * 60 * 1000 });
+    const item = (text) => mod.$$(".modfeed__list:not(.modfeed__list--earlier) .modfeed__item").find((x) => x.textContent.includes(text));
+    await h.until(() => item("Timeout the spammer?") && /Waiting for/.test(item("Timeout the spammer?").textContent), "the question in the feed, waiting");
+    await h.until(() => item("Keep an eye on this one") && /SunChaser/.test(item("Keep an eye on this one").textContent), "the note in the feed, with its chat line");
+    const fold = await h.until(() => mod.$(".modfeed__fold"), "Earlier this stream, for the old note");
+    h.check(/Earlier this stream · 1/.test(fold.textContent) && !item("An old note"), "the old note folded away");
+    fold.click();
+    await h.until(() => mod.$$(".modfeed__list--earlier .modfeed__item").some((x) => x.textContent.includes("An old note")), "the old note there to look back at");
+    // DMs: the streamer, under the comments.
+    const dm = await h.until(() => mod.$(".moddms .moddms__row--streamer"), "the streamer under Messages");
+    dm.click();
+    await h.until(() => mod.$(".chat--dm"), "the DMs with the streamer");
+    noErrors(mod);
   },
 
   async "the streamer asks from the bar and the mod's OK goes back"(h) {
@@ -60,10 +83,10 @@ export const tests = {
   },
 
   async "the streamer's dock shows what's come in one big card at a time, with arrows to step through"(h) {
-    const { streamer, mod } = await streamerAndMod(h);
-    h.typeAndSend(mod.$(".send__bar .ask__input"), "First question?");
+    const { streamer, mod, modWatch } = await streamerAndMod(h);
+    modWatch.send({ t: "ask", to: "streamer", text: "First question?", options: ["t", "y", "n"] });
     await h.until(() => streamer.has("First question?"), "the first question on the dock");
-    h.typeAndSend(mod.$(".send__bar .ask__input"), "Second question?");
+    modWatch.send({ t: "ask", to: "streamer", text: "Second question?", options: ["t", "y", "n"] });
     await h.until(() => streamer.$(".slot__count")?.textContent.endsWith("/2"), "two cards in the slot");
     h.check(streamer.$$(".slot .peek--on").length === 2, "each question should be its own card");
     h.check(streamer.$(".slotwrap--many .slot__arrow--next"), "arrows should show with more than one");

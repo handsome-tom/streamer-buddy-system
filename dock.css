@@ -6142,6 +6142,82 @@ body.livechat .slotwrap { display: none !important; }
     0 12px 28px rgba(0, 0, 0, 0.55);
 }
 
+/* ===== Mod: this stream's comments, then DMs (2026-11-21) =====
+   Under Streamer View: what's been said on this stream between the mods and to the streamer,
+   newest first, each with the sayer's round picture and a little badge for what it is (a note
+   in chat, Connections chat, a flag, a question, a message, quick info, !vanish). Comments
+   over 30 minutes old fold into "Earlier this stream". Then Messages: the streamer and their
+   mods online now, each a row that opens your DMs with them. No boxes: spacing and fuzzy
+   lines that fade at their ends. */
+.modfeed, .moddms { display: flex; flex-direction: column; margin: 20px 8px 0; }
+.modfeed__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.modfeed .mod__label, .moddms > .mod__label { margin: 0 0 6px; }
+.modfeed__count { font-size: 11.5px; color: var(--muted); }
+.modfeed__sub { margin: 2px 0 6px; font-size: 12px; font-weight: 700; color: #ffd27a; }
+.modfeed__none { margin: 2px 2px 6px; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.modfeed__list { display: flex; flex-direction: column; }
+.modfeed__item { --k: #5b9bff; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 11px; padding: 10px 2px; }
+.modfeed__item + .modfeed__item { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08) 18%, rgba(255, 255, 255, 0.08) 82%, transparent) top / 100% 1px no-repeat; }
+.modfeed__item--secret { --k: #8db6ff; }
+.modfeed__item--flag { --k: var(--flag, #3fb2ff); }
+.modfeed__item--ask { --k: #ffb31a; }
+.modfeed__item--msg { --k: #bf94ff; }
+.modfeed__item--info { --k: #ffc23d; }
+.modfeed__item--love { --k: #ff7ab8; }
+.modfeed__face { position: relative; flex: none; width: 30px; height: 30px; margin-top: 1px; }
+.modfeed__pic { display: block; width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
+.modfeed__pic--letter { display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; background: radial-gradient(circle at 35% 30%, #3a3a52, #1b1b26); }
+.modfeed__kind { position: absolute; right: -5px; bottom: -4px; display: grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; color: #0b0d16; background: var(--k); box-shadow: 0 0 0 2px #0b0d16, 0 0 8px -1px var(--k); }
+.modfeed__body { min-width: 0; }
+.modfeed__top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; font-size: 12px; line-height: 1.35; }
+.modfeed__who { font-weight: 800; color: #fff; }
+.modfeed__tag { color: color-mix(in srgb, var(--k) 55%, var(--muted)); }
+.modfeed__ago { margin-left: auto; font-size: 11px; color: var(--muted); white-space: nowrap; }
+.modfeed__text { margin-top: 3px; font-size: 13px; line-height: 1.45; color: var(--text); overflow-wrap: anywhere; }
+/* The chat line it's about, quoted with a soft line down its left that fades away. */
+.modfeed__line { margin-top: 5px; padding-left: 10px; font-size: 12px; line-height: 1.45; color: #b9b9c8; overflow-wrap: anywhere; background: linear-gradient(180deg, color-mix(in srgb, var(--k) 80%, transparent), transparent) left top / 2px 100% no-repeat; }
+.modfeed__line b { font-weight: 700; color: #e2e2ea; }
+.modfeed__answer { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; font-weight: 700; color: #c9f5df; }
+.modfeed__answericon { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; color: #04160e; background: var(--good); }
+.modfeed__wait { margin-top: 5px; font-size: 11.5px; font-style: italic; color: var(--muted); }
+/* Earlier this stream: folded until you open it. */
+.modfeed__fold { display: flex; align-items: center; gap: 9px; width: 100%; margin-top: 4px; padding: 9px 4px; font: inherit; font-size: 12px; font-weight: 700; text-align: left; color: var(--muted); background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08) 18%, rgba(255, 255, 255, 0.08) 82%, transparent) top / 100% 1px no-repeat; border: 0; cursor: pointer; }
+.modfeed__fold:hover { color: var(--text); }
+.modfeed__fold:focus-visible { outline: 2px solid var(--good); outline-offset: 2px; border-radius: 6px; }
+.modfeed__chev { flex: none; width: 6px; height: 6px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(-45deg); transition: transform 0.15s; }
+.modfeed__fold[aria-expanded="true"] .modfeed__chev { transform: rotate(45deg) translateY(-2px); }
+.modfeed__list--earlier .modfeed__item { opacity: 0.8; }
+.modfeed__list--earlier .modfeed__item:first-child { background: none; }
+/* Their question waiting for you: the words on one line, the answer buttons under them, so
+   neither gets squeezed in a narrow panel. */
+.modfeed .ilist { margin-bottom: 4px; }
+.modfeed .irow { flex-wrap: wrap; row-gap: 8px; padding: 10px 12px; border-radius: 18px; background: radial-gradient(120% 140% at 0% 0%, rgba(255, 179, 26, 0.14), transparent 72%); }
+.modfeed .irow__text { flex: 1 1 calc(100% - 30px); }
+.modfeed .irow__who { display: block; margin: 0 0 2px; font-size: 12px; }
+.modfeed .irow__acts { flex: 1 1 100%; flex-wrap: wrap; gap: 4px; }
+
+/* Messages: a row per person, opening your DMs with them. */
+.moddms__row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 11px; width: 100%; padding: 8px 6px; font: inherit; color: var(--text); text-align: left; background: none; border: 0; border-radius: 16px; cursor: pointer; transition: background 0.15s; }
+.moddms__row:hover { background: radial-gradient(100% 160% at 25% 50%, rgba(255, 255, 255, 0.07), transparent 75%); }
+.moddms__row:focus-visible { outline: 2px solid var(--good); outline-offset: -2px; }
+.moddms__face { position: relative; flex: none; width: 36px; height: 36px; }
+.moddms__pic { display: block; width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+.moddms__pic--letter { display: grid; place-items: center; font-size: 15px; font-weight: 800; color: #fff; background: radial-gradient(circle at 35% 30%, #3a3a52, #1b1b26); }
+.moddms__dot { position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%; background: #6b6b7a; box-shadow: 0 0 0 2px #0b0d16; }
+.moddms__row--modding .moddms__dot { background: var(--good); box-shadow: 0 0 0 2px #0b0d16, 0 0 8px var(--good); }
+.moddms__row--on .moddms__dot { background: var(--honey, #ffc23d); }
+.moddms__row--idle .moddms__dot { background: var(--yellow); }
+.moddms__words { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.moddms__top { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.moddms__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: "Pixelify Sans", "Plus Jakarta Sans", sans-serif; font-size: 15px; font-weight: 600; letter-spacing: 0.01em; color: #fff; }
+.moddms__role { flex: none; font-size: 11px; font-weight: 700; color: var(--muted); }
+.moddms__row--streamer .moddms__role { color: #ffb7c4; }
+.moddms__last { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--muted); }
+.moddms__row--new .moddms__last { font-weight: 600; color: #fff; }
+.moddms__side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.moddms__ago { font-size: 11px; color: var(--muted); }
+.moddms__count { min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; display: grid; place-items: center; font-size: 10.5px; font-weight: 800; color: #1a0d00; background: var(--orange); border-radius: 999px; box-shadow: 0 0 10px -2px var(--orange); }
+
 /* ===== Mod tools (the side panel's sword) =====
    The green pixel sword between Mod and Messages opens it: channel points, a raid out (the
    streamer OKs it), and chat modes, each done by the streamer's own chat dock. */

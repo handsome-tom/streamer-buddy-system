@@ -1960,7 +1960,7 @@
     setTimeout(() => {
       if (q.from === me && q.to === "streamer") {
         const doc = panelDoc("mod");
-        const el = doc && ([...doc.querySelectorAll(".mod__reactions *, .sv__row, .log__row")].find((e) => e.children.length < 8 && e.textContent.includes(q.text)) || doc.querySelector(".mod__reactions"));
+        const el = doc && ([...doc.querySelectorAll(".modfeed__item, .sv__row")].find((e) => e.children.length < 8 && e.textContent.includes(q.text)) || doc.querySelector(".modfeed"));
         if (el) showCallout("mod", el, "I answered your question: it shows up here in your side panel.", "streamer");
       } else if (q.from === "streamer" && q.to === me) {
         const doc = panelDoc("obs");

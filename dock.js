@@ -953,9 +953,17 @@
         stats[m.owner] = m.s;
         if (view === "stats") render();
       }
-      else if (m.t === "note") gotNote(m.n);
-      else if (m.t === "notes") (m.list || []).forEach(gotNote);
-      else if (m.t === "unnote") ownChat?.unnote?.(m.id);
+      else if (m.t === "note") {
+        keepNote(m.n);
+        gotNote(m.n);
+      } else if (m.t === "notes") {
+        (m.list || []).forEach((n) => keepNote(n, true));
+        if (view === "mod") render();
+        (m.list || []).forEach(gotNote);
+      } else if (m.t === "unnote") {
+        dropNote(m.id);
+        ownChat?.unnote?.(m.id);
+      }
       else if (m.t === "error") gotError(m);
     };
     ws.onclose = (e) => {
@@ -1166,6 +1174,7 @@
   function gotFlash(f) {
     const mine = f.to === me.login;
     if ((!mine && f.kind !== "chat") || seenFlashes.has(f.id)) return; // connections get flagged chat too
+    if (f.kind === "chat" && f.channel) keepFeed({ id: f.id, kind: "flag", from: f.from, channel: f.channel, chatter: f.chatterName || f.chatter, text: f.text, at: f.at || Date.now() });
     if (mine && dndOn() && f.kind !== "chat") {
       if (f.kind !== "seen") heldFlashes.set(f.id, f);
       return;
@@ -1264,6 +1273,7 @@
       const f = lastFlashSent;
       lastFlashSent = null;
       if (f && (f.kind === "info" || f.kind === "love")) {
+        keepFeed({ id: `sent-${Date.now()}`, kind: f.kind, from: me.login, channel: f.to, text: f.text, at: Date.now() });
         toChat({ id: `sent-${Date.now()}`, kind: f.kind, from: me.login, fromName: "You", tag: `${f.kind === "love" ? "!vanish" : "quick info"} to`, toName: f.to, text: f.text });
       }
       askDraft.sent = m.kind;
@@ -3851,10 +3861,11 @@
       const live = r.ok ? !!stream : !!liveOf[login]?.live;
       const viewers = r.ok ? stream?.viewer_count || 0 : liveOf[login]?.viewers || 0;
       const was = liveOf[login];
-      liveOf[login] = { live, viewers, at: Date.now() };
+      const started = r.ok ? (stream ? Date.parse(stream.started_at) || 0 : 0) : liveOf[login]?.started || 0;
+      liveOf[login] = { live, viewers, started, at: Date.now() };
       if (live !== was?.live || viewers !== was?.viewers) render();
     } catch {
-      liveOf[login] = { live: !!liveOf[login]?.live, at: Date.now() };
+      liveOf[login] = { live: !!liveOf[login]?.live, started: liveOf[login]?.started || 0, at: Date.now() };
     } finally {
       liveChecking.delete(login);
     }
@@ -4811,7 +4822,215 @@
     return body;
   }
 
-  let reactionsTimer = 0; // takes a reaction away 3 minutes after it came
+  // ===== Mod: this stream's comments, then DMs ==============================================
+  // Under the streamer's feed: everything said on this stream between the mods and to the
+  // streamer, newest first: notes on its chat lines (Connections chat ones too), flagged
+  // lines, and your questions, messages, quick info and !vanish to them, with their answers.
+  // A question from them that's waiting for you sits on top, with its buttons. After 30
+  // minutes a comment folds into "Earlier this stream", still there to look back at. Then
+  // DMs: the streamer, and their mods who are online now.
+  const FEED_FRESH_MS = 30 * 60 * 1000;
+  const FEED_KEEP_MS = 12 * 60 * 60 * 1000;
+  const streamNotes = {}; // channel -> Map(id -> chat note), from the relay
+  const notesAsked = {}; // channel -> when its notes were last asked for
+  // Flags and your quick notes, kept here (the relay lets them go after a few minutes).
+  let feedLocal = get("modFeed", []).filter((x) => Date.now() - x.at < FEED_KEEP_MS);
+  let feedEarlierOpen = false; // "Earlier this stream" starts folded
+  let feedTimer = 0; // folds a comment away when it turns 30 minutes old
+  function keepNote(n, quiet = false) {
+    if (!n?.channel || !n.id) return;
+    const m = (streamNotes[n.channel] ||= new Map());
+    m.set(n.id, n);
+    if (m.size > 300) m.delete(m.keys().next().value);
+    if (!quiet && view === "mod" && modOwner() === n.channel) render();
+  }
+  function dropNote(id) {
+    let gone = false;
+    for (const m of Object.values(streamNotes)) gone = m.delete(id) || gone;
+    if (gone && view === "mod") render();
+  }
+  function keepFeed(x) {
+    if (feedLocal.some((y) => y.id === x.id)) return;
+    feedLocal = [...feedLocal.filter((y) => Date.now() - y.at < FEED_KEEP_MS), x].slice(-80);
+    put("modFeed", feedLocal);
+  }
+  // This stream: since it went live (Twitch says when), else the last 12 hours.
+  function streamSince(owner) {
+    const st = liveOf[owner]?.started || 0;
+    return st && Date.now() - st < FEED_KEEP_MS ? st : Date.now() - FEED_KEEP_MS;
+  }
+  function askStreamNotes(owner) {
+    if (!owner || DEMO || socket?.readyState !== 1 || Date.now() - (notesAsked[owner] || 0) < 5 * 60 * 1000) return;
+    notesAsked[owner] = Date.now();
+    socket.send(JSON.stringify({ t: "notes", channel: owner, from: streamSince(owner), to: Date.now() }));
+  }
+  function feedItems(owner) {
+    const since = streamSince(owner);
+    const items = [];
+    for (const n of streamNotes[owner]?.values() || []) {
+      if (n.at >= since) items.push({ id: `n-${n.id}`, at: n.at, who: n.from, kind: n.secret ? "secret" : "note", text: n.body, line: { chatter: n.chatterName || n.chatter, text: n.text } });
+    }
+    for (const x of feedLocal) {
+      if (x.channel !== owner || x.at < since) continue;
+      items.push(x.kind === "flag" ? { id: x.id, at: x.at, who: x.from, kind: "flag", line: { chatter: x.chatter, text: x.text } } : { id: x.id, at: x.at, who: x.from, kind: x.kind, text: x.text });
+    }
+    for (const q of Object.values(questions)) {
+      if (q.at < since || q.withdrawn) continue;
+      const out = q.from === me.login && q.to === owner, back = q.from === owner && q.to === me.login;
+      if (!out && !back) continue;
+      if (back && inbox[q.id] && !inbox[q.id].done) continue; // waiting for you: on top, with its buttons
+      items.push({ id: `q-${q.id}`, at: q.at, who: q.from, kind: q.note ? "msg" : "ask", out, text: q.text, answer: q.answer, seen: !!q.seenAt });
+    }
+    return items.sort((a, b) => b.at - a.at);
+  }
+  const FEED_ICONS = {
+    note: `<path d="M4.5 3.5h11A1.5 1.5 0 0 1 17 5v7a1.5 1.5 0 0 1-1.5 1.5H9.5L5.5 17v-3.5h-1A1.5 1.5 0 0 1 3 12V5a1.5 1.5 0 0 1 1.5-1.5z" ${LINE} stroke-width="1.8"/>`,
+    secret: `<rect x="4.5" y="9" width="11" height="8" rx="2" ${LINE} stroke-width="1.8"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" ${LINE} stroke-width="1.8"/>`,
+    flag: `<path d="M5 17.5V3h10.5l-2.6 3.9 2.6 3.9H5" ${LINE} stroke-width="1.8"/>`,
+    ask: `<path d="M7 7.2a3 3 0 1 1 4.2 2.8c-.8.4-1.2 1-1.2 1.8v.7" ${LINE} stroke-width="2"/><circle cx="10" cy="15.6" r="1.2" fill="currentColor"/>`,
+    msg: `<path d="M3 10l14-6.5-5 14-2.4-5.6z" ${LINE} stroke-width="1.8"/>`,
+    info: `<circle cx="10" cy="10" r="7" ${LINE} stroke-width="1.8"/><path d="M10 9v4.5" ${LINE} stroke-width="2"/><circle cx="10" cy="6.3" r="1.1" fill="currentColor"/>`,
+    love: ANSWERS.t.icon,
+  };
+  function feedTag(x, owner) {
+    switch (x.kind) {
+      case "note": return "note in chat";
+      case "secret": return "Connections chat";
+      case "flag": return `flagged for ${owner}`;
+      case "ask": return x.out ? `asked ${owner}` : "asked you";
+      case "msg": return x.out ? `to ${owner}` : "to you";
+      case "info": return `quick info to ${owner}`;
+      case "love": return `!vanish to ${owner}`;
+      default: return "";
+    }
+  }
+  function feedRow(x, owner) {
+    const row = el("div", `modfeed__item modfeed__item--${x.kind}`);
+    const face = el("span", "modfeed__face");
+    if (pics[x.who]) {
+      const img = el("img", "modfeed__pic");
+      img.src = pics[x.who];
+      img.alt = "";
+      face.append(img);
+    } else {
+      face.append(el("span", "modfeed__pic modfeed__pic--letter", (x.who || "?")[0].toUpperCase()));
+      wantPic(x.who);
+    }
+    const kind = el("span", "modfeed__kind");
+    kind.innerHTML = svg(FEED_ICONS[x.kind] || FEED_ICONS.note, 10);
+    face.append(kind);
+    const body = el("div", "modfeed__body");
+    const top = el("div", "modfeed__top");
+    const name = el("span", "modfeed__who", x.who === me.login ? "You" : x.who);
+    if (x.who !== me.login && colorOf(x.who)) name.style.color = colorOf(x.who);
+    top.append(name, el("span", "modfeed__tag", feedTag(x, owner)), el("span", "modfeed__ago", ago(x.at)));
+    body.append(top);
+    if (x.text) body.append(el("div", "modfeed__text", x.text));
+    if (x.line) {
+      const line = el("div", "modfeed__line");
+      line.append(el("b", "", x.line.chatter || "chat"), document.createTextNode(` ${x.line.text}`));
+      body.append(line);
+    }
+    // What came back: their answer (or yours), or that it's been seen.
+    if (x.answer) {
+      const a = el("div", `modfeed__answer answer--${x.answer.code}`);
+      const i = el("span", "modfeed__answericon");
+      i.innerHTML = svg((ANSWERS[x.answer.code] || ANSWERS.c).icon, 11);
+      a.append(i, el("span", "", `${x.out ? owner : "You"}: ${said(x.answer)}`));
+      body.append(a);
+    } else if (x.out && x.kind === "ask") body.append(el("div", "modfeed__wait", x.seen ? `${owner} has seen it` : `Waiting for ${owner}`));
+    else if (x.out && x.kind === "msg" && x.seen) body.append(el("div", "modfeed__wait", "Seen"));
+    row.append(face, body);
+    return row;
+  }
+  function modFeed(owner) {
+    const sec = el("section", "modfeed");
+    const items = feedItems(owner);
+    const fresh = items.filter((x) => Date.now() - x.at < FEED_FRESH_MS);
+    const earlier = items.filter((x) => Date.now() - x.at >= FEED_FRESH_MS);
+    const waiting = Object.keys(inbox).filter((id) => inbox[id].from === owner && !inbox[id].done).sort((a, b) => stageFor(inbox[b]) - stageFor(inbox[a]) || inbox[b].at - inbox[a].at);
+    const head = el("div", "modfeed__head");
+    head.append(el("span", "mod__label", streaming(owner) ? "This stream" : "Lately"));
+    if (items.length) head.append(el("span", "modfeed__count", `${items.length} comment${items.length === 1 ? "" : "s"}`));
+    sec.append(head);
+    if (waiting.length) sec.append(el("div", "modfeed__sub", `${owner} is waiting for your answer`), inboxList(waiting));
+    if (!items.length && !waiting.length) sec.append(el("p", "modfeed__none", `Nothing yet. Notes on chat lines, flags, and what you send ${owner} show up here as the stream goes.`));
+    const list = el("div", "modfeed__list");
+    for (const x of fresh) list.append(feedRow(x, owner));
+    if (fresh.length) sec.append(list);
+    else if (earlier.length) sec.append(el("p", "modfeed__none", "Nothing in the last 30 minutes."));
+    if (earlier.length) {
+      const fold = el("button", "modfeed__fold");
+      fold.type = "button";
+      fold.setAttribute("aria-expanded", String(feedEarlierOpen));
+      fold.append(el("span", "modfeed__chev"), el("span", "", `Earlier this stream · ${earlier.length}`));
+      fold.title = feedEarlierOpen ? "Fold these away" : "Look back at comments from more than 30 minutes ago";
+      fold.addEventListener("click", () => {
+        feedEarlierOpen = !feedEarlierOpen;
+        render();
+      });
+      sec.append(fold);
+      if (feedEarlierOpen) {
+        const old = el("div", "modfeed__list modfeed__list--earlier");
+        for (const x of earlier) old.append(feedRow(x, owner));
+        sec.append(old);
+      }
+    }
+    // Redraw when the next comment turns 30 minutes old, so it folds away on its own.
+    clearTimeout(feedTimer);
+    if (fresh.length) {
+      const next = Math.min(...fresh.map((x) => x.at)) + FEED_FRESH_MS - Date.now();
+      feedTimer = setTimeout(() => view === "mod" && render(), Math.max(1000, next + 50));
+    }
+    return sec;
+  }
+  // DMs: the streamer first, then their mods who are online now (busy ones last).
+  function modDms(owner) {
+    const sec = el("section", "moddms");
+    sec.append(el("div", "mod__label", "Messages"));
+    const RANK = (x) => (x.modding ? 0 : x.idle ? 2 : 1);
+    const mods = connections.filter((x) => x.mutual && x.online && x.login !== owner && x.login !== me?.login && (x.modFor || []).includes(owner)).sort((a, b) => RANK(a) - RANK(b) || a.login.localeCompare(b.login));
+    const people = [...(conn(owner)?.mutual ? [conn(owner)] : []), ...mods];
+    if (!people.length) {
+      sec.append(el("p", "modfeed__none", `No messages here yet: none of ${owner}'s other mods are online right now.`));
+      return sec;
+    }
+    for (const c of people) {
+      const streamer = c.login === owner;
+      const direct = directWith(c.login);
+      const last = direct && chat[direct.owner]?.at(-1);
+      const n = direct ? unread(direct.owner) : 0;
+      const st = !c.online ? "off" : c.idle ? "idle" : c.modding ? "modding" : "on";
+      const row = el("button", `moddms__row moddms__row--${st}${streamer ? " moddms__row--streamer" : ""}${n ? " moddms__row--new" : ""}`);
+      row.type = "button";
+      const face = el("span", "moddms__face");
+      if (pics[c.login]) {
+        const img = el("img", "moddms__pic");
+        img.src = pics[c.login];
+        img.alt = "";
+        face.append(img);
+      } else {
+        face.append(el("span", "moddms__pic moddms__pic--letter", c.login[0].toUpperCase()));
+        wantPic(c.login);
+      }
+      face.append(el("span", "moddms__dot"));
+      const words = el("span", "moddms__words");
+      const top = el("span", "moddms__top");
+      const name = el("span", "moddms__name", c.login);
+      if (colorOf(c.login)) name.style.color = colorOf(c.login);
+      top.append(name, el("span", "moddms__role", streamer ? "Streamer" : st === "modding" ? "Available mod" : st === "idle" ? "idle" : st === "off" ? "offline" : "online"));
+      words.append(top, el("span", "moddms__last", last ? `${last.from === me.login ? "You: " : ""}${last.text}` : `Say something to ${streamer ? "them" : c.login}`));
+      const side = el("span", "moddms__side");
+      if (last) side.append(el("span", "moddms__ago", agoShort(last.at)));
+      if (n) side.append(el("span", "moddms__count", n > 9 ? "9+" : String(n)));
+      row.append(face, words, side);
+      row.title = direct ? `Your messages with ${c.login}, only the two of you see them` : `${c.login}'s page`;
+      row.addEventListener("click", () => (direct ? show("chat", direct.owner) : show("person", c.login)));
+      sec.append(row);
+    }
+    return sec;
+  }
+
   function modPanel() {
     const owner = modOwner();
     const panel = el("div", "panel mod");
@@ -4900,87 +5119,11 @@
     head.append(el("span", `mod__where${locked ? " mod__where--here" : ""}`, locked ? "On this stream" : c?.online ? "online" : "Not the stream you're on"));
     panel.append(head);
 
-    // Send: always to them, so no "Send to".
-    if (c?.mutual) panel.append(composer(owner, true, true));
-
-    // Their feed (Streamer View), drawn by drawStreamerView after this is on the page, and
-    // your history with them under it; both fold away.
+    // Their feed (Streamer View), drawn by drawStreamerView after this is on the page; under
+    // it, this stream's comments, then DMs with the streamer and their mods online now.
     panel.append(svEl);
-    panel.append(...historyParts(owner, true));
-
-    // Their reactions to what you sent: just the heading, unless they've reacted in the
-    // last 3 minutes; each reaction shows for 3 minutes, then goes.
-    const REACTION_MS = 3 * 60 * 1000;
-    const reacted = Object.entries(sent)
-      .filter(([, q]) => q.to === owner && q.answer && !q.gone && Date.now() - q.answer.at < REACTION_MS)
-      .sort((a, b) => b[1].answer.at - a[1].answer.at)
-      .slice(0, MAX_REACTIONS);
-    clearTimeout(reactionsTimer);
-    if (reacted.length) {
-      const next = Math.min(...reacted.map(([, q]) => q.answer.at)) + REACTION_MS - Date.now();
-      reactionsTimer = setTimeout(() => view === "mod" && render(), Math.max(1000, next + 50));
-    }
-    const rx = el("div", `mod__reactions${reacted.length ? "" : " mod__reactions--none"}`);
-    rx.append(el("div", "mod__label", "Their reactions"));
-    for (const [, q] of reacted) {
-      const row = el("div", "mod__rx");
-      const icon = el("span", `log__icon answer--${q.answer.code}`);
-      icon.innerHTML = svg((ANSWERS[q.answer.code] || ANSWERS.c).icon, 13);
-      row.append(icon, el("b", null, said(q.answer)), el("span", "mod__rxq", q.text), el("span", "sv__ago", ago(q.answer.at)));
-      rx.append(row);
-    }
-    panel.append(rx);
-
-    // The rest of your thread with them: private chat, what's waiting from them, history.
-    panel.append(personPanel(owner, true));
-
-    // Their mods: everyone who mods this channel (the streamer's dock shares Twitch's list;
-    // your connections who mod here are on it either way). Whoever's active right now is lit
-    // up and first; everyone else is gray.
-    const modNames = new Set([...(views[owner]?.mods || []), ...connections.filter((x) => (x.modFor || []).includes(owner)).map((x) => x.login)]);
-    if (me && modFor.includes(owner)) modNames.add(me.login);
-    modNames.delete(owner);
-    if (modNames.size) {
-      const stateOfMod = (login) => {
-        if (me && login === me.login) return myStatus === "offline" ? "off" : myStatus === "idle" ? "idle" : myStatus === "modding" ? "modding" : "on";
-        const x = conn(login);
-        if (!x?.mutual || !x.online) return "off";
-        return x.idle ? "idle" : x.modding ? "modding" : "on";
-      };
-      const WORDS = { modding: "Available mod", on: "online", idle: "idle", off: "" };
-      const RANK = { modding: 0, on: 1, idle: 2, off: 3 };
-      const list = [...modNames].map((login) => ({ login, st: stateOfMod(login) })).sort((a, b) => RANK[a.st] - RANK[b.st] || a.login.localeCompare(b.login));
-      const here = list.filter((m) => m.st !== "off").length;
-      const sec = el("div", "mod__team");
-      sec.append(el("div", "mod__label", `Mods · ${here} of ${list.length} active`));
-      const grid = el("div", "mod__teamlist");
-      for (const { login, st } of list) {
-        // A connection: click for your direct messages with them (or their page, if you
-        // haven't got a chat yet). Not for yourself, or mods who aren't connections.
-        const mate = login !== me?.login && conn(login)?.mutual ? conn(login) : null;
-        const direct = mate && directWith(login);
-        const row = el(mate ? "button" : "div", `mod__mate mod__mate--${st}${mate ? " mod__mate--go" : ""}`);
-        if (mate) {
-          row.type = "button";
-          row.addEventListener("click", () => (direct ? show("chat", direct.owner) : show("person", login)));
-        }
-        const face = pics[login] ? el("img", "mod__matepic") : el("span", "mod__matepic mod__matepic--letter", login[0].toUpperCase());
-        if (pics[login]) {
-          face.src = pics[login];
-          face.alt = "";
-        } else wantPic(login);
-        const words = el("span", "mod__matewords");
-        const name = el("span", "mod__matename", login === me?.login ? `${login} (you)` : login);
-        if (st !== "off" && colorOf(login)) name.style.color = colorOf(login);
-        words.append(name);
-        if (WORDS[st]) words.append(el("span", "mod__matestate", WORDS[st]));
-        row.title = `${login}${WORDS[st] ? ` · ${WORDS[st]}` : " · not active"}${mate ? ` · click to message ${login}` : ""}`;
-        row.append(face, words);
-        grid.append(row);
-      }
-      sec.append(grid);
-      panel.append(sec);
-    }
+    askStreamNotes(owner);
+    panel.append(modFeed(owner), modDms(owner));
 
     const others = Object.keys(inbox).filter((id) => inbox[id].from !== owner && !inbox[id].done).sort((a, b) => inbox[b].at - inbox[a].at);
     if (others.length) {
