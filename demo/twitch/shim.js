@@ -61,6 +61,9 @@
         changes[k] = { oldValue: clone(stores[name].get(k)), newValue: clone(v) };
         stores[name].set(k, clone(v));
       }
+      // Active mods (chatmods.js): the demo page hands this to the mod's side panel, the way
+      // the extension's side panel does on twitch.tv.
+      if (name === "local" && items?.chatMods && parent !== window) parent.postMessage({ t: "demo-chatmods", chatMods: clone(items.chatMods) }, location.origin);
       later(() => {
         changeListeners.forEach((f) => f(changes, name));
         cb?.();

@@ -4842,6 +4842,11 @@
   let feedLocal = get("modFeed", []).filter((x) => Date.now() - x.at < FEED_KEEP_MS);
   let feedEarlierOpen = false; // "Earlier this stream" starts folded
   let feedTimer = 0; // folds a comment away when it turns 30 minutes old
+  // Active mods: the mods heard chatting in the open channel in the last 30 minutes,
+  // { channel, mods: { login: timeMs } }, from the extension (chatmods.js, via the side panel)
+  // or the demo page's pretend chat. Empty until one of them says.
+  let chatMods = { channel: "", mods: {}, heard: false };
+  let ringTimer = 0; // recolors the rings as the minutes go by
   function keepNote(n, quiet = false) {
     if (!n?.channel || !n.id) return;
     const m = (streamNotes[n.channel] ||= new Map());
@@ -4989,36 +4994,65 @@
     }
     return sec;
   }
-  // DMs: the streamer first, then their mods who are online now (busy ones last).
+  // Active mods: the streamer, then the mods you're connected with, then mods in this chat
+  // you aren't connected with. A ring around each picture says how long ago they last
+  // chatted here (green within 5 minutes, orange 10, yellow 20, white up to 30); a mod who
+  // hasn't chatted in 30 minutes is grayed out. Without the extension saying who's chatting
+  // (an older one, or OBS), StreamSpace's online status stands in.
+  function chattedAt(owner, login) {
+    if (!chatMods.heard || chatMods.channel !== owner) return 0;
+    const at = Number(chatMods.mods[login]) || 0;
+    return Date.now() - at < 30 * 60000 ? at : 0;
+  }
+  function ringOf(at) {
+    const min = (Date.now() - at) / 60000;
+    return min <= 5 ? "5" : min <= 10 ? "10" : min <= 20 ? "20" : "old";
+  }
   function modDms(owner) {
     const sec = el("section", "moddms");
-    sec.append(el("div", "mod__label", "Messages"));
-    const RANK = (x) => (x.modding ? 0 : x.idle ? 2 : 1);
-    const mods = connections.filter((x) => x.mutual && x.online && x.login !== owner && x.login !== me?.login && (x.modFor || []).includes(owner)).sort((a, b) => RANK(a) - RANK(b) || a.login.localeCompare(b.login));
+    sec.append(el("div", "mod__label", "Active mods"));
+    const knows = chatMods.heard && chatMods.channel === owner; // the extension says who's chatting here
+    const here = (c) => (knows ? !!chattedAt(owner, c.login) : !!c.online);
+    const mods = connections
+      .filter((x) => x.mutual && x.login !== owner && x.login !== me?.login && (x.modFor || []).includes(owner) && (knows || x.online))
+      .sort((a, b) => Number(here(b)) - Number(here(a)) || chattedAt(owner, b.login) - chattedAt(owner, a.login) || a.login.localeCompare(b.login));
+    const connected = new Set([owner, me?.login, ...connections.filter((x) => x.mutual).map((x) => x.login)]);
+    const strangers = knows
+      ? Object.keys(chatMods.mods)
+          .filter((login) => !connected.has(login) && chattedAt(owner, login))
+          .sort((a, b) => chattedAt(owner, b) - chattedAt(owner, a))
+      : [];
     const people = [...(conn(owner)?.mutual ? [conn(owner)] : []), ...mods];
-    if (!people.length) {
-      sec.append(el("p", "modfeed__none", `No messages here yet: none of ${owner}'s other mods are online right now.`));
+    if (!people.length && !strangers.length) {
+      sec.append(el("p", "modfeed__none", knows ? `No mods have chatted here in the last 30 minutes.` : `None of ${owner}'s other mods are online right now.`));
       return sec;
     }
+    const face = (login, at) => {
+      const f = el("span", `moddms__face${at ? ` moddms__face--ring moddms__face--${ringOf(at)}` : ""}`);
+      if (pics[login]) {
+        const img = el("img", "moddms__pic");
+        img.src = pics[login];
+        img.alt = "";
+        f.append(img);
+      } else {
+        f.append(el("span", "moddms__pic moddms__pic--letter", login[0].toUpperCase()));
+        wantPic(login);
+      }
+      return f;
+    };
+    const chatWords = (at) => (at ? `chatted ${agoShort(at) === "now" ? "just now" : `${agoShort(at)} ago`}` : "not in chat right now");
     for (const c of people) {
       const streamer = c.login === owner;
+      const at = streamer ? 0 : chattedAt(owner, c.login);
+      const away = !streamer && !here(c);
       const direct = directWith(c.login);
       const last = direct && chat[direct.owner]?.at(-1);
       const n = direct ? unread(direct.owner) : 0;
       const st = !c.online ? "off" : c.idle ? "idle" : c.modding ? "modding" : "on";
-      const row = el("button", `moddms__row moddms__row--${st}${streamer ? " moddms__row--streamer" : ""}${n ? " moddms__row--new" : ""}`);
+      const row = el("button", `moddms__row moddms__row--${st}${streamer ? " moddms__row--streamer" : ""}${n ? " moddms__row--new" : ""}${away ? " moddms__row--away" : ""}`);
       row.type = "button";
-      const face = el("span", "moddms__face");
-      if (pics[c.login]) {
-        const img = el("img", "moddms__pic");
-        img.src = pics[c.login];
-        img.alt = "";
-        face.append(img);
-      } else {
-        face.append(el("span", "moddms__pic moddms__pic--letter", c.login[0].toUpperCase()));
-        wantPic(c.login);
-      }
-      face.append(el("span", "moddms__dot"));
+      const f = face(c.login, at);
+      f.append(el("span", "moddms__dot"));
       const words = el("span", "moddms__words");
       const top = el("span", "moddms__top");
       const name = el("span", "moddms__name", c.login);
@@ -5028,11 +5062,32 @@
       const side = el("span", "moddms__side");
       if (last) side.append(el("span", "moddms__ago", agoShort(last.at)));
       if (n) side.append(el("span", "moddms__count", n > 9 ? "9+" : String(n)));
-      row.append(face, words, side);
-      row.title = direct ? `Your messages with ${c.login}, only the two of you see them` : `${c.login}'s page`;
+      row.append(f, words, side);
+      row.title = `${direct ? `Your messages with ${c.login}, only the two of you see them` : `${c.login}'s page`}${streamer || !knows ? "" : ` · ${chatWords(at)}`}`;
       row.addEventListener("click", () => (direct ? show("chat", direct.owner) : show("person", c.login)));
       sec.append(row);
     }
+    if (strangers.length) {
+      sec.append(el("div", "moddms__sub", "In chat, not connected with you"));
+      for (const login of strangers) {
+        const at = chattedAt(owner, login);
+        const row = el("button", "moddms__row moddms__row--stranger");
+        row.type = "button";
+        const words = el("span", "moddms__words");
+        const top = el("span", "moddms__top");
+        const name = el("span", "moddms__name", login);
+        if (colorOf(login)) name.style.color = colorOf(login);
+        top.append(name, el("span", "moddms__role", "Mod"));
+        words.append(top, el("span", "moddms__last", `Chatted ${agoShort(at) === "now" ? "just now" : `${agoShort(at)} ago`}`));
+        row.append(face(login, at), words, el("span", "moddms__side"));
+        row.title = `${login} mods here and isn't connected with you in StreamSpace yet · ${chatWords(at)}`;
+        row.addEventListener("click", () => show("person", login));
+        sec.append(row);
+      }
+    }
+    // Recolor the rings (and gray out anyone past 30 minutes) as time goes by.
+    clearTimeout(ringTimer);
+    if (knows) ringTimer = setTimeout(() => view === "mod" && render(), 60000);
     return sec;
   }
 
@@ -5279,6 +5334,12 @@
   let extNote = "";
   const toExt = (m) => parent.postMessage(m, "*");
   function gotExt(m) {
+    if (m?.t === "ext-chatmods") {
+      if (!m.mods || typeof m.mods !== "object") return;
+      chatMods = { channel: String(m.channel || "").toLowerCase(), mods: m.mods, heard: true };
+      if (view === "mod") render();
+      return;
+    }
     if (m?.t === "ext-settings") ext = { features: m.features || [], off: m.off || [] };
     else if (m?.t === "ext-backup" && m.data) {
       const blob = new Blob([JSON.stringify(m.data, null, 1)], { type: "application/json" });

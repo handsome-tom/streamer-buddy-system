@@ -67,9 +67,34 @@ export const tests = {
     fold.click();
     await h.until(() => mod.$$(".modfeed__list--earlier .modfeed__item").some((x) => x.textContent.includes("An old note")), "the old note there to look back at");
     // DMs: the streamer, under the comments.
-    const dm = await h.until(() => mod.$(".moddms .moddms__row--streamer"), "the streamer under Messages");
+    const dm = await h.until(() => mod.$(".moddms .moddms__row--streamer"), "the streamer under Active mods");
     dm.click();
     await h.until(() => mod.$(".chat--dm"), "the DMs with the streamer");
+    noErrors(mod);
+  },
+
+  async "Active mods: connected mods first, ringed by how long ago they chatted, the quiet ones grayed; mods in chat you aren't connected with underneath"(h) {
+    const { mod, modWatch } = await streamerAndMod(h);
+    const chatty = h.person("mod2");
+    const quiet = h.person("mod3");
+    await h.friends(modWatch, chatty);
+    await h.friends(modWatch, quiet);
+    chatty.send({ t: "modfor", list: ["streamer"] });
+    quiet.send({ t: "modfor", list: ["streamer"] });
+    // What the extension's chatmods.js says: mod2 chatted 2 minutes ago, a stranger 15.
+    const now = Date.now();
+    mod.win.postMessage({ t: "ext-chatmods", channel: "streamer", mods: { mod2: now - 2 * 60000, stranger9: now - 15 * 60000 } }, location.origin);
+    await h.until(() => mod.$(".moddms .moddms__row--stranger"), "the stranger under Active mods");
+    const label = mod.$(".moddms > .mod__label")?.textContent;
+    h.check(/Active mods/i.test(label), `the heading says Active mods (it says ${label})`);
+    const rows = () => mod.$$(".moddms__row").map((r) => r.querySelector(".moddms__name").textContent);
+    await h.until(() => rows().includes("mod3"), "mod3 listed even though they haven't chatted");
+    h.check(JSON.stringify(rows()) === JSON.stringify(["streamer", "mod2", "mod3", "stranger9"]), `streamer, then connected mods (in chat first), then the stranger: ${rows()}`);
+    const row = (n) => mod.$$(".moddms__row").find((r) => r.querySelector(".moddms__name").textContent === n);
+    h.check(row("mod2").querySelector(".moddms__face--5") && !row("mod2").classList.contains("moddms__row--away"), "mod2 has a green ring");
+    h.check(row("mod3").classList.contains("moddms__row--away") && !row("mod3").querySelector(".moddms__face--ring"), "mod3 grayed, no ring");
+    h.check(row("stranger9").querySelector(".moddms__face--20"), "the stranger has a yellow ring");
+    h.check(!/find ?my ?friends/i.test(mod.$(".moddms").innerText + mod.$$(".moddms__row").map((r) => r.title).join(" ")), "nothing mentions FindMyFriends");
     noErrors(mod);
   },
 

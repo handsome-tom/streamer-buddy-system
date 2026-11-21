@@ -1782,6 +1782,14 @@
     features: [["split", "Split screen"], ["streak", "Watch streak flame"], ["emotes", "Pinned emotes and Frequent Channels"], ["phrases", "Quick phrases and highlight words"], ["people", "Chatter notes (right-click a name)"], ["vodmarks", "Bookmarks and VOD markers"], ["flag", "Flag chat lines to the streamer"], ["quietnav", "Quieter top bar"]].map(([key, label]) => ({ key, label })),
     off: ["quietnav"],
   };
+  // Active mods: the pretend chat notes which mods chatted (StreamSpace's chatmods.js) and the
+  // mod's side panel is told, as the extension's side panel does on twitch.tv.
+  addEventListener("message", (e) => {
+    const chat = document.getElementById("twitch")?.contentWindow;
+    const mod = document.getElementById("mod")?.contentWindow;
+    if (!chat || e.source !== chat || e.origin !== location.origin || e.data?.t !== "demo-chatmods") return;
+    mod?.postMessage({ t: "ext-chatmods", channel: "streamer", mods: e.data.chatMods?.streamer || {} }, location.origin);
+  });
   addEventListener("message", (e) => {
     const mod = document.getElementById("mod").contentWindow;
     if (e.source !== mod || !String(e.data?.t).startsWith("ext-")) return;
