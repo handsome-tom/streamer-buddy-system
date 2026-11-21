@@ -291,7 +291,7 @@ whenOn("phrases", "Quick phrases and highlight words", () => {
     for (const p of pinned) {
       const b = document.createElement("button");
       b.type = "button";
-      b.className = "tbc-phrases__emote";
+      b.className = "tbc-phrases__pin";
       b.title = b.ariaLabel = p.name;
       const src = pinnedSrc(p);
       if (src) {

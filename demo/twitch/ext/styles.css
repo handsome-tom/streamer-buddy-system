@@ -1138,38 +1138,38 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   font: 13px/1.35 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
   scrollbar-width: thin;
 }
-/* Chat tools' "Your emotes": your pinned emotes in a row, each one click into the chat box. */
+/* Chat tools' "Your emotes": your pinned emotes in a row, just the pictures, each one
+   click into the chat box. */
 .tbc-phrases__emotes {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px;
-  margin: 0 -4px 10px;
+  gap: 8px;
+  margin: 2px 0 12px;
 }
-.tbc-phrases__emote {
+.tbc-phrases__pin {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
   padding: 0;
   border: 0;
-  border-radius: 10px;
   background: none;
   color: #efeff1;
   font: inherit;
   font-size: 10px;
   cursor: pointer;
-  transition: background 0.12s, transform 0.1s;
+  transition: transform 0.1s, filter 0.12s;
 }
-.tbc-phrases__emote img {
+.tbc-phrases__pin img {
+  display: block;
   width: 28px;
   height: 28px;
   object-fit: contain;
 }
-.tbc-phrases__emote:hover {
-  background: rgba(125, 176, 239, 0.16);
+.tbc-phrases__pin:hover {
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 6px rgba(125, 176, 239, 0.55));
 }
-.tbc-phrases__emote:active {
-  transform: scale(0.9);
+.tbc-phrases__pin:active {
+  transform: scale(0.92);
 }
 /* With tabs: one height for every tab, the tab bar stays put and the inside scrolls. */
 .tbc-phrases--tabs {
