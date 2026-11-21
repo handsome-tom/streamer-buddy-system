@@ -1,3 +1,7 @@
+// Two tabs: messaging the streamer whose chat this is (modtalk.js, when it's there and
+// you're connected with them), then quick phrases. Without modtalk.js it's quick phrases
+// only, as before.
+//
 // Quick phrases: a small speech-bubble button in the chat box, to the left of the
 // Bits and emote buttons, opens a list of things you say a lot (e.g. "Are we
 // winning? tallglaDANCEbee"). Click one to put it in the chat box; it isn't
@@ -37,7 +41,9 @@ whenOn("phrases", "Quick phrases and highlight words", () => {
       placeholder: "+ word", chipClass: "tbc-me", max: 40, clean: (w) => w, removeTip: (w) => `Stop highlighting "${w}"` },
   };
   const chipLists = { hl: [] };
-  let panel = null;
+  let shell = null; // the pop-up
+  let panel = null; // what's in the tab showing
+  let tab = "talk"; // "talk" (the streamer) or "phrases"
   let picking = false; // the emote picker is open for adding to a phrase
   let images = {};      // emote name -> picture url
 
@@ -68,7 +74,7 @@ whenOn("phrases", "Quick phrases and highlight words", () => {
     if (changes.emoteImages) images = changes.emoteImages.newValue || {};
     if (changes.quickPhrases) phrases = changes.quickPhrases.newValue || [];
     if (changes.highlightWords) chipLists.hl = changes.highlightWords.newValue || [];
-    if (panel && (changes.quickPhrases || changes.emoteImages || changes.highlightWords)) fill();
+    if (panel && tab === "phrases" && (changes.quickPhrases || changes.emoteImages || changes.highlightWords)) fill();
   });
 
   // Note the picture of every emote showing in Twitch's picker.
@@ -98,8 +104,8 @@ whenOn("phrases", "Quick phrases and highlight words", () => {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "tbc-phrases-btn";
-    b.title = "Quick phrases";
-    b.setAttribute("aria-label", "Quick phrases");
+    b.title = "Message the streamer, and your quick phrases";
+    b.setAttribute("aria-label", "Message the streamer, and quick phrases");
     b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="${BUBBLE_PATH}"></path></svg>`;
     b.addEventListener("click", (e) => {
       e.preventDefault();
@@ -144,8 +150,8 @@ whenOn("phrases", "Quick phrases and highlight words", () => {
   function close() {
     if (!panel) return;
     stopPicking();
-    panel.remove();
-    panel = null;
+    shell.remove();
+    shell = panel = null;
   }
 
   // ===== Emotes into the phrase being added =====================================
@@ -188,20 +194,84 @@ whenOn("phrases", "Quick phrases and highlight words", () => {
   }, true);
 
   function open() {
-    panel = document.createElement("div");
-    panel.className = "tbc-phrases";
+    shell = document.createElement("div");
+    shell.className = "tbc-phrases";
     for (const type of ["keydown", "keyup", "keypress"]) {
-      panel.addEventListener(type, (e) => {
+      shell.addEventListener(type, (e) => {
         e.stopPropagation();
         if (type === "keydown" && e.key === "Escape") close();
       });
     }
-    document.body.append(panel);
+    panel = document.createElement("div");
+    panel.className = "tbc-phrases__body";
+    shell.append(panel);
+    document.body.append(shell);
+    const talk = window.tbcModTalk?.tab();
+    if (!talk) tab = "phrases";
+    else if (!talk.ready()) tab = tab === "talk" && talkTried ? "talk" : "phrases";
+    else tab = "talk";
     fill();
-    panel.querySelector(".tbc-phrases__new:not(.tbc-phrases__chipnew)").focus();
+    if (tab === "talk") window.tbcModTalk.focus();
+    else panel.querySelector(".tbc-phrases__new:not(.tbc-phrases__chipnew)")?.focus();
+  }
+  let talkTried = false; // picked the streamer tab by hand while it couldn't send yet
+
+  // The two tabs along the top: the streamer (with their picture's first letter as a
+  // stand-in until their name comes), then quick phrases.
+  function drawTabs(talk) {
+    shell.querySelector(".tbc-phrases__tabs")?.remove();
+    if (!talk) return;
+    const bar = document.createElement("div");
+    bar.className = "tbc-phrases__tabs";
+    bar.setAttribute("role", "tablist");
+    const make = (key, label, title) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = `tbc-phrases__tab${tab === key ? " tbc-phrases__tab--on" : ""}`;
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", String(tab === key));
+      b.title = title;
+      const words = document.createElement("span");
+      words.className = "tbc-phrases__tabname";
+      words.textContent = label;
+      b.append(words);
+      b.addEventListener("click", () => {
+        if (tab === key) return;
+        stopPicking();
+        tab = key;
+        if (key === "talk") talkTried = true;
+        fill();
+        if (key === "talk") window.tbcModTalk.focus();
+        else panel.querySelector(".tbc-phrases__new:not(.tbc-phrases__chipnew)")?.focus();
+      });
+      bar.append(b);
+      return words;
+    };
+    const who = make("talk", talk.ready() ? `To ${talk.label()}` : "Streamer", "Ask the streamer, send quick info or a !vanish note");
+    talk.name((n) => (who.textContent = `To ${n}`));
+    make("phrases", "Phrases", "Your quick phrases and highlight words");
+    shell.prepend(bar);
   }
 
   function fill() {
+    const talk = window.tbcModTalk?.tab();
+    if (!talk) tab = "phrases";
+    drawTabs(talk);
+    // A new box when the tab changes, so the other tab's drawing can't land in this one.
+    if (panel.dataset.tab !== tab) {
+      const fresh = document.createElement("div");
+      fresh.dataset.tab = tab;
+      panel.replaceWith(fresh);
+      panel = fresh;
+    }
+    shell.classList.toggle("tbc-phrases--talk", tab === "talk");
+    if (tab === "talk") {
+      panel.className = "tbc-phrases__body";
+      talk.fill(panel);
+      place();
+      return;
+    }
+    panel.className = "tbc-phrases__body";
     const draft = panel.querySelector(".tbc-phrases__new:not(.tbc-phrases__chipnew)")?.value || "";
     const drafts = Object.fromEntries(Object.keys(CHIPS).map((k) => [k, panel.querySelector(`.tbc-phrases__chipnew[data-kind="${k}"]`)?.value || ""]));
     panel.textContent = "";
@@ -352,20 +422,20 @@ whenOn("phrases", "Quick phrases and highlight words", () => {
   // while that's open for picking, so they don't overlap).
   function place() {
     const box = document.querySelector(CHAT_INPUT)?.closest(".chat-input") || document.querySelector(CHAT_INPUT);
-    if (!box || !panel) return;
+    if (!box || !shell) return;
     const r = box.getBoundingClientRect();
     const width = Math.max(260, r.width);
     const picker = picking && pickerOpen() && document.querySelector(PICKER);
     const top = picker ? Math.min(r.top, picker.getBoundingClientRect().top) : r.top;
-    panel.style.width = width + "px";
-    panel.style.left = Math.max(8, Math.min(r.left, innerWidth - width - 8)) + "px";
-    panel.style.bottom = innerHeight - top + 6 + "px";
-    panel.style.maxHeight = Math.max(120, top - 14) + "px";
+    shell.style.width = width + "px";
+    shell.style.left = Math.max(8, Math.min(r.left, innerWidth - width - 8)) + "px";
+    shell.style.bottom = innerHeight - top + 6 + "px";
+    shell.style.maxHeight = Math.max(120, top - 14) + "px";
   }
 
   // Clicking anywhere else closes it (clicks in the emote picker while picking don't).
   window.addEventListener("pointerdown", (e) => {
-    if (!panel || panel.contains(e.target) || e.target.closest?.(".tbc-phrases-btn")) return;
+    if (!shell || shell.contains(e.target) || e.target.closest?.(".tbc-phrases-btn")) return;
     if (picking && e.target.closest?.(PICKER)) return;
     close();
   }, true);

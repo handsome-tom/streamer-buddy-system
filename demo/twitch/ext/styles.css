@@ -1130,11 +1130,50 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   max-height: 60vh;
   overflow-y: auto;
   padding: 10px;
-  border-radius: 10px;
-  background: #18181b;
+  border-radius: 16px;
+  /* StreamSpace's look: space black under the same blue fade as the side panel's profile. */
+  background: linear-gradient(180deg, rgba(63, 125, 216, 0.42) 0%, rgba(63, 125, 216, 0.16) 120px, rgba(63, 125, 216, 0.04) 260px, rgba(63, 125, 216, 0) 360px), #0b0d16;
   color: #efeff1;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(125, 176, 239, 0.08);
   font: 13px/1.35 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+  scrollbar-width: thin;
+}
+/* The two tabs: the streamer, then quick phrases. A soft blue pill on the one showing. */
+.tbc-phrases__tabs {
+  display: flex;
+  gap: 4px;
+  margin: -2px -2px 12px;
+  padding: 3px;
+  border-radius: 12px;
+  background: rgba(4, 6, 14, 0.45);
+}
+.tbc-phrases__tab {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  color: #9aa6c4;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.tbc-phrases__tab:hover {
+  color: #efeff1;
+}
+.tbc-phrases__tab--on {
+  color: #fff;
+  background: linear-gradient(180deg, rgba(99, 152, 235, 0.55), rgba(63, 125, 216, 0.38));
+  box-shadow: 0 4px 14px rgba(20, 50, 110, 0.5);
+}
+.tbc-phrases__tabname {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .tbc-phrases__head {
   margin-bottom: 6px;
@@ -1734,6 +1773,388 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
 }
 
 /* ===== StreamSpace buttons for the hub (hub.js) ===== */
+/* ===== Mod talk: the streamer tab of the chat box's speech bubble (modtalk.js) ===== */
+.tbc-mt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tbc-mt__who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tbc-mt__pic {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #1b2340;
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 0 0 2px #0b0d16, 0 0 0 3.5px #4a5577, 0 6px 16px rgba(0, 0, 0, 0.45);
+}
+.tbc-mt__who--on .tbc-mt__pic {
+  box-shadow: 0 0 0 2px #0b0d16, 0 0 0 3.5px #00c853, 0 6px 16px rgba(0, 0, 0, 0.45);
+}
+.tbc-mt__words {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.tbc-mt__words b {
+  overflow: hidden;
+  font-size: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tbc-mt__state {
+  color: #8b97b5;
+  font-size: 11.5px;
+}
+.tbc-mt__state--on {
+  color: #45d483;
+}
+/* Question / Quick info / !vanish: three big, easy pills, each in its own color. */
+.tbc-mt__modes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.tbc-mt__mode {
+  --c: #6fa3f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 9px 4px 8px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #b8c2dc;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+.tbc-mt__mode--info {
+  --c: #ffb31a;
+}
+.tbc-mt__mode--love {
+  --c: #e26fff;
+}
+.tbc-mt__mode svg {
+  color: var(--c);
+}
+.tbc-mt__mode:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.tbc-mt__mode:active {
+  transform: scale(0.97);
+}
+.tbc-mt__mode--on {
+  background: color-mix(in srgb, var(--c) 22%, transparent);
+  color: #fff;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c) 75%, transparent), 0 6px 18px color-mix(in srgb, var(--c) 22%, transparent);
+}
+.tbc-mt__hint {
+  margin: -2px 2px 0;
+  color: #9aa6c4;
+  font-size: 12px;
+}
+.tbc-mt__form {
+  --c: #6fa3f0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 8px;
+  border-radius: 14px;
+  background: rgba(4, 6, 14, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(125, 176, 239, 0.14);
+  transition: box-shadow 0.15s;
+}
+.tbc-mt__form--info {
+  --c: #ffb31a;
+}
+.tbc-mt__form--love {
+  --c: #e26fff;
+}
+.tbc-mt__form:focus-within {
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c) 70%, transparent), 0 0 0 4px color-mix(in srgb, var(--c) 14%, transparent);
+}
+.tbc-mt__text {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 42px;
+  max-height: 120px;
+  padding: 2px 4px;
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: none;
+  color: #efeff1;
+  font: inherit;
+  font-size: 13.5px;
+  field-sizing: content;
+}
+.tbc-mt__text::placeholder {
+  color: #6f7a96;
+}
+.tbc-mt__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tbc-mt__count {
+  color: #ffb31a;
+  font-size: 11px;
+  font-weight: 700;
+}
+.tbc-mt__keys {
+  margin-left: auto;
+  color: #6f7a96;
+  font-size: 11px;
+}
+.tbc-mt__go {
+  padding: 6px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 90%, #fff), color-mix(in srgb, var(--c) 80%, #000));
+  color: #0b0d16;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--c) 35%, transparent);
+}
+.tbc-mt__form--ask .tbc-mt__go {
+  color: #fff;
+}
+.tbc-mt__go:disabled {
+  opacity: 0.4;
+  cursor: default;
+  box-shadow: none;
+}
+.tbc-mt__note {
+  margin: -2px 2px 0;
+  color: #9aa6c4;
+  font-size: 12px;
+}
+.tbc-mt__note--good {
+  color: #45d483;
+}
+.tbc-mt__note--bad {
+  color: #ff8a7a;
+}
+.tbc-mt__head {
+  margin: 2px 2px -4px;
+  color: #9cc8ff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.tbc-mt__recent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tbc-mt__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 8px;
+}
+.tbc-mt__item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.tbc-mt__itemtext {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #d5dbea;
+  font-size: 12.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tbc-mt__chip {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 179, 26, 0.14);
+  color: #ffc24d;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tbc-mt__chip--done {
+  background: rgba(69, 212, 131, 0.14);
+  color: #5fe29a;
+}
+.tbc-mt__chip--quiet {
+  background: rgba(255, 255, 255, 0.06);
+  color: #9aa6c4;
+}
+.tbc-mt__empty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 8px 14px;
+  text-align: center;
+}
+.tbc-mt__empty b {
+  font-size: 14px;
+}
+.tbc-mt__empty span {
+  color: #9aa6c4;
+  font-size: 12.5px;
+}
+
+/* The conversation in chat: bubbles under the newest line as they happen. Yours on the
+   right in StreamSpace blue, the streamer's on the left in navy. Only you see them. */
+.tbc-mtstack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 4px;
+  font: 13px/1.35 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+}
+.tbc-mt-bubble {
+  display: flex;
+  max-width: 88%;
+  animation: tbc-note-up 0.32s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+.tbc-mt-bubble--mine {
+  align-self: flex-end;
+}
+.tbc-mt-bubble__main {
+  min-width: 0;
+  padding: 7px 12px 8px;
+  border-radius: 18px 18px 18px 6px;
+  background: linear-gradient(180deg, #1f2b4d, #141b33);
+  color: #efeff1;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(125, 176, 239, 0.16);
+  overflow-wrap: anywhere;
+}
+.tbc-mt-bubble--mine .tbc-mt-bubble__main {
+  border-radius: 18px 18px 6px 18px;
+  background: linear-gradient(180deg, #5b95ec, #2f68c4);
+  box-shadow: 0 8px 24px rgba(47, 104, 196, 0.35);
+}
+.tbc-mt-bubble--quiet .tbc-mt-bubble__main {
+  opacity: 0.75;
+}
+.tbc-mt-bubble__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+  font-size: 12px;
+}
+.tbc-mt-bubble__pic {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+.tbc-mt-bubble__head b {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tbc-mt-bubble__tag {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(156, 200, 255, 0.16);
+  color: #9cc8ff;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+.tbc-mt-bubble--mine .tbc-mt-bubble__tag {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+.tbc-mt-bubble__when {
+  flex: none;
+  margin-left: auto;
+  padding-left: 6px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 10.5px;
+}
+.tbc-mt-bubble__about {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11.5px;
+  font-style: italic;
+}
+.tbc-mt-bubble__text {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+/* The streamer asked you something: answer with one tap, right here. */
+.tbc-mt-reply {
+  display: flex;
+  gap: 6px;
+  margin-top: 7px;
+}
+.tbc-mt-reply__btn {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 30px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.tbc-mt-reply__btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+.tbc-mt-reply__btn:active {
+  transform: scale(0.94);
+}
+.tbc-mt-reply__btn--t {
+  color: #ff6b9a;
+}
+.tbc-mt-reply__btn--y {
+  color: #45d483;
+}
+.tbc-mt-reply__btn--n {
+  color: #ff7a6b;
+}
+.tbc-mt-reply__btn--m {
+  color: #ffc24d;
+}
+.tbc-mt-reply__done {
+  color: #9cc8ff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+
 .tbc-hubbtn-wrap {
   display: flex;
   align-items: center;

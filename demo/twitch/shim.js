@@ -87,9 +87,13 @@
   let socket = null;
   let ready = false;
   let people = null;
+  let questions = [];
   const waiting = [];
   const toPorts = (m) => ports.forEach((tell) => tell(m));
-  const tellPeople = () => toPorts({ t: "people", me: people?.me || null, mutual: people?.mutual || [] });
+  const tellPeople = () => {
+    toPorts({ t: "people", me: people?.me || null, mutual: people?.mutual || [], online: people?.online || [] });
+    if (questions.length) toPorts({ t: "questions", list: questions });
+  };
   async function relay() {
     if (socket) return;
     let box = sandbox();
@@ -104,14 +108,17 @@
       if (e.data === "pong") return;
       const m = JSON.parse(e.data);
       if (m.t === "state") {
-        people = { me: m.me, mutual: (m.connections || []).filter((c) => c.mutual).map((c) => c.login) };
+        const mutual = (m.connections || []).filter((c) => c.mutual);
+        people = { me: m.me, mutual: mutual.map((c) => c.login), online: mutual.filter((c) => c.online).map((c) => c.login) };
+        questions = Array.isArray(m.questions) ? m.questions : [];
         tellPeople();
         if (!ready) {
           ready = true;
           for (const w of waiting.splice(0)) ws.send(JSON.stringify(w));
         }
       }
-      if (["flash", "unflash", "flashed", "error", "note", "notes", "unnote"].includes(m.t)) toPorts(m);
+      if (m.t === "q" && m.q?.id) questions = [...questions.filter((q) => q.id !== m.q.id), m.q];
+      if (["flash", "unflash", "flashed", "error", "note", "notes", "unnote", "q"].includes(m.t)) toPorts(m);
     };
     ws.onclose = () => {
       socket = null;
@@ -125,6 +132,10 @@
     if (m.t === "note") out = { t: "note", channel: m.channel, chatter: m.chatter, chatterName: m.chatterName, text: m.text, body: m.body, color: m.color, at: m.at };
     else if (m.t === "unnote") out = { t: "unnote", id: m.id, channel: m.channel, at: m.at };
     else if (m.t === "notes") out = { t: "notes", channel: m.channel, from: m.from, to: m.to };
+    else if (m.t === "ask") out = { t: "ask", to: m.to, text: m.text, options: ["t", "y", "n", "m"] };
+    else if (m.t === "flash" && (m.kind === "info" || m.kind === "love")) out = { t: "flash", kind: m.kind, to: m.to, text: m.text };
+    else if (m.t === "answer") out = { t: "answer", id: m.id, code: m.code };
+    else if (m.t === "seen") out = { t: "seen", id: m.id };
     else if (m.t === "flag") out = { t: "flash", kind: "chat", channel: m.channel, chatter: m.chatter, chatterName: m.chatterName, chatterColor: m.chatterColor, emotes: m.emotes, text: m.text, color: m.color };
     if (!out) return;
     if (ready) socket.send(JSON.stringify(out));
@@ -146,7 +157,8 @@
     if (name === "hub") {
       const tell = (m) => later(() => onMessage.forEach((f) => f(clone(m))));
       ports.add(tell);
-      if (people) later(() => tell({ t: "people", me: people.me, mutual: people.mutual }));
+      if (people) later(() => tell({ t: "people", me: people.me, mutual: people.mutual, online: people.online || [] }));
+      if (questions.length) later(() => tell({ t: "questions", list: questions }));
       relay();
     }
     return p;
