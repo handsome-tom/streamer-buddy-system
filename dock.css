@@ -6045,6 +6045,7 @@ body.livechat .slotwrap { display: none !important; }
 .oc-mod__act--t { color: #ff5c8a; }
 .oc-mod__act--y { color: #3fc98e; }
 .oc-mod__act--n { color: #ff6b5c; }
+.oc-mod__act--seen { padding: 0 8px; color: #3fc98e; }
 .oc-mod__act--dismiss { min-width: 22px; padding: 0 4px; color: #adadb8; background: transparent; box-shadow: none; }
 .oc-mod__act--dismiss:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
 .oc-mod--ask:not(.oc-mod--done) { background: linear-gradient(90deg, color-mix(in srgb, var(--mc) 30%, transparent), color-mix(in srgb, var(--mc) 8%, transparent) 90%); box-shadow: inset 3px 0 0 var(--mc); }

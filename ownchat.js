@@ -1006,9 +1006,41 @@
         }
         line.append(acts);
       }
+      // A stuck quick info or !vanish note: Seen lets it go back to being an ordinary line that
+      // scrolls up with chat; × takes it off the screen altogether. Either way it stays in the
+      // stream log (nothing is sent: only this chat changes).
+      if (copy && m.stickFor > 0) {
+        const acts = el("span", "oc-mod__acts");
+        const seen = button("oc-mod__act oc-mod__act--seen", "", () => seenStuck(m.id), "Seen: stop keeping it at the top");
+        seen.innerHTML = '<svg viewBox="0 0 20 20" width="13" height="13" aria-hidden="true"><path d="m4 10.5 4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Seen</span>';
+        seen.setAttribute("aria-label", "Seen");
+        const x = button("oc-mod__act oc-mod__act--dismiss", "", () => hideStuck(m.id), "Take it off the screen (it stays in the stream log)");
+        x.innerHTML = '<svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>';
+        x.setAttribute("aria-label", "Close");
+        acts.append(seen, x);
+        line.append(acts);
+      }
       // The stuck copy at the top: a click on its words jumps to the line in chat.
       if (copy) body.addEventListener("click", () => modLines.get(m.id)?.line.scrollIntoView({ block: "center", behavior: "smooth" }));
       return line;
+    }
+    // Seen: it stops sticking and carries on up chat like any other line, marked Seen.
+    function seenStuck(id) {
+      const rec = modLines.get(id);
+      if (!rec) return;
+      unstick(id);
+      const ans = rec.line.querySelector(".oc-mod__answer");
+      if (ans) {
+        ans.textContent = "✓ Seen";
+        ans.hidden = false;
+      }
+    }
+    // ×: off the screen, the stuck copy and its line in chat both (it isn't drawn again).
+    function hideStuck(id) {
+      const rec = modLines.get(id);
+      if (!rec) return;
+      unstick(id);
+      rec.line.remove();
     }
     function settleMod(id, text) {
       const rec = modLines.get(id);

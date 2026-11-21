@@ -200,6 +200,18 @@ export const tests = {
     await h.wait(7000);
     h.check(!stuck("love"), "the !vanish note should be gone from the top after 6 seconds");
     h.check(stuck("info"), "quick info should still be at the top (it stays 40 seconds)");
+    // Seen: off the top, and its line carries on in chat marked Seen.
+    stuck("info").querySelector(".oc-mod__act--seen").click();
+    await h.until(() => !stuck("info"), "quick info to leave the top once it's Seen");
+    h.check(/Seen/.test(streamer.$(".oc-mod--info:not(.oc-mod--stuck)")?.textContent || ""), "its line still in chat, marked Seen");
+    // ×: another one goes off the screen altogether, top and chat both.
+    modWatch.send({ t: "flash", kind: "info", to: "streamer", text: "Raid incoming" });
+    await h.until(() => streamer.$$(".oc-mod--info:not(.oc-mod--stuck)").some((l) => l.textContent.includes("Raid incoming")), "the second quick info in chat");
+    await h.wait(400);
+    for (let i = 0; i < 60; i++) h.pretendTwitch.say(`chatter${i % 5}`, `more filler ${i}`);
+    await h.until(() => stuck("info"), "the second one stuck at the top");
+    stuck("info").querySelector(".oc-mod__act--dismiss").click();
+    await h.until(() => !stuck("info") && !streamer.$$(".oc-mod--info").some((l) => l.textContent.includes("Raid incoming")), "× to take it off the top and out of chat");
     noErrors(streamer);
   },
 
