@@ -304,6 +304,29 @@ export const tests = {
     noErrors(panel);
   }),
 
+  async "joining asks streamer, mod, both or neither; both picks mostly-mod; the profile changes it and connections see it"(h) {
+    const friend = h.person("mod2");
+    const meWatch = h.person("mod1");
+    await h.friends(friend, meWatch);
+    const panel = await h.panel("mod1", "ext", "askroles");
+    await h.until(() => panel.$(".roles__choice[data-role='both']"), "the welcome question");
+    h.check(panel.$(".roles .agree__go").disabled, "Continue waits for a choice");
+    panel.$(".roles__choice[data-role='both']").click();
+    await h.until(() => panel.$(".roles__mostly:not([hidden])"), "Mostly known as, for both");
+    h.check(panel.$(".roles__main[aria-pressed='true']")?.dataset.main === "mod", "mod is the default main role");
+    panel.$(".roles .agree__go").click();
+    await h.until(() => !panel.$(".roles"), "the question to close");
+    await h.until(() => friend.state?.connections?.find((c) => c.login === "mod1")?.roles?.main === "mod", "mod2 to see mod1 as mainly a mod");
+    h.check(friend.state.connections.find((c) => c.login === "mod1").roles.streamer, "and as a streamer too");
+    (await h.until(() => panel.$("#msgBtn:not([hidden])"), "the Messages button")).click();
+    const streamerChip = await h.until(() => panel.$(".myspace__role[data-role='streamer'][aria-pressed='true']"), "Streamer on, on the profile");
+    h.check(panel.$(".myspace__known")?.textContent === "Mod", "Known for: Mod");
+    streamerChip.click();
+    await h.until(() => friend.state?.connections?.find((c) => c.login === "mod1")?.roles?.streamer === false, "turning Streamer off to reach the relay");
+    await h.until(() => !panel.$(".myspace__known"), "Known for to go once you're only a mod");
+    noErrors(panel);
+  },
+
   async "groups live in Messages, not Connections: make one, open its page, start its group chat"(h) {
     const mod1 = h.person("mod1");
     const mod2 = h.person("mod2");

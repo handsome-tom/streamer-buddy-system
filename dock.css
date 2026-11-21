@@ -7283,3 +7283,26 @@ html :is(body, body.has-space.has-space) .oc-pop-out { animation: pop-out 0.45s 
 @media (prefers-reduced-motion: reduce) {
   html :is(body, body.has-space.has-space) :is(.oc-pop, .oc-pop *, .oc-pop-kids *, .oc-pop-late, .oc-pop-out) { animation: none !important; }
 }
+
+/* ===== What you are (dock.js askRoles / rolesLine): the first-time question and the
+   profile's Streamer / Mod switches. Soft, boxless: faint fills and a glow when chosen. */
+.roles__card { display: flex; flex-direction: column; gap: 12px; width: min(440px, 100%); color: #d9d9e3; font-size: 14px; line-height: 1.5; }
+.roles__choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.roles__choice { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px 14px; border: 0; border-radius: 14px; font: inherit; text-align: left; color: #d9d9e3; background: rgba(255, 255, 255, 0.05); cursor: pointer; transition: background 0.15s, box-shadow 0.15s; }
+.roles__choice:hover { background: rgba(255, 255, 255, 0.09); }
+.roles__choice[aria-pressed="true"] { background: rgba(63, 125, 216, 0.22); box-shadow: 0 0 18px rgba(63, 125, 216, 0.35); }
+.roles__choice[data-role="streamer"][aria-pressed="true"] { background: rgba(145, 70, 255, 0.24); box-shadow: 0 0 18px rgba(145, 70, 255, 0.35); }
+.roles__choice[data-role="mod"][aria-pressed="true"] { background: rgba(0, 173, 3, 0.2); box-shadow: 0 0 18px rgba(0, 173, 3, 0.3); }
+.roles__label { font-size: 16px; font-weight: 800; color: #fff; }
+.roles__says { font-size: 12.5px; color: #a3a3ad; }
+.roles__mostly { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.roles__mostly[hidden] { display: none; }
+.roles__q { color: #b9b9c8; font-size: 13px; font-weight: 600; }
+.roles__main, .myspace__role, .myspace__known { height: 26px; padding: 0 12px; border: 0; border-radius: 999px; font: inherit; font-size: 12px; font-weight: 700; color: var(--msg-muted, #a3a3ad); background: rgba(255, 255, 255, 0.06); cursor: pointer; }
+.roles__main { height: 30px; font-size: 13px; }
+.roles__main[aria-pressed="true"], .myspace__role[aria-pressed="true"], .myspace__known { color: #fff; background: rgba(63, 125, 216, 0.4); }
+.myspace__role[data-role="streamer"][aria-pressed="true"] { background: rgba(145, 70, 255, 0.45); }
+.myspace__role[data-role="mod"][aria-pressed="true"] { background: rgba(0, 173, 3, 0.4); }
+.myspace__roles { display: inline-flex; gap: 5px; }
+.myspace__role { height: 22px; padding: 0 10px; font-size: 11.5px; }
+.myspace__known { height: 22px; padding: 0 10px; font-size: 11.5px; }

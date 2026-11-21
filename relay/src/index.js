@@ -119,6 +119,11 @@
 //   nudge { id, warn }      remind them of your unanswered question (up to 3; warn: past the
 //                           limits, as a warning; see nudge())
 //   status { status }       "online", "modding", "idle" or "offline"
+//   roles { streamer, mod, main }  what you are: a streamer, a mod, both or neither (asked
+//                           when you first join, changeable on your profile); main, for both:
+//                           which you're mostly known for, "mod" (the default) or "streamer". Kept on your account; you
+//                           get it back as state's "roles" (null until you've said), and your
+//                           mutual connections get it as each connection's "roles"
 //   tag { login, tag, on }  put a connection in (or out of) one of your tags
 //   room { tag }            open your chat room to one of your tags (null closes it)
 //   say { owner, text }     post in someone's room (yours: owner is you)
@@ -223,7 +228,9 @@ const WARN_GAP_MS = 30 * 1000;
 const NOTE_MS = 60 * 24 * 60 * 60 * 1000; // chat notes: as long as Twitch keeps a VOD at most
 const MAX_NOTE_LEN = 300;
 // What this relay can do that older ones couldn't, so the extension only offers what works.
-const RELAY_FEATURES = ["secretNotes", "noteReplies"];
+// Someone's roles as pages get them (without when they were set), or null until they've said.
+const rolesOut = (u) => (u?.roles ? { streamer: !!u.roles.streamer, mod: !!u.roles.mod, main: u.roles.main || "" } : null);
+const RELAY_FEATURES = ["secretNotes", "noteReplies", "roles"];
 const MAX_NOTES_PER_MINUTE = 20;
 const MAX_NOTES_SENT = 1000; // to one VOD
 
@@ -271,6 +278,7 @@ export class Hub {
       else if (m.t === "disconnect") await this.setConnection(who.login, m.login, false);
       else if (m.t === "ask") await this.ask(ws, who, m);
       else if (m.t === "status") await this.setStatus(who.login, m);
+      else if (m.t === "roles") await this.setRoles(who.login, m);
       else if (m.t === "tag") await this.setTag(who.login, m);
       else if (m.t === "room") await this.setRoom(who.login, m);
       else if (m.t === "say") await this.say(ws, who, m);
@@ -508,6 +516,17 @@ export class Hub {
     await this.tellConnections(login);
   }
 
+  // What you are (see roles above): two yes/no answers, kept with when you said.
+  async setRoles(login, m) {
+    const user = (await this.ctx.storage.get(`u:${login}`)) || { list: [] };
+    const streamer = m.streamer === true, mod = m.mod === true;
+    const main = streamer && mod ? (m.main === "streamer" ? "streamer" : "mod") : streamer ? "streamer" : mod ? "mod" : "";
+    user.roles = { streamer, mod, main, at: Date.now() };
+    await this.ctx.storage.put(`u:${login}`, user);
+    await this.sendState(login);
+    await this.tellConnections(login);
+  }
+
   send(ws, msg) {
     try {
       ws.send(JSON.stringify(msg));
@@ -542,7 +561,7 @@ export class Hub {
       const last = mutual && !online ? users[l]?.lastOnline || 0 : 0;
       // modding: online and ready to mod (their sword is lit).
       // modFor: the channels they mod (mutual connections only).
-      return { login: l, mutual, online, idle: online && users[l]?.status === "idle", modding: online && !users[l]?.status, since, last, modFor: mutual ? users[l]?.modFor || [] : [] };
+      return { login: l, mutual, online, idle: online && users[l]?.status === "idle", modding: online && !users[l]?.status, since, last, modFor: mutual ? users[l]?.modFor || [] : [], roles: mutual ? rolesOut(users[l]) : null };
     });
     const requests = Object.entries(users).filter(([l, u]) => l !== login && u.list.includes(login) && !mine.includes(l)).map(([l]) => l);
     const questions = [];
@@ -580,7 +599,7 @@ export class Hub {
     }
     const limit = owner && login !== owner ? this.limitOf(login, await this.allowList()) : null;
     const reports = owner && login === owner ? (await this.ctx.storage.get("reportsNew")) || 0 : undefined;
-    this.sendTo(login, { t: "state", features: RELAY_FEATURES, me: login, owner, allowed, asking, limit, reports, status: users[login]?.status || "modding", since: users[login]?.onlineAt || 0, connections, requests, tags: users[login]?.tags || {}, questions, pins, rooms, chat, statsOn: !!users[login]?.statsOn, stats, views });
+    this.sendTo(login, { t: "state", features: RELAY_FEATURES, me: login, owner, allowed, asking, limit, reports, status: users[login]?.status || "modding", roles: rolesOut(users[login]), since: users[login]?.onlineAt || 0, connections, requests, tags: users[login]?.tags || {}, questions, pins, rooms, chat, statsOn: !!users[login]?.statsOn, stats, views });
   }
 
   // A room's latest messages. Anything over a week old is deleted, even if nobody

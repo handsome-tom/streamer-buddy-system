@@ -1021,6 +1021,7 @@
     statsOn = !!m.statsOn;
     myStatus = m.status || myStatus;
     mySince = m.since || mySince;
+    gotRoles(m);
     collect();
     gotPins(m.pins || []);
     const had = new Set(Object.keys(questions));
@@ -5883,6 +5884,136 @@
   //   Your Friend Space: your Top 8, your first eight connections in the order you added
   //     them (the relay keeps them in that order), the eight spots your sign-in comes
   //     with. Everyone else is in the lists under it, as before.
+  // ===== What you are: a streamer, a mod, both or neither ====================================
+  // Asked once, straight after you first join (before anything is classed wrong), and
+  // changeable any time on your profile in Messages. Someone who's both picks which they're
+  // mainly known for: mod by default, since plenty of people mod every day and only stream
+  // now and then. Kept on your account by the relay (state's "roles"; your connections get
+  // theirs, ready for VIP notes later), and on this computer too, so a relay that can't keep
+  // it yet still doesn't ask twice. The demo and playground never ask (?askroles makes them).
+  let myRoles = null; // { streamer, mod, main } once you've said
+  let rolesAsking = false;
+  const rolesKey = () => `roles:${me.login}`;
+  function cleanRoles(r) {
+    if (!r || typeof r !== "object") return null;
+    const streamer = !!r.streamer, mod = !!r.mod;
+    return { streamer, mod, main: streamer && mod ? (r.main === "streamer" ? "streamer" : "mod") : streamer ? "streamer" : mod ? "mod" : "" };
+  }
+  function gotRoles(m) {
+    if (!me) return;
+    const local = cleanRoles(get(rolesKey(), null));
+    const relayKeeps = (m.features || []).includes("roles");
+    myRoles = cleanRoles(m.roles) || local;
+    if (myRoles) put(rolesKey(), myRoles);
+    // Said on this computer before the relay could keep it: tell it now.
+    if (relayKeeps && !m.roles && local) setTimeout(() => relay({ t: "roles", ...local }), 0);
+    if (!myRoles && !rolesAsking && (!(DEMO || SANDBOX) || params.has("askroles"))) setTimeout(askRoles, 0);
+  }
+  function setRoles(r) {
+    myRoles = cleanRoles(r);
+    put(rolesKey(), myRoles);
+    relay({ t: "roles", ...myRoles });
+    render();
+  }
+  // How your roles read, in a few words: "Mod · streams too", "Streamer", "Viewer".
+  function rolesSay(r) {
+    if (!r) return "";
+    if (r.streamer && r.mod) return r.main === "streamer" ? "Streamer · mods too" : "Mod · streams too";
+    return r.streamer ? "Streamer" : r.mod ? "Mod" : "Viewer";
+  }
+  // The first-time question: four big choices; Both opens "Mostly known as" (Mod first).
+  function askRoles() {
+    if (myRoles || rolesAsking || document.querySelector(".roles")) return;
+    rolesAsking = true;
+    const CHOICES = [
+      { key: "streamer", label: "Streamer", says: "I stream on Twitch", r: { streamer: true, mod: false } },
+      { key: "mod", label: "Mod", says: "I mod for someone's channel", r: { streamer: false, mod: true } },
+      { key: "both", label: "Both", says: "I mod and I stream", r: { streamer: true, mod: true } },
+      { key: "neither", label: "Neither", says: "I'm here to watch and chat", r: { streamer: false, mod: false } },
+    ];
+    let pick = null;
+    let main = "mod";
+    const box = el("div", "agree roles");
+    box.setAttribute("role", "dialog");
+    box.setAttribute("aria-modal", "true");
+    box.setAttribute("aria-labelledby", "rolesTitle");
+    const card = el("form", "roles__card");
+    const title = el("h2", "agree__title", "Welcome! Which are you?");
+    title.id = "rolesTitle";
+    const lead = el("p", "agree__lead", "So StreamSpace shows you the right things. You can change this any time on your profile.");
+    const list = el("div", "roles__choices");
+    const buttons = CHOICES.map((c) => {
+      const b = el("button", "roles__choice");
+      b.type = "button";
+      b.dataset.role = c.key;
+      b.setAttribute("aria-pressed", "false");
+      b.append(el("span", "roles__label", c.label), el("span", "roles__says", c.says));
+      b.addEventListener("click", () => {
+        pick = c;
+        buttons.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+        mostly.hidden = c.key !== "both";
+        go.disabled = false;
+      });
+      list.append(b);
+      return b;
+    });
+    const mostly = el("div", "roles__mostly");
+    mostly.hidden = true;
+    mostly.append(el("span", "roles__q", "Mostly known as:"));
+    const mains = ["mod", "streamer"].map((k) => {
+      const b = el("button", "roles__main", k === "mod" ? "Mod" : "Streamer");
+      b.type = "button";
+      b.dataset.main = k;
+      b.setAttribute("aria-pressed", String(k === main));
+      b.addEventListener("click", () => {
+        main = k;
+        mains.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      });
+      mostly.append(b);
+      return b;
+    });
+    const go = el("button", "agree__go", "Continue");
+    go.type = "submit";
+    go.disabled = true;
+    card.append(title, lead, list, mostly, go);
+    card.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (!pick) return;
+      box.remove();
+      rolesAsking = false;
+      setRoles({ ...pick.r, main });
+    });
+    box.append(card);
+    document.body.append(box);
+    buttons[0].focus();
+  }
+  // On your profile: "I am" with Streamer and Mod switches; with both on, "Known for".
+  function rolesLine() {
+    const r = myRoles || { streamer: false, mod: false, main: "" };
+    const line = el("div", "myspace__fact myspace__fact--roles");
+    const chips = el("span", "myspace__roles");
+    for (const k of ["streamer", "mod"]) {
+      const b = el("button", "myspace__role", k === "mod" ? "Mod" : "Streamer");
+      b.type = "button";
+      b.dataset.role = k;
+      b.setAttribute("aria-pressed", String(!!r[k]));
+      b.title = r[k] ? `Tap if you're not a ${k}` : `Tap if you're a ${k}`;
+      b.addEventListener("click", () => setRoles({ ...r, [k]: !r[k] }));
+      chips.append(b);
+    }
+    line.append(el("span", "myspace__label", "I am"), chips);
+    const parts = [line];
+    if (r.streamer && r.mod) {
+      const known = el("div", "myspace__fact myspace__fact--roles");
+      const sw = el("button", "myspace__known", r.main === "streamer" ? "Streamer" : "Mod");
+      sw.type = "button";
+      sw.title = "What you're mostly known for. Tap to switch.";
+      sw.addEventListener("click", () => setRoles({ ...r, main: r.main === "streamer" ? "mod" : "streamer" }));
+      known.append(el("span", "myspace__label", "Known for"), sw);
+      parts.push(known);
+    }
+    return parts;
+  }
   const MYSPACE_STATUS = {
     modding: { says: "Online Now!", more: "Available mod" },
     online: { says: "Online Now!", more: "" },
@@ -5970,7 +6101,7 @@
       e.stopPropagation(); // or the click that opens it would close it again
       openPresence(presenceMenu.hidden);
     });
-    about.append(status);
+    about.append(status, ...rolesLine());
     // The channels you mod for: their round pictures, names on hover.
     const modFor = (modLists?.modFor || []).filter((l) => l !== login);
     if (modFor.length) {
