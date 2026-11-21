@@ -10,6 +10,9 @@ SRC="${EXTENSION_DIR:-../Twitch extension/v2-hover}" # both live in Claude Proje
 for f in backup.js settings.js lookup.js people.js myname.js phrases.js hub.js flag.js chatnotes.js modtalk.js styles.css; do
   cp "$SRC/$f" demo/twitch/ext/
 done
+# The chat box tabs' pixel font (phrases.js loads it from the extension's fonts/).
+mkdir -p demo/twitch/ext/fonts
+cp "$SRC/fonts/silkscreen.woff2" "$SRC/fonts/silkscreen-OFL.txt" demo/twitch/ext/fonts/
 # On twitch.tv these scripts skip frames (Twitch's own embeds); the playground's pretend chat
 # is a frame of its own, so there (where shim.js has set window.TWITCH_ME) they run as the page.
 for f in demo/twitch/ext/*.js; do

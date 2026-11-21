@@ -460,15 +460,18 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
   const PRIVATE_KEY = "privateNotes"; // Just-me notes (chatnotes.js draws them)
   const PRIVATE_KEEP_MS = 60 * 24 * 60 * 60 * 1000; // 60 days, as long as the relay keeps notes
   const PRIVATE_MAX = 500;
-  // The side panel's Connections tab icon (two pixel people), and a pixel lock for Just me.
-  const CONNECTIONS_SVG = '<svg viewBox="0 0 9 8" width="18" height="16" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="M1 0h2v1h-2zM6 0h2v1h-2zM1 1h2v1h-2zM6 1h2v1h-2zM1 3h2v1h-2zM6 3h2v1h-2zM0 4h4v1h-4zM5 4h4v1h-4zM0 5h4v1h-4zM5 5h4v1h-4zM0 6h4v1h-4zM5 6h4v1h-4z"/></svg>';
-  const LOCK_SVG = '<svg viewBox="0 0 7 8" width="14" height="16" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="M2 0h3v1h-3zM1 1h1v1h-1zM5 1h1v1h-1zM1 2h1v1h-1zM5 2h1v1h-1zM0 3h7v1h-7zM0 4h3v1h-3zM4 4h3v1h-3zM0 5h3v1h-3zM4 5h3v1h-3zM0 6h7v1h-7zM0 7h7v1h-7z"/></svg>';
+  // Pixel icons in the side panel's 16×16 style: the streamer (a camera, like Twitch's
+  // broadcaster badge) for Streamer messages, a person with a chat bubble for Connections
+  // chat, and a lock for Just me.
+  const px = (d) => `<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="${d}"/></svg>`;
+  const STREAMER_SVG = px("M2 3h8v1h-8zM1 4h10v1h-10zM14 4h1v1h-1zM1 5h10v1h-10zM13 5h2v1h-2zM1 6h10v1h-10zM12 6h3v1h-3zM1 7h10v1h-10zM12 7h3v1h-3zM1 8h10v1h-10zM12 8h3v1h-3zM1 9h10v1h-10zM13 9h2v1h-2zM1 10h10v1h-10zM14 10h1v1h-1zM2 11h8v1h-8z");
+  const CONNCHAT_SVG = px("M7 1h7v1h-7zM6 2h9v1h-9zM6 3h2v1h-2zM9 3h1v1h-1zM11 3h1v1h-1zM13 3h2v1h-2zM6 4h9v1h-9zM7 5h7v1h-7zM2 6h2v1h-2zM7 6h2v1h-2zM1 7h4v1h-4zM6 7h1v1h-1zM1 8h4v1h-4zM2 9h2v1h-2zM1 11h4v1h-4zM0 12h6v1h-6zM0 13h6v1h-6z");
+  const LOCK_SVG = px("M6 2h4v1h-4zM5 3h2v1h-2zM9 3h2v1h-2zM4 4h2v1h-2zM10 4h2v1h-2zM4 5h2v1h-2zM10 5h2v1h-2zM4 6h2v1h-2zM10 6h2v1h-2zM2 7h12v1h-12zM2 8h12v1h-12zM2 9h5v1h-5zM9 9h5v1h-5zM2 10h5v1h-5zM9 10h5v1h-5zM2 11h12v1h-12zM2 12h12v1h-12z");
   const WHO = {
     all: {
-      label: "My connections",
-      icon: CONNECTIONS_SVG,
+      label: "Connections chat",
+      icon: CONNCHAT_SVG,
       state: (here) => `Only your connections and ${nameOf(here || "the channel")}'s mods see it. Never the streamer.`,
-      hint: "It goes in chat as its own line, for everyone in your connections with StreamSpace.",
       placeholder: "Say something only your connections see…",
       verb: "Post",
       keys: "Enter to post",
@@ -477,7 +480,6 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
       label: "Just me",
       icon: LOCK_SVG,
       state: () => "Only you see it. It stays on this computer.",
-      hint: "A note to yourself, as its own line in chat. It's never sent to anyone.",
       placeholder: "A note just for you…",
       verb: "Save",
       keys: "Enter to save",
@@ -548,32 +550,25 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
       notice.append(Object.assign(document.createElement("b"), { textContent: "Sign in to use Connections chat" }), Object.assign(document.createElement("span"), { textContent: "Click the StreamSpace button at the top of Twitch and sign in once." }));
       el.append(notice);
     }
-    // The Connections icon, then what it is and who sees it.
+    // One small row: the two choices as round icons (hover for their names), then what the
+    // chosen one is and who sees it.
     const top = document.createElement("div");
     top.className = "tbc-mt__connhead";
-    const icon = document.createElement("span");
-    icon.className = "tbc-mt__connicon";
-    icon.innerHTML = CONNECTIONS_SVG;
-    const words = document.createElement("div");
-    words.className = "tbc-mt__words";
-    words.append(Object.assign(document.createElement("b"), { textContent: "Connections chat" }), Object.assign(document.createElement("span"), { className: "tbc-mt__state", textContent: who.state(here) }));
-    top.append(icon, words);
-    el.append(top);
-
-    // Who sees it: your connections, or just you.
     const pick = document.createElement("div");
-    pick.className = "tbc-mt__modes tbc-mt__modes--two";
+    pick.className = "tbc-mt__pick";
     pick.setAttribute("role", "radiogroup");
     pick.setAttribute("aria-label", "Who sees it");
     for (const [key, w] of Object.entries(WHO)) {
       const b = document.createElement("button");
       b.type = "button";
-      b.className = `tbc-mt__mode tbc-mt__mode--${key === "me" ? "me" : "conn"}${connDraft.who === key ? " tbc-mt__mode--on" : ""}`;
+      b.className = `tbc-mt__pickbtn${connDraft.who === key ? " tbc-mt__pickbtn--on" : ""}`;
       b.setAttribute("role", "radio");
       b.setAttribute("aria-checked", String(connDraft.who === key));
+      b.setAttribute("aria-label", w.label);
+      b.title = w.label;
       b.innerHTML = w.icon;
-      b.append(w.label);
       b.addEventListener("click", () => {
+        if (connDraft.who === key) return;
         connDraft.who = key;
         connDraft.note = "";
         fillConnections(el);
@@ -581,12 +576,11 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
       });
       pick.append(b);
     }
-    el.append(pick);
-
-    const hint = document.createElement("p");
-    hint.className = "tbc-mt__hint";
-    hint.textContent = who.hint;
-    el.append(hint);
+    const words = document.createElement("div");
+    words.className = "tbc-mt__words";
+    words.append(Object.assign(document.createElement("b"), { textContent: who.label }), Object.assign(document.createElement("span"), { className: "tbc-mt__state", textContent: who.state(here) }));
+    top.append(pick, words);
+    el.append(top);
 
     const form = document.createElement("form");
     form.className = `tbc-mt__form tbc-mt__form--${connDraft.who === "me" ? "me" : "conn"}`;
@@ -645,8 +639,8 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
     tabs: () =>
       channelName()
         ? [
-            { key: "talk", label: "Streamer messages", title: "Ask the streamer, send quick info or a !vanish note", fill, focus: () => pane?.querySelector(".tbc-mt__text")?.focus() },
-            { key: "connections", label: "Connections chat", title: "Chat with your connections and the mods here, where the streamer can't see it, or keep a note just for you", fill: fillConnections, focus: () => connPane?.querySelector(".tbc-mt__text")?.focus() },
+            { key: "talk", label: "Streamer messages", title: "Streamer messages: ask the streamer, send quick info or a !vanish note", icon: STREAMER_SVG, fill, focus: () => pane?.querySelector(".tbc-mt__text")?.focus() },
+            { key: "connections", label: "Connections chat", title: "Connections chat: talk with your connections and the mods here, where the streamer can't see it, or keep a note just for you", icon: CONNCHAT_SVG, fill: fillConnections, focus: () => connPane?.querySelector(".tbc-mt__text")?.focus() },
           ]
         : [],
   };

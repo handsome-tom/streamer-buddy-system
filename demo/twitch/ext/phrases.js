@@ -212,6 +212,17 @@ whenOn("phrases", "Quick phrases and highlight words", () => {
   // The tabs along the top: modtalk.js's (Streamer messages, Connections chat) first, then
   // Chat tools (quick phrases and highlight words). All the same height, so switching
   // doesn't make the pop-up jump.
+  // Each tab is a pixel icon (the side panel's 16×16 style) with its name small under it, in
+  // the side panel's pixel font: Silkscreen (fonts/silkscreen.woff2, SIL Open Font License,
+  // fonts/silkscreen-OFL.txt), loaded once, under its own name so it can't clash with Twitch's.
+  const TOOLS_ICON = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="M9 1h4v1h-4zM8 2h4v1h-4zM7 3h4v1h-4zM6 4h4v1h-4zM5 5h4v1h-4zM4 6h9v1h-9zM4 7h8v1h-8zM7 8h4v1h-4zM6 9h4v1h-4zM5 10h4v1h-4zM5 11h3v1h-3zM4 12h2v1h-2zM4 13h1v1h-1z"/></svg>';
+  function pixelFont() {
+    if (document.getElementById("tbc-pixelfont")) return;
+    const f = document.createElement("style");
+    f.id = "tbc-pixelfont";
+    f.textContent = `@font-face { font-family: "TBC Silkscreen"; font-weight: 400; font-display: swap; src: url("${chrome.runtime.getURL("fonts/silkscreen.woff2")}") format("woff2"); }`;
+    document.head.append(f);
+  }
   const extraTabs = () => window.tbcModTalk?.tabs() || [];
   function focusTab() {
     const t = extraTabs().find((x) => x.key === tab);
@@ -222,16 +233,24 @@ whenOn("phrases", "Quick phrases and highlight words", () => {
     shell.querySelector(".tbc-phrases__tabs")?.remove();
     shell.classList.toggle("tbc-phrases--tabs", !!tabs.length);
     if (!tabs.length) return;
+    pixelFont();
     const bar = document.createElement("div");
     bar.className = "tbc-phrases__tabs";
     bar.setAttribute("role", "tablist");
-    for (const t of [...tabs, { key: "phrases", label: "Chat tools", title: "Your quick phrases and highlight words" }]) {
+    for (const t of [...tabs, { key: "phrases", label: "Chat tools", title: "Chat tools: your quick phrases and highlight words", icon: TOOLS_ICON }]) {
       const b = document.createElement("button");
       b.type = "button";
-      b.className = `tbc-phrases__tab${tab === t.key ? " tbc-phrases__tab--on" : ""}`;
+      b.className = `tbc-phrases__tab tbc-phrases__tab--${t.key}${tab === t.key ? " tbc-phrases__tab--on" : ""}`;
       b.setAttribute("role", "tab");
       b.setAttribute("aria-selected", String(tab === t.key));
+      b.setAttribute("aria-label", t.label);
       b.title = t.title;
+      if (t.icon) {
+        const icon = document.createElement("span");
+        icon.className = "tbc-phrases__tabicon";
+        icon.innerHTML = t.icon;
+        b.append(icon);
+      }
       const words = document.createElement("span");
       words.className = "tbc-phrases__tabname";
       words.textContent = t.label;

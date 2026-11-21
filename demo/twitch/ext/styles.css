@@ -1159,20 +1159,21 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   border-radius: 12px;
   background: rgba(4, 6, 14, 0.45);
 }
-/* Each tab as wide as its name (then sharing what's left), so "Streamer messages" and
-   "Connections chat" both fit in Twitch's chat without being cut off. */
+/* Each tab: its pixel icon, with its name small under it in the side panel's pixel font
+   (Silkscreen, loaded by phrases.js). As wide as its name, then sharing what's left. */
 .tbc-phrases__tab {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 7px 4px;
-  letter-spacing: -0.01em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 3px 5px;
   border: 0;
   border-radius: 9px;
   background: none;
-  color: #9aa6c4;
+  color: #8b97b5;
   font: inherit;
-  font-size: 12px;
-  font-weight: 700;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
@@ -1184,11 +1185,26 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   background: linear-gradient(180deg, rgba(99, 152, 235, 0.55), rgba(63, 125, 216, 0.38));
   box-shadow: 0 4px 14px rgba(20, 50, 110, 0.5);
 }
+.tbc-phrases__tabicon {
+  display: flex;
+  color: #7db0ef;
+}
+.tbc-phrases__tab--on .tbc-phrases__tabicon {
+  color: #fff;
+}
 .tbc-phrases__tabname {
   display: block;
+  max-width: 100%;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  font-family: "TBC Silkscreen", Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 400;
+  font-synthesis: none;
+  font-size: 8px;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  -webkit-font-smoothing: none;
 }
 .tbc-phrases__head {
   margin-bottom: 6px;
@@ -2038,35 +2054,56 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   color: #c8cfe0;
   font-size: 12px;
 }
-/* Connections chat: the side panel's Connections icon in its blue, then what it is. */
+/* Connections chat: one small row. The two choices as round pixel icons (Connections chat,
+   Just me; hover for their names), the chosen one lit in Connections blue, then its name and
+   who sees it. */
 .tbc-mt__connhead {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.tbc-mt__connicon {
+.tbc-mt__pick {
   flex: none;
+  display: flex;
+  gap: 4px;
+}
+.tbc-mt__pickbtn {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
   border-radius: 50%;
-  background: rgba(125, 176, 239, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #6f7a96;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+.tbc-mt__pickbtn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #c8d3ec;
+}
+.tbc-mt__pickbtn:active {
+  transform: scale(0.94);
+}
+.tbc-mt__pickbtn--on,
+.tbc-mt__pickbtn--on:hover {
+  background: rgba(125, 176, 239, 0.18);
   color: #7db0ef;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 14px rgba(125, 176, 239, 0.3), 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+.tbc-mt--conn .tbc-mt__words b {
+  font-size: 13px;
 }
 .tbc-mt--conn .tbc-mt__state {
   color: #9aa6c4;
+  font-size: 11px;
+  line-height: 1.3;
 }
-/* Who sees it: two pills, My connections (Connections blue) and Just me (silver). */
-.tbc-mt__modes--two {
-  grid-template-columns: repeat(2, 1fr);
-}
-.tbc-mt__mode--conn,
 .tbc-mt__form--conn {
   --c: #7db0ef;
 }
-.tbc-mt__mode--me,
 .tbc-mt__form--me {
   --c: #c3cbe0;
 }
