@@ -42,7 +42,7 @@ whenOn("phrases", "Quick phrases and highlight words", () => {
   const chipLists = { hl: [] };
   let shell = null; // the pop-up
   let panel = null; // what's in the tab showing
-  let tab = "talk"; // "talk" (Streamer messages), "connections" (Connections chat) or "phrases" (Chat tools)
+  let tab = "phrases"; // always opens on Chat tools; "talk" (Streamer messages), "connections" (Connections chat) or "phrases" (Chat tools)
   let picking = false; // the emote picker is open for adding to a phrase
   let images = {};      // emote name -> picture url
 
@@ -63,10 +63,20 @@ whenOn("phrases", "Quick phrases and highlight words", () => {
   chrome.storage.local.get("emoteImages", (d) => (images = { ...images, ...(d.emoteImages || {}) }));
   // Pinned emotes (pins.js) are saved by ID, so their pictures are known even
   // before the picker has been opened.
-  chrome.storage.sync.get("pinnedEmotes", (d) => {
-    for (const p of d.pinnedEmotes || []) {
+  // They also show at the top of Chat tools ("Your emotes"), to click into the chat box.
+  let pinned = [];
+  const pinnedSrc = (p) => (p.id ? `https://static-cdn.jtvnw.net/emoticons/v2/${p.id}/default/dark/2.0` : p.src || images[p.name] || "");
+  function learnPinned(list) {
+    pinned = Array.isArray(list) ? list.filter((p) => p?.name) : [];
+    for (const p of pinned) {
       if (p.id && !images[p.name]) images[p.name] = `https://static-cdn.jtvnw.net/emoticons/v2/${p.id}/default/dark/1.0`;
     }
+  }
+  chrome.storage.sync.get("pinnedEmotes", (d) => learnPinned(d.pinnedEmotes));
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "sync" || !changes.pinnedEmotes) return;
+    learnPinned(changes.pinnedEmotes.newValue);
+    if (panel && tab === "phrases") fill();
   });
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "local") return;
@@ -193,6 +203,7 @@ whenOn("phrases", "Quick phrases and highlight words", () => {
   }, true);
 
   function open() {
+    tab = "phrases"; // the pop-up always opens on Chat tools
     shell = document.createElement("div");
     shell.className = "tbc-phrases";
     for (const type of ["keydown", "keyup", "keypress"]) {
@@ -215,7 +226,7 @@ whenOn("phrases", "Quick phrases and highlight words", () => {
   // Each tab is a pixel icon (the side panel's 16×16 style) with its name small under it, in
   // the side panel's pixel font: Silkscreen (fonts/silkscreen.woff2, SIL Open Font License,
   // fonts/silkscreen-OFL.txt), loaded once, under its own name so it can't clash with Twitch's.
-  const TOOLS_ICON = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="M9 1h4v1h-4zM8 2h4v1h-4zM7 3h4v1h-4zM6 4h4v1h-4zM5 5h4v1h-4zM4 6h9v1h-9zM4 7h8v1h-8zM7 8h4v1h-4zM6 9h4v1h-4zM5 10h4v1h-4zM5 11h3v1h-3zM4 12h2v1h-2zM4 13h1v1h-1z"/></svg>';
+  const TOOLS_ICON = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="M1 1h10v1h-10zM0 2h12v1h-12zM0 3h2v1h-2zM10 3h2v1h-2zM0 4h12v1h-12zM0 5h2v1h-2zM7 5h5v1h-5zM0 6h12v1h-12zM1 7h9v1h-9zM2 8h2v1h-2zM11 8h2v1h-2zM2 9h1v1h-1zM9 9h6v1h-6zM9 10h6v1h-6zM8 11h3v1h-3zM13 11h3v1h-3zM8 12h3v1h-3zM13 12h3v1h-3zM9 13h6v1h-6zM9 14h6v1h-6zM11 15h2v1h-2z"/></svg>'; // a chat box with a gear
   function pixelFont() {
     if (document.getElementById("tbc-pixelfont")) return;
     const f = document.createElement("style");
@@ -253,7 +264,7 @@ whenOn("phrases", "Quick phrases and highlight words", () => {
       }
       const words = document.createElement("span");
       words.className = "tbc-phrases__tabname";
-      words.textContent = t.label;
+      words.textContent = t.short || t.label; // short on the tab, so all three fit with their icons; the full name on hover
       b.append(words);
       b.addEventListener("click", () => {
         if (tab === t.key) return;
@@ -265,6 +276,39 @@ whenOn("phrases", "Quick phrases and highlight words", () => {
       bar.append(b);
     }
     shell.prepend(bar);
+  }
+
+  // Your emotes: the ones you've pinned in Twitch's emote picker (pins.js; right-click an
+  // emote there to pin it). Click one to add it to the chat box; the pop-up stays open, so
+  // you can click a few in a row.
+  function fillPinned() {
+    if (!pinned.length) return;
+    const head = document.createElement("div");
+    head.className = "tbc-phrases__head tbc-phrases__head--sub";
+    head.textContent = "Your emotes";
+    const row = document.createElement("div");
+    row.className = "tbc-phrases__emotes";
+    for (const p of pinned) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "tbc-phrases__emote";
+      b.title = b.ariaLabel = p.name;
+      const src = pinnedSrc(p);
+      if (src) {
+        const img = document.createElement("img");
+        img.src = src;
+        img.alt = p.name;
+        b.append(img);
+      } else b.textContent = p.name;
+      b.addEventListener("mousedown", (e) => e.preventDefault()); // keep the pop-up open
+      b.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        insert(p.name);
+      });
+      row.append(b);
+    }
+    panel.append(head, row);
   }
 
   function fill() {
@@ -289,6 +333,7 @@ whenOn("phrases", "Quick phrases and highlight words", () => {
     const draft = panel.querySelector(".tbc-phrases__new:not(.tbc-phrases__chipnew)")?.value || "";
     const drafts = Object.fromEntries(Object.keys(CHIPS).map((k) => [k, panel.querySelector(`.tbc-phrases__chipnew[data-kind="${k}"]`)?.value || ""]));
     panel.textContent = "";
+    fillPinned();
     for (const kind of Object.keys(CHIPS)) fillChips(kind, drafts[kind]);
     const head = document.createElement("div");
     head.className = "tbc-phrases__head tbc-phrases__head--sub";

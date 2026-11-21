@@ -1138,6 +1138,39 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   font: 13px/1.35 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
   scrollbar-width: thin;
 }
+/* Chat tools' "Your emotes": your pinned emotes in a row, each one click into the chat box. */
+.tbc-phrases__emotes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin: 0 -4px 10px;
+}
+.tbc-phrases__emote {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: #efeff1;
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  transition: background 0.12s, transform 0.1s;
+}
+.tbc-phrases__emote img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+.tbc-phrases__emote:hover {
+  background: rgba(125, 176, 239, 0.16);
+}
+.tbc-phrases__emote:active {
+  transform: scale(0.9);
+}
 /* With tabs: one height for every tab, the tab bar stays put and the inside scrolls. */
 .tbc-phrases--tabs {
   display: flex;
@@ -1159,16 +1192,16 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   border-radius: 12px;
   background: rgba(4, 6, 14, 0.45);
 }
-/* Each tab: its pixel icon, with its name small under it in the side panel's pixel font
+/* Each tab: its pixel icon on the left, then its name small in the side panel's pixel font
    (Silkscreen, loaded by phrases.js). As wide as its name, then sharing what's left. */
 .tbc-phrases__tab {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 6px 3px 5px;
+  justify-content: center;
+  gap: 4px;
+  padding: 7px 3px;
   border: 0;
   border-radius: 9px;
   background: none;
@@ -1186,11 +1219,17 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   box-shadow: 0 4px 14px rgba(20, 50, 110, 0.5);
 }
 .tbc-phrases__tabicon {
+  flex: none;
   display: flex;
   color: #7db0ef;
 }
 .tbc-phrases__tab--on .tbc-phrases__tabicon {
   color: #fff;
+}
+/* Streamer messages: the streamer's camera in Twitch purple, picked or not. */
+.tbc-phrases__tab--talk .tbc-phrases__tabicon,
+.tbc-phrases__tab--talk.tbc-phrases__tab--on .tbc-phrases__tabicon {
+  color: #b18cff;
 }
 .tbc-phrases__tabname {
   display: block;
@@ -1849,7 +1888,8 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
 .tbc-mt__state--on {
   color: #45d483;
 }
-/* Question / Quick info / !vanish: three big, easy pills, each in its own color. */
+/* Question / Quick info / !vanish: three easy pills, each in its own color, its icon on
+   the left of its name. */
 .tbc-mt__modes {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1858,10 +1898,10 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
 .tbc-mt__mode {
   --c: #6fa3f0;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 9px 4px 8px;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 4px;
   border: 0;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.04);
@@ -1879,6 +1919,7 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   --c: #e26fff;
 }
 .tbc-mt__mode svg {
+  flex: none;
   color: var(--c);
 }
 .tbc-mt__mode:hover {

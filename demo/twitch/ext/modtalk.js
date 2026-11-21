@@ -56,7 +56,8 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
       max: 80,
       verb: "Send",
       placeholder: () => "A little note that vanishes…",
-      icon: '<path d="M10 3.2 11.6 8l4.9.2-3.9 3 1.4 4.7-4-2.8-4 2.8 1.4-4.7-3.9-3L8.4 8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+      // The side panel's !vanish icon: a little devil face (horns, sly brows, grin), like the 😈.
+      icon: '<g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5.2 7.6 4 3.2l3.6 2.4M14.8 7.6 16 3.2l-3.6 2.4"/><circle cx="10" cy="11.2" r="6"/><path d="M6.9 9.3l2.1 1.1M13.1 9.3 11 10.4"/><path d="M7.1 13.1q2.9 2.7 5.8 0"/></g>',
     },
   };
   // The answers a streamer can give, as words.
@@ -639,8 +640,8 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
     tabs: () =>
       channelName()
         ? [
-            { key: "talk", label: "Streamer messages", title: "Streamer messages: ask the streamer, send quick info or a !vanish note", icon: STREAMER_SVG, fill, focus: () => pane?.querySelector(".tbc-mt__text")?.focus() },
-            { key: "connections", label: "Connections chat", title: "Connections chat: talk with your connections and the mods here, where the streamer can't see it, or keep a note just for you", icon: CONNCHAT_SVG, fill: fillConnections, focus: () => connPane?.querySelector(".tbc-mt__text")?.focus() },
+            { key: "talk", label: "Streamer messages", short: "Streamer", title: "Streamer messages: ask the streamer, send quick info or a !vanish note", icon: STREAMER_SVG, fill, focus: () => pane?.querySelector(".tbc-mt__text")?.focus() },
+            { key: "connections", label: "Connections chat", short: "Connections", title: "Connections chat: talk with your connections and the mods here, where the streamer can't see it, or keep a note just for you", icon: CONNCHAT_SVG, fill: fillConnections, focus: () => connPane?.querySelector(".tbc-mt__text")?.focus() },
           ]
         : [],
   };
