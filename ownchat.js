@@ -634,11 +634,35 @@
       if (!held()) toBottom();
     }, true);
 
+    // Pop-ups arriving (dock.css "Pop-ups, one family"): a banner wears .oc-pop while it
+    // animates in, then it comes off, so the chat being shown again (after Settings, Messages
+    // or Twitch's chat) doesn't replay every banner in it. Leaving, a card swells a touch and
+    // shrinks away before it's taken out.
+    const POP_MS = 1600;
+    const POPS = /\b(oc-event|oc-notice|oc-cheerline|oc-redeem|oc-line--highlight|oc-giftline|oc-mod|oc-line--first)\b/;
+    const stillMotion = () => !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    function popIn(node, cls = "oc-pop", ms = POP_MS) {
+      if (!node || stillMotion()) return;
+      node.classList.add(cls);
+      setTimeout(() => node.classList.remove(cls), ms);
+    }
+    function popOut(node, done) {
+      if (!node?.isConnected || stillMotion() || !node.getClientRects().length) {
+        node?.remove();
+        return done?.();
+      }
+      node.classList.add("oc-pop-out");
+      setTimeout(() => {
+        node.remove();
+        done?.();
+      }, 460);
+    }
     function flushLines() {
       if (queue.length) {
         const batch = document.createDocumentFragment();
         for (const line of queue) {
           if (finding) matchLine(line);
+          if (POPS.test(line.className)) popIn(line);
           batch.append(line);
         }
         list.append(batch);
@@ -2028,6 +2052,7 @@
       // Last, small: since when this computer has been counting raids and chat.
       if (you.length && before?.since) card.about.append(el("div", "oc-raid__note oc-raid__note--foot", `Raids and chat counted since ${longDate(before.since)}, while custom chat was open.`));
       card.about.hidden = !card.about.childElementCount;
+      if (!card.about.hidden) popIn(card.about, "oc-pop-late", 700);
     }
 
     function noticeLine(e) {
@@ -2384,9 +2409,13 @@
       if (!c) {
         c = el("div", `oc-topcard oc-topcard--${kind}`);
         tops.set(key, c);
+        // It grows in; its insides rise in only on this first drawing (an update redraws them,
+        // and they shouldn't keep popping as a gift bomb or hype train counts up).
+        popIn(c);
+        c.classList.add("oc-pop-kids");
         if (kind === "pin") topEl.prepend(c); // the pinned message stays first, as on Twitch
         else topEl.append(c);
-      }
+      } else c.classList.remove("oc-pop-kids");
       clearTimeout(c._gone);
       if (ms) c._gone = setTimeout(() => dropTop(key), ms);
       c.replaceChildren();
@@ -2397,9 +2426,8 @@
       const c = tops.get(key);
       if (!c) return;
       clearTimeout(c._gone);
-      c.remove();
       tops.delete(key);
-      topEl.hidden = !tops.size;
+      popOut(c, () => (topEl.hidden = !tops.size));
     }
     function topHead(c, key, label, until, onClose, iconName) {
       const head = el("div", "oc-topcard__head");

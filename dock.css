@@ -6905,3 +6905,180 @@ button.fspace__spot:hover .fspace__free { color: var(--msg-text); background: ra
 .fspace__pickrow .people__pic { width: 26px; height: 26px; }
 .fspace__picknone { margin: 4px 6px; color: var(--msg-muted); font-size: 12px; }
 .fspace__invite { align-self: flex-start; margin: 4px 6px 2px; }
+
+/* ===== Pop-ups, one family (2026-11-21): every banner the streamer sees (subs, resubs, gifts and
+   gift bombs, streaks, cheers, bits badges, charity, channel points, highlighted messages,
+   announcements, the raid card, the cards at the top of chat and the ad timer) takes its shape
+   and motion from the "Twitch Social Media Elements" motion pack. Our colors and fonts stay.
+   Shape: soft corners (the pack's cards are rounded to about a third of their height), pills
+   for tags, counts and buttons, and the icon or picture in a circle on the left. No dotted
+   line down the side: the circle carries the color, as in the pack.
+   Motion (ownchat.js and dock.js add .oc-pop to a banner when it arrives and take it off
+   ~1.6s later, so nothing replays when the chat is shown again): the circle pops in with a
+   ring bursting off it, the card grows out from behind it, then its lines rise in one after
+   another and the count on the right scales in. Cards at the top of chat swell a touch and
+   shrink away when they go (.oc-pop-out). The pack's keyframes ease in and out hard (90 to
+   95% influence), so --pop-ease does too. ===== */
+:root {
+  --pop-r: 18px;          /* banner corners */
+  --pop-r-sm: 12px;       /* one-line rows (each gift in a bomb, first-time chatters, flagged lines) */
+  --pop-ease: cubic-bezier(0.83, 0, 0.17, 1);
+  --pop-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The color each banner's circle is drawn in. */
+html :is(body, body.has-space.has-space) .oc-line.oc-event { --pop-c: var(--ev); --pop-lead: calc(62px + 22px * var(--s, 0)); --pop-half: calc(30px + 11px * var(--s, 0)); }
+html :is(body, body.has-space.has-space) .oc-line.oc-event.oc-event--bomb { --pop-t0: 0px; --pop-b0: calc(100% - 80px); }
+html :is(body, body.has-space.has-space) .oc-line.oc-notice--announcement { --pop-c: var(--twitch-color, var(--k-announce, #e0a53a)); }
+html :is(body, body.has-space.has-space) .oc-line.oc-notice--raid { --pop-c: var(--raid, #ff6a00); --pop-lead: 84px; --pop-t0: 0px; --pop-b0: calc(100% - 82px); }
+html :is(body, body.has-space.has-space) .oc-line.oc-redeem { --pop-c: var(--k-points, #3aa9db); }
+html :is(body, body.has-space.has-space) .oc-line.oc-cheerline { --pop-c: var(--ev, #c86bff); }
+html :is(body, body.has-space.has-space) .oc-line.oc-line--highlight { --pop-c: #bf94ff; }
+html :is(body, body.has-space.has-space) .oc-top .oc-topcard { --pop-c: var(--tc, #9147ff); --pop-lead: 52px; --pop-t0: 0px; --pop-b0: calc(100% - 50px); }
+html :is(body, body.has-space.has-space) .twad { --pop-c: #00ad03; --pop-lead: 56px; --pop-t0: 0px; --pop-b0: calc(100% - 54px); }
+
+/* --- Shape --- */
+html :is(body, body.has-space.has-space) :is(.oc-line.oc-event, .oc-line.oc-notice, .oc-line.oc-cheerline, .oc-line.oc-redeem, .oc-line.oc-line--highlight) {
+  border: 0; border-radius: var(--pop-r);
+  padding-left: calc(12px + 4px * var(--s, 0));
+}
+html :is(body, body.has-space.has-space) :is(.oc-line.oc-event, .oc-line.oc-notice, .oc-line.oc-cheerline, .oc-line.oc-redeem, .oc-line.oc-line--highlight, .oc-top .oc-topcard):not(.oc-line--marked)::before { content: none; }
+html :is(body, body.has-space.has-space) .oc-top .oc-topcard,
+html :is(body, body.has-space.has-space) .oc-top .oc-topcard:is(.oc-topcard--pin, .oc-topcard--pred, .oc-topcard--hype, .oc-topcard--poll, .oc-topcard--gift) {
+  border: 0; border-radius: var(--pop-r); padding: 10px 12px 11px;
+}
+html :is(body, body.has-space.has-space) :is(.twad, .oc-stuck > *) { border-radius: var(--pop-r); }
+html :is(body, body.has-space.has-space) .oc-line.oc-giftline { border-radius: var(--pop-r-sm); }
+html :is(body, body.has-space.has-space) .oc-line:is(.oc-line--first, .oc-line--flagged) { border-radius: var(--pop-r-sm); }
+html :is(body, body.has-space.has-space) .oc-line.oc-line--noted { border-radius: 14px; }
+
+/* The circle on the left: a soft disc in the banner's color with a lit ring, the glyph in a
+   lighter shade of it (the first-time sub keeps its own purple star). */
+html :is(body, body.has-space.has-space) .oc-line.oc-event:not(.oc-event--first) .oc-event__icon,
+html :is(body, body.has-space.has-space) .oc-line.oc-notice--announcement .oc-event__icon {
+  display: grid; place-items: center; flex: none;
+  width: calc(36px + 22px * var(--s, 0)); height: calc(36px + 22px * var(--s, 0));
+  color: color-mix(in srgb, var(--pop-c) 62%, #fff);
+  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, var(--pop-c) 42%, #2c2c33), color-mix(in srgb, var(--pop-c) 20%, #131316) 72%);
+  border: 0; border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--pop-c) 55%, transparent), 0 0 18px color-mix(in srgb, var(--pop-c) 26%, transparent), 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+html :is(body, body.has-space.has-space) .oc-line.oc-event:not(.oc-event--first) .oc-event__icon svg { width: calc(18px + 12px * var(--s, 0)); height: calc(18px + 12px * var(--s, 0)); }
+html :is(body, body.has-space.has-space) .oc-line.oc-notice--announcement .oc-event__icon svg { width: 18px; height: 18px; }
+html :is(body, body.has-space.has-space) :is(.oc-line.oc-event, .oc-line.oc-notice--announcement) { align-items: center; }
+html :is(body, body.has-space.has-space) .oc-line.oc-event.oc-event--bomb { align-items: flex-start; }
+/* The cards at the top of chat: their small icon in the same circle. */
+html :is(body, body.has-space.has-space) .oc-top .oc-topcard .oc-topcard__pin {
+  display: grid; place-items: center; flex: none; width: 28px; height: 28px;
+  color: color-mix(in srgb, var(--pop-c) 62%, #fff);
+  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, var(--pop-c) 42%, #2c2c33), color-mix(in srgb, var(--pop-c) 20%, #131316) 72%);
+  border: 0; border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--pop-c) 55%, transparent), 0 3px 10px rgba(0, 0, 0, 0.45);
+}
+html :is(body, body.has-space.has-space) .oc-top .oc-topcard .oc-topcard__pin svg { width: 16px; height: 16px; }
+html :is(body, body.has-space.has-space) .oc-top .oc-topcard.oc-topcard--pin .oc-topcard__pin { --pop-c: #adadb8; width: 24px; height: 24px; }
+
+/* Pills: tags, counts and buttons. */
+html :is(body, body.has-space.has-space) :is(.oc-event__label, .oc-giftees__count, .oc-redeem__cost, .oc-raidtag, .oc-line--raider .oc-raidtag, .oc-firsttag) { border-radius: 999px; }
+html :is(body, body.has-space.has-space) .oc-event__label { padding: 1px 9px; }
+html :is(body, body.has-space.has-space) .oc-raidtag__pic, body.has-space.has-space .oc-raidtag__pic { border-radius: 50%; }
+html :is(body, body.has-space.has-space) :is(.oc-topcard__x, .oc-topcard__fold, .oc-topcard__more, .twad__x) { border-radius: 50%; }
+html :is(body, body.has-space.has-space) .twad__snooze { border-radius: 999px; padding: 0 14px; }
+/* Progress bars: rounded pills, smooth. */
+html :is(body, body.has-space.has-space) :is(.oc-topbar, .oc-topbar__fill) { border-radius: 999px; }
+html :is(body, body.has-space.has-space) .oc-topbar { height: 6px; }
+
+/* --- The raid card, in the pack's layout: the raider's picture big in a ring of their color
+   on the left, who and what under the small RAID heading, and the count on the right in a
+   rounded tile. Their "about" section under a soft fading rule instead of a hard line. --- */
+html :is(body, body.has-space.has-space) .oc-line.oc-notice.oc-notice--raid { --pop-r: 20px; border-radius: var(--pop-r); padding: 12px 12px 12px 14px; }
+html :is(body, body.has-space.has-space) .oc-notice--raid .oc-raid { gap: 12px; }
+html :is(body, body.has-space.has-space) .oc-notice--raid .oc-raid__pic {
+  width: 56px; height: 56px; border: 0; border-radius: 50%; object-fit: cover;
+  box-shadow: 0 0 0 2px var(--pop-c), 0 0 0 6px color-mix(in srgb, var(--pop-c) 22%, transparent), 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+html :is(body, body.has-space.has-space) .oc-notice--raid .oc-raid__badge { right: -5px; bottom: -4px; width: 20px; height: 20px; border-width: 2px; }
+html :is(body, body.has-space.has-space) .oc-notice--raid .oc-raid__count {
+  align-items: center; justify-content: center; min-width: 58px; padding: 8px 10px;
+  background: radial-gradient(circle at 35% 25%, color-mix(in srgb, var(--pop-c) 30%, transparent), color-mix(in srgb, var(--pop-c) 12%, transparent));
+  border-radius: 16px;
+}
+html :is(body, body.has-space.has-space) .oc-notice--raid .oc-raid__count b { font-size: 22px; }
+html :is(body, body.has-space.has-space) .oc-notice--raid .oc-raid__count span { margin-top: 2px; font-size: 9.5px; }
+html :is(body, body.has-space.has-space) .oc-notice--raid .oc-raid__about {
+  margin-top: 12px; padding-top: 10px; border-top: 0;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pop-c) 45%, transparent), transparent 85%) top left / 100% 1px no-repeat;
+}
+
+/* --- The ad timer, in the same shape: a rounded green card, its bar a smooth pill inside. --- */
+html :is(body, body.has-space.has-space) .twad { padding: 11px 12px 12px; }
+html :is(body, body.has-space.has-space) .twad__bar { height: 5px; margin: 0; border-radius: 999px; background: rgba(0, 50, 1, 0.45); overflow: hidden; }
+html :is(body, body.has-space.has-space) .twad__fill { border-radius: 999px; background: #fff; }
+
+/* --- Motion --- */
+/* From a pill hugging the circle (--pop-lead wide, around --pop-t0/--pop-b0 from the top and
+   bottom; centered on the card by default) out to the whole card. */
+@keyframes pop-card {
+  from { clip-path: inset(var(--pop-t0, calc(50% - var(--pop-half, 32px))) calc(100% - var(--pop-lead, 64px)) var(--pop-b0, calc(50% - var(--pop-half, 32px))) 0 round 40px); }
+  to { clip-path: inset(0 0 0 0 round var(--pop-r)); }
+}
+@keyframes pop-shadow { from { box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent; } }
+@keyframes pop-circle { from { transform: scale(0); } to { transform: none; } }
+@keyframes pop-ring {
+  from { outline: 2px solid color-mix(in srgb, var(--pop-c) 85%, transparent); outline-offset: 0; }
+  to { outline: 2px solid transparent; outline-offset: 8px; }
+}
+@keyframes pop-rise { from { opacity: 0; transform: translateY(0.6em); } to { opacity: 1; transform: none; } }
+@keyframes pop-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pop-chip { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: none; } }
+@keyframes pop-bubble { from { opacity: 0; transform: translateY(8px) scale(0.6); } 55% { opacity: 1; } to { opacity: 1; transform: none; } }
+@keyframes pop-out { 0% { transform: none; opacity: 1; } 35% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(0.5); opacity: 0; } }
+
+/* The card grows out from behind its circle; its shadow and glow come up once it's out. */
+html :is(body, body.has-space.has-space) :is(.oc-line.oc-event, .oc-line.oc-notice, .oc-line.oc-cheerline, .oc-line.oc-redeem, .oc-line.oc-line--highlight).oc-pop,
+html :is(body, body.has-space.has-space) .oc-top .oc-topcard.oc-pop,
+html :is(body, body.has-space.has-space) .twad.oc-pop {
+  animation: pop-card 0.7s var(--pop-ease) backwards, pop-shadow 0.5s ease-out 0.7s backwards;
+}
+/* The circle pops in, a ring bursting off it. */
+html :is(body, body.has-space.has-space) .oc-pop:is(.oc-event:not(.oc-event--first), .oc-notice--announcement) .oc-event__icon,
+html :is(body, body.has-space.has-space) .oc-pop.oc-notice--raid .oc-raid__picwrap,
+html :is(body, body.has-space.has-space) .oc-top .oc-pop-kids .oc-topcard__pin {
+  animation: pop-circle 0.55s var(--pop-ease) backwards, pop-ring 0.6s ease-out 0.45s backwards;
+}
+html :is(body, body.has-space.has-space) .oc-pop.oc-notice--raid .oc-raid__picwrap { border-radius: 50%; }
+/* Then the lines rise in, one after another. */
+html :is(body, body.has-space.has-space) .oc-pop :is(.oc-event__words, .oc-raid__words) > *,
+html :is(body, body.has-space.has-space) .oc-pop:is(.oc-redeem, .oc-cheerline, .oc-line--highlight) > div,
+html :is(body, body.has-space.has-space) .oc-top .oc-pop-kids > :not(.oc-topcard__head),
+html :is(body, body.has-space.has-space) .oc-top .oc-pop-kids .oc-topcard__head > :not(.oc-topcard__pin) {
+  animation: pop-rise 0.55s var(--pop-ease-out) 0.3s backwards;
+}
+html :is(body, body.has-space.has-space) .oc-pop :is(.oc-event__words, .oc-raid__words) > :nth-child(2),
+html :is(body, body.has-space.has-space) .oc-pop:is(.oc-redeem, .oc-cheerline, .oc-line--highlight) > div:nth-child(2),
+html :is(body, body.has-space.has-space) .oc-top .oc-pop-kids > :nth-child(2) { animation-delay: 0.38s; }
+html :is(body, body.has-space.has-space) .oc-pop :is(.oc-event__words, .oc-raid__words) > :nth-child(3),
+html :is(body, body.has-space.has-space) .oc-top .oc-pop-kids > :nth-child(3) { animation-delay: 0.46s; }
+html :is(body, body.has-space.has-space) .oc-pop :is(.oc-event__words, .oc-raid__words) > :nth-child(n + 4),
+html :is(body, body.has-space.has-space) .oc-top .oc-pop-kids > :nth-child(n + 4) { animation-delay: 0.54s; }
+/* The count on the right scales in last, like the pack's buttons. */
+html :is(body, body.has-space.has-space) .oc-pop.oc-notice--raid .oc-raid__count,
+html :is(body, body.has-space.has-space) .oc-pop .oc-giftees__count {
+  animation: pop-chip 0.5s var(--pop-ease) 0.45s backwards;
+}
+/* The raid card's "about them" fades up when it's filled in, a moment later. */
+html :is(body, body.has-space.has-space) .oc-raid__about.oc-pop-late { animation: pop-rise 0.5s var(--pop-ease-out) backwards; }
+/* Each gift in a bomb slides in under it; the first-time chatter's line rises in. */
+html :is(body, body.has-space.has-space) .oc-line.oc-giftline { animation: none; }
+html :is(body, body.has-space.has-space) .oc-line.oc-giftline.oc-pop { animation: oc-giftline-in 0.4s var(--pop-ease-out) backwards; }
+html :is(body, body.has-space.has-space) .oc-line.oc-line--first.oc-pop:not(.oc-line--flagged) { animation: pop-rise 0.45s var(--pop-ease-out) backwards; }
+/* A mod's message bubble pops up from its tail, like the pack's text messages. */
+html :is(body, body.has-space.has-space) .oc-line.oc-mod:not(.oc-mod--stuck) { animation: none; }
+html :is(body, body.has-space.has-space) .oc-line.oc-mod.oc-pop:not(.oc-mod--stuck) { transform-origin: 0 100%; animation: pop-bubble 0.5s var(--pop-ease-out) backwards; }
+html :is(body, body.has-space.has-space) .oc-line.oc-mod.oc-mod--mine.oc-pop { transform-origin: 100% 100%; }
+/* Going: a little swell, then it shrinks away (the top of chat's cards and the ad timer). */
+html :is(body, body.has-space.has-space) .oc-pop-out { animation: pop-out 0.45s var(--pop-ease) both !important; pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html :is(body, body.has-space.has-space) :is(.oc-pop, .oc-pop *, .oc-pop-kids *, .oc-pop-late, .oc-pop-out) { animation: none !important; }
+}

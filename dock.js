@@ -3923,12 +3923,24 @@
     const note = adNote && now - adNote.at < 6000 ? adNote : null;
     const home = LIVECHAT ? ownChat?.adSlot : pinsEl;
     if (!home || !info || (!running && !soon && !note) || (!running && a.next === adHidden)) {
-      adEl?.remove();
+      // Going: a little swell, then it shrinks away (dock.css .oc-pop-out), like the chat's cards.
+      const gone = adEl;
+      if (gone?.isConnected && gone.getClientRects().length && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gone.classList.add("oc-pop-out");
+        setTimeout(() => gone.remove(), 460);
+      } else gone?.remove();
       adEl = null;
       if (a?.next > now) adTick = setTimeout(drawAd, Math.min(2147483000, Math.max(1000, a.next - now - AD_SOON_MS + 50)));
       return;
     }
-    adEl ||= el("div", "twad");
+    if (!adEl) {
+      // Arriving: it grows in like the chat's banners (dock.css .oc-pop), once.
+      const fresh = (adEl = el("div", "twad"));
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        fresh.classList.add("oc-pop");
+        setTimeout(() => fresh.classList.remove("oc-pop"), 1600);
+      }
+    }
     adEl.classList.toggle("twad--run", running);
     const top = el("div", "twad__top");
     const icon = el("span", "twad__icon");
