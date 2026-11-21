@@ -2312,7 +2312,6 @@
     main.replaceChildren(view === "people" ? peoplePanel() : view === "ask" ? askPanel() : view === "person" ? personPanel(askDraft.to) : view === "chat" ? chatPanel() : view === "stats" ? statsPanel() : view === "deck" ? deckPanel() : view === "mod" ? modPanel() : view === "messages" ? messagesPanel() : view === "group" ? groupPanel() : view === "extsettings" ? extSettingsPanel() : view === "tools" ? toolsPanel() : cardList());
     main.classList.toggle("main--msgs", view === "messages" || ((view === "chat" || view === "group") && EMBED)); // the dark Messages sheet
     main.classList.toggle("main--tools", view === "tools"); // Mod tools: the same dark sheet, a little lighter
-    main.classList.toggle("main--myspace", view === "messages"); // Messages: space shows through behind your profile
     if (LIVECHAT && (view !== "cards" || showAll) && main.firstElementChild?.childElementCount !== 0) main.prepend(inlineHead());
     drawDots();
     drawPeek();
@@ -5530,22 +5529,13 @@
     } else pic.append(el("span", "myspace__chanletter", login[0].toUpperCase()));
     return pic;
   }
-  // One MySpace box: a blue header bar with its title, then what's in it.
-  function msBox(cls, title) {
-    const box = el("div", `msbox ${cls}`);
-    const bar = el("div", "msbox__bar");
-    bar.append(title);
-    const inside = el("div", "msbox__in");
-    box.append(bar, inside);
-    return { box, inside };
-  }
   function mySpace() {
     const login = me.login;
     const wrap = el("section", `myspace myspace--${myStatus}`);
 
-    // ----- Your profile
-    const { box: card, inside: body } = msBox("myspace__card", el("h2", "msbox__title myspace__name", login));
-    body.classList.add("myspace__body");
+    // ----- Your profile: your picture, round, its ring your status's color; beside it your
+    // name, how you're showing, the channels you mod for and your connections count.
+    const card = el("div", "myspace__card");
     const pic = el("div", "myspace__pic");
     if (pics[login]) {
       const img = el("img");
@@ -5555,6 +5545,7 @@
     } else pic.append(el("span", "myspace__letter", login[0].toUpperCase()));
 
     const about = el("div", "myspace__about");
+    about.append(el("h2", "myspace__name", login));
     const now = MYSPACE_STATUS[myStatus] || MYSPACE_STATUS.modding;
     const status = el("button", "myspace__status");
     status.type = "button";
@@ -5566,7 +5557,7 @@
       openPresence(presenceMenu.hidden);
     });
     about.append(status);
-    // The channels you mod for: their pictures, names on hover.
+    // The channels you mod for: their round pictures, names on hover.
     const modFor = (modLists?.modFor || []).filter((l) => l !== login);
     if (modFor.length) {
       const line = el("div", "myspace__fact myspace__fact--chans");
@@ -5586,49 +5577,45 @@
     const count = el("div", "myspace__fact");
     count.append(el("span", "myspace__label", "Connections"), el("span", "myspace__value", String(friends.length)));
     about.append(count);
-    body.append(pic, about);
+    card.append(pic, about);
 
-    // ----- Your Friend Space: the Top 8, names above the pictures as MySpace had them.
-    const title = el("h3", "msbox__title fspace__title");
-    title.append(el("span", "fspace__who", login), el("span", null, "'s Friend Space"));
-    const { box: fbox, inside } = msBox("fspace__box", title);
-    const said = el("p", "fspace__count");
-    said.append(el("b", null, login), " has ", el("b", "fspace__num", String(friends.length)), ` ${friends.length === 1 ? "connection" : "connections"}.`);
-    const top = el("div", "fspace");
+    // ----- Your Top 8: your first eight connections, round pictures with names under them,
+    // like Online now. A section heading as everywhere else in Messages.
     // The owner (everyone's first connection, as Tom was on MySpace) takes none of your
     // eight spots (Connections' "Top 8 · n of 8 spots used"), so isn't one of them here.
     const first = friends.filter((c) => c.login !== owner).slice(0, TOP_EIGHT);
+    let all = null;
+    if (friends.length) {
+      all = el("button", "fspace__all", "View all");
+      all.type = "button";
+      all.title = "All your connections";
+      all.addEventListener("click", () => show("people"));
+    }
+    const top = el("div", "fspace");
     for (const c of first) {
       const b = el("button", `fspace__friend ${relClass(c.login)}`);
       b.type = "button";
       const state = stateOf(c.login);
       b.title = `${c.login} (${state === "on" ? "online" : state === "idle" ? "idle" : "offline"})`;
-      // The frame's edge says how they are: green online, amber idle, plain when they're off.
-      const frame = el("span", `fspace__frame fspace__frame--${state}`);
-      const face = ringedPic(c.login);
+      const face = ringedPic(c.login); // green ring online, amber idle, dimmed when off
       const badges = roleBadges(c.login);
       if (badges) face.append(badges);
       const direct = directWith(c.login);
       const n = direct ? unread(direct.owner) : 0;
       if (n) face.append(el("span", "msgs__facecount", String(n)));
-      frame.append(face);
-      b.append(nameBit(c.login, "fspace__name"), frame);
+      const name = nameBit(c.login, "fspace__name");
+      if (colorOf(c.login)) name.style.color = colorOf(c.login);
+      b.append(face, name);
       b.addEventListener("click", () => (direct ? openChat(direct.owner) : show("person", c.login)));
       top.append(b);
     }
-    // The spots still free: empty frames, so it reads as eight.
-    for (let i = first.length; i < TOP_EIGHT; i++) top.append(el("span", "fspace__free"));
-    inside.append(said, top);
-    if (friends.length) {
-      // MySpace's pale bottom strip ("Take the full tour »"): here, to all your connections.
-      const foot = el("div", "msbox__foot");
-      const all = el("button", "fspace__all", "View all connections »");
-      all.type = "button";
-      all.addEventListener("click", () => show("people"));
-      foot.append(all);
-      fbox.append(foot);
+    // The spots still free: faint round shadows, so it reads as eight.
+    for (let i = first.length; i < TOP_EIGHT; i++) {
+      const free = el("span", "fspace__spot");
+      free.append(el("span", "fspace__free"));
+      top.append(free);
     }
-    wrap.append(card, fbox);
+    wrap.append(card, msgsHead(`Top 8 · ${first.length} of ${TOP_EIGHT}`, all), top);
     return wrap;
   }
 

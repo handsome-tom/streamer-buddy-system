@@ -6823,102 +6823,62 @@ html :is(body, body.has-space.has-space) :is(
 ):not(.oc-line--marked)::before { opacity: 0.55; }
 .qflash:not(.qflash--love):not(.qflash--seen)::after { opacity: 0.55; }
 
-/* ===== Messages' top: your profile and Friend Space, modeled on MySpace's 2008 front page =====
-   (dock.js, mySpace.) In the dark: hard-edged boxes with a thin blue line around them, each
-   under MySpace's glossy blue header bar with white bold words; square pictures in thin
-   frames; bold blue links; the friend count in red; the pale bottom strip with a "»" link.
-   Square corners throughout. (This one part has boxes on purpose: Alex asked for MySpace.)
-   Stars show in the gaps; the sheet darkens further down for the lists. */
-main.main--msgs.main--myspace {
-  --ms-line: #34548f;       /* the thin line around a box */
-  --ms-box: #0b1324;        /* inside a box */
-  --ms-bar-hi: #6f9fe3;     /* the header bar, top and bottom of its gloss */
-  --ms-bar-lo: #3e6dba;
-  --ms-link: #8db6ff;       /* bold links and names */
-  --ms-label: #8b9aba;
-  --ms-frame: #4d6ca6;      /* a picture's frame */
-  --ms-red: #ff5a4a;        /* the count, as MySpace's red */
-  background: linear-gradient(180deg, rgba(2, 3, 8, 0.25) 0, rgba(2, 3, 8, 0.45) 240px, rgba(2, 3, 8, 0.88) 520px, rgba(2, 3, 8, 0.95) 100%);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-/* With the blur off, the planet's ring and Tom's meteor tail read as sharp streaks behind
-   the profile: they sit this page out (the stars stay). */
-body:has(main.main--myspace) :is(.space__planet, .space__tom) { opacity: 0; transition: opacity 0.3s; }
-
-.myspace { display: flex; flex-direction: column; gap: 12px; padding: 2px 0 4px; }
-.msbox { background: var(--ms-box); border: 1px solid var(--ms-line); border-radius: 0; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
-.msbox__bar { display: flex; align-items: center; min-height: 30px; padding: 5px 9px; background: linear-gradient(180deg, var(--ms-bar-hi) 0%, #5a8bd6 48%, var(--ms-bar-lo) 52%, #4877c6 100%); border-bottom: 1px solid #22447f; }
-.msbox__title { min-width: 0; margin: 0; overflow: hidden; color: #fff; font-family: "Plus Jakarta Sans", Verdana, Arial, sans-serif; font-size: 13.5px; font-weight: 800; line-height: 1.25; letter-spacing: 0; white-space: nowrap; text-overflow: ellipsis; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3); }
-.msbox__in { padding: 10px; }
-/* MySpace's pale strip at the bottom of a box ("Take the full tour »"), in the dark. */
-.msbox__foot { display: flex; align-items: center; padding: 7px 10px; background: rgba(255, 214, 102, 0.07); border-top: 1px solid rgba(255, 214, 102, 0.18); }
-
-/* Your profile: the name in the bar, a little bigger; picture on the left, about you on the right. */
-.myspace__name { font-size: 15px; }
-.myspace__body { display: flex; align-items: flex-start; gap: 12px; }
-/* Your picture: square, in a thin frame (a hairline, a dark gap, the picture). The frame's
-   line goes amber when you're Idle, gray when Invisible. */
-.myspace__pic { display: grid; place-items: center; flex: none; width: 108px; height: 108px; padding: 3px; overflow: hidden; background: #050913; border: 1px solid var(--ms-frame); border-radius: 0; box-sizing: content-box; }
-.myspace--idle .myspace__pic { border-color: var(--amber); }
-.myspace--offline .myspace__pic { border-color: #3a4256; }
+/* ===== Messages' top: your profile and your Top 8 (dock.js, mySpace) =====
+   In the same look as the rest of Messages: no boxes or header bars, round pictures with
+   status rings, a soft dark haze behind your profile instead of a frame. */
+.myspace { display: flex; flex-direction: column; padding: 2px 0 0; }
+.myspace__card { display: flex; align-items: center; gap: 14px; padding: 12px 10px; border-radius: 18px; background: radial-gradient(closest-side, rgba(63, 125, 216, 0.16), rgba(63, 125, 216, 0.06) 60%, transparent); }
+/* Your picture: round, its ring your status's color (Available mod green, Online orange,
+   Idle yellow, Invisible gray, dimmed). */
+.myspace__pic { --st: var(--good); display: grid; place-items: center; flex: none; width: 76px; height: 76px; overflow: hidden; background: #1b1d26; border-radius: 50%; box-shadow: 0 0 0 2px #0b0c10, 0 0 0 4px var(--st), 0 8px 24px rgba(0, 0, 0, 0.5); }
+.myspace--online .myspace__pic { --st: var(--honey); }
+.myspace--idle .myspace__pic { --st: var(--yellow); }
+.myspace--offline .myspace__pic { --st: #3a4256; }
 .myspace--offline .myspace__pic img { filter: grayscale(0.5); opacity: 0.8; }
-.myspace__pic img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 0; }
-.myspace__letter { color: var(--msg-text); font-size: 48px; font-weight: 800; }
-.myspace__about { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; padding-top: 1px; }
-/* How you're showing, as MySpace's "Online Now!": a button, it opens the same menu as your
-   status in the bar. Its color is your status's, as in the bar (Available mod green, Online
-   orange, Idle yellow, Invisible gray). */
-.myspace__status { --st: var(--good); display: flex; flex-direction: column; align-items: flex-start; gap: 1px; margin: -3px -5px 1px; padding: 3px 5px; color: var(--st); font: inherit; text-align: left; background: none; border: 1px solid transparent; border-radius: 0; cursor: pointer; }
+.myspace__pic img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.myspace__letter { color: var(--msg-text); font-size: 34px; font-weight: 800; }
+.myspace__about { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 0; }
+.myspace__name { min-width: 0; margin: 0; overflow: hidden; color: var(--msg-text); font-size: 15px; font-weight: 800; line-height: 1.2; white-space: nowrap; text-overflow: ellipsis; }
+/* How you're showing: a button, it opens the same menu as your status in the bar. */
+.myspace__status { --st: var(--good); display: flex; flex-direction: column; align-items: flex-start; gap: 1px; margin: -2px -6px 0; padding: 2px 6px; color: var(--st); font: inherit; text-align: left; background: none; border: 0; border-radius: 8px; cursor: pointer; }
 .myspace--online .myspace__status { --st: var(--honey); }
 .myspace--idle .myspace__status { --st: var(--yellow); }
 .myspace--offline .myspace__status { --st: var(--muted); }
-.myspace__status:hover { border-color: var(--ms-line); background: rgba(141, 182, 255, 0.06); }
-.myspace__status .presence { font-family: "Plus Jakarta Sans", Verdana, Arial, sans-serif; font-size: 15px; font-weight: 800; letter-spacing: 0; }
-.myspace__more { padding-left: 20px; color: var(--ms-label); font-size: 11.5px; font-weight: 600; }
+.myspace__status:hover { background: rgba(255, 255, 255, 0.05); }
+.myspace__status .presence { font-size: 13px; font-weight: 800; }
+.myspace__more { padding-left: 20px; color: var(--msg-muted); font-size: 11px; font-weight: 600; }
 .myspace--modding .myspace__more { padding-left: 30px; color: var(--good); }
 .myspace__fact { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: 12px; line-height: 1.35; }
-.myspace__label { flex: none; color: var(--ms-label); font-weight: 600; }
+.myspace__label { flex: none; color: var(--msg-muted); font-weight: 600; }
 .myspace__label::after { content: ":"; }
 .myspace__value { min-width: 0; overflow: hidden; color: var(--msg-text); font-weight: 800; white-space: nowrap; text-overflow: ellipsis; }
-/* The channels you mod for: little square pictures in thin frames, the label above. */
-.myspace__fact--chans { flex-direction: column; align-items: flex-start; gap: 4px; }
+/* The channels you mod for: little round pictures beside the label. */
+.myspace__fact--chans { flex-wrap: wrap; }
 .myspace__chans { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
-.myspace__chan { position: relative; display: grid; place-items: center; flex: none; width: 24px; height: 24px; padding: 1px; color: var(--msg-text); font-size: 10px; font-weight: 800; background: #050913; border: 1px solid var(--ms-frame); border-radius: 0; cursor: default; outline: none; }
-.myspace__chan img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 0; }
-.myspace__chan:hover, .myspace__chan:focus-visible { border-color: var(--ms-link); }
-.myspace__chanletter { font-size: 12px; font-weight: 800; }
-/* Its name, as soon as you point at it: a small square-cornered tip above, opening leftward
-   (the pictures sit on the panel's right side, so it stays inside). It only exists while
-   shown, so a hidden one can't make the panel scroll sideways. */
-.myspace__chan::after { content: attr(data-tip); position: absolute; z-index: 5; right: -5px; bottom: calc(100% + 6px); display: none; padding: 3px 7px; color: #fff; font-size: 11.5px; font-weight: 700; line-height: 1.3; white-space: nowrap; background: #0b1324; border: 1px solid var(--ms-line); border-radius: 0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.55); pointer-events: none; }
+.myspace__chan { position: relative; display: grid; place-items: center; flex: none; width: 22px; height: 22px; color: var(--msg-text); font-size: 10px; font-weight: 800; background: #1b1d26; border-radius: 50%; cursor: default; outline: none; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45); }
+.myspace__chan img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.myspace__chan:hover, .myspace__chan:focus-visible { box-shadow: 0 0 0 2px var(--purple); }
+.myspace__chanletter { font-size: 11px; font-weight: 800; }
+/* Its name, as soon as you point at it: a small tip above, opening leftward so it stays
+   inside the panel. It only exists while shown, so it can't make the panel scroll sideways. */
+.myspace__chan::after { content: attr(data-tip); position: absolute; z-index: 5; right: -5px; bottom: calc(100% + 6px); display: none; padding: 3px 8px; color: #fff; font-size: 11.5px; font-weight: 700; line-height: 1.3; white-space: nowrap; background: rgba(11, 14, 24, 0.96); border-radius: 8px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6); pointer-events: none; }
 .myspace__chan:hover::after, .myspace__chan:focus-visible::after { display: block; }
 
-/* Your Friend Space: the count ("has 2 connections", the number in MySpace red), then the
-   Top 8, four across, each name a bold blue link above a square framed picture. */
-.fspace__who { display: inline-block; max-width: 60%; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
-.fspace__count { margin: 0 0 10px; color: var(--msg-muted); font-size: 12px; }
-.fspace__count b { color: var(--msg-text); font-weight: 800; }
-.fspace__count .fspace__num { color: var(--ms-red); }
-.fspace { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 6px; }
-.fspace__friend { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; padding: 0; color: var(--ms-link); font: inherit; background: none; border: 0; border-radius: 0; cursor: pointer; }
-.fspace__name { max-width: 100%; overflow: hidden; color: var(--ms-link); font-size: 11.5px; font-weight: 800; line-height: 15px; white-space: nowrap; text-overflow: ellipsis; }
-.fspace__friend:hover .fspace__name { text-decoration: underline; }
-/* A friend's frame: a hairline, a dark gap, the picture. The line says how they are:
-   green online, amber idle, plain blue when they're off (and the picture dims, as everywhere). */
-.fspace__frame { position: relative; display: block; width: 100%; max-width: 72px; aspect-ratio: 1; padding: 2px; background: #050913; border: 1px solid var(--ms-frame); border-radius: 0; box-sizing: border-box; }
-.fspace__frame--on { border: 2px solid var(--good); padding: 1px; }
-.fspace__frame--idle { border: 2px solid var(--amber); padding: 1px; }
-.fspace__friend:hover .fspace__frame { border-color: var(--ms-link); }
-.fspace .people__pic { position: relative; overflow: visible; width: 100%; height: 100%; background: #1b1d26; border-radius: 0; box-shadow: none; }
-.fspace .people__pic img, .fspace .people__pic:has(.rank--corner) img { border-radius: 0; }
-.fspace .dot__letter { font-size: 26px; }
-.fspace .rank-pair { right: -6px; bottom: -6px; }
-.fspace .rank-pair .rank { width: 17px; height: 17px; }
-.fspace .rank-pair .rank svg { width: 9px; height: 9px; }
-.fspace .msgs__facecount { top: -7px; right: -7px; border-radius: 0; }
-/* A free spot: an empty frame, so it reads as eight. */
-.fspace__free { justify-self: center; width: 100%; max-width: 72px; aspect-ratio: 1; margin-top: 19px; background: rgba(5, 9, 19, 0.6); border: 1px solid #1f2e4d; border-radius: 0; box-sizing: border-box; }
-/* "View all connections »": a bold blue link, as MySpace's "Take the full tour »". */
-.fspace__all { padding: 0; color: var(--ms-link); font: inherit; font-size: 12.5px; font-weight: 800; background: none; border: 0; cursor: pointer; }
-.fspace__all:hover { text-decoration: underline; }
+/* Your Top 8: four across, round pictures with status rings, names under them, as in
+   Online now. "View all" sits on the heading's right. */
+.fspace { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px 2px; }
+.fspace__friend, .fspace__spot { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 0; padding: 6px 2px 4px; color: var(--msg-text); font: inherit; background: none; border: 0; border-radius: 10px; }
+.fspace__friend { cursor: pointer; }
+.fspace__friend:hover { background: rgba(255, 255, 255, 0.05); }
+.fspace .people__pic { position: relative; overflow: visible; width: 44px; height: 44px; }
+.fspace .people__pic img { border-radius: 50%; }
+.fspace .dot__letter { font-size: 18px; }
+.fspace .rank-pair { right: -5px; bottom: -4px; }
+.fspace .rank-pair .rank { width: 15px; height: 15px; }
+.fspace .rank-pair .rank svg { width: 8px; height: 8px; }
+.fspace .msgs__facecount { top: -5px; right: -7px; }
+.fspace__name { max-width: 100%; overflow: hidden; font-size: 11px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+/* A free spot: a faint round shadow where a picture would go. */
+.fspace__free { width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle, rgba(141, 182, 255, 0.07), rgba(141, 182, 255, 0.02) 65%, transparent 72%); }
+.fspace__all { padding: 0; color: var(--msg-muted); font: inherit; font-size: 11px; font-weight: 700; background: none; border: 0; cursor: pointer; }
+.fspace__all:hover { color: var(--msg-text); }
