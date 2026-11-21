@@ -278,6 +278,7 @@ export class Hub {
       else if (m.t === "unflash") await this.unflash(who, m);
       else if (m.t === "note") await this.note(ws, who, m);
       else if (m.t === "notes") await this.notes(ws, who, m);
+      else if (m.t === "unlog") await this.unlog(who, m);
       else if (m.t === "unnote") await this.unnote(who, m);
       else if (m.t === "statsShare") await this.statsShare(who.login, m);
       else if (m.t === "sample") await this.sample(who.login, m.s);
@@ -1097,6 +1098,16 @@ export class Hub {
     const stale = [...old].filter(([, r]) => Date.now() - r.at > SENT_FLASH_MS).map(([k]) => k);
     if (stale.length) await this.ctx.storage.delete(stale);
     if (online.length) await this.ctx.storage.put(`f:${f.id}`, { from: who.login, to: online, at: f.at });
+    const log = kind === "info" && online.length ? logEntry(m, who, "info", text, m.to === "*" || String(m.to || "").startsWith("#") ? String(m.to) : online[0]) : null;
+    if (log) {
+      if (f.color) log.color = f.color;
+      log.fid = f.id;
+      await this.ctx.storage.put(noteKey(log), { ...log, only: [who.login, ...online] });
+      await this.ctx.storage.put(`lg:${f.id}`, { key: noteKey(log), at: f.at });
+      const gone = await this.ctx.storage.list({ prefix: "lg:" });
+      const staleRefs = [...gone].filter(([, r]) => Date.now() - r.at > NOTE_MS).map(([k]) => k);
+      if (staleRefs.length) await this.ctx.storage.delete(staleRefs);
+    }
     this.send(ws, { t: "flashed", kind, reached: online.length });
   }
 
@@ -1110,6 +1121,7 @@ export class Hub {
       const r = await this.ctx.storage.get(sentKey);
       if (!r || r.from !== who.login) return;
       await this.ctx.storage.delete(sentKey);
+      await this.unlog(who, m);
       for (const l of r.to) this.sendTo(l, { t: "unflash", id: String(m.id) });
       return;
     }
@@ -1166,7 +1178,8 @@ export class Hub {
     if (!/^[a-z0-9_]{1,25}$/.test(channel) || !from || to <= from) return;
     const users = await this.users();
     const found = await this.ctx.storage.list({ start: `n:${channel}:${pad13(from)}`, end: `n:${channel}:${pad13(to + 1)}`, limit: MAX_NOTES_SENT });
-    this.send(ws, { t: "notes", channel, from, to, list: [...found.values()].filter((n) => Date.now() - n.at < NOTE_MS && noteSeers(n, users).includes(who.login)) });
+    const list = [...found.values()].filter((n) => Date.now() - n.at < NOTE_MS && (!n.kind || m.log) && noteSeers(n, users).includes(who.login));
+    this.send(ws, { t: "notes", channel, from, to, ...(m.log ? { log: true } : {}), list });
   }
 
   // Only whoever wrote a note can take it back.
@@ -1218,16 +1231,23 @@ export class Hub {
     }
     const group = everyone ? crypto.randomUUID().slice(0, 8) : null;
     const options = note ? [] : cleanOptions(m.options);
+    // Said in a channel's chat (m.channel, and m.anchor: the newest line there then): kept as
+    // that stream's log too, so it comes back in its VOD's chat replay (see Stream log below).
+    const log = logEntry(m, who, note ? "say" : "ask", text, everyone ? `#${tagName ?? "everyone"}` : targets[0]);
+    const reached = [];
     let sent = 0;
     for (const to of targets) {
       if (full.includes(to)) continue; // asking everyone skips anyone already full up
       const q = { id: crypto.randomUUID().slice(0, 8), from: who.login, to, text, at: Date.now(), options, answer: null, dismissed: 0, seenAt: 0 };
       if (group) Object.assign(q, { group, toTag: tagName ?? "everyone" });
       if (note) q.note = true;
+      if (log) q.log = noteKey(log);
       await this.ctx.storage.put(`q:${q.id}`, q);
       this.share(q);
+      reached.push(to);
       sent++;
     }
+    if (log && reached.length) await this.ctx.storage.put(noteKey(log), { ...log, only: [who.login, ...reached] });
     if (!sent) this.send(ws, { t: "error", why: `Everyone already has ${MAX_OPEN_PER_PAIR} unanswered questions from you` });
   }
 
@@ -1275,6 +1295,37 @@ export class Hub {
     change(q);
     await this.ctx.storage.put(`q:${q.id}`, q);
     this.share(q);
+    if (q.log) await this.logChanged(q);
+  }
+
+  // ===== Stream log ==========================================================================
+  // Questions, messages and quick info said while watching a channel are also kept as that
+  // channel's log, in the chat notes' keys ("n:<channel>:<at>:<id>", with a kind), so a
+  // VOD's chat replay brings them back on the same moment, after the line that was newest
+  // when they were sent. Only their sender and whoever they went to (n.only) see them, and
+  // only pages that ask (notes { log: true }). Dismissed (x'd out) or taken back, they
+  // leave the log; !vanish notes are never kept. Dropped after NOTE_MS like chat notes.
+
+  async logChanged(q) {
+    const n = await this.ctx.storage.get(q.log);
+    if (!n) return;
+    if (q.withdrawn) return this.ctx.storage.delete(q.log);
+    if (q.dismissed) n.only = (n.only || []).filter((l) => l !== q.to);
+    else if (q.answer) n.answers = { ...(n.answers || {}), [q.to]: { code: q.answer.code, text: q.answer.text || "" } };
+    else if (q.seenAt) n.seen = [...new Set([...(n.seen || []), q.to])];
+    if ((n.only || []).length <= 1) return this.ctx.storage.delete(q.log);
+    await this.ctx.storage.put(q.log, n);
+  }
+
+  // Cleared with its X by whoever it went to (it leaves their log), or taken back by its
+  // sender (it leaves everyone's).
+  async unlog(who, m) {
+    const ref = await this.ctx.storage.get(`lg:${String(m.id || "").slice(0, 8)}`);
+    const n = ref && (await this.ctx.storage.get(ref.key));
+    if (!n || !(n.only || []).includes(who.login)) return;
+    n.only = who.login === n.from ? [] : n.only.filter((l) => l !== who.login);
+    if (n.only.length <= 1) await this.ctx.storage.delete([ref.key, `lg:${String(m.id).slice(0, 8)}`]);
+    else await this.ctx.storage.put(ref.key, n);
   }
 
   share(q) {
@@ -1323,6 +1374,17 @@ function cleanOptions(list) {
   return out.slice(0, MAX_OPTIONS);
 }
 
+// A stream log entry for something said while watching a channel, or null: needs the
+// channel and the newest line in its chat then (m.anchor: chatter, chatterName, text).
+function logEntry(m, who, kind, body, to) {
+  const channel = String(m.channel || "").toLowerCase();
+  const a = m.anchor && typeof m.anchor === "object" ? m.anchor : {};
+  const chatter = clean(a.chatter).slice(0, 25).toLowerCase();
+  const text = cleanTo(a.text, MAX_FLAGGED_LEN);
+  if (!/^[a-z0-9_]{1,25}$/.test(channel) || !chatter || !text) return null;
+  return { id: crypto.randomUUID().slice(0, 8), kind, channel, chatter, chatterName: clean(a.chatterName).slice(0, 50), text, from: who.login, to: String(to || "").slice(0, 30), body, at: Date.now() };
+}
+
 // Chat notes: kept in time order within each channel, so a VOD can ask for a stretch.
 const pad13 = (ms) => String(Math.max(0, Math.floor(ms))).padStart(13, "0");
 const noteKey = (n) => `n:${n.channel}:${pad13(n.at)}:${n.id}`;
@@ -1330,6 +1392,7 @@ const noteKey = (n) => `n:${n.channel}:${pad13(n.at)}:${n.id}`;
 // Who sees a chat note: whoever wrote it and their mutual connections; and when the writer
 // is the channel or one of its mutual connections, the channel and its mutual connections.
 function noteSeers(n, users) {
+  if (n.kind) return n.only || []; // a stream log entry (see Stream log): only its own people
   const mutuals = (login) => (users[login]?.list || []).filter((l) => users[l]?.list.includes(login));
   const seers = [n.from, ...mutuals(n.from)];
   const channelCircle = [n.channel, ...mutuals(n.channel)];

@@ -178,6 +178,39 @@ export const tests = {
     noErrors(streamer);
   },
 
+  async "questions and quick info sent in a channel's chat come back in its VOD for the two of them, unless x'd out; !vanish never does"(h) {
+    const s = h.person("streamer");
+    const m = h.person("mod1");
+    await h.friends(s, m);
+    const t0 = Date.now() - 1000;
+    const where = { channel: "streamer", anchor: { chatter: "viewer1", chatterName: "Viewer1", text: "gg that was close" } };
+    m.send({ t: "ask", to: "streamer", text: "Raid after this?", options: ["t", "y", "n", "m"], ...where });
+    const { q: q1 } = await s.next("q", (x) => x.q.text === "Raid after this?");
+    m.send({ t: "ask", to: "streamer", text: "Drop this one?", options: ["t", "y", "n", "m"], ...where });
+    const { q: q2 } = await s.next("q", (x) => x.q.text === "Drop this one?");
+    m.send({ t: "flash", kind: "info", to: "streamer", text: "Ad in 2", ...where });
+    await s.next("flash", (x) => x.f.text === "Ad in 2");
+    m.send({ t: "flash", kind: "love", to: "streamer", text: "ur great", ...where });
+    await s.next("flash", (x) => x.f.text === "ur great");
+    s.send({ t: "answer", id: q1.id, code: "y" });
+    await m.next("q", (x) => x.q.id === q1.id && x.q.answer);
+    s.send({ t: "dismiss", id: q2.id });
+    await m.next("q", (x) => x.q.id === q2.id && x.q.dismissed);
+    const log = async (p, asks = true) => {
+      p.send({ t: "notes", channel: "streamer", from: t0, to: Date.now() + 1000, ...(asks ? { log: true } : {}) });
+      return (await p.next("notes")).list;
+    };
+    const list = await log(s);
+    h.check(list.map((n) => n.body).sort().join() === "Ad in 2,Raid after this?", `the VOD should have the question and the quick info, got: ${list.map((n) => n.body).join(", ")}`);
+    const raid = list.find((n) => n.body === "Raid after this?");
+    h.check(raid.kind === "ask" && raid.answers?.streamer?.code === "y" && raid.chatter === "viewer1" && raid.text === "gg that was close", "the question keeps its answer and its moment in chat");
+    h.check((await log(m)).length === 2, "the mod who sent them sees them too");
+    h.check((await log(s, false)).length === 0, "a page that doesn't ask for the log (an older one) gets none of it");
+    s.send({ t: "unlog", id: list.find((n) => n.kind === "info").fid });
+    await h.wait(200);
+    h.check(!(await log(s)).some((n) => n.kind === "info"), "the streamer's X on quick info takes it out of the VOD");
+  },
+
   async "a question sent while OBS is closed is waiting when the dock opens"(h) {
     const mod = h.person("mod1");
     const streamer = h.person("streamer");

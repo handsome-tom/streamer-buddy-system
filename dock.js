@@ -1235,6 +1235,7 @@
     const pinned = f.kind === "chat";
     const clear = () => {
       if (pinned) relay({ t: "unflash", id: f.id });
+      else if (f.kind === "info") relay({ t: "unlog", id: f.id }); // x'd out: not in the VOD's replay either
       leave();
     };
     chip.append(icon, body, closeButton(clear, pinned ? "Clear this for everyone" : "Clear this"));
