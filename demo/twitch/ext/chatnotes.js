@@ -228,6 +228,15 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
     const head = document.createElement("span");
     head.className = "tbc-note__head";
     head.append(pic, name);
+    // From Secret chat (modtalk.js): a little lock, so it's clear the streamer can't see it.
+    if (n.secret) {
+      b.classList.add("tbc-note--secret");
+      const lock = document.createElement("span");
+      lock.className = "tbc-note__secret";
+      lock.textContent = "Secret";
+      lock.title = "Secret chat: only your network and the mods see this, not the streamer";
+      head.append(lock);
+    }
     main.append(head, body, when);
     b.append(main);
     if (mine) {

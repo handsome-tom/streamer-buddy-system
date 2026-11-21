@@ -11,7 +11,7 @@
 // window.SANDBOX is what the two panels use (demo/sandbox.js): Socket, fetch and seed.
 // The demo page's own buttons use the same sockets, as the pretend people.
 
-import { Hub } from "../relay/src/index.js?v=321"; // the number: bump it when the relay changes, so browsers fetch the new one (and bump hub.js?v= in play.html)
+import { Hub } from "../relay/src/index.js?v=322"; // the number: bump it when the relay changes, so browsers fetch the new one (and bump hub.js?v= in play.html)
 
 // ===== Sockets ================================================================================
 // One object per connection, on the page's side, shaped like a browser WebSocket (on*
@@ -97,8 +97,9 @@ const relay = (() => {
       if (Array.isArray(key)) return key.filter((k) => store.delete(k)).length;
       return store.delete(key);
     },
-    async list({ prefix = "", reverse = false, limit = Infinity } = {}) {
-      const keys = [...store.keys()].filter((k) => k.startsWith(prefix)).sort();
+    async list({ prefix = "", start = "", end = "", reverse = false, limit = Infinity } = {}) {
+      // start is included and end isn't, as Cloudflare's.
+      const keys = [...store.keys()].filter((k) => k.startsWith(prefix) && (!start || k >= start) && (!end || k < end)).sort();
       if (reverse) keys.reverse(); // as Cloudflare's: newest first, then the limit
       return new Map(keys.slice(0, limit).map((k) => [k, clone(store.get(k))]));
     },

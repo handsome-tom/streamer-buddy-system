@@ -103,6 +103,25 @@ export const tests = {
     await a.next("q", (m) => m.q.id === q.id && m.q.seenAt);
   },
 
+  async "a secret chat note reaches the writer's network and the channel's mods, never the streamer"(h) {
+    const mod = h.person("mod1");
+    const other = h.person("mod2");
+    const streamer = h.person("streamer");
+    await h.friends(mod, streamer);
+    await h.friends(other, streamer);
+    h.check((mod.state.features || []).includes("secretNotes"), "the relay should say it can do secret notes");
+    mod.send({ t: "note", channel: "streamer", chatter: "viewer1", chatterName: "Viewer1", text: "hello chat", body: "Watch this one, they were banned last week", secret: true });
+    const { n } = await other.next("note", (m) => m.n.body.startsWith("Watch this one"));
+    h.check(n.secret, "it should arrive marked secret");
+    await h.until(() => mod.seen("note", (m) => m.n.id === n.id), "the writer to get it back too");
+    mod.send({ t: "note", channel: "streamer", chatter: "viewer1", chatterName: "Viewer1", text: "hello chat", body: "A normal note" });
+    await streamer.next("note", (m) => m.n.body === "A normal note");
+    h.check(!streamer.seen("note", (m) => m.n.id === n.id), "the streamer should never get the secret note");
+    streamer.send({ t: "notes", channel: "streamer", from: Date.now() - 60000, to: Date.now() + 5000 });
+    const { list } = await streamer.next("notes");
+    h.check(list.length === 1 && list[0].body === "A normal note", `the streamer's catch-up should leave the secret note out, got: ${list.map((x) => x.body)}`);
+  },
+
   async "a mod can nudge a waiting question, and it climbs a level"(h) {
     const mod = h.person("mod1");
     const streamer = h.person("streamer");

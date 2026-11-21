@@ -1,6 +1,8 @@
-// Mod talk: the first tab of the speech-bubble button in the chat box (phrases.js draws the
-// tabs; quick phrases are the second). From there a mod messages the streamer whose chat
-// this is, the same three ways the side panel does:
+// Mod talk: the first two tabs of the speech-bubble button in the chat box (phrases.js draws
+// the tabs; Chat tools, the quick phrases, is the last).
+//
+// Streamer messages: a mod messages the streamer whose chat this is, the same three ways
+// the side panel does:
 //   Question    the streamer answers with one tap (heart, yes, no, maybe) or a reply
 //   Quick info  pops up on the streamer's screen for 2 minutes, no answer needed
 //   !vanish     a short note on their screen for 30 seconds, then gone
@@ -10,8 +12,15 @@
 // anything they send you on the left in their name color. A question from the streamer
 // comes with its answer buttons right there. Only you see these bubbles.
 //
-// Only in the chat of a streamer you're connected with in Streamer Buddy System (not your
-// own channel). It goes through the same relay connection as flags and notes
+// Sending only works in the chat of a streamer you're connected with in Streamer Buddy
+// System (not your own channel); elsewhere the tab still shows everything, with a note on
+// top saying why it can't send yet.
+//
+// Secret chat: a message only your network and the channel's mods see, posted as a chat
+// note (chatnotes.js draws it, with a "Secret" tag) on the newest chat line. The relay
+// keeps it from the streamer. Offered only once the relay says it can (state's
+// "secretNotes"), so an older relay can never show one to the streamer.
+// It goes through the same relay connection as flags and notes
 // (background.js), so the StreamSpace button has to have been signed in once.
 //
 // Wrapped so its names don't clash with the other scripts, and only started if it's
@@ -52,7 +61,7 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
   // What a mod can answer the streamer's questions with, here in chat.
   const REPLIES = [["t", "♥", "Thank you"], ["y", "✓", "Yes"], ["n", "✕", "No"], ["m", "?", "Maybe"]];
 
-  let circle = { me: null, mutual: [], online: [] };
+  let circle = { me: null, mutual: [], online: [], features: [] };
   const questions = new Map(); // id -> question, from the relay
   const shownInChat = new Set(); // "<id>:<what>" already put in chat, so nothing shows twice
   const draft = { mode: "ask", text: "", note: "", noteKind: "" };
@@ -104,7 +113,7 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
 
   function heard(m) {
     if (m.t === "people") {
-      circle = { me: m.me, mutual: m.mutual || [], online: m.online || [] };
+      circle = { me: m.me, mutual: m.mutual || [], online: m.online || [], features: m.features || [] };
       redraw();
     } else if (m.t === "questions") {
       for (const q of m.list || []) questions.set(q.id, q);
@@ -255,12 +264,14 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
   }
   function redraw() {
     if (pane?.isConnected) fill(pane);
+    if (secretPane?.isConnected) fillSecret(secretPane);
   }
 
   function sendNow() {
     const to = streamer();
     const text = draft.text.trim();
-    if (!to || !text) return;
+    if (!text) return;
+    if (!to) return say(circle.me ? `You and ${nameOf(channelName() || "this streamer")} need to connect in StreamSpace first` : "Sign in with the StreamSpace button first", "bad");
     const mode = draft.mode;
     if (mode === "ask") {
       if (send({ t: "ask", to, text: text.slice(0, MODES.ask.max) })) {
@@ -280,27 +291,29 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
     el.className = "tbc-mt";
     const to = streamer();
     const here = channelName();
+    // Can't send here: say why on top, and show everything else anyway.
     if (!to) {
-      const empty = document.createElement("div");
-      empty.className = "tbc-mt__empty";
+      const notice = document.createElement("div");
+      notice.className = "tbc-mt__notice";
       const big = document.createElement("b");
       const small = document.createElement("span");
       if (!circle.me) {
         big.textContent = "Sign in to message the streamer";
-        small.textContent = "Click the StreamSpace button at the top of Twitch and sign in once. Then you can ask, send quick info or a !vanish note from here.";
+        small.textContent = "Click the StreamSpace button at the top of Twitch and sign in once.";
       } else if (here === circle.me) {
         big.textContent = "This is your own channel";
-        small.textContent = "Your mods message you from here in their chat. Your answers go back to them.";
+        small.textContent = "Your mods message you from their chat. Your answers go back to them.";
       } else {
-        big.textContent = `You and ${nameOf(here || "this streamer")} aren't connected yet`;
-        small.textContent = "Connect with each other in StreamSpace (the StreamSpace button, then Connections), and you can message them from here.";
+        big.textContent = `You and ${nameOf(here || "this streamer")} aren't connected`;
+        small.textContent = "Connect in StreamSpace (the StreamSpace button, then Connections) to message them here.";
       }
-      empty.append(big, small);
-      el.append(empty);
-      return;
+      notice.append(big, small);
+      el.append(notice);
     }
+    const target = to || here || "the streamer";
 
     // Who you're talking to.
+    if (to) {
     const who = document.createElement("div");
     who.className = "tbc-mt__who";
     const pic = document.createElement("span");
@@ -327,6 +340,7 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
     });
     if (on) who.classList.add("tbc-mt__who--on");
     el.append(who);
+    }
 
     // Question / Quick info / !vanish.
     const modes = document.createElement("div");
@@ -363,7 +377,7 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
     box.className = "tbc-mt__text";
     box.rows = 2;
     box.maxLength = mode.max;
-    box.placeholder = mode.placeholder(nameOf(to));
+    box.placeholder = mode.placeholder(nameOf(target));
     box.value = draft.text.slice(0, mode.max);
     box.spellcheck = true;
     const row = document.createElement("div");
@@ -381,7 +395,7 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
       draft.text = box.value;
       const left = mode.max - box.value.length;
       count.textContent = left <= 20 ? `${left} left` : "";
-      go.disabled = !box.value.trim();
+      go.disabled = !to || !box.value.trim();
     };
     box.addEventListener("input", sync);
     box.addEventListener("keydown", (e) => {
@@ -435,10 +449,133 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
     }
   }
 
+  // ===== Secret chat ===========================================================================
+
+  let secretPane = null;
+  const secretDraft = { text: "", note: "", noteKind: "" };
+  const SECRET_MAX = 300; // the relay's longest chat note
+
+  // The newest chat line, to hang the note on, with its words as chat notes read them.
+  function newestLine() {
+    return [...document.querySelectorAll(LINE)].reverse().find((l) => l.dataset.aUser && !l.closest('.chat-input, [class*="chat-input-tray"]'));
+  }
+  function lineText(line) {
+    let text = "";
+    const walk = (node) => {
+      if (node.nodeType === 3) text += node.textContent;
+      else if (node.tagName === "IMG") text += node.alt || "";
+      else if (!node.classList?.contains("tbc-notes") && !node.classList?.contains("tbc-mtstack")) node.childNodes.forEach(walk);
+    };
+    line.querySelectorAll('[data-a-target="chat-line-message-body"]').forEach(walk);
+    return text.replace(/\s+/g, " ").trim();
+  }
+
+  function sendSecret() {
+    const here = channelName();
+    const body = secretDraft.text.trim().slice(0, SECRET_MAX);
+    if (!body || !here) return;
+    const sayS = (text, kind) => {
+      secretDraft.note = text;
+      secretDraft.noteKind = kind;
+      redraw();
+    };
+    if (!circle.me) return sayS("Sign in with the StreamSpace button first", "bad");
+    if (!circle.features.includes("secretNotes")) return sayS("Secret chat needs a StreamSpace update on the server first. Nothing was sent.", "bad");
+    const line = newestLine();
+    const text = line && lineText(line);
+    if (!line || !text) return sayS("Wait for someone to chat first: it goes on the newest chat line.", "bad");
+    const chatterName = line.querySelector(".chat-author__display-name")?.textContent.trim() || line.dataset.aUser;
+    if (!send({ t: "note", secret: true, channel: here, chatter: line.dataset.aUser, chatterName, text, body, at: Date.now() })) return;
+    secretDraft.text = "";
+    sayS("Posted on the newest chat line. Only your network and the mods see it.", "good");
+  }
+
+  function fillSecret(el) {
+    secretPane = el;
+    const focused = el.contains(document.activeElement) && document.activeElement.classList.contains("tbc-mt__text");
+    el.textContent = "";
+    el.className = "tbc-mt tbc-mt--secret";
+    const here = channelName();
+    if (!circle.me) {
+      const notice = document.createElement("div");
+      notice.className = "tbc-mt__notice";
+      notice.append(Object.assign(document.createElement("b"), { textContent: "Sign in to use Secret chat" }), Object.assign(document.createElement("span"), { textContent: "Click the StreamSpace button at the top of Twitch and sign in once." }));
+      el.append(notice);
+    }
+    const top = document.createElement("div");
+    top.className = "tbc-mt__secrethead";
+    top.innerHTML = '<svg viewBox="0 0 20 20" width="22" height="22" aria-hidden="true"><rect x="4" y="9" width="12" height="8.5" rx="2.2" fill="currentColor"/><path d="M6.8 9V6.8a3.2 3.2 0 0 1 6.4 0V9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    const words = document.createElement("div");
+    words.className = "tbc-mt__words";
+    words.append(Object.assign(document.createElement("b"), { textContent: "Secret chat" }), Object.assign(document.createElement("span"), { className: "tbc-mt__state", textContent: `Only your network and ${nameOf(here || "the channel")}'s mods see it. Never the streamer.` }));
+    top.append(words);
+    el.append(top);
+    const hint = document.createElement("p");
+    hint.className = "tbc-mt__hint";
+    hint.textContent = "It shows on the newest chat line, as a bubble with a Secret tag, for everyone in your network with StreamSpace.";
+    el.append(hint);
+
+    const form = document.createElement("form");
+    form.className = "tbc-mt__form tbc-mt__form--secret";
+    const box = document.createElement("textarea");
+    box.className = "tbc-mt__text";
+    box.rows = 2;
+    box.maxLength = SECRET_MAX;
+    box.placeholder = "Say something only your people see…";
+    box.value = secretDraft.text;
+    const row = document.createElement("div");
+    row.className = "tbc-mt__row";
+    const count = document.createElement("span");
+    count.className = "tbc-mt__count";
+    const keys = document.createElement("span");
+    keys.className = "tbc-mt__keys";
+    keys.textContent = "Enter to post";
+    const go = document.createElement("button");
+    go.type = "submit";
+    go.className = "tbc-mt__go";
+    go.textContent = "Post";
+    const sync = () => {
+      secretDraft.text = box.value;
+      const left = SECRET_MAX - box.value.length;
+      count.textContent = left <= 30 ? `${left} left` : "";
+      go.disabled = !circle.me || !box.value.trim();
+    };
+    box.addEventListener("input", sync);
+    box.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendSecret();
+      }
+    });
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      sendSecret();
+    });
+    row.append(count, keys, go);
+    form.append(box, row);
+    el.append(form);
+    sync();
+    if (secretDraft.note) {
+      const note = document.createElement("p");
+      note.className = `tbc-mt__note${secretDraft.noteKind ? ` tbc-mt__note--${secretDraft.noteKind}` : ""}`;
+      note.textContent = secretDraft.note;
+      el.append(note);
+    }
+    if (focused) {
+      box.focus();
+      box.setSelectionRange(box.value.length, box.value.length);
+    }
+  }
+
+  // The tabs phrases.js puts first in the chat box's pop-up, on any channel's chat.
   window.tbcModTalk = {
-    // The tab, while there's a streamer here you can message (or a reason you can't).
-    tab: () => (channelName() ? { label: () => (streamer() ? nameOf(streamer()) : "Streamer"), ready: () => !!streamer(), fill, name: (cb) => streamer() && person(streamer()).then((p) => p.displayName && cb(p.displayName)) } : null),
-    focus: () => pane?.querySelector(".tbc-mt__text")?.focus(),
+    tabs: () =>
+      channelName()
+        ? [
+            { key: "talk", label: "Streamer messages", title: "Ask the streamer, send quick info or a !vanish note", fill, focus: () => pane?.querySelector(".tbc-mt__text")?.focus() },
+            { key: "secret", label: "Secret chat", title: "A message only your network and the mods see in this chat, not the streamer", fill: fillSecret, focus: () => secretPane?.querySelector(".tbc-mt__text")?.focus() },
+          ]
+        : [],
   };
 
   connect();

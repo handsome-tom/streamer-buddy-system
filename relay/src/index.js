@@ -222,6 +222,8 @@ const NUDGE_GAP_MS = 15 * 1000;
 const WARN_GAP_MS = 30 * 1000;
 const NOTE_MS = 60 * 24 * 60 * 60 * 1000; // chat notes: as long as Twitch keeps a VOD at most
 const MAX_NOTE_LEN = 300;
+// What this relay can do that older ones couldn't, so the extension only offers what works.
+const RELAY_FEATURES = ["secretNotes"];
 const MAX_NOTES_PER_MINUTE = 20;
 const MAX_NOTES_SENT = 1000; // to one VOD
 
@@ -577,7 +579,7 @@ export class Hub {
     }
     const limit = owner && login !== owner ? this.limitOf(login, await this.allowList()) : null;
     const reports = owner && login === owner ? (await this.ctx.storage.get("reportsNew")) || 0 : undefined;
-    this.sendTo(login, { t: "state", me: login, owner, allowed, asking, limit, reports, status: users[login]?.status || "modding", since: users[login]?.onlineAt || 0, connections, requests, tags: users[login]?.tags || {}, questions, pins, rooms, chat, statsOn: !!users[login]?.statsOn, stats, views });
+    this.sendTo(login, { t: "state", features: RELAY_FEATURES, me: login, owner, allowed, asking, limit, reports, status: users[login]?.status || "modding", since: users[login]?.onlineAt || 0, connections, requests, tags: users[login]?.tags || {}, questions, pins, rooms, chat, statsOn: !!users[login]?.statsOn, stats, views });
   }
 
   // A room's latest messages. Anything over a week old is deleted, even if nobody
@@ -1145,6 +1147,9 @@ export class Hub {
     const at = asked > now - NOTE_MS && asked <= now ? asked : now;
     const n = { id: crypto.randomUUID().slice(0, 8), channel, chatter, chatterName: clean(m.chatterName).slice(0, 50), text, from: who.login, body, at };
     if (/^#[0-9a-f]{6}$/i.test(m.color || "")) n.color = m.color;
+    // Secret chat (the extension's chat-box tab): the channel's own streamer never sees it,
+    // only the writer's connections and the channel's other people (its mods).
+    if (m.secret && who.login !== channel) n.secret = true;
     await this.ctx.storage.put(noteKey(n), n);
     // This channel's notes from before NOTE_MS go now.
     const old = await this.ctx.storage.list({ prefix: `n:${channel}:`, end: `n:${channel}:${pad13(now - NOTE_MS)}` });
@@ -1329,7 +1334,8 @@ function noteSeers(n, users) {
   const seers = [n.from, ...mutuals(n.from)];
   const channelCircle = [n.channel, ...mutuals(n.channel)];
   if (channelCircle.includes(n.from)) seers.push(...channelCircle);
-  return [...new Set(seers)];
+  // A secret note skips the streamer whose chat it's in.
+  return [...new Set(seers)].filter((l) => !(n.secret && l === n.channel));
 }
 
 function cleanTo(s, max) {

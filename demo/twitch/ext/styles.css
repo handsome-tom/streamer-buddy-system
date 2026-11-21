@@ -1138,7 +1138,19 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   font: 13px/1.35 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
   scrollbar-width: thin;
 }
-/* The two tabs: the streamer, then quick phrases. A soft blue pill on the one showing. */
+/* With tabs: one height for every tab, the tab bar stays put and the inside scrolls. */
+.tbc-phrases--tabs {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.tbc-phrases--tabs > :not(.tbc-phrases__tabs) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+/* The tabs along the top. A soft blue pill on the one showing. */
 .tbc-phrases__tabs {
   display: flex;
   gap: 4px;
@@ -1150,13 +1162,13 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
 .tbc-phrases__tab {
   flex: 1;
   min-width: 0;
-  padding: 7px 10px;
+  padding: 7px 6px;
   border: 0;
   border-radius: 9px;
   background: none;
   color: #9aa6c4;
   font: inherit;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
@@ -2005,6 +2017,44 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   background: rgba(255, 255, 255, 0.06);
   color: #9aa6c4;
 }
+/* Why it can't send here (not connected, own channel, signed out): a soft note on top;
+   everything under it still shows. */
+.tbc-mt__notice {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, rgba(255, 179, 26, 0.16), rgba(255, 179, 26, 0.04));
+}
+.tbc-mt__notice b {
+  color: #ffd27a;
+  font-size: 13px;
+}
+.tbc-mt__notice span {
+  color: #c8cfe0;
+  font-size: 12px;
+}
+/* Secret chat: a lock in mod green, then what it is. */
+.tbc-mt__secrethead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tbc-mt__secrethead > svg {
+  flex: none;
+  padding: 8px;
+  border-radius: 50%;
+  background: rgba(63, 214, 160, 0.14);
+  color: #3fd6a0;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+.tbc-mt--secret .tbc-mt__state {
+  color: #9aa6c4;
+}
+.tbc-mt__form--secret {
+  --c: #3fd6a0;
+}
 .tbc-mt__empty {
   display: flex;
   flex-direction: column;
@@ -2018,6 +2068,24 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
 .tbc-mt__empty span {
   color: #9aa6c4;
   font-size: 12.5px;
+}
+
+/* A chat note from Secret chat: a small lock tag by the writer's name. */
+.tbc-note__secret {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  vertical-align: 1px;
+}
+.tbc-note__secret::before {
+  content: "\1F512  ";
+  font-size: 9px;
 }
 
 /* The conversation in chat: bubbles under the newest line as they happen. Yours on the

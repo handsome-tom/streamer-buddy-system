@@ -91,7 +91,7 @@
   const waiting = [];
   const toPorts = (m) => ports.forEach((tell) => tell(m));
   const tellPeople = () => {
-    toPorts({ t: "people", me: people?.me || null, mutual: people?.mutual || [], online: people?.online || [] });
+    toPorts({ t: "people", me: people?.me || null, mutual: people?.mutual || [], online: people?.online || [], features: people?.features || [] });
     if (questions.length) toPorts({ t: "questions", list: questions });
   };
   async function relay() {
@@ -109,7 +109,7 @@
       const m = JSON.parse(e.data);
       if (m.t === "state") {
         const mutual = (m.connections || []).filter((c) => c.mutual);
-        people = { me: m.me, mutual: mutual.map((c) => c.login), online: mutual.filter((c) => c.online).map((c) => c.login) };
+        people = { me: m.me, mutual: mutual.map((c) => c.login), online: mutual.filter((c) => c.online).map((c) => c.login), features: Array.isArray(m.features) ? m.features : [] };
         questions = Array.isArray(m.questions) ? m.questions : [];
         tellPeople();
         if (!ready) {
@@ -129,7 +129,7 @@
   function fromPage(m) {
     if (m.t === "unflag") return ready && socket.send(JSON.stringify({ t: "unflash", id: m.id }));
     let out = null;
-    if (m.t === "note") out = { t: "note", channel: m.channel, chatter: m.chatter, chatterName: m.chatterName, text: m.text, body: m.body, color: m.color, at: m.at };
+    if (m.t === "note") out = { t: "note", channel: m.channel, chatter: m.chatter, chatterName: m.chatterName, text: m.text, body: m.body, color: m.color, at: m.at, ...(m.secret ? { secret: true } : {}) };
     else if (m.t === "unnote") out = { t: "unnote", id: m.id, channel: m.channel, at: m.at };
     else if (m.t === "notes") out = { t: "notes", channel: m.channel, from: m.from, to: m.to };
     else if (m.t === "ask") out = { t: "ask", to: m.to, text: m.text, options: ["t", "y", "n", "m"] };
@@ -157,7 +157,7 @@
     if (name === "hub") {
       const tell = (m) => later(() => onMessage.forEach((f) => f(clone(m))));
       ports.add(tell);
-      if (people) later(() => tell({ t: "people", me: people.me, mutual: people.mutual, online: people.online || [] }));
+      if (people) later(() => tell({ t: "people", me: people.me, mutual: people.mutual, online: people.online || [], features: people.features || [] }));
       if (questions.length) later(() => tell({ t: "questions", list: questions }));
       relay();
     }
