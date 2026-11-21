@@ -16,10 +16,13 @@
 // System (not your own channel); elsewhere the tab still shows everything, with a note on
 // top saying why it can't send yet.
 //
-// Secret chat: a message only your network and the channel's mods see, posted as a chat
-// note (chatnotes.js draws it, with a "Secret" tag) on the newest chat line. The relay
-// keeps it from the streamer. Offered only once the relay says it can (state's
-// "secretNotes"), so an older relay can never show one to the streamer.
+// Connections chat: a message only your connections and the channel's mods see, posted as
+// its own line in chat, a rounded bar with the Connections icon (chatnotes.js draws it).
+// To the relay it's a chat note marked secret, kept against the newest chat line so it
+// stays in its place; the relay keeps it from the streamer. Sent only once the relay says
+// it can (state's "secretNotes"), so an older relay can never show one to the streamer.
+// "Just me" instead keeps it as a note only you see: saved in this browser (chrome.storage
+// "privateNotes"), never sent anywhere, drawn the same way with a lock.
 // It goes through the same relay connection as flags and notes
 // (background.js), so the StreamSpace button has to have been signed in once.
 //
@@ -264,7 +267,7 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
   }
   function redraw() {
     if (pane?.isConnected) fill(pane);
-    if (secretPane?.isConnected) fillSecret(secretPane);
+    if (connPane?.isConnected) fillConnections(connPane);
   }
 
   function sendNow() {
@@ -449,13 +452,39 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
     }
   }
 
-  // ===== Secret chat ===========================================================================
+  // ===== Connections chat ======================================================================
 
-  let secretPane = null;
-  const secretDraft = { text: "", note: "", noteKind: "" };
-  const SECRET_MAX = 300; // the relay's longest chat note
+  let connPane = null;
+  const connDraft = { who: "all", text: "", note: "", noteKind: "" }; // who: "all" (your connections) or "me" (just you)
+  const CONN_MAX = 300; // the relay's longest chat note
+  const PRIVATE_KEY = "privateNotes"; // Just-me notes (chatnotes.js draws them)
+  const PRIVATE_KEEP_MS = 60 * 24 * 60 * 60 * 1000; // 60 days, as long as the relay keeps notes
+  const PRIVATE_MAX = 500;
+  // The side panel's Connections tab icon (two pixel people), and a pixel lock for Just me.
+  const CONNECTIONS_SVG = '<svg viewBox="0 0 9 8" width="18" height="16" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="M1 0h2v1h-2zM6 0h2v1h-2zM1 1h2v1h-2zM6 1h2v1h-2zM1 3h2v1h-2zM6 3h2v1h-2zM0 4h4v1h-4zM5 4h4v1h-4zM0 5h4v1h-4zM5 5h4v1h-4zM0 6h4v1h-4zM5 6h4v1h-4z"/></svg>';
+  const LOCK_SVG = '<svg viewBox="0 0 7 8" width="14" height="16" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="M2 0h3v1h-3zM1 1h1v1h-1zM5 1h1v1h-1zM1 2h1v1h-1zM5 2h1v1h-1zM0 3h7v1h-7zM0 4h3v1h-3zM4 4h3v1h-3zM0 5h3v1h-3zM4 5h3v1h-3zM0 6h7v1h-7zM0 7h7v1h-7z"/></svg>';
+  const WHO = {
+    all: {
+      label: "My connections",
+      icon: CONNECTIONS_SVG,
+      state: (here) => `Only your connections and ${nameOf(here || "the channel")}'s mods see it. Never the streamer.`,
+      hint: "It goes in chat as its own line, for everyone in your connections with StreamSpace.",
+      placeholder: "Say something only your connections see…",
+      verb: "Post",
+      keys: "Enter to post",
+    },
+    me: {
+      label: "Just me",
+      icon: LOCK_SVG,
+      state: () => "Only you see it. It stays on this computer.",
+      hint: "A note to yourself, as its own line in chat. It's never sent to anyone.",
+      placeholder: "A note just for you…",
+      verb: "Save",
+      keys: "Enter to save",
+    },
+  };
 
-  // The newest chat line, to hang the note on, with its words as chat notes read them.
+  // The newest chat line, to keep the message's place by, with its words as chat notes read them.
   function newestLine() {
     return [...document.querySelectorAll(LINE)].reverse().find((l) => l.dataset.aUser && !l.closest('.chat-input, [class*="chat-input-tray"]'));
   }
@@ -464,79 +493,123 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
     const walk = (node) => {
       if (node.nodeType === 3) text += node.textContent;
       else if (node.tagName === "IMG") text += node.alt || "";
-      else if (!node.classList?.contains("tbc-notes") && !node.classList?.contains("tbc-mtstack")) node.childNodes.forEach(walk);
+      else if (!node.classList?.contains("tbc-notes") && !node.classList?.contains("tbc-cnotes") && !node.classList?.contains("tbc-mtstack")) node.childNodes.forEach(walk);
     };
     line.querySelectorAll('[data-a-target="chat-line-message-body"]').forEach(walk);
     return text.replace(/\s+/g, " ").trim();
   }
 
-  function sendSecret() {
-    const here = channelName();
-    const body = secretDraft.text.trim().slice(0, SECRET_MAX);
-    if (!body || !here) return;
-    const sayS = (text, kind) => {
-      secretDraft.note = text;
-      secretDraft.noteKind = kind;
-      redraw();
-    };
-    if (!circle.me) return sayS("Sign in with the StreamSpace button first", "bad");
-    if (!circle.features.includes("secretNotes")) return sayS("Secret chat needs a StreamSpace update on the server first. Nothing was sent.", "bad");
-    const line = newestLine();
-    const text = line && lineText(line);
-    if (!line || !text) return sayS("Wait for someone to chat first: it goes on the newest chat line.", "bad");
-    const chatterName = line.querySelector(".chat-author__display-name")?.textContent.trim() || line.dataset.aUser;
-    if (!send({ t: "note", secret: true, channel: here, chatter: line.dataset.aUser, chatterName, text, body, at: Date.now() })) return;
-    secretDraft.text = "";
-    sayS("Posted on the newest chat line. Only your network and the mods see it.", "good");
+  // A Just-me note: into this browser's storage, where chatnotes.js picks it up and draws it.
+  function savePrivate(n) {
+    const note = { ...n, id: `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, from: circle.me, private: true };
+    chrome.storage.local.get(PRIVATE_KEY, (d) => {
+      const kept = (Array.isArray(d?.[PRIVATE_KEY]) ? d[PRIVATE_KEY] : []).filter((x) => Date.now() - x.at < PRIVATE_KEEP_MS).slice(-(PRIVATE_MAX - 1));
+      chrome.storage.local.set({ [PRIVATE_KEY]: [...kept, note] });
+    });
   }
 
-  function fillSecret(el) {
-    secretPane = el;
+  function postConnections() {
+    const here = channelName();
+    const justMe = connDraft.who === "me";
+    const body = connDraft.text.trim().slice(0, CONN_MAX);
+    if (!body || !here) return;
+    const sayC = (text, kind) => {
+      connDraft.note = text;
+      connDraft.noteKind = kind;
+      redraw();
+    };
+    if (!circle.me) return sayC("Sign in with the StreamSpace button first", "bad");
+    if (!justMe && !circle.features.includes("secretNotes")) return sayC("Connections chat needs a StreamSpace update on the server first. Nothing was sent.", "bad");
+    const line = newestLine();
+    const text = line && lineText(line);
+    if (!line || !text) return sayC("Wait for someone to chat first, so it has a place in chat.", "bad");
+    const chatterName = line.querySelector(".chat-author__display-name")?.textContent.trim() || line.dataset.aUser;
+    const n = { channel: here, chatter: line.dataset.aUser, chatterName, text, body, at: Date.now() };
+    if (justMe) {
+      savePrivate(n);
+      connDraft.text = "";
+      return sayC("Saved in chat. Only you can see it.", "good");
+    }
+    if (!send({ t: "note", secret: true, ...n })) return;
+    connDraft.text = "";
+    sayC("Posted in chat. Only your connections and the mods see it.", "good");
+  }
+
+  function fillConnections(el) {
+    connPane = el;
     const focused = el.contains(document.activeElement) && document.activeElement.classList.contains("tbc-mt__text");
     el.textContent = "";
-    el.className = "tbc-mt tbc-mt--secret";
+    el.className = `tbc-mt tbc-mt--conn tbc-mt--conn-${connDraft.who}`;
     const here = channelName();
+    const who = WHO[connDraft.who];
     if (!circle.me) {
       const notice = document.createElement("div");
       notice.className = "tbc-mt__notice";
-      notice.append(Object.assign(document.createElement("b"), { textContent: "Sign in to use Secret chat" }), Object.assign(document.createElement("span"), { textContent: "Click the StreamSpace button at the top of Twitch and sign in once." }));
+      notice.append(Object.assign(document.createElement("b"), { textContent: "Sign in to use Connections chat" }), Object.assign(document.createElement("span"), { textContent: "Click the StreamSpace button at the top of Twitch and sign in once." }));
       el.append(notice);
     }
+    // The Connections icon, then what it is and who sees it.
     const top = document.createElement("div");
-    top.className = "tbc-mt__secrethead";
-    top.innerHTML = '<svg viewBox="0 0 20 20" width="22" height="22" aria-hidden="true"><rect x="4" y="9" width="12" height="8.5" rx="2.2" fill="currentColor"/><path d="M6.8 9V6.8a3.2 3.2 0 0 1 6.4 0V9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    top.className = "tbc-mt__connhead";
+    const icon = document.createElement("span");
+    icon.className = "tbc-mt__connicon";
+    icon.innerHTML = CONNECTIONS_SVG;
     const words = document.createElement("div");
     words.className = "tbc-mt__words";
-    words.append(Object.assign(document.createElement("b"), { textContent: "Secret chat" }), Object.assign(document.createElement("span"), { className: "tbc-mt__state", textContent: `Only your network and ${nameOf(here || "the channel")}'s mods see it. Never the streamer.` }));
-    top.append(words);
+    words.append(Object.assign(document.createElement("b"), { textContent: "Connections chat" }), Object.assign(document.createElement("span"), { className: "tbc-mt__state", textContent: who.state(here) }));
+    top.append(icon, words);
     el.append(top);
+
+    // Who sees it: your connections, or just you.
+    const pick = document.createElement("div");
+    pick.className = "tbc-mt__modes tbc-mt__modes--two";
+    pick.setAttribute("role", "radiogroup");
+    pick.setAttribute("aria-label", "Who sees it");
+    for (const [key, w] of Object.entries(WHO)) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = `tbc-mt__mode tbc-mt__mode--${key === "me" ? "me" : "conn"}${connDraft.who === key ? " tbc-mt__mode--on" : ""}`;
+      b.setAttribute("role", "radio");
+      b.setAttribute("aria-checked", String(connDraft.who === key));
+      b.innerHTML = w.icon;
+      b.append(w.label);
+      b.addEventListener("click", () => {
+        connDraft.who = key;
+        connDraft.note = "";
+        fillConnections(el);
+        el.querySelector(".tbc-mt__text")?.focus();
+      });
+      pick.append(b);
+    }
+    el.append(pick);
+
     const hint = document.createElement("p");
     hint.className = "tbc-mt__hint";
-    hint.textContent = "It shows on the newest chat line, as a bubble with a Secret tag, for everyone in your network with StreamSpace.";
+    hint.textContent = who.hint;
     el.append(hint);
 
     const form = document.createElement("form");
-    form.className = "tbc-mt__form tbc-mt__form--secret";
+    form.className = `tbc-mt__form tbc-mt__form--${connDraft.who === "me" ? "me" : "conn"}`;
     const box = document.createElement("textarea");
     box.className = "tbc-mt__text";
     box.rows = 2;
-    box.maxLength = SECRET_MAX;
-    box.placeholder = "Say something only your people see…";
-    box.value = secretDraft.text;
+    box.maxLength = CONN_MAX;
+    box.placeholder = who.placeholder;
+    box.value = connDraft.text;
     const row = document.createElement("div");
     row.className = "tbc-mt__row";
     const count = document.createElement("span");
     count.className = "tbc-mt__count";
     const keys = document.createElement("span");
     keys.className = "tbc-mt__keys";
-    keys.textContent = "Enter to post";
+    keys.textContent = who.keys;
     const go = document.createElement("button");
     go.type = "submit";
     go.className = "tbc-mt__go";
-    go.textContent = "Post";
+    go.textContent = who.verb;
     const sync = () => {
-      secretDraft.text = box.value;
-      const left = SECRET_MAX - box.value.length;
+      connDraft.text = box.value;
+      const left = CONN_MAX - box.value.length;
       count.textContent = left <= 30 ? `${left} left` : "";
       go.disabled = !circle.me || !box.value.trim();
     };
@@ -544,21 +617,21 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
     box.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        sendSecret();
+        postConnections();
       }
     });
     form.addEventListener("submit", (e) => {
       e.preventDefault();
-      sendSecret();
+      postConnections();
     });
     row.append(count, keys, go);
     form.append(box, row);
     el.append(form);
     sync();
-    if (secretDraft.note) {
+    if (connDraft.note) {
       const note = document.createElement("p");
-      note.className = `tbc-mt__note${secretDraft.noteKind ? ` tbc-mt__note--${secretDraft.noteKind}` : ""}`;
-      note.textContent = secretDraft.note;
+      note.className = `tbc-mt__note${connDraft.noteKind ? ` tbc-mt__note--${connDraft.noteKind}` : ""}`;
+      note.textContent = connDraft.note;
       el.append(note);
     }
     if (focused) {
@@ -573,7 +646,7 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
       channelName()
         ? [
             { key: "talk", label: "Streamer messages", title: "Ask the streamer, send quick info or a !vanish note", fill, focus: () => pane?.querySelector(".tbc-mt__text")?.focus() },
-            { key: "secret", label: "Secret chat", title: "A message only your network and the mods see in this chat, not the streamer", fill: fillSecret, focus: () => secretPane?.querySelector(".tbc-mt__text")?.focus() },
+            { key: "connections", label: "Connections chat", title: "Chat with your connections and the mods here, where the streamer can't see it, or keep a note just for you", fill: fillConnections, focus: () => connPane?.querySelector(".tbc-mt__text")?.focus() },
           ]
         : [],
   };

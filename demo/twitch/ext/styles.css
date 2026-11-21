@@ -1159,10 +1159,13 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   border-radius: 12px;
   background: rgba(4, 6, 14, 0.45);
 }
+/* Each tab as wide as its name (then sharing what's left), so "Streamer messages" and
+   "Connections chat" both fit in Twitch's chat without being cut off. */
 .tbc-phrases__tab {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
-  padding: 7px 6px;
+  padding: 7px 4px;
+  letter-spacing: -0.01em;
   border: 0;
   border-radius: 9px;
   background: none;
@@ -2035,25 +2038,37 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   color: #c8cfe0;
   font-size: 12px;
 }
-/* Secret chat: a lock in mod green, then what it is. */
-.tbc-mt__secrethead {
+/* Connections chat: the side panel's Connections icon in its blue, then what it is. */
+.tbc-mt__connhead {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.tbc-mt__secrethead > svg {
+.tbc-mt__connicon {
   flex: none;
-  padding: 8px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  background: rgba(63, 214, 160, 0.14);
-  color: #3fd6a0;
+  background: rgba(125, 176, 239, 0.14);
+  color: #7db0ef;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
-.tbc-mt--secret .tbc-mt__state {
+.tbc-mt--conn .tbc-mt__state {
   color: #9aa6c4;
 }
-.tbc-mt__form--secret {
-  --c: #3fd6a0;
+/* Who sees it: two pills, My connections (Connections blue) and Just me (silver). */
+.tbc-mt__modes--two {
+  grid-template-columns: repeat(2, 1fr);
+}
+.tbc-mt__mode--conn,
+.tbc-mt__form--conn {
+  --c: #7db0ef;
+}
+.tbc-mt__mode--me,
+.tbc-mt__form--me {
+  --c: #c3cbe0;
 }
 .tbc-mt__empty {
   display: flex;
@@ -2070,22 +2085,13 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   font-size: 12.5px;
 }
 
-/* A chat note from Secret chat: a small lock tag by the writer's name. */
-.tbc-note__secret {
-  display: inline-block;
+/* A Connections chat message (or a Just-me note): the Connections icon (or a lock) right
+   after the writer's name, in the words' own color. */
+.tbc-note__badge {
+  display: inline-flex;
   margin-left: 6px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.28);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  vertical-align: 1px;
-}
-.tbc-note__secret::before {
-  content: "\1F512  ";
-  font-size: 9px;
+  vertical-align: -1px;
+  opacity: 0.9;
 }
 
 /* The conversation in chat: bubbles under the newest line as they happen. Yours on the
@@ -2626,6 +2632,30 @@ html.tbc-noting .tbc-flagx::before {
   height: 16px;
   background: #0b1224;
   clip-path: polygon(0 0, 100% 0, 10% 100%);
+}
+/* Connections chat and Just-me notes: their own line in chat, not a reply to the line
+   above. The same rounded bubble, across the whole chat, with no tail pointing anywhere. */
+.tbc-cnotes {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 3px;
+  font: 13px/1.35 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+}
+.tbc-cnotes > .tbc-note {
+  flex-direction: row;
+  align-self: stretch;
+  max-width: none;
+}
+.tbc-cnotes .tbc-note__main {
+  flex: 1;
+  border-radius: 16px;
+}
+/* Just me: a quiet slate, so it reads as a note to yourself. */
+.tbc-note--private {
+  --note-c: #4a5878;
 }
 .tbc-noted {
   border-radius: 6px;

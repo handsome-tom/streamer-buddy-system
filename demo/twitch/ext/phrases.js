@@ -1,4 +1,4 @@
-// Tabs: Streamer messages and Secret chat (modtalk.js, when it's there), then Chat tools
+// Tabs: Streamer messages and Connections chat (modtalk.js, when it's there), then Chat tools
 // (quick phrases and highlight words). Without modtalk.js it's quick phrases only, as before.
 //
 // Quick phrases: a small speech-bubble button in the chat box, to the left of the
@@ -42,7 +42,7 @@ whenOn("phrases", "Quick phrases and highlight words", () => {
   const chipLists = { hl: [] };
   let shell = null; // the pop-up
   let panel = null; // what's in the tab showing
-  let tab = "talk"; // "talk" (Streamer messages), "secret" (Secret chat) or "phrases" (Chat tools)
+  let tab = "talk"; // "talk" (Streamer messages), "connections" (Connections chat) or "phrases" (Chat tools)
   let picking = false; // the emote picker is open for adding to a phrase
   let images = {};      // emote name -> picture url
 
@@ -209,7 +209,7 @@ whenOn("phrases", "Quick phrases and highlight words", () => {
     focusTab();
   }
 
-  // The tabs along the top: modtalk.js's (Streamer messages, Secret chat) first, then
+  // The tabs along the top: modtalk.js's (Streamer messages, Connections chat) first, then
   // Chat tools (quick phrases and highlight words). All the same height, so switching
   // doesn't make the pop-up jump.
   const extraTabs = () => window.tbcModTalk?.tabs() || [];

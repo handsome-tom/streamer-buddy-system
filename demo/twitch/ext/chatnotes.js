@@ -20,6 +20,11 @@
 // has to fit too (written up to 15 minutes after it), so a repeated message picks the
 // right one. You can take back your own note with the × on it.
 //
+// Connections chat (the chat box's tab, modtalk.js) comes through here too: a chat note
+// marked secret (the relay keeps it from the streamer), drawn as its own rounded line in
+// chat with the Connections icon, not as a reply to anyone. "Just me" notes from the same
+// tab are drawn the same way, from this browser's storage only.
+//
 // Wrapped so its names don't clash with the other scripts, and only started if
 // it's switched on (settings.js).
 whenOn("chatnotes", "Notes on chat lines for mods", () => {
@@ -36,6 +41,10 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
   const MAX_BODY = 300;
   const BUBBLE_ICON = '<svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 16 14h-6l-4 3v-3H4a1.5 1.5 0 0 1-1.5-1.5v-7A1.5 1.5 0 0 1 4 4z"/></svg>';
   const SEND_ICON = '<svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l14-6-5 14-2.5-6L3 10z"/></svg>';
+  // The side panel's Connections tab icon (two pixel people), and a pixel lock for Just me.
+  const CONNECTIONS_ICON = '<svg viewBox="0 0 9 8" width="14" height="12" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="M1 0h2v1h-2zM6 0h2v1h-2zM1 1h2v1h-2zM6 1h2v1h-2zM1 3h2v1h-2zM6 3h2v1h-2zM0 4h4v1h-4zM5 4h4v1h-4zM0 5h4v1h-4zM5 5h4v1h-4zM0 6h4v1h-4zM5 6h4v1h-4z"/></svg>';
+  const LOCK_ICON = '<svg viewBox="0 0 7 8" width="11" height="12" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="M2 0h3v1h-3zM1 1h1v1h-1zM5 1h1v1h-1zM1 2h1v1h-1zM5 2h1v1h-1zM0 3h7v1h-7zM0 4h3v1h-3zM4 4h3v1h-3zM0 5h3v1h-3zM4 5h3v1h-3zM0 6h7v1h-7zM0 7h7v1h-7z"/></svg>';
+  const PRIVATE_KEY = "privateNotes"; // Just-me notes, kept only in this browser (modtalk.js writes them)
 
   // ===== Where we are =========================================================================
 
@@ -132,7 +141,7 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
     const walk = (node) => {
       if (node.nodeType === 3) text += node.textContent;
       else if (node.tagName === "IMG") text += node.alt || "";
-      else if (!node.classList?.contains("tbc-notes")) node.childNodes.forEach(walk);
+      else if (!node.classList?.contains("tbc-notes") && !node.classList?.contains("tbc-cnotes")) node.childNodes.forEach(walk);
     };
     parts.forEach(walk);
     if (vodId()) text = text.replace(/^\s*:\s*/, ""); // the ": " after the name
@@ -196,7 +205,8 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
     // An iPhone-style text bubble: the writer's picture and name inside it at the top,
     // the note, and the time tucked in the bottom corner. Someone else's sits on the left
     // with its tail bottom-left; yours on the right in brighter blue, tail bottom-right.
-    const mine = n.from === circle.me;
+    // (Connections chat and Just-me notes are their own line instead: see barsOf.)
+    const mine = n.private || n.from === circle.me;
     if (mine) b.classList.add("tbc-note--mine");
     // The bubble is in the writer's Twitch name color (sent with the note, or looked up),
     // with dark text on a light color so it stays readable.
@@ -211,7 +221,8 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
       b.classList.toggle("tbc-note--light", light);
       return true;
     };
-    const painted = paint(n.color);
+    // A Just-me note keeps its own quiet slate color (styles.css), whatever your name color.
+    const painted = n.private || paint(n.color);
     const main = document.createElement("div");
     main.className = "tbc-note__main";
     const name = document.createElement("b");
@@ -228,14 +239,15 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
     const head = document.createElement("span");
     head.className = "tbc-note__head";
     head.append(pic, name);
-    // From Secret chat (modtalk.js): a little lock, so it's clear the streamer can't see it.
-    if (n.secret) {
-      b.classList.add("tbc-note--secret");
-      const lock = document.createElement("span");
-      lock.className = "tbc-note__secret";
-      lock.textContent = "Secret";
-      lock.title = "Secret chat: only your network and the mods see this, not the streamer";
-      head.append(lock);
+    // From Connections chat (modtalk.js): the Connections icon by the name, so it's clear
+    // it's for your connections (the streamer can't see it). A Just-me note gets a lock.
+    if (n.secret || n.private) {
+      b.classList.add(n.private ? "tbc-note--private" : "tbc-note--connections");
+      const badge = document.createElement("span");
+      badge.className = "tbc-note__badge";
+      badge.title = n.private ? "Just you: this note stays on this computer" : "Connections chat: only your connections and the mods see this, not the streamer";
+      badge.innerHTML = n.private ? LOCK_ICON : CONNECTIONS_ICON;
+      head.append(badge);
     }
     main.append(head, body, when);
     b.append(main);
@@ -249,7 +261,8 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
       x.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        send({ t: "unnote", id: n.id, channel: n.channel, at: n.at });
+        if (n.private) forgetPrivate(n.id);
+        else send({ t: "unnote", id: n.id, channel: n.channel, at: n.at });
       });
       b.append(x);
     }
@@ -279,6 +292,22 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
     return stack;
   }
 
+  // Connections chat and Just-me notes aren't about anyone's message: each is its own line
+  // in chat, a rounded bar with no tail, just after the line that was newest when it was
+  // written (that's what keeps it in its place in chat, and in the VOD's chat replay).
+  // That line isn't lit up, since it's not a reply to it.
+  const isBar = (n) => !!(n.secret || n.private);
+  function barsOf(line, make) {
+    const host = hostOf(line);
+    let bars = host.querySelector(":scope > .tbc-cnotes");
+    if (!bars && make) {
+      bars = document.createElement("div");
+      bars.className = "tbc-cnotes";
+      host.append(bars);
+    }
+    return bars;
+  }
+
   // Put a note on its line (moving it if a better one turned up), if it's on screen.
   function place(n, fresh, index) {
     const line = bestLine(n, index);
@@ -288,7 +317,7 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
     if (old) unstack(old);
     const b = bubble(n);
     if (fresh) b.classList.add("tbc-note--new");
-    const stack = stackOf(line, true);
+    const stack = isBar(n) ? barsOf(line, true) : stackOf(line, true);
     const box = stack.querySelector(".tbc-notebox");
     stack.insertBefore(b, box || null);
   }
@@ -297,9 +326,26 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
     const stack = b.parentElement;
     b.remove();
     if (stack && !stack.childElementCount) {
-      stack.parentElement?.classList.remove("tbc-noted");
+      if (stack.classList.contains("tbc-notes")) stack.parentElement?.classList.remove("tbc-noted");
       stack.remove();
     }
+  }
+
+  // Take a note off the screen and out of the list.
+  function dropNote(id) {
+    notes = notes.filter((n) => n.id !== id);
+    const b = document.querySelector(`[data-tbc-note="${CSS.escape(id)}"]`);
+    if (b) unstack(b);
+  }
+
+  // Notes to add to this channel's (or VOD's): fresh ones slide in, the rest just appear.
+  function addNotes(list, fresh) {
+    const known = new Set(notes.map((n) => n.id));
+    const add = list.filter((n) => n?.id && !known.has(n.id));
+    if (!add.length) return;
+    notes = [...notes, ...add].sort((a, b) => a.at - b.at);
+    if (fresh) for (const n of add) place(n, true);
+    else placeAll();
   }
 
   function placeAll() {
@@ -328,7 +374,42 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
       notes = [];
       send({ t: "notes", channel: c, from: Date.now() - LIVE_LOOKBACK_MS, to: Date.now() });
     }
+    loadPrivate();
   }
+
+  // ===== Just-me notes ========================================================================
+  // Written with "Just me" in the chat box's Connections chat tab (modtalk.js). Kept only in
+  // this browser, under "privateNotes", and never sent to the relay, so nobody else can
+  // ever see them. Drawn here like the rest, as their own line, and back in the VOD's chat
+  // replay the same way. modtalk.js keeps them 60 days, like the relay keeps notes.
+
+  // The ones for this live channel (its last few hours) or this VOD.
+  function privateHere(list) {
+    if (!Array.isArray(list)) return [];
+    if (vodId()) return vod ? list.filter((n) => n.channel === vod.channel && n.at >= vod.start && n.at <= vodEnd()) : [];
+    const c = liveChannel();
+    return c ? list.filter((n) => n.channel === c && n.at > Date.now() - LIVE_LOOKBACK_MS) : [];
+  }
+  function loadPrivate() {
+    const want = notesFor;
+    chrome.storage.local.get(PRIVATE_KEY, (d) => {
+      if (notesFor === want) addNotes(privateHere(d?.[PRIVATE_KEY]), false);
+    });
+  }
+  function forgetPrivate(id) {
+    chrome.storage.local.get(PRIVATE_KEY, (d) => {
+      const list = Array.isArray(d?.[PRIVATE_KEY]) ? d[PRIVATE_KEY] : [];
+      chrome.storage.local.set({ [PRIVATE_KEY]: list.filter((n) => n.id !== id) });
+    });
+  }
+  // Saved or taken back (here, or in another Twitch tab): in or out of chat at once.
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "local" || !changes[PRIVATE_KEY] || !notesFor) return;
+    const now = Array.isArray(changes[PRIVATE_KEY].newValue) ? changes[PRIVATE_KEY].newValue : [];
+    const ids = new Set(now.map((n) => n.id));
+    for (const n of notes.filter((x) => x.private && !ids.has(x.id))) dropNote(n.id);
+    addNotes(privateHere(now), true);
+  });
 
   // ===== The relay, through background.js =====================================================
 
@@ -371,9 +452,7 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
       notes.push(n);
       place(n, true);
     } else if (m.t === "unnote") {
-      notes = notes.filter((n) => n.id !== m.id);
-      const b = document.querySelector(`[data-tbc-note="${CSS.escape(m.id)}"]`);
-      if (b) unstack(b);
+      dropNote(m.id);
     } else if (m.t === "needSignin") {
       toast("Click the StreamSpace button and sign in first");
     }
@@ -446,7 +525,7 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
   document.addEventListener("mouseover", (e) => {
     if (vodId() || !canNote()) return;
     const line = e.target.closest?.(LIVE_LINE);
-    if (!line || e.target.closest(".tbc-notes") || dot.parentElement === line) return;
+    if (!line || e.target.closest(".tbc-notes, .tbc-cnotes") || dot.parentElement === line) return;
     if (line.closest(REPLY_BOX)) return; // the "Replying to" box above the chat box
     dot.classList.add("tbc-notedot--live");
     dot.style.left = dot.style.top = "";
@@ -458,7 +537,7 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
     if (!vodId()) return; // live chat: the stylesheet shows the dot (above)
     if (e.target === dot || dot.contains(e.target)) return clearTimeout(hoverTimer);
     const line = e.target.closest?.(lineSel()) || null;
-    const ok = line && canNote() && !e.target.closest(".tbc-notes");
+    const ok = line && canNote() && !e.target.closest(".tbc-notes, .tbc-cnotes");
     const r = ok && line.getBoundingClientRect();
     const near = ok && e.clientX >= r.left + r.width * NEAR_RIGHT;
     if (!near) {
@@ -560,6 +639,7 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
       closeBox();
       hideDot();
       document.querySelectorAll(".tbc-notes").forEach((s) => (s.parentElement?.classList.remove("tbc-noted"), s.remove()));
+      document.querySelectorAll(".tbc-cnotes").forEach((s) => s.remove());
     }
     loadVod();
     if (!canNote()) return hideDot();
