@@ -2717,6 +2717,31 @@ html.tbc-noting .tbc-flagx::before {
 .tbc-note__reply:hover {
   color: #fff;
 }
+/* Pin (chatnotes.js): a small push pin on a note; pointed at, it lights up. Once used it
+   stays lit in green, so you can see it went. */
+.tbc-note__pin {
+  align-self: center;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: #adadb8;
+  opacity: 0.55;
+  line-height: 0;
+  cursor: pointer;
+}
+.tbc-note:hover .tbc-note__pin,
+.tbc-note__pin:focus-visible {
+  opacity: 1;
+}
+.tbc-note__pin:hover {
+  color: #fff;
+}
+.tbc-note__pin--done,
+.tbc-note__pin--done:hover {
+  color: #3fc98e;
+  opacity: 1;
+  cursor: default;
+}
 /* A reply sits a little in from what it answers, with that note's name and words, small
    and soft, above its own. */
 .tbc-note--reply {

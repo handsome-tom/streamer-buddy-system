@@ -1131,7 +1131,7 @@
   // PIN_STICK_MS, and the line itself glows in the chat (custom chat), so it's easy to
   // find again without taking up the top for long.
   const FLASH_MS = { info: 120000, chat: 300000, love: 30000, seen: 5000 }; // "Seen" is just a quick tick
-  const PIN_STICK_MS = 10 * 1000;
+  const PIN_STICK_MS = 20 * 1000; // a flag, or a mod pinning their note's line (chatnotes.js)
   const FLASH_STICK_MS = { info: 40 * 1000, love: 6 * 1000 }; // at the top of chat, once scrolled up
   const flashMs = (kind) => (kind === "chat" && LIVECHAT ? PIN_STICK_MS : FLASH_MS[kind]);
   const FUZZ_MS = 1400;
@@ -1210,6 +1210,9 @@
       const name = el("b", null, f.chatterName || f.chatter);
       if (f.chatterColor) name.style.color = f.chatterColor;
       body.append(name, ": ", ...withEmotes(f.text, f.emotes), el("span", "qflash__who", ` flagged by ${f.from}${mine ? "" : ` in ${f.channel}`}`));
+      // Pinned from a mod's note (chatnotes.js): their note on that line, so it's clear why.
+      const note = noteOnLine(f.channel, f.chatter, f.text, f.from);
+      if (note) body.append(el("span", "qflash__note", `${note.from}: “${note.body}”`));
     } else if (f.kind === "seen") {
       body.title = `Seen by ${f.from}: ${f.text}`;
       body.append(el("b", null, `Seen by ${f.from}`), el("span", "qflash__who", ` ${f.text}`));
@@ -4854,6 +4857,11 @@
     m.set(n.id, n);
     if (m.size > 300) m.delete(m.keys().next().value);
     if (!quiet && view === "mod" && modOwner() === n.channel) render();
+  }
+  // The newest note on a chat line (by who said it and what), preferring one by `by`.
+  function noteOnLine(channel, chatter, text, by) {
+    const notes = [...(streamNotes[channel]?.values() || [])].filter((n) => n.body && !n.secret && n.chatter === chatter && (n.text === text || String(text || "").startsWith(String(n.text || "").slice(0, 40))));
+    return notes.filter((n) => n.from === by).at(-1) || notes.at(-1) || null;
   }
   function dropNote(id) {
     let gone = false;

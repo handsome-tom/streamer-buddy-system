@@ -43,6 +43,8 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
   const SEND_ICON = '<svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l14-6-5 14-2.5-6L3 10z"/></svg>';
   // The side panel's Connections tab icon (two pixel people), and a pixel lock for Just me.
   const CONNECTIONS_ICON = '<svg viewBox="0 0 9 8" width="14" height="12" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="M1 0h2v1h-2zM6 0h2v1h-2zM1 1h2v1h-2zM6 1h2v1h-2zM1 3h2v1h-2zM6 3h2v1h-2zM0 4h4v1h-4zM5 4h4v1h-4zM0 5h4v1h-4zM5 5h4v1h-4zM0 6h4v1h-4zM5 6h4v1h-4z"/></svg>';
+  // A pixel push pin (pin a note's line to the top of the streamer's chat).
+  const PIN_ICON = '<svg viewBox="0 0 7 9" width="10" height="13" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="M1 0h5v1h-5zM2 1h3v3h-3zM1 4h5v1h-5zM0 5h7v1h-7zM3 6h1v3h-1z"/></svg>';
   const LOCK_ICON = '<svg viewBox="0 0 7 8" width="11" height="12" aria-hidden="true" fill="currentColor" shape-rendering="crispEdges"><path d="M2 0h3v1h-3zM1 1h1v1h-1zM5 1h1v1h-1zM1 2h1v1h-1zM5 2h1v1h-1zM0 3h7v1h-7zM0 4h3v1h-3zM4 4h3v1h-3zM0 5h3v1h-3zM4 5h3v1h-3zM0 6h7v1h-7zM0 7h7v1h-7z"/></svg>';
   const PRIVATE_KEY = "privateNotes"; // Just-me notes, kept only in this browser (modtalk.js writes them)
 
@@ -294,6 +296,28 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
         openReply(n, b);
       });
       b.append(r);
+    }
+    // Pin: makes sure the streamer sees the line this note is on (a missed streak, a donation
+    // that might slip by). It's flagged, so it hangs at the top of the streamer's chat for a
+    // little while with this note beside it, and stays lit up in its place in chat after.
+    // Only notes on a real chat line the streamer can see (not Connections chat, Just me or
+    // the stream's log), and not in your own channel.
+    if (!n.private && !n.kind && !n.secret && n.chatter && n.text && n.channel && n.channel !== circle.me) {
+      const p = document.createElement("button");
+      p.type = "button";
+      p.className = "tbc-note__pin";
+      p.title = `Pin this line to the top of ${n.channel}'s chat`;
+      p.setAttribute("aria-label", p.title);
+      p.innerHTML = PIN_ICON;
+      p.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        send({ t: "flag", channel: n.channel, chatter: n.chatter, chatterName: n.chatterName, text: n.text, color: myColor });
+        p.classList.add("tbc-note__pin--done");
+        p.disabled = true;
+        p.title = "Pinned to the top of the streamer's chat";
+      });
+      b.append(p);
     }
     if (mine) {
       const x = document.createElement("button");

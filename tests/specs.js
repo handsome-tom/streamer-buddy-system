@@ -758,6 +758,33 @@ export const tests = {
 
   // ----- The playground's pretend Twitch chat (StreamSpace's real chat scripts) --------------
 
+  async "in the pretend Twitch chat, a mod pins a note's line: it hangs at the top of the streamer's chat with the note, and × puts it back in its place"(h) {
+    const streamerWatch = h.person("streamer");
+    const modWatch = h.person("mod1");
+    const mod2 = h.person("mod2");
+    await h.friends(streamerWatch, modWatch);
+    await h.friends(streamerWatch, mod2);
+    await h.friends(modWatch, mod2);
+    const streamer = await h.panel("streamer", "obs");
+    const tw = await h.panel("mod1", "twitch");
+    await h.until(() => streamer.$(".oc-line"), "custom chat to start");
+    h.pretendTwitch.say("streakfan", "my streak just broke :(");
+    await h.until(() => [...tw.doc.querySelectorAll(".chat-line__message")].find((l) => l.textContent.includes("my streak just broke")), "the line in the pretend Twitch chat");
+    await h.wait(300);
+    mod2.send({ t: "note", channel: "streamer", chatter: "streakfan", chatterName: "streakfan", text: "my streak just broke :(", body: "can we save this streak?" });
+    const bubble = await h.until(() => [...tw.doc.querySelectorAll(".tbc-note")].find((b) => b.textContent.includes("can we save this streak?")), "the note in chat");
+    const pin = bubble.querySelector(".tbc-note__pin");
+    h.check(pin, "the note has a pin");
+    pin.click();
+    const chip = await h.until(() => streamer.$$(".qflash--chat").find((c) => c.textContent.includes("my streak just broke")), "the line pinned at the top of the streamer's chat");
+    h.check(/can we save this streak\?/.test(chip.querySelector(".qflash__note")?.textContent || ""), `the pinned line shows the note: ${chip.textContent}`);
+    await h.until(() => streamer.$$(".oc-line--flagged").some((l) => l.textContent.includes("my streak just broke")), "the line lit up in its place in chat");
+    chip.querySelector(".x").click();
+    await h.until(() => !streamer.$$(".qflash--chat:not(.qflash--leaving)").some((c) => c.textContent.includes("my streak just broke")), "× to take it off the top");
+    h.check(streamer.$$(".oc-line").some((l) => l.textContent.includes("my streak just broke")), "the line is still in chat");
+    noErrors(streamer, tw);
+  },
+
   async "in the pretend Twitch chat, a Connections chat message and a note on a line can be replied to, and replies to replies too"(h) {
     const streamer = h.person("streamer");
     const mod = h.person("mod1");

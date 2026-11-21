@@ -1542,6 +1542,14 @@ main:has(> .cards:empty) {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+.qflash__note {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-style: italic;
+  color: #fff;
+  opacity: 0.85;
+}
 .qflash__who {
   color: var(--muted);
   font-size: 11px;
