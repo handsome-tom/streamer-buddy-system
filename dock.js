@@ -5619,10 +5619,13 @@
     // in it (Edit: × takes someone out, + on a free spot puts one of your other connections
     // in); it starts as your first eight connections, and new connections fill free spots
     // unless you've taken them out. Taking someone out of your Top 8 doesn't disconnect them.
-    // The owner (everyone's first connection, as Tom was on MySpace) takes none of your
-    // eight spots (Connections' "Top 8 · n of 8 spots used"), so isn't one of them here.
+    // The owner (everyone's first connection, as Tom was on MySpace) is always first in
+    // everyone else's Top 8 and can't be taken out; the other seven spots are yours to pick.
+    // (Connections still counts the owner in none of your eight connection spots.)
     const pool = friends.filter((c) => c.login !== owner);
-    const shown = topEightOf(pool);
+    const tom = login !== owner ? friends.find((c) => c.login === owner) : null;
+    const picked = topEightOf(pool, TOP_EIGHT - (tom ? 1 : 0));
+    const shown = tom ? [tom, ...picked] : picked;
     const head = el("span", "fspace__btns");
     if (pool.length) {
       const edit = el("button", "fspace__all", topEditing ? "Done" : "Edit");
@@ -5644,19 +5647,20 @@
       const b = el("button", `fspace__friend ${relClass(c.login)}`);
       b.type = "button";
       const state = stateOf(c.login);
-      b.title = topEditing ? `Take ${c.login} out of your Top 8 (you stay connected)` : `${c.login} (${state === "on" ? "online" : state === "idle" ? "idle" : "offline"})`;
+      const fixed = c === tom; // the owner: always there
+      b.title = topEditing ? (fixed ? `${c.login} is always in your Top 8` : `Take ${c.login} out of your Top 8 (you stay connected)`) : `${c.login} (${state === "on" ? "online" : state === "idle" ? "idle" : "offline"})`;
       const face = ringedPic(c.login); // green ring online, amber idle, dimmed when off
       const badges = roleBadges(c.login);
       if (badges) face.append(badges);
       const direct = directWith(c.login);
       const n = direct ? unread(direct.owner) : 0;
       if (n && !topEditing) face.append(el("span", "msgs__facecount", String(n)));
-      if (topEditing) face.append(el("span", "fspace__x", "×"));
+      if (topEditing && !fixed) face.append(el("span", "fspace__x", "×"));
       const name = nameBit(c.login, "fspace__name");
       if (colorOf(c.login)) name.style.color = colorOf(c.login);
       b.append(face, name);
       b.addEventListener("click", () => {
-        if (topEditing) return setTopEight(shown.map((x) => x.login).filter((l) => l !== c.login), c.login);
+        if (topEditing) return fixed ? null : setTopEight(picked.map((x) => x.login).filter((l) => l !== c.login), c.login);
         direct ? openChat(direct.owner) : show("person", c.login);
       });
       top.append(b);
@@ -5691,7 +5695,7 @@
         b.append(ringedPic(c.login), name);
         b.addEventListener("click", () => {
           topAdding = false;
-          setTopEight([...shown.map((x) => x.login), c.login]);
+          setTopEight([...picked.map((x) => x.login), c.login]);
         });
         pick.append(b);
       }
@@ -5710,12 +5714,12 @@
   let topEditing = false;
   let topAdding = false;
   const topKey = () => `topEight:${me.login}`;
-  function topEightOf(pool) {
+  function topEightOf(pool, room = TOP_EIGHT) {
     const saved = get(topKey(), null) || { picks: [], out: [] };
     const byLogin = new Map(pool.map((c) => [c.login, c]));
     const picks = saved.picks.filter((l) => byLogin.has(l));
     const rest = pool.filter((c) => !picks.includes(c.login) && !saved.out.includes(c.login)).map((c) => c.login);
-    return [...picks, ...rest].slice(0, TOP_EIGHT).map((l) => byLogin.get(l));
+    return [...picks, ...rest].slice(0, room).map((l) => byLogin.get(l));
   }
   function setTopEight(picks, takenOut = null) {
     const saved = get(topKey(), null) || { picks: [], out: [] };

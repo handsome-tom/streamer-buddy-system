@@ -188,7 +188,7 @@ export const tests = {
     noErrors(panel);
   },
 
-  "Messages opens on your profile and your Top 8: your first eight connections in order, the owner not taking a spot": withAllowList(async (h) => {
+  "Messages opens on your profile and your Top 8: the owner always first, then your first seven connections in order": withAllowList(async (h) => {
     const tom = h.person("tom");
     await tom.ready;
     const mods = Array.from({ length: 8 }, (_, i) => `mod${i + 1}`);
@@ -203,8 +203,11 @@ export const tests = {
     h.check(/Online Now!/.test(panel.$(".myspace__status")?.textContent || ""), "your profile should say Online Now!");
     h.check(!/online since/i.test(panel.$(".myspace").innerText), "your profile shouldn't say when you came online");
     const top = panel.$$(".fspace__name").map((n) => n.textContent);
-    h.check(top.join() === mods.join(), `the Top 8 should be mod1 to mod8 in the order added, got: ${top}`);
-    h.check(streamer.connectedTo("tom"), "the owner should still be one of your connections (just not in a spot)");
+    h.check(top.join() === ["tom", ...mods.slice(0, 7)].join(), `the Top 8 should be the owner, then mod1 to mod7 in the order added, got: ${top}`);
+    h.check(streamer.connectedTo("tom"), "the owner should still be one of your connections");
+    (await h.until(() => panel.$$(".fspace__all").find((b) => b.textContent === "Edit"), "the Edit button")).click();
+    await h.until(() => panel.$(".fspace--editing"), "editing the Top 8");
+    h.check(panel.$$(".fspace__friend").length === 8 && panel.$$(".fspace__x").length === 7, "everyone but the owner can be taken out of your Top 8");
     h.check(!panel.$$(".fspace__free").length, "a full Top 8 has no free spots");
     h.check(panel.$$(".msgs__sechead").some((s) => /Direct messages/.test(s.textContent)), "the usual lists should still be under it");
     noErrors(panel);
