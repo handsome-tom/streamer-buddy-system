@@ -6826,7 +6826,10 @@ html :is(body, body.has-space.has-space) :is(
 /* ===== Messages' top: your profile and your Top 8 (dock.js, mySpace) =====
    In the same look as the rest of Messages: no boxes or header bars, round pictures with
    status rings, a soft dark haze behind your profile instead of a frame. */
-.myspace { display: flex; flex-direction: column; padding: 2px 0 0; }
+.myspace { display: flex; flex-direction: column; margin: -8px -8px 0; padding: 10px 8px 14px; background: linear-gradient(180deg, rgba(63, 125, 216, 0.38) 0%, rgba(63, 125, 216, 0.18) 45%, rgba(63, 125, 216, 0.06) 80%, rgba(63, 125, 216, 0) 100%); }
+/* "Top 8": a little bigger than the other headings, Edit and View all on its right. */
+.myspace .msgs__label { font-size: 13px; }
+.fspace__btns { display: flex; gap: 12px; }
 .myspace__card { display: flex; align-items: center; gap: 14px; padding: 12px 10px; border-radius: 18px; background: radial-gradient(closest-side, rgba(63, 125, 216, 0.16), rgba(63, 125, 216, 0.06) 60%, transparent); }
 /* Your picture: round, its ring your status's color (Available mod green, Online orange,
    Idle yellow, Invisible gray, dimmed). */
@@ -6882,3 +6885,16 @@ html :is(body, body.has-space.has-space) :is(
 .fspace__free { width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle, rgba(141, 182, 255, 0.07), rgba(141, 182, 255, 0.02) 65%, transparent 72%); }
 .fspace__all { padding: 0; color: var(--msg-muted); font: inherit; font-size: 11px; font-weight: 700; background: none; border: 0; cursor: pointer; }
 .fspace__all:hover { color: var(--msg-text); }
+/* Editing: a × on each picture takes them out; free spots are + buttons. */
+.fspace__x { position: absolute; top: -5px; right: -6px; display: grid; place-items: center; width: 18px; height: 18px; color: #fff; font-size: 13px; font-weight: 800; line-height: 1; background: #3a2030; border-radius: 50%; box-shadow: 0 0 0 2px #0b0c10; }
+.fspace--editing .fspace__friend:hover .fspace__x { background: var(--bad); }
+button.fspace__spot { cursor: pointer; }
+button.fspace__spot .fspace__free { display: grid; place-items: center; color: var(--msg-muted); font-size: 20px; font-weight: 600; background: radial-gradient(circle, rgba(141, 182, 255, 0.14), rgba(141, 182, 255, 0.04) 65%, transparent 72%); }
+button.fspace__spot:hover .fspace__free { color: var(--msg-text); background: radial-gradient(circle, rgba(141, 182, 255, 0.24), rgba(141, 182, 255, 0.06) 65%, transparent 72%); }
+/* Who you could put in: your other connections, one row each. */
+.fspace__pick { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; padding: 6px; border-radius: 12px; background: rgba(4, 6, 14, 0.55); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); }
+.fspace__pickrow { display: flex; align-items: center; gap: 8px; padding: 5px 6px; color: var(--msg-text); font: inherit; font-size: 12.5px; font-weight: 700; text-align: left; background: none; border: 0; border-radius: 8px; cursor: pointer; }
+.fspace__pickrow:hover { background: rgba(255, 255, 255, 0.06); }
+.fspace__pickrow .people__pic { width: 26px; height: 26px; }
+.fspace__picknone { margin: 4px 6px; color: var(--msg-muted); font-size: 12px; }
+.fspace__invite { align-self: flex-start; margin: 4px 6px 2px; }

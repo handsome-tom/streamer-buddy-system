@@ -5579,44 +5579,114 @@
     about.append(count);
     card.append(pic, about);
 
-    // ----- Your Top 8: your first eight connections, round pictures with names under them,
-    // like Online now. A section heading as everywhere else in Messages.
+    // ----- Your Top 8: round pictures with names under them, like Online now. You pick who's
+    // in it (Edit: × takes someone out, + on a free spot puts one of your other connections
+    // in); it starts as your first eight connections, and new connections fill free spots
+    // unless you've taken them out. Taking someone out of your Top 8 doesn't disconnect them.
     // The owner (everyone's first connection, as Tom was on MySpace) takes none of your
     // eight spots (Connections' "Top 8 · n of 8 spots used"), so isn't one of them here.
-    const first = friends.filter((c) => c.login !== owner).slice(0, TOP_EIGHT);
-    let all = null;
-    if (friends.length) {
-      all = el("button", "fspace__all", "View all");
+    const pool = friends.filter((c) => c.login !== owner);
+    const shown = topEightOf(pool);
+    const head = el("span", "fspace__btns");
+    if (pool.length) {
+      const edit = el("button", "fspace__all", topEditing ? "Done" : "Edit");
+      edit.type = "button";
+      edit.title = topEditing ? "Done changing your Top 8" : "Pick who's in your Top 8";
+      edit.addEventListener("click", () => {
+        topEditing = !topEditing;
+        topAdding = false;
+        render();
+      });
+      const all = el("button", "fspace__all", "View all");
       all.type = "button";
       all.title = "All your connections";
       all.addEventListener("click", () => show("people"));
+      head.append(edit, all);
     }
-    const top = el("div", "fspace");
-    for (const c of first) {
+    const top = el("div", `fspace${topEditing ? " fspace--editing" : ""}`);
+    for (const c of shown) {
       const b = el("button", `fspace__friend ${relClass(c.login)}`);
       b.type = "button";
       const state = stateOf(c.login);
-      b.title = `${c.login} (${state === "on" ? "online" : state === "idle" ? "idle" : "offline"})`;
+      b.title = topEditing ? `Take ${c.login} out of your Top 8 (you stay connected)` : `${c.login} (${state === "on" ? "online" : state === "idle" ? "idle" : "offline"})`;
       const face = ringedPic(c.login); // green ring online, amber idle, dimmed when off
       const badges = roleBadges(c.login);
       if (badges) face.append(badges);
       const direct = directWith(c.login);
       const n = direct ? unread(direct.owner) : 0;
-      if (n) face.append(el("span", "msgs__facecount", String(n)));
+      if (n && !topEditing) face.append(el("span", "msgs__facecount", String(n)));
+      if (topEditing) face.append(el("span", "fspace__x", "×"));
       const name = nameBit(c.login, "fspace__name");
       if (colorOf(c.login)) name.style.color = colorOf(c.login);
       b.append(face, name);
-      b.addEventListener("click", () => (direct ? openChat(direct.owner) : show("person", c.login)));
+      b.addEventListener("click", () => {
+        if (topEditing) return setTopEight(shown.map((x) => x.login).filter((l) => l !== c.login), c.login);
+        direct ? openChat(direct.owner) : show("person", c.login);
+      });
       top.append(b);
     }
-    // The spots still free: faint round shadows, so it reads as eight.
-    for (let i = first.length; i < TOP_EIGHT; i++) {
-      const free = el("span", "fspace__spot");
-      free.append(el("span", "fspace__free"));
+    // The spots still free: faint round shadows, so it reads as eight. While editing, each
+    // is a + that lists your connections not in your Top 8 (or offers to invite someone).
+    for (let i = shown.length; i < TOP_EIGHT; i++) {
+      const free = el(topEditing ? "button" : "span", "fspace__spot");
+      const ring = el("span", "fspace__free");
+      if (topEditing) {
+        free.type = "button";
+        free.title = "Put someone in your Top 8";
+        ring.textContent = "+";
+        free.addEventListener("click", () => {
+          topAdding = !topAdding;
+          render();
+        });
+      }
+      free.append(ring);
       top.append(free);
     }
-    wrap.append(card, msgsHead(`Top 8 · ${first.length} of ${TOP_EIGHT}`, all), top);
+    const parts = [card, msgsHead("Top 8", head), top];
+    if (topEditing && topAdding) {
+      const pick = el("div", "fspace__pick");
+      const others = pool.filter((c) => !shown.some((x) => x.login === c.login));
+      for (const c of others) {
+        const b = el("button", "fspace__pickrow");
+        b.type = "button";
+        b.title = `Put ${c.login} in your Top 8`;
+        const name = el("span", "fspace__pickname", c.login);
+        if (colorOf(c.login)) name.style.color = colorOf(c.login);
+        b.append(ringedPic(c.login), name);
+        b.addEventListener("click", () => {
+          topAdding = false;
+          setTopEight([...shown.map((x) => x.login), c.login]);
+        });
+        pick.append(b);
+      }
+      if (!others.length) pick.append(el("p", "fspace__picknone", "Everyone you're connected with is already in your Top 8."));
+      const invite = el("button", "fspace__all fspace__invite", "Connect with someone new »");
+      invite.type = "button";
+      invite.addEventListener("click", () => show("people"));
+      pick.append(invite);
+      parts.push(pick);
+    }
+    wrap.append(...parts);
     return wrap;
+  }
+  // Who's in your Top 8, in order: the ones you put there (still connected), then any other
+  // connections you haven't taken out, up to eight. Kept on this computer, per account.
+  let topEditing = false;
+  let topAdding = false;
+  const topKey = () => `topEight:${me.login}`;
+  function topEightOf(pool) {
+    const saved = get(topKey(), null) || { picks: [], out: [] };
+    const byLogin = new Map(pool.map((c) => [c.login, c]));
+    const picks = saved.picks.filter((l) => byLogin.has(l));
+    const rest = pool.filter((c) => !picks.includes(c.login) && !saved.out.includes(c.login)).map((c) => c.login);
+    return [...picks, ...rest].slice(0, TOP_EIGHT).map((l) => byLogin.get(l));
+  }
+  function setTopEight(picks, takenOut = null) {
+    const saved = get(topKey(), null) || { picks: [], out: [] };
+    let out = saved.out.filter((l) => !picks.includes(l));
+    if (takenOut && !out.includes(takenOut)) out.push(takenOut);
+    put(topKey(), { picks: picks.slice(0, TOP_EIGHT), out });
+    render();
   }
 
   function messagesPanel() {
