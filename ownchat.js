@@ -88,6 +88,7 @@
     pinline: '<path d="M12 17v5"/> <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
     megaphone: '<path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/> <path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/> <path d="M8 6v8"/>',
     sparkles: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/> <path d="M20 3v4"/> <path d="M22 5h-4"/>',
+    quick: '<path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/> <path d="M7 11h10"/> <path d="M7 15h6"/> <path d="M7 7h8"/>',
     pin: '<path d="M12 17v5"/> <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
   };
   // Solid glyphs for the event banners' round badges, in the same style as the dock's sword,
@@ -212,7 +213,12 @@
     input.setAttribute("data-1p-ignore", "");
     input.setAttribute("data-lpignore", "true");
     const pickBtn = button("oc-emotebtn", "☺", () => togglePicker(), "Emotes");
-    composer.append(input, pickBtn);
+    // Quick messages: things the streamer types a lot (commands, the Discord link, !so @),
+    // saved here and put in the box with one click (see "Quick messages" below).
+    const qmBtn = iconButton("oc-emotebtn oc-qmbtn", "quick", () => toggleQuick(), "Quick messages: commands, links and things you type a lot");
+    const qmPanel = el("div", "oc-qm");
+    qmPanel.hidden = true;
+    composer.append(input, qmBtn, pickBtn);
     // Twitch's cards at the top of chat: the pinned message, gift bombs, hype trains, polls
     // and predictions (see "Top of chat" below).
     const topEl = el("div", "oc-top");
@@ -225,7 +231,7 @@
     stuckEl.hidden = true;
     // The ad break timer (dock.js draws it, like Twitch's): above everything else in the chat.
     const adSlot = el("div", "oc-adslot");
-    root.append(bar, adSlot, heldEl, topEl, stuckEl, listWrap, noteEl, warnEl, replyEl, picker, composer);
+    root.append(bar, adSlot, heldEl, topEl, stuckEl, listWrap, noteEl, warnEl, replyEl, picker, qmPanel, composer);
     host.box.append(root);
 
     function setStatus(text, kind) {
@@ -3127,6 +3133,7 @@
     let pickerBuilt = false;
     function togglePicker() {
       picker.hidden = !picker.hidden;
+      if (!picker.hidden) qmPanel.hidden = true;
       if (picker.hidden || pickerBuilt) return;
       pickerBuilt = true;
       const search = el("input", "oc-picker__search");
@@ -3148,6 +3155,86 @@
       search.addEventListener("input", draw);
       picker.append(search, grid);
       draw();
+    }
+
+    // ----- Quick messages --------------------------------------------------------------
+    // The speech bubble beside the emote button opens a list of things the streamer types a
+    // lot: chat commands (!discord, !so @), links, a welcome. Clicking one puts it in the
+    // message box where the cursor is; nothing sends until Enter, so "!so @" waits for a name.
+    // Add new ones in the box at the bottom, × takes one away. Kept on this computer
+    // ("quickMessages" in this page's storage), like the extension's quick phrases.
+    const QM_KEY = "quickMessages";
+    const QM_MAX = 40;
+    let qmList = null;
+    function qmLoad() {
+      if (qmList) return qmList;
+      try { qmList = JSON.parse(localStorage.getItem(QM_KEY)); } catch {}
+      if (!Array.isArray(qmList)) qmList = ["!discord", "!so @"]; // first time: two examples
+      qmList = qmList.filter((t) => typeof t === "string" && t.trim()).slice(0, QM_MAX);
+      return qmList;
+    }
+    function qmSave() {
+      try { localStorage.setItem(QM_KEY, JSON.stringify(qmList)); } catch {}
+    }
+    function qmInsert(text) {
+      const v = input.value;
+      const at = input.selectionStart ?? v.length;
+      const end = input.selectionEnd ?? at;
+      const before = v.slice(0, at);
+      const after = v.slice(end);
+      const lead = before && !/\s$/.test(before) ? " " : "";
+      const trail = after && !/^\s/.test(after) ? " " : "";
+      input.value = `${before}${lead}${text}${trail}${after}`.slice(0, input.maxLength);
+      const caret = Math.min(input.value.length, before.length + lead.length + text.length);
+      qmPanel.hidden = true;
+      input.focus();
+      input.setSelectionRange(caret, caret);
+    }
+    function drawQuick() {
+      const items = qmLoad();
+      const listEl = el("div", "oc-qm__list");
+      items.forEach((text, i) => {
+        const row = el("div", "oc-qm__row");
+        const use = button("oc-qm__use", text, () => qmInsert(text), "Put this in the message box");
+        const del = button("oc-qm__del", "×", () => {
+          qmList.splice(i, 1);
+          qmSave();
+          drawQuick();
+        }, "Remove this quick message");
+        row.append(use, del);
+        listEl.append(row);
+      });
+      if (!items.length) listEl.append(el("div", "oc-picker__none", "No quick messages yet. Add one below."));
+      const add = el("form", "oc-qm__add");
+      const box = el("input", "oc-qm__input");
+      Object.assign(box, { type: "text", maxLength: 500, placeholder: "+ Add a command, link or message", autocomplete: "off", spellcheck: true, name: "sbs-quick-add" });
+      box.setAttribute("data-1p-ignore", "");
+      box.setAttribute("data-lpignore", "true");
+      add.append(box);
+      add.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const t = box.value.replace(/\s+$/, "").replace(/^\s+/, "");
+        if (!t) return;
+        if (!qmList.includes(t)) qmList.push(t);
+        qmList = qmList.slice(-QM_MAX);
+        qmSave();
+        drawQuick();
+        qmPanel.querySelector(".oc-qm__input")?.focus();
+      });
+      box.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          qmPanel.hidden = true;
+          input.focus();
+        }
+      });
+      const hint = el("div", "oc-qm__hint", "Click one to put it in the box. It sends when you press Enter.");
+      qmPanel.replaceChildren(hint, listEl, add);
+    }
+    function toggleQuick() {
+      qmPanel.hidden = !qmPanel.hidden;
+      if (qmPanel.hidden) return;
+      picker.hidden = true;
+      drawQuick();
     }
 
     // ----- Chat from before this page opened -------------------------------------------
