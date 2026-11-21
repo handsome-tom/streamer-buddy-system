@@ -364,6 +364,50 @@ export const tests = {
     noErrors(panel);
   },
 
+  async "DM chime: the extension's quiet listener hears DMs (with your status) without making you look online; the side panel reports unread DMs and has the switch"(h) {
+    const mod1 = h.person("mod1");
+    const mod2 = h.person("mod2");
+    await h.friends(mod1, mod2);
+    mod1.send({ t: "status", status: "idle" });
+    await h.until(() => mod2.state?.connections?.find((c) => c.login === "mod1")?.idle, "mod2 to see mod1 idle");
+    mod1.close();
+    await h.until(() => mod2.state?.connections?.find((c) => c.login === "mod1")?.online === false, "mod1 to go offline");
+    const ear = h.listener("mod1");
+    await h.until(() => ear.got.find((m) => m.t === "listening"), "the listener to be let in");
+    h.check(ear.got[0].status === "idle", "the listener should hear your status");
+    await h.wait(300);
+    h.check(mod2.state.connections.find((c) => c.login === "mod1").online === false, "a listener mustn't make you show as online");
+    mod2.send({ t: "say", owner: "@mod1+mod2", text: "you there?" });
+    const dm = await h.until(() => ear.got.find((m) => m.t === "dm"), "the listener to hear the DM");
+    h.check(dm.from === "mod2" && dm.owner === "@mod1+mod2" && dm.status === "idle" && dm.at > 0, "dm carries who, which room, when, and your status");
+    h.check(!dm.text, "the listener doesn't need the words");
+    mod2.send({ t: "say", owner: "mod2", text: "not a DM" });
+    await h.wait(200);
+    h.check(ear.got.filter((m) => m.t === "dm").length === 1, "only direct messages reach the listener");
+    ear.send({ t: "status", status: "online" });
+    await h.wait(200);
+    h.check(mod2.state.connections.find((c) => c.login === "mod1").online === false, "a listener can't change anything");
+
+    // The side panel tells the extension how many DMs are unread, and shows the switch once it answers.
+    const told = [];
+    const hear = (e) => String(e.data?.t).startsWith("ext-dm") && told.push(e.data);
+    addEventListener("message", hear);
+    try {
+      const panel = await h.panel("mod1", "ext");
+      await h.until(() => told.find((m) => m.t === "ext-dmchime-get"), "the panel to ask about the chime");
+      await h.until(() => told.find((m) => m.t === "ext-dms" && m.unread === 1), "the panel to report one unread DM");
+      panel.win.postMessage({ t: "ext-dmchime", on: true }, "*");
+      (await h.until(() => panel.$("#msgBtn:not([hidden])"), "the Messages button")).click();
+      const sw = await h.until(() => panel.$(".myspace__chime"), "the DM chime switch on the profile");
+      h.check(sw.getAttribute("aria-pressed") === "true" && sw.textContent === "On", "the chime starts on");
+      sw.click();
+      await h.until(() => told.find((m) => m.t === "ext-dmchime-set" && m.on === false), "silencing to reach the extension");
+      noErrors(panel);
+    } finally {
+      removeEventListener("message", hear);
+    }
+  },
+
   async "groups live in Messages, not Connections: make one, open its page, start its group chat"(h) {
     const mod1 = h.person("mod1");
     const mod2 = h.person("mod2");

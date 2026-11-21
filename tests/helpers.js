@@ -3,7 +3,7 @@
 // in this page (demo/hub.js), never the real one.
 
 // The same address play.html uses (with its ?v=), so a browser never runs an old copy.
-import { Socket, resetRelay, pretendTwitch, relayPost } from "../demo/hub.js?v=136";
+import { Socket, resetRelay, pretendTwitch, relayPost } from "../demo/hub.js?v=153";
 export { relayPost };
 
 export { pretendTwitch };
@@ -87,6 +87,17 @@ export function person(login, { invite } = {}) {
   p.ready = until(() => p.state, `${login} to sign in`);
   p.ready.catch(() => {}); // someone turned away never signs in: the test says if that matters
   return p;
+}
+
+// The extension's quiet DM listener (background.js): auth with listen: true.
+export function listener(login) {
+  const ws = new Socket("wss://sandbox.invalid/ws");
+  const got = [];
+  ws.onopen = () => ws.send(JSON.stringify({ t: "auth", token: `dev:${login}`, listen: true }));
+  ws.onmessage = (e) => e.data !== "pong" && got.push(JSON.parse(e.data));
+  const l = { login, got, close: () => ws.close(), send: (m) => ws.send(JSON.stringify(m)) };
+  opened.push(l);
+  return l;
 }
 
 // Two people who've added each other.

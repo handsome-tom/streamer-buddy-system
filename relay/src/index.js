@@ -166,6 +166,11 @@
 //   error { why }           why "invite" has detail: what was wrong with the link
 // A plain "ping" gets "pong" without waking the hub (keeps idle pages cheap).
 //
+// DM listener: the extension's background (no page open) signs in with auth { token, listen: true }.
+// That connection doesn't count as being online (nobody sees you come on), gets nothing but
+// listening { status } and, for each direct message someone sends you, dm { owner, from, at, status }
+// (status: yours right now, so it can stay quiet while you're idle or invisible).
+//
 // Streamer View: a streamer's OBS dock sends a summary of what it shows whenever that
 // changes: { glow, waiting, answers, notes, chat, dnd }. It's kept as "v:<login>" while that
 // dock is connected and goes to their mutual connections (state's "views", and "view"
@@ -230,7 +235,7 @@ const MAX_NOTE_LEN = 300;
 // What this relay can do that older ones couldn't, so the extension only offers what works.
 // Someone's roles as pages get them (without when they were set), or null until they've said.
 const rolesOut = (u) => (u?.roles ? { streamer: !!u.roles.streamer, mod: !!u.roles.mod, main: u.roles.main || "" } : null);
-const RELAY_FEATURES = ["secretNotes", "noteReplies", "roles"];
+const RELAY_FEATURES = ["secretNotes", "noteReplies", "roles", "dmListen"];
 const MAX_NOTES_PER_MINUTE = 20;
 const MAX_NOTES_SENT = 1000; // to one VOD
 
@@ -271,8 +276,9 @@ export class Hub {
       return;
     }
     const who = ws.deserializeAttachment() || {};
-    if (m.t === "auth") return this.auth(ws, m.token, m.invite);
+    if (m.t === "auth") return this.auth(ws, m.token, m.invite, m.listen === true);
     if (!who.login) return this.send(ws, { t: "error", why: "Not signed in" });
+    if (who.listen) return; // a DM listener only listens
     try {
       if (m.t === "connect") await this.setConnection(who.login, m.login, true);
       else if (m.t === "disconnect") await this.setConnection(who.login, m.login, false);
@@ -325,7 +331,7 @@ export class Hub {
 
   // ===== Who's who ===========================================================================
 
-  async auth(ws, token, invite) {
+  async auth(ws, token, invite, listen = false) {
     let j = null;
     // Local testing only (`wrangler dev --var DEV_AUTH:1`): "dev:<login>" signs in as anyone.
     // Never set DEV_AUTH on the deployed relay.
@@ -345,6 +351,11 @@ export class Hub {
       await this.askToJoin(j.login, await this.inviter(invite));
       this.send(ws, { t: "error", why: "notallowed", owner, asked: true });
       return ws.close(4003, "not on the allow list");
+    }
+    if (listen) {
+      ws.serializeAttachment({ login: j.login, id: j.user_id, listen: true });
+      const u = await this.ctx.storage.get(`u:${j.login}`);
+      return this.send(ws, { t: "listening", status: u?.status || "modding" });
     }
     const was = this.isOnline(j.login);
     ws.serializeAttachment({ login: j.login, id: j.user_id });
@@ -475,6 +486,7 @@ export class Hub {
 
   async left(ws) {
     const who = ws.deserializeAttachment() || {};
+    if (who.listen) return; // a DM listener was never "online"
     if (who.login && who.viewer && !this.sockets(who.login, ws).some((w) => w.deserializeAttachment()?.viewer)) {
       await this.ctx.storage.delete(`v:${who.login}`);
       if (this.isOnline(who.login, ws)) await this.tellView(who.login, null);
@@ -490,8 +502,17 @@ export class Hub {
     }
   }
 
+  // Someone's pages (DM listeners left out: they aren't pages and don't make you online).
   sockets(login, except) {
-    return this.ctx.getWebSockets().filter((w) => w !== except && w.readyState === 1 && w.deserializeAttachment()?.login === login);
+    return this.ctx.getWebSockets().filter((w) => {
+      if (w === except || w.readyState !== 1) return false;
+      const a = w.deserializeAttachment();
+      return a?.login === login && !a.listen;
+    });
+  }
+
+  listeners(login) {
+    return this.ctx.getWebSockets().filter((w) => w.readyState === 1 && w.deserializeAttachment()?.listen && w.deserializeAttachment().login === login);
   }
 
   isOnline(login, except) {
@@ -989,6 +1010,12 @@ export class Hub {
     const msg = { id: `${at.toString(36)}${crypto.randomUUID().slice(0, 4)}`, owner, from: who.login, text, at };
     await this.ctx.storage.put(`m:${owner}:${String(at).padStart(15, "0")}:${msg.id}`, msg);
     for (const l of members) this.sendTo(l, { t: "msg", m: msg });
+    // A direct message: the other person's extension hears, for its chime and toolbar mark.
+    if (owner.startsWith("@")) {
+      for (const l of members.filter((x) => x !== who.login)) {
+        for (const w of this.listeners(l)) this.send(w, { t: "dm", owner, from: who.login, at, status: users[l]?.status || "modding" });
+      }
+    }
     // A week is plenty: drop older messages in this room.
     const old = [...(await this.ctx.storage.list({ prefix: `m:${owner}:`, limit: 50 }))].filter(([, v]) => at - v.at > WEEK_MS).map(([k]) => k);
     if (old.length) await this.ctx.storage.delete(old);

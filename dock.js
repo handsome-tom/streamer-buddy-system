@@ -2344,6 +2344,7 @@
     askBtn.classList.toggle("pill--on", DECK ? view === "deck" : view === "ask" || (view === "cards" && !short() && get("askOpen", true)));
     peopleBtn.classList.toggle("pill--badge", requests.length + asking.length > 0);
     const unreadChat = rooms.reduce((sum, r) => sum + unread(r.owner), 0);
+    tellDms();
     peopleBtn.title = [requests.length ? `${requests.length} waiting for you to add them back` : "", asking.length ? `${asking.length} asking to join` : "", unreadChat ? `${unreadChat} unread in chat` : ""].filter(Boolean).join(", ");
     peopleBtn.title = peopleBtn.title ? `Connections and chat (${peopleBtn.title})` : "Connections and chat";
     peopleBtn.classList.toggle("pill--on", view === "people" || view === "chat" || (view === "group" && !EMBED));
@@ -5333,7 +5334,29 @@
   let extChanged = false;
   let extNote = "";
   const toExt = (m) => parent.postMessage(m, "*");
+  // The DM chime (the extension's background plays it, panel open or not, and puts a little
+  // message mark on its toolbar icon). This tells it how many DMs are unread and up to when
+  // you've read, so the mark goes once you've read them. dmChime: the extension's switch
+  // (null until it answers; older extensions don't, and then there's no switch).
+  let dmChime = null;
+  let dmsTold = "";
+  function tellDms() {
+    if (!EMBED || !me || !rooms.length) return;
+    const directs = rooms.filter((r) => r.direct);
+    const n = directs.reduce((sum, r) => sum + unread(r.owner), 0);
+    const upTo = n ? 0 : Math.max(0, ...directs.map((r) => chat[r.owner]?.at(-1)?.at || 0));
+    const said = `${n}:${upTo}`;
+    if (said === dmsTold) return;
+    dmsTold = said;
+    toExt({ t: "ext-dms", unread: n, upTo });
+  }
+  if (EMBED) toExt({ t: "ext-dmchime-get" });
   function gotExt(m) {
+    if (m?.t === "ext-dmchime") {
+      dmChime = m.on !== false;
+      if (view === "messages") render();
+      return;
+    }
     if (m?.t === "ext-chatmods") {
       if (!m.mods || typeof m.mods !== "object") return;
       chatMods = { channel: String(m.channel || "").toLowerCase(), mods: m.mods, heard: true };
@@ -6072,6 +6095,21 @@
       sw.addEventListener("click", () => setRoles({ ...r, main: r.main === "streamer" ? "mod" : "streamer" }));
       known.append(el("span", "myspace__label", "Known for"), sw);
       parts.push(known);
+    }
+    // The DM chime switch (side panel only, once the extension says it can).
+    if (EMBED && dmChime !== null) {
+      const chimeLine = el("div", "myspace__fact myspace__fact--roles");
+      const sw = el("button", "myspace__role myspace__chime", dmChime ? "On" : "Off");
+      sw.type = "button";
+      sw.setAttribute("aria-pressed", String(dmChime));
+      sw.title = dmChime ? "A chime when someone DMs you (not while you're idle or invisible). Tap to silence it." : "Silenced. Tap to hear a chime when someone DMs you.";
+      sw.addEventListener("click", () => {
+        dmChime = !dmChime;
+        toExt({ t: "ext-dmchime-set", on: dmChime });
+        render();
+      });
+      chimeLine.append(el("span", "myspace__label", "DM chime"), sw);
+      parts.push(chimeLine);
     }
     return parts;
   }

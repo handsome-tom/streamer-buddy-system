@@ -7314,6 +7314,7 @@ html :is(body, body.has-space.has-space) .oc-pop-out { animation: pop-out 0.45s 
 .roles__main[aria-pressed="true"], .myspace__role[aria-pressed="true"], .myspace__known { color: #fff; background: rgba(63, 125, 216, 0.4); }
 .myspace__role[data-role="streamer"][aria-pressed="true"] { background: rgba(145, 70, 255, 0.45); }
 .myspace__role[data-role="mod"][aria-pressed="true"] { background: rgba(0, 173, 3, 0.4); }
+.myspace__chime[aria-pressed="true"] { background: rgba(145, 70, 255, 0.45); }
 .myspace__roles { display: inline-flex; gap: 5px; }
 .myspace__role { height: 22px; padding: 0 10px; font-size: 11.5px; }
 .myspace__known { height: 22px; padding: 0 10px; font-size: 11.5px; }
