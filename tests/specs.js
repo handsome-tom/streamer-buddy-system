@@ -499,14 +499,24 @@ export const tests = {
     for (let i = 0; i < 40 && (r = h.pretendTwitch.redeem()).title !== "Hydrate!"; i++) await h.wait(30);
     h.check(r.title === "Hydrate!", "the pretend Twitch to redeem Hydrate!");
     tools.click();
+    // Each tool opens on a page of its own from the front page's round icons.
+    const open = async (k) => {
+      mod.$(".tools__back")?.click();
+      (await h.until(() => mod.$(`.tools__tile[data-tool="${k}"]`), `the ${k} icon on Mod tools' front page`)).click();
+      await h.until(() => mod.$(`.tools__page[data-tool="${k}"]`), `the ${k} page`);
+    };
+    await h.until(() => mod.$$(".tools__nowrow").some((x) => /new redemption/.test(x.textContent)), "the new redemption under Happening now");
+    await open("points");
     const row = await h.until(() => mod.$$(".tools__red").find((x) => x.textContent.includes("Hydrate!") && x.querySelector(".tools__btn--refund")), "the redemption in Mod tools");
     row.querySelector(".tools__btn--refund").click();
     await h.until(() => /Refunded .*Hydrate!/.test(mod.$(".tools__said")?.textContent || ""), "the refund confirmed in the panel");
     await h.until(() => streamer.has("refunded"), "the refund noted in the streamer's chat");
     // Slow mode on.
+    await open("modes");
     mod.$$(".tools__mode").find((b) => b.textContent.includes("Slow")).click();
     await h.until(() => mod.$$(".tools__mode").find((b) => b.textContent.includes("Slow"))?.getAttribute("aria-pressed") === "true", "slow mode shown on");
     // A raid: nothing happens until the streamer presses Raid.
+    await open("raid");
     const field = mod.$(".tools__raid .tools__field");
     field.value = "lumpthegreen";
     field.dispatchEvent(new Event("input", { bubbles: true }));
@@ -524,8 +534,15 @@ export const tests = {
     (await h.until(() => mod.$("#toolsBtn:not([hidden])"), "the sword in the side panel's bar")).click();
     const type = (key, v) => { const i = mod.$(`[data-key="${key}"]`); i.value = v; i.dispatchEvent(new Event("input", { bubbles: true })); };
     const button = (re) => mod.$$(".tools button").find((b) => re.test(b.textContent.trim()));
+    const open = async (k) => {
+      mod.$(".tools__back")?.click();
+      (await h.until(() => mod.$(`.tools__tile[data-tool="${k}"]`), `the ${k} icon on Mod tools' front page`)).click();
+      await h.until(() => mod.$(`.tools__page[data-tool="${k}"]`), `the ${k} page`);
+    };
+    await open("safety");
     await h.until(() => mod.$$(".tools__chip").some((c) => c.textContent.includes("spoilers")), "the channel's blocked words");
-    // A poll.
+    // A poll (then its front-page icon says it's running).
+    await open("poll");
     type("pollQ", "Which boss next?");
     type("pollC1", "Margit");
     type("pollC2", "Godrick");
@@ -533,14 +550,19 @@ export const tests = {
     button(/^Start poll$/).closest("form").requestSubmit();
     await h.until(() => mod.$$(".tools__bar").some((b) => b.textContent.includes("Godrick")), "the poll running in Mod tools");
     await h.until(() => streamer.has("started a poll"), "the poll noted in the streamer's chat");
+    mod.$(".tools__back").click();
+    await h.until(() => mod.$('.tools__tile[data-tool="poll"].tools__tile--live'), "the poll's icon marked running");
     // A blocked word.
+    await open("safety");
     type("termAdd", "camping");
     button(/^Block$/).closest("form").requestSubmit();
     await h.until(() => mod.$$(".tools__chip").some((c) => c.textContent.includes("camping")), "the new blocked word");
     // The unban request waiting.
+    await open("unbans");
     (await h.until(() => button(/^Unban$/), "the unban request")).click();
     await h.until(() => /Approved/.test(mod.$(".tools__said")?.textContent || ""), "the unban confirmed");
     // The mod log names the mod, not the streamer whose sign-in did it.
+    await open("log");
     await h.until(() => mod.$$(".tools__logrow").some((l) => /mod1 blocked “camping”/.test(l.textContent)), "the mod log crediting the mod");
     noErrors(streamer, mod);
   },

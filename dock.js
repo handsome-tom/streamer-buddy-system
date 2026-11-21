@@ -4099,190 +4099,417 @@
     });
   }
 
-  function toolButton(label, cls, run, title = "") {
-    const b = el("button", `tools__btn${cls ? ` ${cls}` : ""}`, label);
-    b.type = "button";
-    if (title) b.title = title;
+  // ----- Drawing Mod tools -----------------------------------------------------------------
+  // The front page: whose channel it is, whether it's live and whether their dock is open;
+  // four one-tap actions (clip, marker, ad, clear chat); what's going on right now (a poll
+  // running, unban requests waiting, new redemptions); then every tool as a round icon in its
+  // own color, in three groups. A tool opens on a page of its own, with a way back (the
+  // arrow, Esc, or the sword again). No boxes: round icons, soft glows, spacing.
+  const TI = { // line icons, 20×20, drawn like the answer buttons
+    info: `<rect x="2.5" y="5" width="15" height="10.5" rx="2.5" ${LINE} stroke-width="1.8"/><path d="M7 2l3 3 3-3" ${LINE} stroke-width="1.8"/>`,
+    poll: `<path d="M4 5h8M4 10h12M4 15h5" ${LINE} stroke-width="2.4"/>`,
+    pred: `<circle cx="10" cy="8.5" r="5.5" ${LINE} stroke-width="1.8"/><path d="M5 17.5h10M7.4 14.2l-.9 3.3M12.6 14.2l.9 3.3" ${LINE} stroke-width="1.8"/><path d="M7.6 7.4a2.6 2.6 0 0 1 2-1.8" ${LINE} stroke-width="1.5"/>`,
+    raid: `<path d="M17.5 2.5L2.5 8.6l5.8 2.6 2.6 5.8z" ${LINE} stroke-width="1.8"/><path d="M8.3 11.2l9.2-8.7" ${LINE} stroke-width="1.6"/>`,
+    modes: `<path d="M3 6h7.5M14.5 6H17M3 14h2.5M9.5 14H17" ${LINE} stroke-width="1.8"/><circle cx="12.5" cy="6" r="2" ${LINE} stroke-width="1.8"/><circle cx="7.5" cy="14" r="2" ${LINE} stroke-width="1.8"/>`,
+    safety: `<path d="M10 2.5l6 2.3v4.7c0 3.9-2.6 6.8-6 8-3.4-1.2-6-4.1-6-8V4.8z" ${LINE} stroke-width="1.8"/><path d="M7.3 10.2l1.9 1.9 3.7-3.9" ${LINE} stroke-width="1.8"/>`,
+    log: `<path d="M8 5.5h9M8 10h9M8 14.5h6" ${LINE} stroke-width="1.8"/><circle cx="4" cy="5.5" r="1.2" fill="currentColor"/><circle cx="4" cy="10" r="1.2" fill="currentColor"/><circle cx="4" cy="14.5" r="1.2" fill="currentColor"/>`,
+    points: `<circle cx="10" cy="10" r="7.2" ${LINE} stroke-width="1.8"/><path d="M10 5.8l1.2 3 3 1.2-3 1.2-1.2 3-1.2-3-3-1.2 3-1.2z" fill="currentColor"/>`,
+    vips: `<path d="M5.5 3h9l3.5 4.5L10 17 2 7.5z" ${LINE} stroke-width="1.7"/><path d="M2.4 7.5h15.2M8 3.2L7 7.5l3 9 3-9-1-4.3" ${LINE} stroke-width="1.3"/>`,
+    unbans: `<rect x="3.5" y="9" width="13" height="8.5" rx="2.2" ${LINE} stroke-width="1.8"/><path d="M6.8 9V6.4a3.2 3.2 0 0 1 6.1-1.4" ${LINE} stroke-width="1.8"/><circle cx="10" cy="13.2" r="1.2" fill="currentColor"/>`,
+    clip: `<rect x="2.5" y="8" width="15" height="9" rx="2" ${LINE} stroke-width="1.8"/><path d="M2.8 8l13.6-3.6M6.6 7l1.6-3.3M11 5.8l1.6-3.3" ${LINE} stroke-width="1.6"/>`,
+    marker: `<path d="M5 17.5V3h10.5l-2.6 3.9 2.6 3.9H5" ${LINE} stroke-width="1.8"/>`,
+    ad: `<path d="M3 8v4h2.8l6.2 4.2V3.8L5.8 8z" ${LINE} stroke-width="1.8"/><path d="M14.8 7.2a3.6 3.6 0 0 1 0 5.6M16.8 5a6.6 6.6 0 0 1 0 10" ${LINE} stroke-width="1.6"/>`,
+    clear: `<path d="M4.5 3.5h11A1.5 1.5 0 0 1 17 5v7a1.5 1.5 0 0 1-1.5 1.5H9.5L5.5 17v-3.5h-1A1.5 1.5 0 0 1 3 12V5a1.5 1.5 0 0 1 1.5-1.5z" ${LINE} stroke-width="1.7"/><path d="M8 6.6l4 4M12 6.6l-4 4" ${LINE} stroke-width="1.7"/>`,
+    back: `<path d="M12.5 4l-6 6 6 6" ${LINE} stroke-width="2.2"/>`,
+    next: `<path d="M7.5 4l6 6-6 6" ${LINE} stroke-width="2.2"/>`,
+    out: `<path d="M8.5 4H5.5A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16h9a1.5 1.5 0 0 0 1.5-1.5v-3M11.5 4H16v4.5M16 4l-7 7" ${LINE} stroke-width="1.7"/>`,
+    lock: `<rect x="4.5" y="9" width="11" height="8" rx="2" ${LINE} stroke-width="1.8"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" ${LINE} stroke-width="1.8"/>`,
+    warn: `<path d="M10 5.5v5.5" ${LINE} stroke-width="2.4"/><circle cx="10" cy="14.6" r="1.4" fill="currentColor"/>`,
+    plus: `<path d="M10 4.5v11M4.5 10h11" ${LINE} stroke-width="2.2"/>`,
+  };
+  // Every tool: its page's name, color, group and one line on what it's for; `can` is the
+  // permission (from the streamer's dock) it needs.
+  const TOOL_DEFS = [
+    { k: "info", name: "Stream info", c: "#ff6b81", grp: "Stream", can: "info", say: () => "Title, category, clips, markers and ad breaks.", make: streamTools },
+    { k: "poll", name: "Poll", c: "#5b9bff", grp: "Stream", can: "polls", say: () => "Ask chat a question. Votes come in live.", make: pollTools },
+    { k: "pred", name: "Prediction", c: "#d98cff", grp: "Stream", can: "preds", say: () => "Chat bets channel points on what happens next.", make: predTools },
+    { k: "raid", name: "Raid", c: "#ff8a3d", grp: "Stream", can: "raid", say: (o) => `Send everyone watching to another channel. ${o} OKs it first.`, make: raidTools },
+    { k: "modes", name: "Chat modes", c: "#3fd0e0", grp: "Chat", can: "modes", say: () => "Slow mode, followers only, emote only and more.", make: modeTools },
+    { k: "safety", name: "Chat safety", c: "#00c27a", grp: "Chat", can: "automod", say: () => "AutoMod, blocked words, and clearing chat.", make: safetyTools },
+    { k: "log", name: "Mod log", c: "#b9b9cc", grp: "Chat", can: "log", say: () => "Bans, timeouts, deletes and mode changes, from every mod.", make: logTools },
+    { k: "points", name: "Channel points", c: "#ffc23d", grp: "Viewers", can: "points", say: () => "Recent redemptions: refund them or mark them done.", make: pointsTools },
+    { k: "vips", name: "VIPs", c: "#ff7ab8", grp: "Viewers", can: "vips", say: () => "Give someone VIP, or take it away.", make: vipTools },
+    { k: "unbans", name: "Unban requests", c: "#a6e35f", grp: "Viewers", can: "unbans", say: () => "People asking to be let back into chat.", make: unbanTools },
+  ];
+  const TOOL_GROUPS = ["Stream", "Chat", "Viewers"];
+  const toolDef = (k) => TOOL_DEFS.find((t) => t.k === k);
+  let toolsPage = ""; // "" the front page, else the open tool's k
+  let toolsPageAt = 0; // when it opened (it slides in once, not on every redraw)
+  function openTool(k) {
+    toolsPage = k;
+    toolsPageAt = Date.now();
+    toolSure = null;
+    render();
+    main.scrollTop = 0;
+    if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+  }
+  // Esc on a tool's page goes back to the front page.
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && view === "tools" && toolsPage && !e.defaultPrevented) openTool("");
+  });
+  // Time left on a poll or prediction counts down on its own, without redrawing the panel.
+  setInterval(() => {
+    if (view !== "tools") return;
+    for (const t of main.querySelectorAll(".tools [data-ends]")) t.textContent = leftOf(Number(t.dataset.ends));
+  }, 1000);
+
+  // A button: its words, and maybe an icon before them. Busy, it shows a little spinner and
+  // can't be pressed again until the dock answers.
+  function tbtn(label, cls, run, o = {}) {
+    const b = el("button", `tools__btn${cls ? ` ${cls}` : ""}`);
+    b.type = o.submit ? "submit" : "button";
+    if (o.icon) {
+      const i = el("span", "tools__btnico");
+      i.innerHTML = svg(TI[o.icon], o.size || 16);
+      b.append(i);
+    }
+    b.append(el("span", "tools__btnlabel", label));
+    if (o.busy) {
+      b.classList.add("tools__btn--busy");
+      b.setAttribute("aria-busy", "true");
+    }
+    if (o.title) b.title = o.title;
+    if (o.off || o.busy) b.disabled = true;
     if (run) b.addEventListener("click", run);
     return b;
   }
-  function toolsPanel() {
-    const owner = modOwner();
-    const panel = el("div", "panel tools");
-    const head = el("div", "tools__head");
-    const icon = el("span", "tools__icon");
-    icon.innerHTML = TOOLS_SWORD;
-    head.append(icon, el("span", "tools__title", "Mod tools"));
-    if (owner) head.append(el("span", "tools__for", owner));
-    panel.append(head);
-    if (!owner || !(modLists?.modFor || []).includes(owner)) {
-      panel.append(el("p", "panel__sub", owner ? `You don't mod for ${owner}, so there are no mod tools for their channel.` : "Open a stream you mod for."));
-      return panel;
-    }
-    if (!conn(owner)?.mutual) {
-      panel.append(el("p", "panel__sub", `Mod tools work once you and ${owner} have added each other.`));
-      return panel;
-    }
-    if (!(owner in toolsOf)) askTools(owner);
-    const s = toolsOf[owner];
-    if (!s) panel.append(el("p", "tools__off", `${owner}'s chat dock isn't open, so these can't run right now. They work while it's open in OBS.`));
-    if (toolSaid && toolSaid.owner === owner && Date.now() - toolSaid.at < 15000) panel.append(el("p", `tools__said${toolSaid.ok ? "" : " tools__said--no"}`, toolSaid.text));
-    // Four groups, each a heading over its folding sections.
-    const GROUPS = [
-      ["On stream", [streamTools, pollTools, predTools, raidTools]],
-      ["Chat", [modeTools, safetyTools]],
-      ["People", [pointsTools, vipTools, unbanTools]],
-      ["History", [logTools]],
-    ];
-    for (const [name, makers] of GROUPS) {
-      const grp = el("div", "tools__grp");
-      grp.append(el("h2", "tools__grptitle", name));
-      for (const make of makers) {
-        const sec = make(owner, s);
-        foldable(sec, s);
-        grp.append(sec);
-      }
-      panel.append(grp);
-    }
-    return panel;
-  }
-  // Each Mod tools section folds up under its heading (tap to open or close), with a short
-  // note beside the heading saying what's going on inside. Which ones are open is remembered.
-  let toolsOpen = new Set();
-  try { toolsOpen = new Set(JSON.parse(localStorage.getItem("toolsOpen") || "[]")); } catch {}
-  function toolsBadge(name, s) {
-    if (!s) return "";
-    const m = s.modes || {};
-    switch (name) {
-      case "Stream": return s.live ? "live" : "offline";
-      case "Poll": return s.poll ? "running" : "";
-      case "Prediction": return s.pred ? (s.pred.status === "locked" ? "locked" : "running") : "";
-      case "Chat modes": { const on = [m.slow > 0, m.followers >= 0, m.emote, m.sub, m.unique].filter(Boolean).length; return on ? `${on} on` : ""; }
-      case "Chat safety": return s.automod != null ? (s.automod ? `AutoMod ${s.automod}` : "AutoMod off") : "";
-      case "Channel points": { const n = (s.reds || []).filter((r) => r.status === "unfulfilled").length; return n ? `${n} new` : ""; }
-      case "Raid out": return s.raid ? `raiding ${s.raid.to}` : "";
-      case "Unban requests": return s.unbans?.length ? `${s.unbans.length} waiting` : "";
-      case "Mod log": return s.log?.length ? String(s.log.length) : "";
-      default: return "";
-    }
-  }
-  function foldable(sec, s) {
-    const head = sec.querySelector(":scope > h3, :scope > .tools__h");
-    const h3 = head?.matches("h3") ? head : head?.querySelector("h3");
-    if (!h3) return;
-    const name = h3.textContent;
-    const open = toolsOpen.has(name);
-    const btn = el("button", "tools__fold");
-    btn.type = "button";
-    btn.setAttribute("aria-expanded", String(open));
-    const badge = toolsBadge(name, s);
-    btn.append(el("span", "tools__chev"), el("span", "tools__foldname", name));
-    if (badge) btn.append(el("span", `tools__badge${/waiting|new|running|raiding|locked|live/.test(badge) ? " tools__badge--hot" : ""}`, badge));
-    btn.addEventListener("click", () => {
-      if (toolsOpen.has(name)) toolsOpen.delete(name);
-      else toolsOpen.add(name);
-      try { localStorage.setItem("toolsOpen", JSON.stringify([...toolsOpen])); } catch {}
-      render();
-    });
-    h3.replaceWith(btn);
-    sec.classList.toggle("tools__sec--shut", !open);
-  }
+  const row = (cls, ...kids) => {
+    const r = el("div", `tools__row${cls ? ` ${cls}` : ""}`);
+    r.append(...kids.filter(Boolean));
+    return r;
+  };
+  // A part of a tool's page: a small heading, then what's in it.
+  const block = (label, ...kids) => {
+    const b = el("div", "tools__block");
+    if (label) b.append(el("h3", "tools__label", label));
+    b.append(...kids.filter(Boolean));
+    return b;
+  };
+  const disk = (def, size = "") => {
+    const d = el("span", `tools__disk${size ? ` tools__disk--${size}` : ""}`);
+    d.innerHTML = svg(TI[def.k], size === "sm" ? 16 : size === "lg" ? 24 : 22);
+    return d;
+  };
   // What's typed in Mod tools' boxes, kept while the panel redraws (data-key keeps the focus).
   const toolDrafts = {};
   let toolSure = null; // { key, at }: a button pressed once that wants a second press
-  function draftInput(key, placeholder, max) {
+  function draftInput(key, placeholder, max, start = "") {
     const i = el("input", "tools__field");
     i.placeholder = placeholder;
-    i.value = toolDrafts[key] || "";
+    i.value = toolDrafts[key] ?? start;
     i.dataset.key = key;
     i.autocomplete = "off";
+    i.spellcheck = false;
     if (max) i.maxLength = max;
     i.addEventListener("input", () => (toolDrafts[key] = i.value));
     return i;
   }
-  function toolSelect(key, options, def, title) {
-    const sel = el("select", "tools__select");
-    for (const [v, label] of options) {
-      const o = el("option", "", label);
-      o.value = v;
-      sel.append(o);
+  // Picking one of a few (how long a poll runs, an ad's length): tap a chip, no drop-down.
+  function toolChips(key, options, def, label) {
+    const box = el("div", "tools__pick");
+    box.setAttribute("role", "radiogroup");
+    if (label) box.setAttribute("aria-label", label);
+    const cur = toolDrafts[key] ?? def;
+    for (const [v, text] of options) {
+      const b = el("button", "tools__pickbtn", text);
+      b.type = "button";
+      b.setAttribute("role", "radio");
+      b.setAttribute("aria-checked", String(v === cur));
+      b.addEventListener("click", () => {
+        toolDrafts[key] = v;
+        for (const x of box.children) x.setAttribute("aria-checked", String(x === b));
+      });
+      box.append(b);
     }
-    sel.value = toolDrafts[key] ?? def;
-    if (title) sel.title = title;
-    sel.addEventListener("change", () => (toolDrafts[key] = sel.value));
-    return sel;
+    return box;
   }
   const busyTool = (owner, a) => waitingOn(owner, (w) => w.a === a);
   const toolNo = (owner, text) => { toolSaid = { owner, text, ok: false, at: Date.now() }; render(); };
   // A button that asks "Sure?" first (clearing chat, running an ad): press it again within 4 seconds.
-  function sureButton(owner, key, label, sure, cls, run, title) {
+  function sureButton(owner, key, label, sure, cls, run, o = {}) {
     const armed = toolSure?.key === key && Date.now() - toolSure.at < 4000;
-    const b = toolButton(armed ? sure : label, `${cls}${armed ? " tools__btn--sure" : ""}`, () => {
+    return tbtn(armed ? sure : label, `${cls}${armed ? " tools__btn--sure" : ""}`, () => {
       if (armed) { toolSure = null; run(); return; }
       toolSure = { key, at: Date.now() };
       render();
       setTimeout(() => toolSure?.key === key && Date.now() - toolSure.at >= 4000 && ((toolSure = null), render()), 4100);
-    }, title);
-    return b;
+    }, { ...o, title: armed ? "Press again to go ahead" : o.title });
   }
-  const secOf = (title) => { const sec = el("section", "tools__sec"); sec.append(el("h3", "", title)); return sec; };
   const leftOf = (t) => { const s2 = Math.max(0, Math.round((t - Date.now()) / 1000)); return s2 >= 60 ? `${Math.floor(s2 / 60)}m ${s2 % 60}s left` : `${s2}s left`; };
+  const timeLeft = (t) => {
+    const x = el("span", "tools__left", leftOf(t));
+    x.dataset.ends = String(t);
+    return x;
+  };
+  const AD_LENS = [["30", "30s"], ["60", "1 min"], ["90", "90s"], ["120", "2 min"], ["180", "3 min"]];
+  const adLen = () => Number(toolDrafts.adLen || 60);
+  const adLenWords = () => ({ 30: "30s", 60: "1 min", 90: "90s", 120: "2 min", 180: "3 min" })[adLen()];
+
+  // What a tool's icon says under it on the front page (and on its page's top right).
+  function toolStatus(k, s, owner) {
+    if (!s) return {};
+    const m = s.modes || {};
+    switch (k) {
+      case "info": return s.live ? { text: "Live", live: true } : { text: "Offline" };
+      case "poll": return s.poll ? { text: "Running", live: true } : {};
+      case "pred": return s.pred ? { text: s.pred.status === "locked" ? "Locked" : "Running", live: true } : {};
+      case "raid": return s.raid ? { text: "Raiding", live: true } : busyTool(owner, "raid") ? { text: "Asking…", live: true } : {};
+      case "modes": { const on = [m.slow > 0, m.followers >= 0, m.emote, m.sub, m.unique].filter(Boolean).length; return on ? { text: `${on} on` } : {}; }
+      case "safety": return s.automod != null ? { text: s.automod ? `AutoMod ${s.automod}` : "AutoMod off" } : {};
+      case "log": return s.log?.length ? { text: `${agoShort(s.log[0].at)}${agoShort(s.log[0].at) === "now" ? "" : " ago"}` } : {};
+      case "points": { const n = (s.reds || []).filter((r) => r.status === "unfulfilled").length; return n ? { text: `${n} new`, count: n } : {}; }
+      case "unbans": return s.unbans?.length ? { text: `${s.unbans.length} waiting`, count: s.unbans.length } : {};
+      default: return {};
+    }
+  }
+  // What's going on right now that a mod may want to see or do something about.
+  function happening(owner, s) {
+    const out = [];
+    if (!s) return out;
+    const lead = (list, n) => { const top = [...list].sort((a, b) => n(b) - n(a))[0]; return top && n(top) > 0 ? top : null; };
+    if (s.raid) out.push({ k: "raid", title: `Raiding ${s.raid.to}`, sub: [s.raid.by ? `Asked by ${s.raid.by}` : "On its way"] });
+    else if (busyTool(owner, "raid")) out.push({ k: "raid", title: "A raid is waiting for an OK", sub: [`${owner} gets Raid / Not now in their dock`] });
+    if (s.poll) {
+      const top = lead(s.poll.choices, (c) => c.votes);
+      out.push({ k: "poll", title: s.poll.title, sub: [top ? `${top.title} leads · ` : "Poll · ", timeLeft(s.poll.ends)] });
+    }
+    if (s.pred) {
+      const top = lead(s.pred.outcomes, (o) => o.points);
+      out.push({ k: "pred", title: s.pred.title, sub: s.pred.status === "locked" ? ["Locked: pick the winner"] : [top ? `${top.title} leads · ` : "Prediction · ", timeLeft(s.pred.locks)] });
+    }
+    const unbans = s.unbans || [];
+    if (unbans.length) out.push({ k: "unbans", title: `${unbans.length} unban request${unbans.length > 1 ? "s" : ""}`, sub: [unbans.slice(0, 3).map((u) => u.user).join(", ")] });
+    const fresh = (s.reds || []).filter((r) => r.status === "unfulfilled");
+    if (fresh.length) out.push({ k: "points", title: `${fresh.length} new redemption${fresh.length > 1 ? "s" : ""}`, sub: [[...new Set(fresh.map((r) => r.title))].slice(0, 3).join(", ")] });
+    return out;
+  }
+
+  function toolsPanel() {
+    const owner = modOwner();
+    const panel = el("div", "panel tools");
+    const able = !!owner && (modLists?.modFor || []).includes(owner);
+    if (!able || !conn(owner)?.mutual) {
+      panel.append(toolsEmpty(...(!owner ? ["No stream yet", "Open a stream you mod for, and its tools show up here."]
+        : !able ? [`You don't mod for ${owner}`, "Mod tools are for channels you mod. Open one of those streams."]
+        : [`Add ${owner} first`, `Mod tools work once you and ${owner} have added each other.`])));
+      return panel;
+    }
+    if (!(owner in toolsOf)) askTools(owner);
+    // undefined: not heard yet; null: their dock isn't open. The relay doesn't say when a dock
+    // closes, but it does say when they go offline, and then nothing here can run.
+    const s = toolsOf[owner] && conn(owner)?.online === false ? null : toolsOf[owner];
+    const def = toolDef(toolsPage);
+    panel.append(def ? toolPage(def, owner, s) : toolsHome(owner, s));
+    if (toolSaid && toolSaid.owner === owner && Date.now() - toolSaid.at < 15000) {
+      const t = el("div", `tools__said${toolSaid.ok ? "" : " tools__said--no"}${Date.now() - toolSaid.at < 400 ? " tools__said--new" : ""}`);
+      t.setAttribute("role", "status");
+      const i = el("span", "tools__saidico");
+      i.innerHTML = svg(toolSaid.ok ? ANSWERS.y.icon : TI.warn, 13);
+      t.append(i, el("span", "tools__saidtext", toolSaid.text));
+      panel.append(t);
+    }
+    return panel;
+  }
+  function toolsEmpty(title, text) {
+    const box = el("div", "tools__empty");
+    const d = el("span", "tools__disk tools__disk--lg tools__disk--quiet");
+    d.innerHTML = TOOLS_SWORD;
+    box.append(d, el("h2", "tools__emptytitle", title), el("p", "tools__emptysay", text));
+    return box;
+  }
+  // Their dock: open (all good), closed (nothing can run), or not heard from yet.
+  function toolsNotice(s, owner) {
+    if (s) return null;
+    const n = el("div", `tools__notice${s === null ? " tools__notice--closed" : ""}`);
+    n.setAttribute("role", "status");
+    const words = el("div", "tools__noticewords");
+    words.append(
+      el("b", "", s === null ? `${owner}'s dock is closed` : `Reaching ${owner}'s dock…`),
+      el("span", "", s === null ? "Mod tools run through the streamer's chat dock in OBS. Once it's open, everything here is ready." : "Asking what's going on in their channel."),
+    );
+    n.append(el("span", "tools__noticedot"), words);
+    return n;
+  }
+
+  function toolsHome(owner, s) {
+    const home = el("div", "tools__home");
+    // Whose tools: their picture (a red ring while live), their name, and two little states.
+    const head = el("header", "tools__head");
+    const live = s ? !!s.live : streaming(owner);
+    const face = el("span", `tools__face${live ? " tools__face--live" : ""}`);
+    if (pics[owner]) {
+      const img = el("img", "tools__pic");
+      img.src = pics[owner];
+      img.alt = "";
+      face.append(img);
+    } else face.append(el("span", "tools__pic tools__pic--letter", owner[0].toUpperCase()));
+    const words = el("div", "tools__headwords");
+    const eyebrow = el("div", "tools__eyebrow");
+    const sword = el("span", "tools__sword");
+    sword.innerHTML = TOOLS_SWORD;
+    eyebrow.append(sword, el("span", "", "Mod tools"));
+    const name = el("div", "tools__for", owner);
+    if (colorOf(owner)) name.style.color = colorOf(owner);
+    const states = el("div", "tools__states");
+    const n = liveOf[owner]?.viewers;
+    states.append(
+      el("span", `tools__state${live ? " tools__state--live" : ""}`, live ? (n ? `Live · ${viewerCount(n)}` : "Live") : "Offline"),
+      el("span", `tools__state${s ? " tools__state--on" : s === null ? " tools__state--off" : ""}`, s ? "Dock open" : s === null ? "Dock closed" : "Checking…"),
+    );
+    states.firstChild.title = live ? `${owner} is live` : `${owner} isn't live`;
+    states.lastChild.title = s ? `${owner}'s chat dock is open, so these work` : `These work while ${owner}'s chat dock is open in OBS`;
+    words.append(eyebrow, name, states);
+    head.append(face, words);
+    home.append(head);
+    const notice = toolsNotice(s, owner);
+    if (notice) home.append(notice);
+
+    // One tap (two for an ad or clearing chat): the things a mod reaches for mid-stream.
+    const off = !s?.live;
+    const quick = el("div", "tools__quick");
+    const key = (b, c) => (b.style.setProperty("--c", c), b);
+    quick.append(
+      key(tbtn("Clip", "tools__key", () => sendTool(owner, "clip", {}), { icon: "clip", size: 20, busy: busyTool(owner, "clip"), off: !s || off, title: off ? `Clips work while ${owner} is live` : "Clip the last 30 seconds" }), "#c39bff"),
+      key(tbtn("Marker", "tools__key", () => sendTool(owner, "marker", { note: "" }), { icon: "marker", size: 20, busy: busyTool(owner, "marker"), off: !s || off, title: off ? `Markers work while ${owner} is live` : "Mark this moment in the past broadcast, so it's easy to find later" }), "#5b9bff"),
+      key(sureButton(owner, "ad", "Run ad", "Sure?", "tools__key", () => sendTool(owner, "commercial", { length: adLen() }), { icon: "ad", size: 20, busy: busyTool(owner, "commercial"), off: !s || off, title: off ? `Ads work while ${owner} is live` : `Start a ${adLenWords()} ad break now (pick the length in Stream info)` }), "#ffc23d"),
+      key(sureButton(owner, "clear", "Clear chat", "Sure?", "tools__key", () => sendTool(owner, "clear", {}), { icon: "clear", size: 20, busy: busyTool(owner, "clear"), off: !s, title: "Wipe every message in chat" }), "#ff6b6b"),
+    );
+    home.append(quick);
+
+    // Happening now.
+    const now = happening(owner, s);
+    if (now.length) {
+      const sec = el("section", "tools__grp tools__grp--now");
+      sec.append(el("h3", "tools__grptitle", "Happening now"));
+      for (const h of now) {
+        const def = toolDef(h.k);
+        const b = el("button", "tools__nowrow");
+        b.type = "button";
+        b.style.setProperty("--c", def.c);
+        const w = el("span", "tools__nowwords");
+        const sub = el("span", "tools__nowsub");
+        sub.append(...h.sub);
+        w.append(el("span", "tools__nowtitle", h.title), sub);
+        const go = el("span", "tools__nowgo");
+        go.innerHTML = svg(TI.next, 14);
+        b.append(disk(def, "sm"), w, go);
+        b.title = `Open ${def.name}`;
+        b.addEventListener("click", () => openTool(h.k));
+        sec.append(b);
+      }
+      home.append(sec);
+    }
+
+    // Every tool, in its group.
+    for (const g of TOOL_GROUPS) {
+      const sec = el("section", "tools__grp");
+      sec.append(el("h3", "tools__grptitle", g));
+      const grid = el("div", "tools__grid");
+      for (const def of TOOL_DEFS.filter((t) => t.grp === g)) {
+        const st = toolStatus(def.k, s, owner);
+        const b = el("button", `tools__tile${st.live ? " tools__tile--live" : ""}`);
+        b.type = "button";
+        b.dataset.tool = def.k;
+        b.style.setProperty("--c", def.c);
+        b.title = def.say(owner);
+        const d = disk(def);
+        if (st.count) d.append(el("span", "tools__count", st.count > 9 ? "9+" : String(st.count)));
+        b.append(d, el("span", "tools__tilename", def.name), el("span", "tools__tilesay", st.text || ""));
+        b.addEventListener("click", () => openTool(def.k));
+        grid.append(b);
+      }
+      sec.append(grid);
+      home.append(sec);
+    }
+    return home;
+  }
+
+  // A tool's own page: back, its name and what it's for, then the tool.
+  function toolPage(def, owner, s) {
+    const page = el("section", `tools__page${Date.now() - toolsPageAt < 400 ? " tools__page--new" : ""}`);
+    page.dataset.tool = def.k;
+    page.style.setProperty("--c", def.c);
+    const top = el("div", "tools__pagetop");
+    top.append(tbtn("All tools", "tools__back", () => openTool(""), { icon: "back", size: 14, title: "Back to all the tools (Esc)" }));
+    const st = toolStatus(def.k, s, owner);
+    if (st.text) top.append(el("span", `tools__pill${st.live ? " tools__pill--live" : ""}`, st.text));
+    const head = el("div", "tools__pagehead");
+    const words = el("div", "tools__pagewords");
+    words.append(el("h2", "tools__pagetitle", def.name), el("p", "tools__pagesay", def.say(owner)));
+    head.append(disk(def, "lg"), words);
+    page.append(top, head);
+    const notice = toolsNotice(s, owner);
+    if (notice) page.append(notice);
+    else if (s.can && s.can[def.can] === false) {
+      const hint = el("p", "tools__hint");
+      const i = el("span", "tools__hintico");
+      i.innerHTML = svg(TI.lock, 13);
+      hint.append(i, document.createTextNode(`${owner} hasn't allowed this one yet. Trying it asks them to, in their dock.`));
+      page.append(hint);
+    }
+    page.append(def.make(owner, s));
+    return page;
+  }
+  const toolBody = () => el("div", "tools__body");
+  const quiet = (text) => el("p", "tools__none", text);
 
   function streamTools(owner, s) {
-    const sec = secOf("Stream");
-    if (s?.info) sec.append(el("p", "tools__now", `${s.info.title || "No title"}${s.info.game ? ` · ${s.info.game}` : ""}`));
-    // Title and category.
-    const form = el("form", "tools__group tools__stack");
-    const title = draftInput("infoTitle", "New title", 140);
-    const game = draftInput("infoGame", "New category (like Just Chatting)", 100);
-    const row = el("div", "tools__row");
-    const save = toolButton(busyTool(owner, "info") ? "…" : "Change", "tools__btn--main");
-    save.type = "submit";
-    save.disabled = !s || busyTool(owner, "info");
-    row.append(game, save);
-    form.append(el("p", "tools__label", "Title and category"), title, row);
+    const body = toolBody();
+    const off = !s?.live;
+    const info = s?.info || {};
+    // Changed and now showing: the boxes go back to following what's on Twitch.
+    if (toolDrafts.infoTitle === info.title) delete toolDrafts.infoTitle;
+    if (toolDrafts.infoGame === info.game) delete toolDrafts.infoGame;
+    // Title and category: the boxes start with what it says now; Save sends what changed.
+    const form = el("form", "tools__block tools__stack");
+    const title = draftInput("infoTitle", "Stream title", 140, info.title || "");
+    const game = draftInput("infoGame", "Category, like Just Chatting", 100, info.game || "");
+    const busy = busyTool(owner, "info");
+    const save = tbtn("Save changes", "tools__btn--main", null, { submit: true, busy, off: !s });
+    const changed = () => (!!title.value.trim() && title.value.trim() !== (info.title || "")) || (!!game.value.trim() && game.value.trim() !== (info.game || ""));
+    const sync = () => (save.disabled = !s || busy || !changed());
+    title.addEventListener("input", sync);
+    game.addEventListener("input", sync);
+    sync();
+    form.append(el("h3", "tools__label", "Title"), title, el("h3", "tools__label", "Category"), game, save);
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const x = {};
-      if (title.value.trim()) x.title = title.value.trim();
-      if (game.value.trim()) x.game = game.value.trim();
-      if (!x.title && !x.game) return toolNo(owner, "Type a new title or category first.");
-      toolDrafts.infoTitle = toolDrafts.infoGame = "";
+      const t = title.value.trim(), g = game.value.trim();
+      if (t && t !== (info.title || "")) x.title = t;
+      if (g && g !== (info.game || "")) x.game = g;
+      if (!x.title && !x.game) return toolNo(owner, "Change the title or category first.");
       sendTool(owner, "info", x);
     });
-    sec.append(form);
-    const off = !s?.live;
+    body.append(form);
     // This moment: a clip, or a marker (with a note) in the past broadcast.
-    const moment = el("div", "tools__group tools__stack");
-    const acts = el("div", "tools__row tools__row--even");
-    const clip = toolButton(busyTool(owner, "clip") ? "…" : "Clip it", "", () => sendTool(owner, "clip", {}), "Make a clip of the last 30 seconds");
-    const mark = toolButton(busyTool(owner, "marker") ? "…" : "Add marker", "", () => { sendTool(owner, "marker", { note: toolDrafts.markNote || "" }); toolDrafts.markNote = ""; }, "Mark this moment in the past broadcast, so it's easy to find later");
-    clip.disabled = off || busyTool(owner, "clip");
-    mark.disabled = off || busyTool(owner, "marker");
-    acts.append(clip, mark);
-    moment.append(el("p", "tools__label", "This moment"), draftInput("markNote", "Marker note (optional)", 140), acts);
+    const clip = tbtn("Clip it", "", () => sendTool(owner, "clip", {}), { icon: "clip", busy: busyTool(owner, "clip"), off: !s || off, title: "Clip the last 30 seconds" });
+    const mark = tbtn("Add marker", "", () => { sendTool(owner, "marker", { note: toolDrafts.markNote || "" }); toolDrafts.markNote = ""; }, { icon: "marker", busy: busyTool(owner, "marker"), off: !s || off, title: "Mark this moment in the past broadcast, so it's easy to find later" });
+    body.append(block("This moment", draftInput("markNote", "Marker note (optional)", 140), row("tools__row--even", clip, mark)));
     // An ad break now.
-    const adBox = el("div", "tools__group tools__stack");
-    const adRow = el("div", "tools__row");
-    const len = toolSelect("adLen", [["30", "30 seconds"], ["60", "1 minute"], ["90", "90 seconds"], ["120", "2 minutes"], ["180", "3 minutes"]], "60", "How long");
-    const lenLabel = { 30: "30s", 60: "1 min", 90: "90s", 120: "2 min", 180: "3 min" }[toolDrafts.adLen || 60];
-    const ad = sureButton(owner, "ad", busyTool(owner, "commercial") ? "…" : "Run ad", `Sure? Run a ${lenLabel} ad`, "tools__btn--warn", () => sendTool(owner, "commercial", { length: Number(toolDrafts.adLen || 60) }), "Start an ad break now");
-    ad.disabled = off || busyTool(owner, "commercial");
-    len.disabled = off;
-    adRow.append(len, ad);
-    adBox.append(el("p", "tools__label", "Ad break"), adRow);
-    sec.append(moment, adBox);
-    if (s && off) sec.append(el("p", "tools__note", `Clips, markers and ads work while ${owner} is live.`));
-    return sec;
+    const ad = sureButton(owner, "ad", "Run ad", `Sure? Run a ${adLenWords()} ad`, "tools__btn--warn tools__btn--wide", () => sendTool(owner, "commercial", { length: adLen() }), { icon: "ad", busy: busyTool(owner, "commercial"), off: !s || off, title: "Start an ad break now" });
+    body.append(block("Ad break", toolChips("adLen", AD_LENS, "60", "How long"), ad));
+    if (s && off) body.append(quiet(`Clips, markers and ads work while ${owner} is live.`));
+    return body;
   }
 
   // Up to five boxes for a poll's choices or a prediction's outcomes: the next one shows once
   // the last is filled in.
   function choiceInputs(prefix, max, word) {
-    const box = el("div", "tools__stack");
+    const box = el("div", "tools__stack tools__stack--tight");
     for (let i = 1; i <= max; i++) {
       if (i > 2 && !(toolDrafts[`${prefix}${i - 1}`] || "").trim()) break;
-      const inp = draftInput(`${prefix}${i}`, `${word} ${i}`, 25);
+      const inp = draftInput(`${prefix}${i}`, i > 2 ? `${word} ${i} (optional)` : `${word} ${i}`, 25);
       if (i >= 2) inp.addEventListener("input", () => { const shown = box.childElementCount; if (inp.value.trim() && i === shown && i < max) render(); });
       box.append(inp);
     }
@@ -4290,35 +4517,46 @@
   }
   const choicesOf = (prefix, max) => Array.from({ length: max }, (_, i) => (toolDrafts[`${prefix}${i + 1}`] || "").trim()).filter(Boolean);
   const clearDrafts = (...keys) => keys.forEach((k) => Object.keys(toolDrafts).filter((d) => d.startsWith(k)).forEach((d) => delete toolDrafts[d]));
+  // Results as bars: the one ahead is lit.
+  function resultBars(items, count, label, extra) {
+    const total = items.reduce((n, x) => n + count(x), 0);
+    const best = Math.max(0, ...items.map(count));
+    const list = el("div", "tools__bars");
+    for (const x of items) {
+      const pct = total ? Math.round((count(x) / total) * 100) : 0;
+      const bar = el("div", `tools__bar${total && count(x) === best ? " tools__bar--lead" : ""}`);
+      bar.style.setProperty("--pct", `${pct}%`);
+      const words = el("span", "tools__barwords");
+      words.append(el("span", "tools__barname", x.title), el("span", "tools__barnum", label(x, pct)));
+      bar.append(words);
+      const more = extra?.(x);
+      if (more) bar.append(more);
+      list.append(bar);
+    }
+    return list;
+  }
 
   function pollTools(owner, s) {
-    const sec = secOf("Poll");
+    const body = toolBody();
     const p = s?.poll;
     if (p) {
       const total = p.choices.reduce((n, c) => n + c.votes, 0);
-      sec.append(el("p", "tools__now", p.title));
-      const list = el("div", "tools__bars");
-      for (const c of p.choices) {
-        const pct = total ? Math.round((c.votes / total) * 100) : 0;
-        const row = el("div", "tools__bar");
-        row.style.setProperty("--pct", `${pct}%`);
-        row.append(el("span", "tools__barname", c.title), el("span", "tools__barnum", `${c.votes} · ${pct}%`));
-        list.append(row);
-      }
-      const end = toolButton(busyTool(owner, "endpoll") ? "…" : "End poll", "tools__btn--warn", () => sendTool(owner, "endpoll", { id: p.id }));
-      end.disabled = busyTool(owner, "endpoll");
-      const row = el("div", "tools__row");
-      row.append(el("span", "tools__ago", leftOf(p.ends)), end);
-      sec.append(list, row);
-      return sec;
+      const end = tbtn("End poll", "tools__btn--warn", () => sendTool(owner, "endpoll", { id: p.id }), { busy: busyTool(owner, "endpoll") });
+      body.append(block("Running now",
+        el("p", "tools__q", p.title),
+        resultBars(p.choices, (c) => c.votes, (c, pct) => `${pct}% · ${c.votes}`),
+        row("tools__row--foot", el("span", "tools__meta", `${total} vote${total === 1 ? "" : "s"} · `), timeLeft(p.ends), end),
+      ));
+      return body;
     }
-    const form = el("form", "tools__stack");
-    const go = toolButton(busyTool(owner, "poll") ? "…" : "Start poll", "tools__btn--main");
-    go.type = "submit";
-    go.disabled = !s || busyTool(owner, "poll");
-    const row = el("div", "tools__row");
-    row.append(toolSelect("pollDur", [["60", "1 minute"], ["120", "2 minutes"], ["300", "5 minutes"], ["600", "10 minutes"]], "120", "How long it runs"), go);
-    form.append(draftInput("pollQ", "Question", 60), choiceInputs("pollC", 5, "Choice"), el("p", "tools__label", "How long it runs"), row);
+    const form = el("form", "tools__block tools__stack");
+    const go = tbtn("Start poll", "tools__btn--main", null, { submit: true, busy: busyTool(owner, "poll"), off: !s });
+    form.append(
+      el("h3", "tools__label", "Question"), draftInput("pollQ", "Ask chat something", 60),
+      el("h3", "tools__label", "Choices"), choiceInputs("pollC", 5, "Choice"),
+      el("h3", "tools__label", "How long it runs"), toolChips("pollDur", [["60", "1 min"], ["120", "2 min"], ["300", "5 min"], ["600", "10 min"]], "120", "How long it runs"),
+      go,
+    );
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const title = (toolDrafts.pollQ || "").trim(), choices = choicesOf("pollC", 5);
@@ -4326,46 +4564,32 @@
       sendTool(owner, "poll", { title, choices, dur: Number(toolDrafts.pollDur || 120) });
       clearDrafts("pollQ", "pollC");
     });
-    sec.append(form);
-    return sec;
+    body.append(form);
+    return body;
   }
 
   function predTools(owner, s) {
-    const sec = secOf("Prediction");
+    const body = toolBody();
     const p = s?.pred;
     if (p) {
+      const locked = p.status === "locked";
       const pts = p.outcomes.reduce((n, o) => n + o.points, 0);
-      sec.append(el("p", "tools__now", `${p.title}${p.status === "locked" ? " · locked" : ""}`));
-      const list = el("div", "tools__bars");
-      for (const o of p.outcomes) {
-        const pct = pts ? Math.round((o.points / pts) * 100) : 0;
-        const row = el("div", "tools__bar tools__bar--pick");
-        row.style.setProperty("--pct", `${pct}%`);
-        const win = toolButton("Winner", "tools__btn--refund", () => sendTool(owner, "predwin", { id: p.id, winner: o.id }), `${o.title} wins: points go to everyone who picked it`);
-        win.disabled = busyTool(owner, "predwin");
-        row.append(el("span", "tools__barname", o.title), el("span", "tools__barnum", `${o.points.toLocaleString()} pts · ${o.users}`), win);
-        list.append(row);
-      }
-      const row = el("div", "tools__row");
-      row.append(el("span", "tools__ago", p.status === "locked" ? "Locked: pick the winner" : leftOf(p.locks)));
-      if (p.status !== "locked") {
-        const lock = toolButton(busyTool(owner, "predlock") ? "…" : "Lock", "", () => sendTool(owner, "predlock", { id: p.id }), "No more points in");
-        lock.disabled = busyTool(owner, "predlock");
-        row.append(lock);
-      }
-      const cancel = sureButton(owner, "predcancel", "Cancel", "Sure? Points back", "tools__btn--warn", () => sendTool(owner, "predcancel", { id: p.id }), "Cancel it: everyone gets their points back");
-      cancel.disabled = busyTool(owner, "predcancel");
-      row.append(cancel);
-      sec.append(list, row);
-      return sec;
+      const bars = resultBars(p.outcomes, (o) => o.points, (o, pct) => `${pct}% · ${o.points.toLocaleString()} pts · ${o.users} ${o.users === 1 ? "person" : "people"}`, (o) =>
+        tbtn("Winner", "tools__btn--refund tools__btn--sm", () => sendTool(owner, "predwin", { id: p.id, winner: o.id }), { busy: busyTool(owner, "predwin"), title: `${o.title} wins: points go to everyone who picked it` }));
+      const foot = row("tools__row--foot", el("span", "tools__meta", `${pts.toLocaleString()} pts in · `), locked ? el("span", "tools__left", "Locked") : timeLeft(p.locks));
+      if (!locked) foot.append(tbtn("Lock", "", () => sendTool(owner, "predlock", { id: p.id }), { icon: "lock", busy: busyTool(owner, "predlock"), title: "No more points in" }));
+      foot.append(sureButton(owner, "predcancel", "Cancel", "Sure? Points back", "tools__btn--warn", () => sendTool(owner, "predcancel", { id: p.id }), { busy: busyTool(owner, "predcancel"), title: "Cancel it: everyone gets their points back" }));
+      body.append(block(locked ? "Locked: pick the winner" : "Running now", el("p", "tools__q", p.title), bars, foot));
+      return body;
     }
-    const form = el("form", "tools__stack");
-    const go = toolButton(busyTool(owner, "pred") ? "…" : "Start prediction", "tools__btn--main");
-    go.type = "submit";
-    go.disabled = !s || busyTool(owner, "pred");
-    const row = el("div", "tools__row");
-    row.append(toolSelect("predWin", [["60", "1 minute"], ["120", "2 minutes"], ["300", "5 minutes"], ["600", "10 minutes"]], "120", "How long people can put points in"), go);
-    form.append(draftInput("predQ", "Question (like: Do we beat the boss?)", 45), choiceInputs("predO", 5, "Outcome"), el("p", "tools__label", "Time to put points in"), row);
+    const form = el("form", "tools__block tools__stack");
+    const go = tbtn("Start prediction", "tools__btn--main", null, { submit: true, busy: busyTool(owner, "pred"), off: !s });
+    form.append(
+      el("h3", "tools__label", "Question"), draftInput("predQ", "Like: Do we beat the boss?", 45),
+      el("h3", "tools__label", "Outcomes"), choiceInputs("predO", 5, "Outcome"),
+      el("h3", "tools__label", "Time to put points in"), toolChips("predWin", [["60", "1 min"], ["120", "2 min"], ["300", "5 min"], ["600", "10 min"]], "120", "How long people can put points in"),
+      go,
+    );
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const title = (toolDrafts.predQ || "").trim(), outcomes = choicesOf("predO", 5);
@@ -4373,47 +4597,94 @@
       sendTool(owner, "pred", { title, outcomes, window: Number(toolDrafts.predWin || 120) });
       clearDrafts("predQ", "predO");
     });
-    sec.append(form);
-    return sec;
+    body.append(form);
+    return body;
+  }
+
+  function raidTools(owner, s) {
+    const body = toolBody();
+    if (s?.raid) {
+      const now = el("div", "tools__raiding");
+      const words = el("div", "tools__raidwords");
+      words.append(el("span", "tools__raidto", `Raiding ${s.raid.to}`), el("span", "tools__meta", s.raid.by ? `Asked by ${s.raid.by}` : "On its way"));
+      now.append(words, tbtn("Call it off", "tools__btn--warn", () => sendTool(owner, "unraid", {}), { busy: busyTool(owner, "unraid") }));
+      body.append(now);
+      return body;
+    }
+    const waiting = busyTool(owner, "raid");
+    const form = el("form", "tools__block tools__stack tools__raid");
+    const at = el("label", "tools__at");
+    const input = el("input", "tools__field");
+    input.placeholder = "Channel to raid";
+    input.value = raidDraft;
+    input.dataset.key = "raidTo";
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    input.disabled = waiting;
+    input.addEventListener("input", () => (raidDraft = input.value));
+    at.append(el("span", "tools__atsign", "@"), input);
+    form.append(el("h3", "tools__label", "Where to"), at, tbtn(waiting ? `Waiting for ${owner}…` : "Ask to raid", "tools__btn--main", null, { submit: true, busy: waiting, off: !s, title: `${owner} gets Raid / Not now in their dock` }));
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const to = input.value.trim().replace(/^@/, "").toLowerCase();
+      if (!/^[a-z0-9_]{2,25}$/.test(to)) return toolNo(owner, "That doesn't look like a Twitch channel name.");
+      sendTool(owner, "raid", { to });
+    });
+    body.append(form, quiet(waiting ? `${owner} has a Raid / Not now card in their dock. It waits two minutes for them.` : `${owner} gets Raid / Not now in their dock. Nothing happens unless they say Raid.`));
+    return body;
+  }
+
+  function modeTools(owner, s) {
+    const body = toolBody();
+    const m = s?.modes || {};
+    const list = el("div", "tools__modes");
+    const MODES = [
+      ["slow", "Slow mode", m.slow > 0, m.slow > 0 ? `One message every ${m.slow}s` : "One message every 30 seconds", (on) => (on ? 30 : 0)],
+      ["followers", "Followers only", m.followers >= 0, m.followers > 0 ? `Followed for ${m.followers}+ minutes` : m.followers === 0 ? "Any follower can chat" : "Followed for 10+ minutes", (on) => (on ? 10 : false)],
+      ["emote", "Emote only", m.emote, "Messages can only be emotes"],
+      ["sub", "Subscribers only", m.sub, "Only subs can chat"],
+      ["unique", "Unique chat", m.unique, "No repeating the same message"],
+    ];
+    for (const [k, label, on, detail, value] of MODES) {
+      const b = el("button", `tools__mode${on ? " tools__mode--on" : ""}`);
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(!!on));
+      const words = el("span", "tools__modewords");
+      words.append(el("span", "tools__modename", label), el("small", "tools__modedetail", detail));
+      const busy = waitingOn(owner, (w) => w.a === "mode" && w.x?.k === k);
+      b.append(words, el("span", `tools__switch${busy ? " tools__switch--busy" : ""}`));
+      b.disabled = !s || busy;
+      b.addEventListener("click", () => sendTool(owner, "mode", { k, v: value ? value(!on) : !on }));
+      list.append(b);
+    }
+    body.append(list);
+    return body;
   }
 
   function safetyTools(owner, s) {
-    const sec = secOf("Chat safety");
-    const top = el("div", "tools__row");
-    const clear = sureButton(owner, "clear", busyTool(owner, "clear") ? "…" : "Clear chat", "Sure? Clear it all", "tools__btn--warn", () => sendTool(owner, "clear", {}), "Wipe every message in chat");
-    clear.disabled = !s || busyTool(owner, "clear");
-    top.append(clear);
-    sec.append(top);
+    const body = toolBody();
     // AutoMod's level: off, then 1 (least filtering) to 4 (most).
-    sec.append(el("p", "tools__label", "AutoMod"));
+    const LEVELS = ["Off: nothing is held back", "Level 1: a little filtering", "Level 2: some filtering", "Level 3: more filtering", "Level 4: the most filtering"];
     const seg = el("div", "tools__seg");
     ["Off", "1", "2", "3", "4"].forEach((label, lv) => {
-      const b = toolButton(label, s?.automod === lv ? "tools__segon" : "", () => sendTool(owner, "automod", { level: lv }), lv ? `Level ${lv}: ${["", "less", "some", "more", "the most"][lv]} filtering` : "AutoMod off");
+      const b = tbtn(label, s?.automod === lv ? "tools__segon" : "", () => sendTool(owner, "automod", { level: lv }), { off: !s || busyTool(owner, "automod"), title: LEVELS[lv] });
       b.setAttribute("aria-pressed", String(s?.automod === lv));
-      b.disabled = !s || busyTool(owner, "automod");
       seg.append(b);
     });
-    sec.append(seg);
-    if (s && s.automod == null && s.can?.automod) sec.append(el("p", "tools__note", "Set up by category on Twitch. Picking a level here replaces that."));
-    // Blocked terms: AutoMod holds any message with one.
-    sec.append(el("p", "tools__label", "Blocked words"));
+    const say = s?.automod != null ? LEVELS[s.automod] : s?.can?.automod ? "Set up by category on Twitch. Picking a level here replaces that." : "Holds risky messages back until a mod OKs them.";
+    body.append(block("AutoMod", seg, el("p", "tools__segsay", say)));
+    // Blocked words: AutoMod holds any message with one.
     const terms = s?.terms || [];
-    if (terms.length) {
-      const chips = el("div", "tools__chips");
-      for (const t of terms.slice(0, 40)) {
-        const chip = el("span", "tools__chip", t.text);
-        const x = toolButton("×", "tools__chipx", () => sendTool(owner, "term", { remove: t.id }), `Unblock “${t.text}”`);
-        x.disabled = busyTool(owner, "term");
-        chip.append(x);
-        chips.append(chip);
-      }
-      sec.append(chips);
-    } else sec.append(el("p", "tools__empty", s?.terms ? "No blocked words yet." : "Their blocked words show here."));
-    const form = el("form", "tools__row");
-    const add = toolButton("Block", "tools__btn--main");
-    add.type = "submit";
-    add.disabled = !s || busyTool(owner, "term");
-    form.append(draftInput("termAdd", "Word or phrase to block", 500), add);
+    const words = terms.length ? el("div", "tools__chips") : quiet(s?.terms ? "No blocked words yet." : "Their blocked words show here.");
+    for (const t of terms.slice(0, 40)) {
+      const chip = el("span", "tools__chip", t.text);
+      const x = tbtn("×", "tools__chipx", () => sendTool(owner, "term", { remove: t.id }), { off: busyTool(owner, "term"), title: `Unblock “${t.text}”` });
+      x.setAttribute("aria-label", `Unblock ${t.text}`);
+      chip.append(x);
+      words.append(chip);
+    }
+    const form = el("form", "tools__row tools__row--field");
+    form.append(draftInput("termAdd", "Word or phrase to block", 500), tbtn("Block", "tools__btn--main", null, { submit: true, busy: busyTool(owner, "term"), off: !s }));
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const text = (toolDrafts.termAdd || "").trim();
@@ -4421,175 +4692,123 @@
       toolDrafts.termAdd = "";
       sendTool(owner, "term", { add: text });
     });
-    sec.append(form);
-    return sec;
+    body.append(block("Blocked words", words, form));
+    // Clearing chat, last and red.
+    const clear = sureButton(owner, "clear", "Clear chat", "Sure? Clear it all", "tools__btn--warn tools__btn--wide", () => sendTool(owner, "clear", {}), { icon: "clear", busy: busyTool(owner, "clear"), off: !s, title: "Wipe every message in chat" });
+    body.append(block("Clear chat", clear, quiet("Wipes every message in chat, for everyone.")));
+    return body;
+  }
+
+  function logTools(owner, s) {
+    const body = toolBody();
+    const log = s?.log || [];
+    if (!log.length) {
+      body.append(quiet(s ? "Nothing yet since their dock opened. Bans, timeouts, deletes and mode changes show here, from every mod." : "What every mod does shows here while their dock is open."));
+      return body;
+    }
+    const list = el("ol", "tools__log");
+    for (const l of log) {
+      const li = el("li", "tools__logrow");
+      const who = el("b", "tools__logwho", l.by);
+      if (colorOf(l.by)) who.style.color = colorOf(l.by);
+      li.append(el("span", "tools__ago", agoShort(l.at)), who, " ", document.createTextNode(l.what));
+      list.append(li);
+    }
+    body.append(list);
+    return body;
+  }
+
+  function pointsTools(owner, s) {
+    const body = toolBody();
+    const queue = el("a", "tools__link");
+    queue.href = `https://www.twitch.tv/popout/${encodeURIComponent(owner)}/reward-queue`;
+    queue.target = "_blank";
+    queue.rel = "noopener";
+    queue.title = "Twitch's own reward queue: refund or complete any redemption there";
+    const qi = el("span", "tools__btnico");
+    qi.innerHTML = svg(TI.out, 13);
+    queue.append(el("span", "", "Open Twitch's reward queue"), qi);
+    const reds = s?.reds || [];
+    if (!reds.length) {
+      body.append(quiet(s ? "No redemptions since their dock opened." : "Recent redemptions show here while their dock is open."), queue);
+      return body;
+    }
+    const list = el("div", "tools__reds");
+    for (const r of reds.slice(0, 10)) {
+      const item = el("div", `tools__red tools__red--${r.status}`);
+      const top = el("div", "tools__redtop");
+      top.append(el("span", "tools__reward", r.title), el("span", "tools__cost", `${r.cost.toLocaleString()} pts`));
+      const who = el("div", "tools__redwho");
+      const name = el("b", "tools__who", r.user);
+      if (colorOf(r.user)) name.style.color = colorOf(r.user);
+      who.append(name, el("span", "tools__ago", ` · ${agoShort(r.at)}${agoShort(r.at) === "now" ? "" : " ago"}`));
+      item.append(top, who);
+      if (r.input) item.append(el("div", "tools__input", `“${r.input}”`));
+      const acts = el("div", "tools__redacts");
+      if (r.status !== "unfulfilled") acts.append(el("span", `tools__status${r.status === "canceled" ? " tools__status--back" : ""}`, r.status === "canceled" ? "Refunded" : "Done"));
+      // Refunds work for rewards made with StreamSpace; until their dock knows (no permission
+      // yet), try, and pressing it asks the streamer for the OK.
+      else if (r.own || !s.can?.points) {
+        const busy = waitingOn(owner, (w) => w.x?.id === r.id);
+        acts.append(
+          tbtn("Refund", "tools__btn--refund tools__btn--sm", () => sendTool(owner, "refund", { id: r.id, rid: r.rid }), { busy, title: `Give ${r.user} their ${r.cost.toLocaleString()} points back` }),
+          tbtn("Done", "tools__btn--sm", () => sendTool(owner, "fulfill", { id: r.id, rid: r.rid }), { off: busy, title: "Mark it done" }),
+        );
+      } else acts.append(el("span", "tools__status", "Made on Twitch: use the reward queue"));
+      item.append(acts);
+      list.append(item);
+    }
+    body.append(list, queue);
+    return body;
   }
 
   function vipTools(owner, s) {
-    const sec = secOf("VIPs");
-    const form = el("form", "tools__row");
-    const name = draftInput("vipName", "Their Twitch name", 25);
-    const give = toolButton(busyTool(owner, "vip") ? "…" : "Make VIP", "tools__btn--main");
-    give.type = "submit";
-    const take = toolButton("Remove", "", null, "Take VIP off them");
-    give.disabled = take.disabled = !s || busyTool(owner, "vip");
+    const body = toolBody();
+    const form = el("form", "tools__block tools__stack");
+    const at = el("label", "tools__at");
+    at.append(el("span", "tools__atsign", "@"), draftInput("vipName", "Their Twitch name", 25));
+    const busy = busyTool(owner, "vip");
     const send = (on) => {
       const login = (toolDrafts.vipName || "").trim().replace(/^@/, "").toLowerCase();
       if (!/^[a-z0-9_]{2,25}$/.test(login)) return toolNo(owner, "That doesn't look like a Twitch name.");
       toolDrafts.vipName = "";
       sendTool(owner, "vip", { login, on });
     };
-    take.addEventListener("click", () => send(false));
+    const give = tbtn("Make VIP", "tools__btn--main", null, { submit: true, busy, off: !s, icon: "vips" });
+    const take = tbtn("Remove VIP", "", () => send(false), { off: !s || busy, title: "Take VIP off them" });
     form.addEventListener("submit", (e) => { e.preventDefault(); send(true); });
-    form.append(name, give, take);
-    sec.append(el("p", "tools__label tools__label--first", "Add or remove a VIP"), form);
-    return sec;
+    form.append(el("h3", "tools__label", "Who"), at, row("tools__row--even", give, take));
+    body.append(form);
+    return body;
   }
 
   function unbanTools(owner, s) {
-    const sec = secOf("Unban requests");
+    const body = toolBody();
     const list = s?.unbans || [];
     if (!list.length) {
-      sec.append(el("p", "tools__empty", s ? "None waiting." : "Unban requests show here while their dock is open."));
-      return sec;
+      body.append(quiet(s ? "None waiting. Nice." : "Unban requests show here while their dock is open."));
+      return body;
     }
     const box = el("div", "tools__reds");
     for (const u of list) {
-      const row = el("div", "tools__red");
-      row.append(el("div", "tools__redtop", u.user));
-      if (u.text) row.append(el("div", "tools__input", u.text));
-      const bottom = el("div", "tools__redbottom");
-      const busy = waitingOn(owner, (w) => w.a === "unbanreq" && w.x?.id === u.id);
-      const yes = toolButton(busy ? "…" : "Unban", "tools__btn--refund", () => sendTool(owner, "unbanreq", { id: u.id, ok: true }));
-      const no = toolButton("Deny", "", () => sendTool(owner, "unbanreq", { id: u.id, ok: false }));
-      yes.disabled = no.disabled = busy;
-      bottom.append(el("span", "tools__ago", agoShort(u.at)), yes, no);
-      row.append(bottom);
-      box.append(row);
-    }
-    sec.append(box);
-    return sec;
-  }
-
-  function logTools(owner, s) {
-    const sec = secOf("Mod log");
-    const log = s?.log || [];
-    if (!log.length) {
-      sec.append(el("p", "tools__empty", s ? "Nothing yet since their dock opened. Bans, timeouts, deletes and mode changes show here, from every mod." : "What every mod does shows here while their dock is open."));
-      return sec;
-    }
-    const list = el("ol", "tools__log");
-    for (const l of log) {
-      const li = el("li", "tools__logrow");
-      li.append(el("span", "tools__ago", agoShort(l.at)), el("b", "", l.by), " ", document.createTextNode(l.what));
-      list.append(li);
-    }
-    sec.append(list);
-    return sec;
-  }
-  function pointsTools(owner, s) {
-    const sec = el("section", "tools__sec");
-    const h = el("div", "tools__h");
-    h.append(el("h3", "", "Channel points"));
-    const queue = el("a", "tools__link", "Reward queue ↗");
-    queue.href = `https://www.twitch.tv/popout/${encodeURIComponent(owner)}/reward-queue`;
-    queue.target = "_blank";
-    queue.rel = "noopener";
-    queue.title = "Twitch's own reward queue: refund or complete any redemption there";
-    h.append(queue);
-    sec.append(h);
-    const reds = s?.reds || [];
-    if (!reds.length) {
-      sec.append(el("p", "tools__empty", s ? "No redemptions since their dock opened." : "Recent redemptions show here while their dock is open."));
-      return sec;
-    }
-    const list = el("div", "tools__reds");
-    for (const r of reds.slice(0, 10)) {
-      const row = el("div", `tools__red tools__red--${r.status}`);
+      const item = el("div", "tools__red");
       const top = el("div", "tools__redtop");
-      top.append(el("b", "tools__who", r.user), " ", el("span", "tools__reward", r.title), " ", el("span", "tools__cost", `${r.cost.toLocaleString()} pts`));
-      row.append(top);
-      if (r.input) row.append(el("div", "tools__input", r.input));
-      const bottom = el("div", "tools__redbottom");
-      bottom.append(el("span", "tools__ago", agoShort(r.at)));
-      if (r.status !== "unfulfilled") bottom.append(el("span", "tools__status", r.status === "canceled" ? "Refunded" : "Done"));
-      // Refunds work for rewards made with StreamSpace; until their dock knows (no permission
-      // yet), try, and pressing it asks the streamer for the OK.
-      else if (r.own || !s.can?.points) {
-        const busy = waitingOn(owner, (w) => w.x?.id === r.id);
-        const refund = toolButton(busy ? "…" : "Refund", "tools__btn--refund", () => sendTool(owner, "refund", { id: r.id, rid: r.rid }), `Give ${r.user} their ${r.cost.toLocaleString()} points back`);
-        const done = toolButton("Done", "", () => sendTool(owner, "fulfill", { id: r.id, rid: r.rid }), "Mark it done");
-        refund.disabled = done.disabled = busy;
-        bottom.append(refund, done);
-      } else bottom.append(el("span", "tools__queue", "Made on Twitch: refund it in the reward queue"));
-      row.append(bottom);
-      list.append(row);
+      const name = el("b", "tools__reward", u.user);
+      if (colorOf(u.user)) name.style.color = colorOf(u.user);
+      top.append(name, el("span", "tools__ago", `${agoShort(u.at)}${agoShort(u.at) === "now" ? "" : " ago"}`));
+      item.append(top);
+      item.append(el("div", "tools__input", u.text ? `“${u.text}”` : "No message"));
+      const busy = waitingOn(owner, (w) => w.a === "unbanreq" && w.x?.id === u.id);
+      const acts = el("div", "tools__redacts");
+      acts.append(
+        tbtn("Unban", "tools__btn--refund tools__btn--sm", () => sendTool(owner, "unbanreq", { id: u.id, ok: true }), { busy, title: `Let ${u.user} back into chat` }),
+        tbtn("Deny", "tools__btn--sm", () => sendTool(owner, "unbanreq", { id: u.id, ok: false }), { off: busy, title: "Keep them banned" }),
+      );
+      item.append(acts);
+      box.append(item);
     }
-    sec.append(list);
-    return sec;
-  }
-  function raidTools(owner, s) {
-    const sec = el("section", "tools__sec");
-    sec.append(el("h3", "", "Raid out"));
-    if (s?.raid) {
-      const row = el("div", "tools__raiding");
-      const what = el("span", "tools__raidto", `Raiding ${s.raid.to}`);
-      if (s.raid.by) what.append(el("small", "", ` · asked by ${s.raid.by}`));
-      const off = toolButton("Call it off", "tools__btn--warn", () => sendTool(owner, "unraid", {}));
-      off.disabled = waitingOn(owner, (w) => w.a === "unraid");
-      row.append(what, off);
-      sec.append(row);
-      return sec;
-    }
-    const form = el("form", "tools__raid");
-    const input = el("input", "tools__field");
-    input.placeholder = "Channel to raid";
-    input.value = raidDraft;
-    input.dataset.key = "raidTo";
-    input.autocomplete = "off";
-    input.spellcheck = false;
-    input.addEventListener("input", () => (raidDraft = input.value));
-    const waiting = waitingOn(owner, (w) => w.a === "raid");
-    const go = toolButton(waiting ? "Waiting…" : "Ask to raid", "tools__btn--main", null, `${owner} gets Raid / Not now in their dock`);
-    go.type = "submit";
-    go.disabled = !s || waiting;
-    form.append(input, go);
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const to = input.value.trim().replace(/^@/, "").toLowerCase();
-      if (!/^[a-z0-9_]{2,25}$/.test(to)) {
-        toolSaid = { owner, text: "That doesn't look like a Twitch channel name.", ok: false, at: Date.now() };
-        return render();
-      }
-      sendTool(owner, "raid", { to });
-    });
-    sec.append(form, el("p", "tools__note", waiting ? `Waiting for ${owner} to OK it in their dock.` : `${owner} gets Raid / Not now in their dock; nothing happens unless they OK it.`));
-    return sec;
-  }
-  function modeTools(owner, s) {
-    const sec = el("section", "tools__sec");
-    sec.append(el("h3", "", "Chat modes"));
-    const m = s?.modes || {};
-    const list = el("div", "tools__modes");
-    const MODES = [
-      ["slow", "Slow mode", m.slow > 0, m.slow > 0 ? `${m.slow}s` : "30s", (on) => (on ? 30 : 0)],
-      ["followers", "Followers only", m.followers >= 0, m.followers > 0 ? `${m.followers} min` : m.followers === 0 ? "any follower" : "10 min", (on) => (on ? 10 : false)],
-      ["emote", "Emote only", m.emote],
-      ["sub", "Subscribers only", m.sub],
-      ["unique", "Unique chat", m.unique, "no repeats"],
-    ];
-    for (const [k, label, on, detail, value] of MODES) {
-      const b = el("button", `tools__mode${on ? " tools__mode--on" : ""}`);
-      b.type = "button";
-      b.setAttribute("aria-pressed", String(!!on));
-      b.append(el("span", "tools__switch"), el("span", "tools__modename", label));
-      if (detail) b.append(el("small", "tools__modedetail", detail));
-      b.disabled = !s || waitingOn(owner, (w) => w.a === "mode" && w.x?.k === k);
-      b.addEventListener("click", () => sendTool(owner, "mode", { k, v: value ? value(!on) : !on }));
-      list.append(b);
-    }
-    sec.append(list);
-    return sec;
+    body.append(box);
+    return body;
   }
 
   let reactionsTimer = 0; // takes a reaction away 3 minutes after it came
@@ -7387,6 +7606,7 @@
   statsBtn.addEventListener("click", () => show("stats", statsWho()));
   msgBtn.addEventListener("click", () => show("messages"));
   toolsBtn.addEventListener("click", () => {
+    if (view === "tools" && toolsPage) return openTool(""); // on a tool's page: back to them all
     if (view !== "tools") askTools(modOwner());
     show("tools");
   });
