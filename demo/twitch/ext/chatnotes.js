@@ -160,10 +160,6 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
   // comment itself is laid out in columns).
   const hostOf = (line) => (vodId() ? line.closest("li") || line : line);
 
-  function lineOf(el) {
-    return el.closest?.(lineSel()) || null;
-  }
-
   // ===== Notes ================================================================================
 
   let notes = []; // this channel's (or this VOD's) notes, oldest first

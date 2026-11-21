@@ -25,7 +25,6 @@ whenOn("people", "Chatter notes (right-click a name)", () => {
   const MAX_RESULTS = 6;
 
   let follows = [];
-  let followsUpdated = 0;
   const people = {}; // login -> { known, pronouns, note }
   let version = 0;   // bumps whenever people change, so chat lines redraw
 
@@ -44,7 +43,6 @@ whenOn("people", "Chatter notes (right-click a name)", () => {
     }
     if (data.follows) {
       follows = data.follows.list || [];
-      followsUpdated = data.follows.updated || 0;
     }
     version++;
     decorateAll();
@@ -60,7 +58,6 @@ whenOn("people", "Chatter notes (right-click a name)", () => {
         touched = true;
       } else if (k === "follows" && newValue) {
         follows = newValue.list || [];
-        followsUpdated = newValue.updated || 0;
         if (flyout) renderFlyout();
       }
     }

@@ -46,13 +46,6 @@
   }
 
   // ----- A chat line, built like Twitch's ------------------------------------------------------------
-  const iconBtn = (label, path) => {
-    const b = el("button", "tw-iconbtn tw-iconbtn--small");
-    b.type = "button";
-    b.title = b.ariaLabel = label;
-    b.innerHTML = `<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="${path}" fill="currentColor"/></svg>`;
-    return b;
-  };
   function body(e) {
     const wrap = el("span");
     wrap.dataset.aTarget = "chat-line-message-body";

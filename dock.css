@@ -161,26 +161,6 @@ button:disabled {
 .bar__status:not(.bar__status--bad) {
   font-size: 0;
 }
-.bar__btn {
-  flex: none;
-  padding: 4px 8px;
-  border: 0;
-  border-radius: 4px;
-  background: #2f2f35;
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 600;
-}
-.bar__btn:hover {
-  background: #3a3a44;
-}
-.bar__btn--on {
-  background: var(--purple);
-  color: #fff;
-}
-.bar__btn--on:hover {
-  background: var(--purple-dark);
-}
 
 main {
   padding: 8px;
@@ -216,11 +196,6 @@ main:has(> .cards:empty) {
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
-.qcard__error {
-  margin: -4px 0 8px;
-  color: var(--bad);
-  font-size: 12px;
-}
 .qcard__answers {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -244,14 +219,12 @@ main:has(> .cards:empty) {
 .qcard__answer:hover:not(:disabled) {
   background: #3a3a44;
 }
-.qcard__own,
-.panel__form {
+.qcard__own {
   display: flex;
   gap: 6px;
   margin-top: 8px;
 }
-.qcard__own input,
-.panel__form input {
+.qcard__own input {
   flex: 1;
   width: 100%;
   min-width: 0;
@@ -262,13 +235,11 @@ main:has(> .cards:empty) {
   color: var(--text);
   font: inherit;
 }
-.qcard__own input:focus,
-.panel__form input:focus {
+.qcard__own input:focus {
   border-color: var(--purple);
   outline: none;
 }
 .qcard__own button,
-.panel__form button,
 .signin__btn {
   padding: 0 14px;
   border: 0;
@@ -278,7 +249,6 @@ main:has(> .cards:empty) {
   font-weight: 600;
 }
 .qcard__own button:hover:not(:disabled),
-.panel__form button:hover:not(:disabled),
 .signin__btn:hover {
   background: var(--purple-dark);
 }
@@ -319,17 +289,10 @@ main:has(> .cards:empty) {
   font-weight: 600;
 }
 .panel__sub,
-.panel__note,
 .signin__sub {
   margin: 4px 0 8px;
   color: var(--muted);
   font-size: 12px;
-}
-.panel__note:empty {
-  display: none;
-}
-.people__list {
-  margin: 10px 0 6px;
 }
 .people__row {
   display: flex;
@@ -375,52 +338,6 @@ main:has(> .cards:empty) {
   margin: 6px 0 0;
   color: var(--bad);
   font-size: 12px;
-}
-
-/* Their answer to a question you asked. */
-.acard {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 6px 10px 10px;
-  border: 2px solid var(--purple);
-  border-radius: 10px;
-  background: var(--panel);
-}
-.acard__icon {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: #2f2f35;
-}
-.acard__body {
-  flex: 1;
-  min-width: 0;
-}
-.acard__who {
-  color: #bf94ff;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-}
-.acard__head {
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-.acard__question {
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-.acard .x {
-  align-self: flex-start;
 }
 
 /* A question you asked, still waiting. */
@@ -491,40 +408,6 @@ main:has(> .cards:empty) {
 .receipt--btn:hover:not(:disabled) {
   border-color: var(--purple);
   background: #3a3a44;
-}
-
-/* Your answer to someone's question, until you close it. */
-.rcard {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 7px 4px 7px 8px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
-}
-.rcard__icon {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  margin-top: 1px;
-  border-radius: 50%;
-  background: #2f2f35;
-}
-.rcard__body {
-  flex: 1;
-  min-width: 0;
-}
-.rcard__head {
-  font-size: 13px;
-  overflow-wrap: anywhere;
-}
-.rcard__question {
-  color: var(--muted);
-  font-size: 12px;
-  overflow-wrap: anywhere;
 }
 
 /* Pill buttons: Ask, Connections (an icon), and the bar's answer buttons. */
@@ -608,11 +491,6 @@ main:has(> .cards:empty) {
 }
 .peek__answer {
   flex: none;
-}
-.peek__error {
-  flex: none;
-  color: var(--bad);
-  font-size: 12px;
 }
 .peek__answers {
   flex: none;
@@ -923,88 +801,14 @@ main:has(> .cards:empty) {
   letter-spacing: 0.4px;
   text-transform: uppercase;
 }
-.ask__options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.ask__option {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 4px 0 10px;
-  border-radius: 13px;
-  background: #2f2f35;
-  font-size: 12px;
-  font-weight: 600;
-}
-.ask__option > span:first-child {
-  display: flex;
-}
-.ask__option--own {
-  background: rgba(145, 71, 255, 0.2);
-  color: #d4bbff;
-}
-.ask__optx {
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 18px;
-}
-.ask__optx:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--text);
-}
-.ask__add input {
-  width: 118px;
-  height: 26px;
-  padding: 0 10px;
-  border: 1px dashed var(--field);
-  border-radius: 13px;
-  background: none;
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-}
-.ask__add input:focus {
-  border-style: solid;
-  border-color: var(--purple);
-  outline: none;
-}
-.ask__foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 8px;
-}
 .ask__hint,
 .ask__note {
   margin: 8px 0 0;
   color: var(--muted);
   font-size: 12px;
 }
-.ask__foot .ask__hint {
-  margin: 0;
-}
 .ask__note {
   color: var(--bad);
-}
-.ask__reset {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: #bf94ff;
-  font-size: 12px;
-}
-.ask__reset:hover {
-  text-decoration: underline;
 }
 
 /* The asker's own options, on cards and in the bar: words, no icon. */
@@ -1113,38 +917,6 @@ main:has(> .cards:empty) {
   background: rgba(145, 71, 255, 0.3);
   color: #d4bbff;
 }
-.ask__save {
-  flex: none;
-  width: 38px;
-  height: 38px;
-  border: 1px solid var(--field);
-  border-radius: 19px;
-  background: none;
-  color: var(--muted);
-  font-size: 16px;
-}
-.ask__save:hover {
-  border-color: var(--amber);
-  color: var(--amber);
-}
-.ask__quick {
-  padding-left: 0;
-}
-.ask__quickuse {
-  height: 26px;
-  padding: 0 4px 0 10px;
-  border: 0;
-  background: none;
-  color: var(--text);
-  font: inherit;
-  font-weight: 600;
-}
-.peek__label {
-  flex: none;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-}
 .pill--quick {
   border: 1px solid #3a3a3d;
   background: var(--bg);
@@ -1230,14 +1002,6 @@ main:has(> .cards:empty) {
   background: rgba(63, 178, 255, 0.22);
   color: #8fd0ff;
 }
-.people__tags {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 5px;
-  padding: 0 2px 8px;
-  border-bottom: 1px solid #26262c;
-}
 .people__row {
   border-bottom: 0;
 }
@@ -1252,37 +1016,6 @@ main:has(> .cards:empty) {
   color: #8fd0ff;
   font-size: 11px;
   font-weight: 700;
-}
-.tagchip__x {
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  color: #8fd0ff;
-  font-size: 13px;
-  line-height: 16px;
-}
-.tagchip__x:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-.tagadd input {
-  width: 80px;
-  height: 22px;
-  padding: 0 9px;
-  border: 1px dashed var(--field);
-  border-radius: 11px;
-  background: none;
-  color: var(--text);
-  font: inherit;
-  font-size: 11px;
-}
-.tagadd input:focus {
-  border-style: solid;
-  border-color: #3fb2ff;
-  outline: none;
-  width: 120px;
 }
 
 /* Quick questions beside the bar's Ask field. */
@@ -1358,17 +1091,6 @@ main:has(> .cards:empty) {
   border: 0;
   background: none;
   box-shadow: none;
-}
-.ask__form .ask__save {
-  width: 26px;
-  height: 26px;
-  border: 0;
-  border-radius: 50%;
-  font-size: 14px;
-  line-height: 1;
-}
-.ask__form .ask__save:hover {
-  background: rgba(255, 179, 26, 0.12);
 }
 .ask__form .ask__send {
   display: grid;
@@ -1606,33 +1328,6 @@ main:has(> .cards:empty) {
   .qflash__body {
     white-space: normal;
   }
-}
-
-/* The Ask box's sections. */
-.ask__modes {
-  display: flex;
-  gap: 2px;
-  margin-top: 8px;
-  padding: 2px;
-  border-radius: 10px;
-  background: var(--bg);
-}
-.ask__mode {
-  flex: 1;
-  height: 26px;
-  border: 0;
-  border-radius: 8px;
-  background: none;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-}
-.ask__mode:hover {
-  color: var(--text);
-}
-.ask__mode--on {
-  background: #2f2f35;
-  color: var(--text);
 }
 
 /* Stats. */
@@ -2123,13 +1818,11 @@ body.livechat main:has(> .cards:empty) {
 .oc-tool--mark:hover { background: color-mix(in srgb, var(--amber) 40%, transparent); }
 .oc-tool--on { color: var(--amber); }
 .oc-tool--on svg { fill: currentColor; }
-.oc-tool--mod:hover { background: color-mix(in srgb, var(--red) 55%, transparent); }
 .oc-tool[hidden] { display: none; }
 .oc-more { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); padding: 5px 14px; font-size: 12px; font-weight: 600; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); color: #fff; background: var(--purple); border: 0; border-radius: 12px; cursor: pointer; white-space: nowrap; }
 .oc-card { position: absolute; left: 6px; right: 6px; top: 6px; padding: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5); }
 .oc-card__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .oc-card__name { font-weight: 700; color: var(--text); }
-.oc-card__row { display: flex; flex-wrap: wrap; gap: 4px; }
 .oc-act { padding: 3px 9px; font-size: 12px; color: var(--text); background: #2f2f35; border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
 .oc-act:hover { background: #3f3f46; }
 .oc-act--good { border-color: var(--good); }
@@ -2318,18 +2011,6 @@ body.livechat main:has(> .cards:empty) {
 .sv__title { font-weight: 700; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
 .sv__toggle .peek__ping { margin-right: -4px; }
 .sv__says { overflow: hidden; color: var(--muted); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
-.sv__owner { flex: none; font-weight: 600; font-size: 12px; }
-.sv__pick {
-  flex: none;
-  max-width: 45%;
-  padding: 2px 6px;
-  font: inherit;
-  font-size: 12px;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-}
 .sv__body {
   display: flex;
   flex-direction: column;
@@ -2362,14 +2043,6 @@ body.livechat main:has(> .cards:empty) {
 .sv__text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .sv__who { font-weight: 700; }
 .sv__muted { color: var(--muted); }
-.sv__tag {
-  margin-left: 6px;
-  padding: 0 6px;
-  font-size: 11px;
-  color: var(--muted);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
 .sv__ago { flex: none; margin-top: 1px; color: var(--muted); font-size: 11px; white-space: nowrap; }
 .sv__empty { margin: 0; padding: 4px 2px; color: var(--muted); font-size: 12px; }
 
@@ -2462,22 +2135,6 @@ body.livechat main { max-height: 55vh; }
 /* ===== The message area (the bar's peek) ================================================ */
 /* Which one of several is showing: a dot each, then See all. They take turns every 6 s. */
 .peek__pager { display: flex; flex: none; align-items: center; gap: 5px; }
-.peek__dot {
-  --ping: var(--muted);
-  width: 8px;
-  height: 8px;
-  padding: 0;
-  border: 1.5px solid var(--ping);
-  border-radius: 50%;
-  background: none;
-  opacity: 0.7;
-}
-.peek__dot--1 { --ping: var(--good); }
-.peek__dot--2 { --ping: var(--orange); }
-.peek__dot--3 { --ping: var(--yellow); }
-.peek__dot--4 { --ping: #fff; }
-.peek__dot--on { background: var(--ping); opacity: 1; }
-.peek__dot:hover { opacity: 1; }
 
 /* In the streamer's chat dock: the place to look, a little larger than everything round
    it. No edges: a soft glow in the color of what it shows, fading out at the sides. */
@@ -2528,38 +2185,6 @@ body.livechat .peek__count { font-size: 10px; }
 }
 
 /* ===== The Ask box's typing bar ======================================================= */
-/* Ask, Quick info or !vanish, picked at the left of the bar you type in. */
-.ask__field {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  min-width: 0;
-  height: 38px;
-  padding: 0 4px;
-  border: 1px solid var(--field);
-  border-radius: 19px;
-  background: var(--bg);
-}
-.ask__field:focus-within { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(145, 71, 255, 0.25); }
-.ask__field .ask__input { height: 36px; padding: 0 10px; border: 0; border-radius: 0; background: none; }
-.ask__field .ask__input:focus { box-shadow: none; }
-.ask__modepick {
-  flex: none;
-  height: 28px;
-  padding: 0 22px 0 10px;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text);
-  border: 0;
-  border-radius: 14px;
-  background: var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23adadb8' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 8px center;
-  appearance: none;
-  cursor: pointer;
-}
-.ask__field--ask .ask__modepick { background-color: color-mix(in srgb, var(--purple) 35%, var(--panel)); }
-.ask__field--info .ask__modepick { background-color: color-mix(in srgb, #3fb2ff 30%, var(--panel)); }
-.ask__field--love .ask__modepick { background-color: color-mix(in srgb, #ff7ab8 30%, var(--panel)); }
 
 /* The status menu (side panel): Online, Idle or Offline, opened from the status button. */
 .presence__menu {
@@ -2599,7 +2224,7 @@ body.livechat .peek__count { font-size: 10px; }
 .glow--5 { display: block; --ping: var(--red); box-shadow: inset 0 0 0 3.5px #ff2a1f, inset 0 0 26px rgba(255, 42, 31, 0.6); animation: warnPulse 1.1s ease-in-out infinite !important; }
 @keyframes warnPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 @media (prefers-reduced-motion: reduce) { .glow--5 { animation: none !important; } }
-.peek__ping--5, .peek__dot--5 { --ping: var(--red); }
+.peek__ping--5 { --ping: var(--red); }
 body.livechat .peek--5 { --ping: var(--red); }
 .sv--5 { --ping: var(--red); }
 .sv__row--5 { --ping: var(--red); }
@@ -2783,40 +2408,7 @@ body.livechat .peek__line .peek__answer { margin-right: 8px; }
   color: var(--muted);
   white-space: nowrap;
 }
-.peek__menu {
-  display: flex;
-  flex: 1 1 100%;
-  flex-direction: column;
-  gap: 1px;
-  max-height: 150px;
-  margin-top: 2px;
-  padding: 4px;
-  overflow-y: auto;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
-}
-.peek__item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 5px 8px;
-  font: inherit;
-  font-size: 12.5px;
-  color: var(--text);
-  text-align: left;
-  background: none;
-  border: 0;
-  border-radius: 8px;
-  cursor: pointer;
-}
-.peek__item:hover { background: color-mix(in srgb, var(--purple) 28%, transparent); }
-.peek__item--on { background: rgba(255, 255, 255, 0.07); }
-.peek__item .peek__ping { margin: 0; }
 .peek__ping--answer { background: var(--purple); }
-.peek__itemtext { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 /* ===== !vanish notes: a pink glow that spills out into the background ==================== */
 /* As it arrives the glow blooms wide and bright past the edges of the note, then settles
@@ -2941,19 +2533,12 @@ body.livechat .peek__dismiss:hover, body.livechat .peek__dismiss:focus-visible {
 
 /* Connections: the Chat button by each person, the group rooms row, and the way back
    from a chat. */
-.people__row .people__chat { flex: none; }
-.people__rooms { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 10px; }
-.people__roomslabel { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .chat__back { align-self: flex-start; margin: 0 0 6px; padding: 2px 6px 2px 2px; font: inherit; font-size: 12px; color: var(--muted); background: none; border: 0; border-radius: 6px; cursor: pointer; }
 .chat__back:hover, .chat__back:focus-visible { color: var(--text); background: color-mix(in srgb, var(--text) 8%, transparent); }
-.people__chat .pill__count:not(:empty), .people__rooms .pill__count:not(:empty) { position: static; margin-left: 4px; }
 
 /* The side panel's "Clear all": plain text, right-aligned, between Ask and the lists. */
 .cards__clearall { align-self: flex-end; margin: -2px 2px -4px; padding: 2px 4px; font: inherit; font-size: 12px; color: var(--muted); background: none; border: 0; border-radius: 4px; cursor: pointer; }
 .cards__clearall:hover, .cards__clearall:focus-visible { color: var(--text); text-decoration: underline; }
-/* A connection's name opens your private chat with them. */
-.people__name--chat { padding: 0; font: inherit; font-weight: 600; color: inherit; text-align: left; background: none; border: 0; cursor: pointer; }
-.people__name--chat:hover, .people__name--chat:focus-visible { text-decoration: underline; }
 
 /* Connections: one row per person. Picture, name and state on the left (one button that
    opens your private chat), their tags on the right, then + (add a tag) and ×. */
@@ -2967,12 +2552,9 @@ body.livechat .peek__dismiss:hover, body.livechat .peek__dismiss:focus-visible {
 .people__words .people__name { flex: none; }
 .people__words .people__state { font-size: 11px; }
 .people__unread { flex: none; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--purple); color: #fff; font-size: 10px; font-weight: 800; line-height: 16px; text-align: center; }
-.people__row .people__tags { flex: none; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px; max-width: 55%; padding: 0; border: 0; }
 .people__plus { flex: none; width: 22px; height: 22px; padding: 0; font: inherit; font-size: 15px; line-height: 1; color: var(--muted); background: none; border: 1px dashed var(--field); border-radius: 50%; cursor: pointer; }
-.people__plus:hover, .people__plus:focus-visible, .people__plus--on { color: var(--text); border-style: solid; border-color: #3fb2ff; }
-.people__list > .tagadd { display: flex; justify-content: flex-end; gap: 6px; padding: 0 30px 8px 0; border-bottom: 1px solid #26262c; }
-.people__list > .tagadd input { width: 140px; }
-.people__list > .tagadd .pill { height: 22px; }
+.people__plus:hover,
+.people__plus:focus-visible { color: var(--text); border-style: solid; border-color: #3fb2ff; }
 
 /* Connections carries chat's unread count now. */
 #peopleBtn { position: relative; }
@@ -3044,19 +2626,16 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-raid__title { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #ff9a4d; }
 .oc-raid__name { font-weight: 700; color: var(--text); text-decoration: none; }
 .oc-raid__name:hover { text-decoration: underline; }
-.oc-raid__hi { margin: 6px 0 0 42px; }
 .oc-line--first { margin: 2px 0; background: rgba(0, 219, 132, 0.1); box-shadow: inset 3px 0 0 #00db84; }
 .oc-firsttag { font-size: 11px; font-weight: 700; color: #3ce59f; }
 .oc-line--highlight { background: rgba(145, 71, 255, 0.22); box-shadow: inset 3px 0 0 #bf94ff; }
 .oc-line--giant .oc-emote { height: 84px; margin: 2px; }
-.oc-bits { margin-right: 4px; padding: 0 5px; font-size: 11px; font-weight: 700; color: #1f1f23; background: var(--amber); border-radius: 3px; }
 /* A chatter who probably came with a raid: orange, like the raid card */
 .oc-line--raider { background: rgba(255, 106, 0, 0.1); box-shadow: inset 3px 0 0 #ff6a00; }
 .oc-line--raider.oc-line--first { background: linear-gradient(90deg, rgba(255, 106, 0, 0.14), rgba(0, 219, 132, 0.1)); }
 .oc-raidtag { margin-right: 4px; padding: 0 5px; font-size: 10px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #fff; background: #ff6a00; border-radius: 3px; cursor: help; }
 /* The raiding streamer's picture: large on the raid card, small on each raider's tag */
 .oc-raid__pic { width: 56px; height: 56px; border-width: 3px; object-fit: cover; }
-.oc-raid__hi { margin-left: 64px; }
 .oc-raidtag { display: inline-flex; align-items: center; gap: 3px; vertical-align: 1px; }
 .oc-raidtag__pic { width: 14px; height: 14px; margin-left: -3px; border-radius: 50%; border: 1px solid #fff; object-fit: cover; }
 /* Quieter backgrounds for first-time chatters and raiders (labels unchanged) */
@@ -3088,10 +2667,7 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-card__close:hover { color: var(--text); background: #2f2f35; }
 .oc-card__facts { display: grid; gap: 3px; margin: 8px 0; font-size: 12px; }
 .oc-card__fact { color: var(--text); }
-.oc-card__fact--wait { color: var(--muted); font-style: italic; }
-.oc-card__bio { margin-top: 3px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .oc-card__said { margin-bottom: 8px; padding-top: 6px; border-top: 1px solid var(--line); font-size: 12px; }
-.oc-card__label { margin-bottom: 3px; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .oc-card__msg { padding: 2px 0; color: var(--text); overflow-wrap: anywhere; }
 .oc-card__msg--gone { color: var(--muted); text-decoration: line-through; }
 /* Custom chat: warn, and Twitch's cards at the top of chat */
@@ -3180,9 +2756,6 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-event--streak .oc-event__value { color: #ffb066; }
 .oc-event__who { margin-top: 1px; font-size: 12px; color: var(--muted); }
 .oc-event__msg { margin-top: 4px; color: var(--text); }
-/* Cheers: a gem and the number in bold */
-.oc-bits { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px 1px 5px; font-size: 12px; color: #fff; background: linear-gradient(90deg, #7b3fe4, #9c6bff); border-radius: 10px; vertical-align: 1px; }
-.oc-bits b { font-size: 13px; font-weight: 800; }
 /* The pinned message */
 .oc-topcard--pin { --tc: #bf94ff; background: linear-gradient(135deg, rgba(145, 71, 255, 0.24), rgba(145, 71, 255, 0.07)); border-color: rgba(191, 148, 255, 0.45); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); }
 .oc-topcard__pin { display: grid; place-items: center; width: 22px; height: 22px; flex: none; color: #fff; background: #9147ff; border-radius: 50%; }
@@ -3204,7 +2777,6 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-pinmenu__item { padding: 6px 10px; font: inherit; font-size: 12px; text-align: left; color: var(--text); background: none; border: 0; border-radius: 4px; cursor: pointer; white-space: nowrap; }
 .oc-pinmenu__item:hover { background: #2f2f35; }
 .oc-pinmenu__head { padding: 3px 10px 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
-.oc-topcard__unpin { margin-top: 6px; padding: 2px 10px; font-size: 11px; }
 /* A gift bomb: a big card that lists everyone who got a sub */
 .oc-event--bomb { flex-wrap: wrap; margin: 6px 0; padding: 10px 12px 12px; border-radius: 0 6px 6px 0; background: linear-gradient(135deg, rgba(191, 90, 242, 0.32), rgba(145, 71, 255, 0.1)); }
 .oc-event--bomb .oc-event__icon { width: 44px; height: 44px; }
@@ -3212,9 +2784,6 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-event--bomb .oc-event__value { font-size: 28px; }
 .oc-event--bomb .oc-event__big { font-size: 16px; }
 .oc-giftees__count { width: 100%; margin: 8px 0 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #e2c6ff; }
-.oc-giftees { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; }
-.oc-giftee { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 6px; font-size: 12px; font-weight: 600; color: #fff; background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(191, 148, 255, 0.35); border-radius: 12px; animation: oc-giftee-in 0.35s ease-out; }
-.oc-giftee svg { color: #d9a6ff; }
 @keyframes oc-giftee-in { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: none; } }
 /* Mod icons a little tighter together; a little more room between chat lines */
 .oc-modicons { gap: 0; margin-right: 3px; }
@@ -3227,9 +2796,6 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-event--streak .oc-event__value { color: #ff9a4d; }
 .oc-event--bomb .oc-event__icon { width: 40px; height: 40px; }
 .oc-giftees__count { color: #c9a8ff; }
-.oc-giftee { background: #18181b; border-color: #3a3a3d; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
-.oc-giftee svg { color: #bf94ff; }
-.oc-bits { background: #7b3fe4; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
 .oc-topcard, .oc-topcard--pin { background: color-mix(in srgb, var(--tc) 12%, #1f1f23); border: 1px solid #35353b; border-left: 3px solid var(--tc); border-radius: 6px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7); }
 .oc-topcard--pin { --tc: #9147ff; }
 .oc-topcard--pin .oc-topcard__label { color: #bf94ff; }
@@ -3244,12 +2810,10 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-redeem { border-top: 1px solid rgba(0, 181, 240, 0.7); border-bottom: 1px solid rgba(0, 181, 240, 0.7); border-radius: 2px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
 .oc-notice:not(.oc-event):not(.oc-notice--raid) { --notice: var(--purple); border-top: 1px solid var(--notice); border-bottom: 1px solid var(--notice); border-radius: 2px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
 .oc-notice--gold:not(.oc-event) { --notice: var(--amber); }
-.oc-giftee { border-radius: 2px; }
 /* Cards: a black border all round and a big black shadow; nothing colored on the edges */
 .oc-event, .oc-event--bomb, .oc-notice--raid, .oc-redeem, .oc-notice:not(.oc-event):not(.oc-notice--raid) { border: 1px solid #000; border-radius: 2px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.85), 0 2px 4px rgba(0, 0, 0, 0.7); }
 .oc-topcard, .oc-topcard--pin { border: 1px solid #000; border-radius: 2px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.85), 0 2px 4px rgba(0, 0, 0, 0.7); }
 .oc-event, .oc-event--bomb, .oc-notice--raid, .oc-redeem, .oc-notice { position: relative; z-index: 1; margin-top: 8px; margin-bottom: 8px; }
-
 
 /* ===== One color per kind of notice, on one calm dark card =====
    Every card sits on the same mid-dark gray; the kind's color is on its icon, its big number
@@ -3300,8 +2864,6 @@ body.no-modicons .oc-modicons { display: none; }
 
 /* Gift bombs: the list of names, in the gift color. */
 .oc-giftees__count { font-family: var(--label); font-size: 12px; letter-spacing: 0.06em; color: var(--k-gift); }
-.oc-giftee { font-family: var(--label); letter-spacing: 0.02em; background: #1b1b20; border: 1px solid #000; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); }
-.oc-giftee svg { color: var(--k-gift); }
 
 /* Channel points: who redeemed what, and the cost. */
 .oc-redeem__head { font-family: var(--label); letter-spacing: 0.02em; color: var(--muted); }
@@ -3318,8 +2880,6 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-raidtag { font-family: var(--label); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; }
 
 /* Cheers and highlighted messages (tinted only lightly). */
-.oc-bits { color: #10241f; background: var(--k-bits); }
-.oc-bits b { font-family: var(--serif); font-size: 13px; font-weight: 700; }
 .oc-cheer { color: #c86bff; } /* cheers: one pink-purple, whatever the size */
 .oc-line--highlight { background: color-mix(in srgb, var(--k-points) 9%, transparent); box-shadow: inset 2px 0 0 var(--k-points); }
 
@@ -3418,10 +2978,13 @@ body.no-modicons .oc-modicons { display: none; }
 .oc-notice--announcement .oc-notice__head { font-weight: 700; letter-spacing: 0; }
 .oc-raid__title, .oc-notice--raid .oc-raid__title { font-family: var(--label); font-weight: 800; letter-spacing: 0.02em; }
 .oc-raid__pic { border-radius: 12px; }
-.oc-firsttag, .oc-raidtag, .oc-giftees__count, .oc-giftee, .oc-redeem__head, .oc-redeem__cost, .oc-bits b { font-family: var(--label); letter-spacing: 0.01em; }
+.oc-firsttag,
+.oc-raidtag,
+.oc-giftees__count,
+.oc-redeem__head,
+.oc-redeem__cost { font-family: var(--label); letter-spacing: 0.01em; }
 
 /* Little tinted chips (gift names), like the reference's soft orange notice. */
-.oc-giftee { background: color-mix(in srgb, var(--k-gift) 10%, #1b1b1f); border: 1px solid color-mix(in srgb, var(--k-gift) 22%, transparent); border-radius: 8px; box-shadow: none; }
 .oc-topbar { height: 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.07); }
 .oc-topbar__fill { border-radius: 6px; background: linear-gradient(90deg, color-mix(in srgb, var(--tc) 70%, #000), var(--tc)); }
 
@@ -3525,13 +3088,44 @@ body.livechat .dot--resting:not(:hover):not(.dot--answer):not(.dot--ask) { box-s
 }
 
 /* ===== Corners: everything that isn't chat, a dropdown or a button is only just rounded ===== */
-.acard, .arow, .ask, .ask__menu, .chat__log, .dnd-menu, .presence__menu, .peek__menu, .oc-pinmenu,
-.irow, .irow:hover, .irow:focus-within, .irow--open,
-.oc-card, .oc-event, .oc-event--bomb, .oc-redeem, .oc-notice, .oc-notice--raid, .oc-notice--announcement,
-.oc-topcard, .oc-topcard--pin, .oc-topbar, .oc-topbar__fill, .oc-giftee, .oc-bits, .oc-raid__pic,
-.peek__item, body.livechat .peek--on, .people__row .people__who,
-.qflash, .pins .qflash, body.livechat .qflash--love, .qcard, .qcard__answer, .rcard, .receipt,
-.settings, .stats__cell, .stats__live, .sv, .sv__row, .sv__tag, .tagchip, .tile {
+.arow,
+.ask,
+.ask__menu,
+.chat__log,
+.dnd-menu,
+.presence__menu,
+.oc-pinmenu,
+.irow,
+.irow:hover,
+.irow:focus-within,
+.irow--open,
+.oc-card,
+.oc-event,
+.oc-event--bomb,
+.oc-redeem,
+.oc-notice,
+.oc-notice--raid,
+.oc-notice--announcement,
+.oc-topcard,
+.oc-topcard--pin,
+.oc-topbar,
+.oc-topbar__fill,
+.oc-raid__pic,
+body.livechat .peek--on,
+.people__row .people__who,
+.qflash,
+.pins .qflash,
+body.livechat .qflash--love,
+.qcard,
+.qcard__answer,
+.receipt,
+.settings,
+.stats__cell,
+.stats__live,
+.sv,
+.sv__row,
+.tagchip,
+.tile {
   border-radius: 3px;
 }
 /* Icon tiles and the count tag: a touch less. */
@@ -3887,7 +3481,6 @@ body.livechat .oc-bar::after {
   body.livechat .bar::before, body.livechat .bar::after, .bar__planet { animation: none; }
 }
 
-
 /* ===== Twitch Space branding, quiet, everywhere ===== */
 /* A thin line of the brand's blue along the very top, fading out at both ends. */
 body::before {
@@ -4061,57 +3654,6 @@ body.livechat::before {
 .cx__section { display: flex; flex-direction: column; gap: 8px; }
 .cx__sechead { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 0; }
 .cx__group { padding: 10px 12px; }
-.cx__grouptop { display: flex; align-items: center; gap: 6px; }
-.cx__groupname { font-size: 14px; font-weight: 800; color: #fff; }
-.cx__groupcount {
-  margin-right: auto;
-  min-width: 20px;
-  height: 18px;
-  padding: 0 6px;
-  border-radius: 9px;
-  background: rgba(125, 176, 239, 0.14);
-  color: #7db0ef;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 18px;
-  text-align: center;
-}
-.cx__faces { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.cx__face {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 8px 0 3px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.25);
-  font-size: 12px;
-  font-weight: 600;
-  color: #9ea4bb;
-}
-.cx__face .people__pic { width: 22px; height: 22px; opacity: 0.55; filter: grayscale(0.7); }
-.cx__face--on { color: #e8ecf6; }
-.cx__face--on .people__pic { opacity: 1; filter: none; box-shadow: 0 0 0 2px var(--good); }
-.cx__face--idle .people__pic { opacity: 0.8; filter: none; box-shadow: 0 0 0 2px var(--amber); }
-.cx__facex {
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  color: #6c7390;
-  font-size: 13px;
-  line-height: 16px;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-.cx__face:hover .cx__facex { opacity: 1; }
-.cx__facex:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
-.cx__rooms { display: flex; flex-wrap: wrap; gap: 6px; }
 .cx__list {
   display: flex;
   flex-direction: column;
@@ -4129,29 +3671,11 @@ body.livechat::before {
 .cx__pic--off { opacity: 0.6; filter: grayscale(0.6); }
 .cx .people__plus { border-color: rgba(125, 176, 239, 0.3); color: #7db0ef; }
 .cx .tagchip { background: rgba(125, 176, 239, 0.12); border-color: rgba(125, 176, 239, 0.25); color: #cfe0f7; }
-.cx .tagadd { display: flex; gap: 6px; padding: 4px 6px 8px 44px; }
-.cx .tagadd input { flex: 1; min-width: 0; }
 .cx__foot { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 8px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
 .cx__build { margin: 0; font-size: 11px; color: #55586a; }
 
 /* Groups, calmer: squarer buttons, and members as picture-and-name with no box round them. */
 .cx__btn { height: 26px; padding: 0 10px; border-radius: 7px; }
-.cx__groupcount { min-width: 0; height: auto; padding: 0; background: none; color: #7d8299; font-size: 12px; font-weight: 600; line-height: inherit; }
-.cx__faces { gap: 4px 14px; margin-top: 10px; }
-.cx__face { height: auto; gap: 6px; padding: 0; border: 0; border-radius: 0; background: none; }
-.cx__facex { margin-left: -2px; }
-.cx__newgroup { display: flex; flex-direction: column; gap: 8px; }
-.cx .cx__newname {
-  height: 34px;
-  padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  background: rgba(4, 6, 14, 0.7);
-  color: var(--text);
-  font: inherit;
-  font-size: 13.5px;
-}
-.cx .cx__newname:focus { border-color: rgba(90, 149, 230, 0.6); outline: none; }
 .cx__picklabel { margin: 4px 2px 0; }
 .cx__picklist { display: flex; flex-direction: column; gap: 2px; }
 .cx__pick {
@@ -4170,46 +3694,7 @@ body.livechat::before {
 }
 .cx__pick:hover { background: rgba(125, 176, 239, 0.08); }
 .cx__pick .people__pic { width: 24px; height: 24px; }
-.cx__tick {
-  margin-left: auto;
-  width: 18px;
-  height: 18px;
-  border: 1.5px solid rgba(125, 176, 239, 0.35);
-  border-radius: 5px;
-  color: #fff;
-  font-size: 12px;
-  line-height: 15px;
-  text-align: center;
-}
 .cx__pick--on { color: #fff; }
-.cx__pick--on .cx__tick { border-color: #3f7dd8; background: #3f7dd8; }
-.cx__newgroup .cx__btn--blue { align-self: flex-end; }
-.cx__newgroup .cx__note:empty { display: none; }
-/* The two groups Twitch fills in. */
-.cx__from { font-size: 10.5px; font-weight: 600; color: #7db0ef; opacity: 0.8; }
-.cx__face--new { color: #7d8299; }
-.cx__face--new .people__pic { opacity: 0.45; filter: grayscale(1); }
-.cx__faceadd {
-  height: 20px;
-  padding: 0 7px;
-  border: 1px solid rgba(125, 176, 239, 0.35);
-  border-radius: 5px;
-  background: none;
-  color: #7db0ef;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.cx__faceadd:hover:not(:disabled) { background: #3f7dd8; border-color: #3f7dd8; color: #fff; }
-.cx__faceadd:disabled { opacity: 0.4; cursor: default; }
-.cx__allow { display: flex; align-items: center; gap: 10px; }
-.cx__allowtext { flex: 1; font-size: 12px; line-height: 1.4; color: #b9c2d8; }
-.cx .tagchip--auto { padding-right: 8px; }
-.cx__grouptop { flex-wrap: wrap; row-gap: 8px; }
-.cx__grouplabel { display: flex; align-items: baseline; gap: 6px; margin-right: auto; white-space: nowrap; }
-.cx__grouplabel .cx__groupcount { margin-right: 0; }
-.cx__groupacts { display: flex; gap: 6px; margin-left: auto; }
 
 /* The streamer's bar: each ring color (how recently they chatted) with a soft glow of its own. */
 body.livechat .dot--light5:not(:hover):not(.dot--answer):not(.dot--ask) { box-shadow: 0 0 0 2px var(--good), 0 0 10px 1px color-mix(in srgb, var(--good) 55%, transparent); }
@@ -4462,10 +3947,8 @@ body.has-space.has-space .oc-event__icon { box-shadow: 0 3px 10px rgba(0, 0, 0, 
 body.has-space.has-space .oc-raid__pic { box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55); }
 
 /* Little tags in a line (raider, first-timer, cheers): rounded like everything else. */
-body.has-space.has-space .oc-raidtag,
-body.has-space.has-space .oc-bits { border-radius: 10px; font-weight: 800; }
+body.has-space.has-space .oc-raidtag { border-radius: 10px; font-weight: 800; }
 body.has-space.has-space .oc-firsttag { font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
-body.has-space.has-space .oc-giftee { background: rgba(20, 28, 48, 0.7); border: 1px solid rgba(125, 176, 239, 0.14); border-radius: 10px; box-shadow: none; }
 
 /* Highlighted, first-time and raider lines: a soft wash, no hard bar down the side. */
 body.has-space.has-space .oc-line--highlight,
@@ -4491,12 +3974,6 @@ body.has-space.has-space .oc-line--raider .oc-raidtag {
 }
 body.has-space.has-space .oc-raidtag__pic,
 body.has-space.has-space .oc-line--raider .oc-raidtag__pic { border-color: var(--raid-ink, #fff); }
-body.has-space.has-space .oc-bits,
-body.has-space.has-space .oc-bits b {
-  color: #fff;
-  text-shadow: none;
-}
-body.has-space.has-space .oc-bits { background: color-mix(in srgb, var(--k-bits) 72%, #000); }
 
 /* Chat lines stay plain rows, edge to edge: no rounded boxes. First-timers and raiders are
    marked by their label and tag; a highlighted message gets the faintest full-width tint. */
@@ -4783,24 +4260,6 @@ body.livechat .slot .qflash--info .qflash__who,
 body.livechat .slot .qflash--love .qflash__who { font-size: 9.5px; margin-left: 6px; }
 body.livechat .slot .qflash--love::before { inset: -6px -10px; }
 body.livechat .slot > .pins { display: flex; flex-direction: column; gap: 3px; }
-body.livechat .slot__more {
-  position: fixed;
-  right: 10px;
-  z-index: 25;
-  height: 18px;
-  padding: 0 8px;
-  font: inherit;
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: #fff;
-  background: #3f7dd8;
-  border: 0;
-  border-radius: 9px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-  cursor: pointer;
-}
-body.livechat .slot__more[hidden] { display: none; }
 
 /* Empty slot, take two: the streamer's space shows through, with a soft fuzzy patch of
    black shadow in the middle that fades out to nothing at its edges. */
@@ -4965,9 +4424,6 @@ body.livechat.has-space .bar__planet { opacity: 0.52; }
 /* Opening the panel: the word written in a ring round the dot, like a planet's ring. The
    ring is tilted and turns slowly as a whole (presenceTilt, the slow spin) while the word
    travels round the dot a little quicker (presenceOrbit), then it all fades. */
-.presence__spin { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; pointer-events: none; perspective: 120px; animation: presenceTilt 2.6s ease-in-out forwards; }
-.presence__spin svg { display: block; width: 100%; height: 100%; overflow: visible; animation: presenceOrbit 1.4s linear infinite; }
-.presence__spin text { fill: #fff; font-size: 6.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: none; }
 @keyframes presenceTilt {
   0% { opacity: 0; transform: rotateZ(-28deg) rotateX(58deg) scale(0.85); }
   14% { opacity: 1; }
@@ -4975,7 +4431,6 @@ body.livechat.has-space .bar__planet { opacity: 0.52; }
   100% { opacity: 0; transform: rotateZ(22deg) rotateX(58deg) scale(1); }
 }
 @keyframes presenceOrbit { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .presence__spin, .presence__spin svg { animation: presenceFade 3s ease-out forwards; } }
 @keyframes presenceFade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
 
 /* Mod view with lots of streamers: one row that scrolls sideways, never pushing the
@@ -5048,7 +4503,6 @@ main.main--msgs .panel__sub { color: var(--msg-muted); }
 .msgs__grouppic { width: 36px !important; height: 36px !important; color: var(--honey-ink); font-weight: 800; background: var(--honey); }
 .msgs__empty { margin: 0; padding: 10px 4px; color: var(--msg-muted); font-size: 12px; line-height: 1.45; }
 .msgs__empty p { margin: 0 0 8px; }
-.msgs__picker { margin: 0 0 8px; }
 
 /* Streamers bar: the camera (and, for a streamer who's also your mod, their sword or
    hammer beside it) in the picture's bottom-right corner. */
@@ -5213,7 +4667,6 @@ body.embed main { padding-bottom: 44px; }
 body.embed .space__mark { right: auto; left: 14px; }
 /* The DMs: a green ring round someone online, and beside their name, "online" or when
    they last were. */
-.msgs__pic--on { border-radius: 50%; box-shadow: 0 0 0 2px #0b0c10, 0 0 0 4px var(--good); }
 .msgs__nameline { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
 .msgs__seen { overflow: hidden; color: var(--msg-muted); font-size: 11px; white-space: nowrap; text-overflow: ellipsis; }
 .msgs__seen--on { color: var(--good); }
@@ -5623,10 +5076,6 @@ body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; 
 /* Connections: people first. "Add people" heads its own card further down; the group chats
    other people started are listed by name; a speech bubble by each name you can message. */
 .cx__card .cx__addlabel { margin-top: 2px; }
-.cx__roomslabel { margin: 6px 4px 0; }
-.cx__roombtn { gap: 6px; }
-.cx__roomname { font-weight: 700; color: #fff; }
-.cx__roomby { color: #8b93ad; font-weight: 600; }
 .people__go { flex: none; display: grid; place-items: center; margin-left: auto; color: #7db0ef; opacity: 0.45; transition: opacity 0.15s; }
 .people__who--chat:hover .people__go, .people__who--chat:focus-visible .people__go { opacity: 1; }
 /* Side panel chats: a run of messages from one person reads as one block (name at the top,
@@ -5672,7 +5121,6 @@ body.has-space .mod-btn.mod-btn--live { overflow: visible; background: #2f2f35; 
 .grp .chat__back:hover { color: var(--honey-hi); text-decoration: underline; text-underline-offset: 3px; }
 .grp .dm__head { margin-bottom: 10px; }
 .grp__ends { margin-top: 14px; }
-.grp__note { padding: 12px 4px 0; }
 /* Your own group chat: its top (or title, in the OBS dock) opens the group's page. */
 .dm__head--link { width: 100%; color: inherit; font: inherit; text-align: left; background: none; border: 0; border-radius: 10px; cursor: pointer; }
 .dm__head--link:hover { background: rgba(255, 255, 255, 0.035); }
@@ -6099,8 +5547,6 @@ body.livechat .slotwrap { display: none !important; }
 :is(body, body.has-space.has-space) .oc-topcard--pin .oc-topcard__time { font-family: inherit; font-size: 11px; font-weight: 600; color: #77777f; }
 :is(body, body.has-space.has-space) .oc-topcard--pin .oc-topcard__sender { font-family: inherit; font-weight: 700; letter-spacing: 0; }
 :is(body, body.has-space.has-space) .oc-topcard--pin .oc-topcard__body { font-size: 13px; color: #efeff1; }
-:is(body, body.has-space.has-space) .oc-topcard--pin .oc-topcard__unpin { padding: 0; font-size: 12px; font-weight: 600; color: #bf94ff; background: none; border: 0; box-shadow: none; }
-:is(body, body.has-space.has-space) .oc-topcard--pin .oc-topcard__unpin:hover { text-decoration: underline; }
 
 /* A first-time chatter: their line on its own, outlined, with the label on top. */
 :is(body, body.has-space.has-space) .oc-line.oc-line--first {
@@ -6854,7 +6300,6 @@ html :is(body, body.has-space.has-space) .oc-line.oc-mod.oc-mod--bright.oc-mod--
 .stopalert--float { position: fixed; top: 8px; right: 8px; z-index: 1001; }
 @keyframes stopalert-in { from { opacity: 0; transform: scale(0.9); } }
 @media (prefers-reduced-motion: reduce) { .stopalert, .stopalert__dot { animation: none; } }
-
 
 /* ===== The tester agreement, right after signing in with Twitch (dock.js testerAgreement) ===== */
 .agree { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 12px; background: radial-gradient(120% 90% at 50% 0%, rgba(28, 34, 66, 0.97), rgba(6, 7, 12, 0.99)); }

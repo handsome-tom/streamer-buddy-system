@@ -584,7 +584,6 @@
     let queue = [];
     let follow = true; // staying at the newest message
     let holdUntil = 0; // the mouse is over the chat
-    let unseen = false;
     let newCount = 0; // lines that came in while chat was paused
     let lastTop = 0;
 
@@ -599,7 +598,6 @@
     function toBottom() {
       list.scrollTop = list.scrollHeight;
       lastTop = list.scrollTop;
-      unseen = false;
       newCount = 0;
       moreBtn.hidden = true;
     }
@@ -612,7 +610,6 @@
       if (goingUp && gap > 2) follow = false;
       else if (gap < 40) follow = true;
       if (follow && Date.now() >= holdUntil) {
-        unseen = false;
         newCount = 0;
       }
       drawMore();
@@ -668,7 +665,6 @@
         list.append(batch);
         if (held()) newCount += queue.length;
         queue = [];
-        unseen = true;
       }
       const limit = held() ? MAX_LINES_PAUSED : MAX_LINES;
       while (list.childElementCount > limit) {

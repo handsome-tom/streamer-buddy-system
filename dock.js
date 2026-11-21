@@ -1,4 +1,4 @@
-// Streamer Buddy System: the hub where a streamer and the people around her
+// Streamer Buddy System: the hub where a streamer and the people around them
 // (mods, regulars) ask each other quick questions. The same page runs as:
 //   - the streamer's OBS dock (Docks → Custom Browser Docks), and its pop-out
 //     windows (?popout)
@@ -1942,11 +1942,6 @@
     }
 
     const body = el("div", "sv__body");
-    const who = (login) => {
-      const b = el("b", "sv__who", login);
-      if (colorOf(login)) b.style.color = colorOf(login);
-      return b;
-    };
     // Each line: a mark (dot or icon), who and when on top, what was said under it, and
     // your own actions (Nudge, take back) as small round buttons on the right.
     const line = (cls, mark, whoLogin, verb, at, text, extra) => {
@@ -3843,10 +3838,8 @@
   // Mod (the sword, the side panel's first button): everything about the stream you're on.
   // Who it's for follows the Twitch tab (modOwner); the picker switches by hand. Then:
   //   - their feed: what their OBS dock shows right now (Streamer View, drawn in here)
-  //   - their reactions: how they answered what you sent, newest first
-  //   - your thread with them: the Send box and the history, same as their own page
-  //   - anything waiting from someone else, underneath, so nothing hides
-  const MAX_REACTIONS = 8;
+  //   - This stream: notes, flags, questions and quick info on this channel (modFeed)
+  //   - Active mods: the streamer and the mods chatting here, opening DMs
 
   // The sword's ring: only while you're on the stream of someone live right now, and you
   // show as online (so they see you're there). Live comes from Twitch, checked every 2
@@ -7226,7 +7219,7 @@
     } catch {}
   }
 
-  // Twitch's live events for her channel; the relay does the adding up.
+  // Twitch's live events for their channel; the relay does the adding up.
   let eventSocket = null;
   function listenForEvents(url = "wss://eventsub.wss.twitch.tv/ws", isReconnect = false) {
     const ws = new WebSocket(url);

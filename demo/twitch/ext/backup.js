@@ -20,6 +20,7 @@ const TBC_BACKUP_KEY = "tbcBackup"; // in twitch.tv's localStorage
 const TBC_BACKUP_SKIP = new Set([
   "accounts", "accountAdding", "hubToken", "modChannels",                    // private
   "tbcInstalled", "featureList", "streakSaverTab", "streakSaverState",       // this install only
+  "streakSaverWin", "streakSaverJob", "streakSaverSaved",
   "streakSaverFailed", "streakSamples",
   "emoteImages", "emoteOwners", "emoteChannels", "buddyPics", "follows",      // caches
   "followsByAccount", "buddies", "buddySeen", "buddyLeader", "myChatColor",

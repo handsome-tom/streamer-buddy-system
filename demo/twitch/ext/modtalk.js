@@ -78,6 +78,29 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
     const name = (parts[0] === "popout" || parts[0] === "moderator" ? parts[1] : parts[0])?.toLowerCase();
     return name && /^[a-z0-9_]+$/.test(name) ? name : null;
   }
+  // The newest line in this chat right now (who said it and what, emotes as their names,
+  // the way chatnotes.js reads a line), so the relay can put what you send back on that
+  // moment in the VOD's chat replay.
+  function anchor() {
+    const lines = document.querySelectorAll(".chat-line__message");
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i];
+      const chatter = line.querySelector('[data-a-target="chat-message-username"]')?.dataset.aUser?.toLowerCase();
+      if (!chatter) continue;
+      let text = "";
+      const walk = (node) => {
+        if (node.nodeType === 3) text += node.textContent;
+        else if (node.tagName === "IMG") text += node.alt || "";
+        else if (!node.classList?.contains("tbc-notes") && !node.classList?.contains("tbc-cnotes")) node.childNodes.forEach(walk);
+      };
+      line.querySelectorAll('[data-a-target="chat-line-message-body"]').forEach(walk);
+      text = text.replace(/\s+/g, " ").trim();
+      if (!text) continue;
+      const chatterName = line.querySelector('[data-a-target="chat-message-username"]')?.textContent.trim() || "";
+      return { chatter, chatterName, text };
+    }
+    return null;
+  }
   // Whose chat this is, if you can message them here.
   function streamer() {
     const c = channelName();
@@ -277,12 +300,13 @@ whenOn("modtalk", "Message the streamer from the chat box", () => {
     if (!text) return;
     if (!to) return say(circle.me ? `You and ${nameOf(channelName() || "this streamer")} need to connect in StreamSpace first` : "Sign in with the StreamSpace button first", "bad");
     const mode = draft.mode;
+    const where = { channel: channelName(), anchor: anchor() }; // for the VOD's chat replay
     if (mode === "ask") {
-      if (send({ t: "ask", to, text: text.slice(0, MODES.ask.max) })) {
+      if (send({ t: "ask", to, text: text.slice(0, MODES.ask.max), ...where })) {
         draft.text = "";
         say("Asked. Their answer will show up right here in chat.", "good");
       }
-    } else if (send({ t: "flash", kind: mode, to, text: text.slice(0, MODES[mode].max) })) {
+    } else if (send({ t: "flash", kind: mode, to, text: text.slice(0, MODES[mode].max), ...(mode === "info" ? where : {}) })) {
       pending = { kind: mode, to, text };
       say("Sending…");
     }

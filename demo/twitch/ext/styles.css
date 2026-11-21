@@ -49,38 +49,116 @@
   gap: 0 5px;
   padding: 4px 8px 8px;
 }
+.tbc-pins[hidden],
+.tbc-freqch[hidden] {
+  display: none !important;
+}
 .tbc-pins__emote {
+  position: relative;
   width: 38px;
   height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 15%;
+  border-radius: 10px;
   background: none;
   border: 0;
+  color: inherit;
   cursor: pointer;
+  transition: background-color 120ms ease-out;
 }
 .tbc-pins__emote:hover {
   background: var(--color-background-interactable-hover, rgba(83, 83, 95, 0.48));
 }
+.tbc-pins__emote:focus-visible,
+.tbc-freqch__channel:focus-visible,
+.tbc-chnav__item:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 2px #a970ff, 0 0 10px rgba(169, 112, 255, 0.55);
+}
 .tbc-pins__emote img {
   width: 28px;
   height: 28px;
+  object-fit: contain;
+  transition: transform 140ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+.tbc-pins__emote:hover img {
+  transform: scale(1.18);
+}
+.tbc-pins__emote:active img {
+  transform: scale(0.94);
+}
+/* A pin whose picture is gone shows its name instead (it still types the emote). */
+.tbc-pins__emote--text {
+  width: auto;
+  max-width: 96px;
+  padding: 0 8px;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  line-height: 38px;
 }
 .tbc-pins__hint {
   margin: 0;
+  padding: 2px 8px;
   font-size: 12px;
   opacity: 0.7;
 }
-/* Drag to reorder: a bar shows where the dragged pin will land. */
+/* Drag to reorder: a soft glowing bar shows where the dragged pin will land. */
 .tbc-pins__emote.tbc-dragging {
-  opacity: 0.4;
+  opacity: 0.35;
 }
-.tbc-pins__emote.tbc-drop-before {
-  box-shadow: inset 3px 0 0 #a970ff;
+.tbc-pins__emote.tbc-drop-before::before,
+.tbc-pins__emote.tbc-drop-after::before,
+.tbc-freqch__channel.tbc-drop-before::before,
+.tbc-freqch__channel.tbc-drop-after::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 3px;
+  background: #a970ff;
+  box-shadow: 0 0 8px rgba(169, 112, 255, 0.8);
+  pointer-events: none;
 }
-.tbc-pins__emote.tbc-drop-after {
-  box-shadow: inset -3px 0 0 #a970ff;
+.tbc-pins__emote.tbc-drop-before::before {
+  left: -4px;
+}
+.tbc-pins__emote.tbc-drop-after::before {
+  right: -4px;
+}
+.tbc-freqch__channel.tbc-drop-before::before {
+  left: -5px;
+}
+.tbc-freqch__channel.tbc-drop-after::before {
+  right: -5px;
+}
+/* "Pinned KEKW": a short note over the bottom of the picker (pins.js). Never takes clicks. */
+.tbc-pins__toast {
+  position: fixed;
+  z-index: 10002;
+  max-width: 260px;
+  padding: 6px 14px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: rgba(24, 24, 27, 0.94);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 14px rgba(169, 112, 255, 0.35);
+  color: #efeff1;
+  font: 600 12px/1.3 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: tbc-pins-toast 1600ms ease-out both;
+}
+@keyframes tbc-pins-toast {
+  0% { opacity: 0; transform: translate(-50%, 8px); }
+  10%, 80% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -4px); }
 }
 
 /* Watch streak flame (streak.js), sitting next to the bits / points balances. */
@@ -519,14 +597,24 @@ html.tbc-peek [role="dialog"][aria-labelledby="channel-points-reward-center-head
   background: none;
   cursor: pointer;
 }
-.tbc-freqch__channel:hover {
-  background: var(--color-background-interactable-hover, rgba(83, 83, 95, 0.48));
-}
 .tbc-freqch__channel img {
   width: 30px;
   height: 30px;
   border-radius: 50%;
   display: block;
+  /* A channel with no picture yet shows as a soft disc, not a broken image. */
+  background: rgba(83, 83, 95, 0.38);
+  transition: transform 140ms cubic-bezier(0.2, 0.9, 0.3, 1.3), box-shadow 140ms ease-out;
+}
+.tbc-freqch__channel img:not([src]) {
+  visibility: hidden;
+}
+.tbc-freqch__channel:has(img:not([src])) {
+  background: rgba(83, 83, 95, 0.38);
+}
+.tbc-freqch__channel:hover img {
+  transform: scale(1.1);
+  box-shadow: 0 0 0 2px rgba(169, 112, 255, 0.85), 0 0 12px rgba(169, 112, 255, 0.5);
 }
 .tbc-freqch__channel {
   position: relative;
@@ -541,10 +629,12 @@ html.tbc-peek [role="dialog"][aria-labelledby="channel-points-reward-center-head
   height: 14px;
   border-radius: 50%;
   background: #3a3a3d;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
   color: #fff;
   font-size: 11px;
   line-height: 14px;
   text-align: center;
+  z-index: 1;
 }
 .tbc-freqch__channel:hover .tbc-freqch__x {
   display: block;
@@ -553,17 +643,16 @@ html.tbc-peek [role="dialog"][aria-labelledby="channel-points-reward-center-head
   background: #e91916;
 }
 .tbc-freqch__channel.tbc-dragging {
-  opacity: 0.4;
+  opacity: 0.35;
 }
-.tbc-freqch__channel.tbc-drop-before {
-  box-shadow: inset 3px 0 0 #a970ff;
+/* A soft pulse when a channel is added from the sidebar. */
+.tbc-freqch__channel--new img {
+  animation: tbc-freqch-new 900ms ease-out;
 }
-.tbc-freqch__channel.tbc-drop-after {
-  box-shadow: inset -3px 0 0 #a970ff;
-}
-/* Brief highlight when a channel is added from the sidebar. */
-.tbc-freqch__channel--new {
-  background: rgba(169, 112, 255, 0.45);
+@keyframes tbc-freqch-new {
+  0% { transform: scale(0.6); box-shadow: 0 0 0 0 rgba(169, 112, 255, 0.9); }
+  45% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(169, 112, 255, 0.35), 0 0 18px rgba(169, 112, 255, 0.7); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(169, 112, 255, 0); }
 }
 
 /* Marker list (vodmarks.js): pops up above the bookmark button, live or VOD. */
@@ -952,12 +1041,16 @@ a.tbc-bdrop__row:hover {
    (streaksaver.js): Auto Saver | Streak Saver | Off. */
 .tbc-ssmode {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   margin: 10px 10px 6px;
+  padding: 2px;
+  border-radius: 9999px;
+  background: rgba(173, 173, 184, 0.1);
 }
 .tbc-ssmode__opt {
-  padding: 3px 7px;
-  border: 1px solid #53535f;
+  flex: 1 1 auto;
+  padding: 4px 7px;
+  border: 0;
   border-radius: 9999px;
   background: none;
   color: #adadb8;
@@ -966,19 +1059,31 @@ a.tbc-bdrop__row:hover {
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
+  transition: background-color 140ms ease-out, color 140ms ease-out, box-shadow 140ms ease-out;
 }
 .tbc-ssmode__opt:hover {
-  border-color: #adadb8;
+  color: #efeff1;
+}
+.tbc-ssmode__opt:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 2px #a970ff;
 }
 .tbc-ssmode__opt--on {
-  border-color: #00c27a;
-  background: rgba(0, 194, 122, 0.15);
+  background: rgba(0, 194, 122, 0.18);
+  box-shadow: 0 0 10px rgba(0, 194, 122, 0.28);
+  color: #00c27a;
+}
+.tbc-ssmode__opt--on:hover {
   color: #00c27a;
 }
 .tbc-ssmode__opt--on[data-mode="off"] {
-  border-color: #adadb8;
-  background: rgba(173, 173, 184, 0.15);
+  background: rgba(173, 173, 184, 0.2);
+  box-shadow: none;
   color: #efeff1;
+}
+/* The sidebar squeezed shut: no room for the pills. */
+.side-nav--collapsed .tbc-ssmode {
+  display: none;
 }
 
 /* X on the "Save your Streak" row (streaksaver.js). */
@@ -1003,6 +1108,12 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   text-align: center;
   cursor: pointer;
   transform: translateY(-50%);
+  opacity: 0.55;
+  transition: opacity 120ms ease-out, background-color 120ms ease-out;
+}
+a[class*="saveYourStreakSideNavRow"]:hover .tbc-ssx,
+.tbc-ssx:focus-visible {
+  opacity: 1;
 }
 .tbc-ssx:hover {
   background: rgba(255, 255, 255, 0.15);
@@ -1020,17 +1131,83 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: tbc-gaveup-fade 160ms ease-out both;
 }
 .tbc-gaveup__card {
   width: 320px;
-  padding: 20px;
-  border-radius: 12px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  padding: 22px 20px 20px;
+  border-radius: 18px;
   background: #18181b;
   color: #efeff1;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6), 0 0 34px rgba(145, 71, 255, 0.22);
   font: 14px/1.4 Inter, Roobert, "Helvetica Neue", Arial, sans-serif;
   text-align: center;
+  animation: tbc-gaveup-pop 260ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@keyframes tbc-gaveup-fade {
+  from { opacity: 0; }
+}
+@keyframes tbc-gaveup-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.94); }
+}
+/* A note (Tom has started): at the top of the page, nothing dimmed, and the page around
+   it still takes clicks. */
+.tbc-gaveup--note {
+  align-items: flex-start;
+  padding-top: 64px;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+.tbc-gaveup--note .tbc-gaveup__card {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  column-gap: 12px;
+  align-items: center;
+  width: 380px;
+  padding: 14px 16px;
+  text-align: left;
+}
+.tbc-gaveup--note .tbc-gaveup__tom {
+  grid-row: 1 / span 2;
+  width: 44px;
+  height: 44px;
+}
+.tbc-gaveup--note .tbc-gaveup__msg {
+  margin: 0;
+  font-size: 14px;
+}
+.tbc-gaveup--note .tbc-gaveup__sub {
+  margin: 2px 0 0;
+}
+.tbc-gaveup--note .tbc-gaveup__ok {
+  grid-column: 2;
+  justify-self: start;
+  margin-top: 10px;
+  padding: 4px 14px;
+  background: rgba(145, 71, 255, 0.22);
+  color: #d5c2ff;
+  font-size: 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tbc-gaveup,
+  .tbc-gaveup__card,
+  .tbc-pins__toast,
+  .tbc-freqch__channel--new img {
+    animation: none;
+  }
+  .tbc-pins__emote img,
+  .tbc-freqch__channel img,
+  .tbc-chnav__item {
+    transition: none;
+  }
 }
 .tbc-gaveup__tom {
   width: 72px;
@@ -1056,6 +1233,16 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 120ms ease-out, transform 120ms ease-out;
+}
+.tbc-gaveup__ok:hover {
+  background: #a970ff;
+}
+.tbc-gaveup__ok:active {
+  transform: scale(0.96);
+}
+.tbc-gaveup--note .tbc-gaveup__ok:hover {
+  background: rgba(145, 71, 255, 0.36);
 }
 
 /* Status label inside the saver window. */
@@ -2148,20 +2335,6 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
 .tbc-mt__form--me {
   --c: #c3cbe0;
 }
-.tbc-mt__empty {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 18px 8px 14px;
-  text-align: center;
-}
-.tbc-mt__empty b {
-  font-size: 14px;
-}
-.tbc-mt__empty span {
-  color: #9aa6c4;
-  font-size: 12.5px;
-}
 
 /* A Connections chat message (or a Just-me note): the Connections icon (or a lock) right
    after the writer's name, in the words' own color. */
@@ -2356,9 +2529,6 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
   color: #fff;
 }
 /* In the chat header: smaller and quiet until you point at it. */
-.tbc-hubchat-wrap {
-  margin-right: 2px;
-}
 .tbc-hubchat {
   color: #dcdce2;
   width: 26px;
@@ -2897,9 +3067,14 @@ html.tbc-noting .tbc-flagx::before {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 6px 0;
+  padding: 10px 0;
   box-sizing: border-box;
-  border-left: 1px solid var(--color-border-base, rgba(83, 83, 95, 0.48));
+  /* No dividing line: the ends fade out, so pictures slide in and out of sight softly. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+}
+.tbc-chnav::-webkit-scrollbar {
+  display: none;
 }
 .tbc-chnav__item {
   flex: none;
@@ -2913,17 +3088,29 @@ html.tbc-noting .tbc-flagx::before {
   font-weight: 600;
   cursor: pointer;
 }
+.tbc-chnav__item {
+  opacity: 0.72;
+  transition: opacity 140ms ease-out, transform 140ms cubic-bezier(0.2, 0.9, 0.3, 1.3), box-shadow 140ms ease-out;
+}
 .tbc-chnav__item:hover {
-  background: var(--color-background-interactable-hover, rgba(83, 83, 95, 0.48));
+  opacity: 1;
+  transform: scale(1.1);
 }
 .tbc-chnav__item--on {
-  box-shadow: 0 0 0 2px #a970ff;
+  opacity: 1;
+  box-shadow: 0 0 0 2px #a970ff, 0 0 10px rgba(169, 112, 255, 0.55);
 }
 .tbc-chnav__item img {
   width: 28px;
   height: 28px;
   border-radius: 50%;
   display: block;
+}
+/* No picture yet: the first letter on a soft disc. */
+.tbc-chnav__item:not(:has(img)) {
+  background: rgba(83, 83, 95, 0.38);
+  font-size: 12px;
+  line-height: 28px;
 }
 
 /* The streak flame steps aside while Twitch's own streak popup shows (streak.js). */
