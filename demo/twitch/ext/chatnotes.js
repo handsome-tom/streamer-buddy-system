@@ -249,8 +249,52 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
       badge.innerHTML = n.private ? LOCK_ICON : CONNECTIONS_ICON;
       head.append(badge);
     }
-    main.append(head, body, when);
+    // From the stream's log (VOD only): a question, message or quick info between a mod and
+    // the streamer, back where it was sent, saying what it was, to whom, and how it ended.
+    const extra = [];
+    if (n.kind) {
+      b.classList.add("tbc-note--log", `tbc-note--${n.kind}`);
+      const toMe = n.to === circle.me;
+      const toWho = n.to?.startsWith("#") ? (n.to === "#everyone" ? "everyone" : n.to.slice(1)) : toMe ? "you" : n.to;
+      const tag = document.createElement("span");
+      tag.className = "tbc-note__tag";
+      tag.textContent = n.kind === "info" ? (mine ? `quick info to ${toWho}` : "quick info") : n.kind === "say" ? (mine ? `message to ${toWho}` : "message") : mine ? `asked ${toWho}` : "asks";
+      head.append(tag);
+      const SAID = { t: "♥", y: "Yes", n: "No", m: "Maybe" };
+      const answers = Object.entries(n.answers || {}).map(([who, a]) => `${who === circle.me ? "You" : who}: ${a.code === "c" || a.code === "x" ? a.text : SAID[a.code] || a.text || "answered"}`);
+      if (answers.length) {
+        const ans = document.createElement("span");
+        ans.className = "tbc-note__answer";
+        ans.textContent = `→ ${answers.join(" · ")}`;
+        extra.push(ans);
+      }
+    }
+    main.append(head, body, ...extra, when);
     b.append(main);
+    // A reply: what it answers, small, above its words ("↩ name: their words").
+    if (n.re) {
+      b.classList.add("tbc-note--reply");
+      const quote = document.createElement("span");
+      quote.className = "tbc-note__quote";
+      quote.textContent = `↩ ${n.reFrom === circle.me ? "You" : n.reFrom || "a note"}${n.reBody ? `: ${n.reBody}` : ""}`;
+      main.insertBefore(quote, body);
+    }
+    // Anyone who can see a note (a Connections chat message, a note on a line, or a reply to
+    // either) can reply to it. Not a Just-me note, or one from the stream's log.
+    if (!n.private && !n.kind) {
+      const r = document.createElement("button");
+      r.type = "button";
+      r.className = "tbc-note__reply";
+      r.title = "Reply";
+      r.setAttribute("aria-label", "Reply");
+      r.textContent = "↩";
+      r.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openReply(n, b);
+      });
+      b.append(r);
+    }
     if (mine) {
       const x = document.createElement("button");
       x.type = "button";
@@ -296,7 +340,7 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
   // in chat, a rounded bar with no tail, just after the line that was newest when it was
   // written (that's what keeps it in its place in chat, and in the VOD's chat replay).
   // That line isn't lit up, since it's not a reply to it.
-  const isBar = (n) => !!(n.secret || n.private);
+  const isBar = (n) => !!(n.secret || n.private || n.kind);
   function barsOf(line, make) {
     const host = hostOf(line);
     let bars = host.querySelector(":scope > .tbc-cnotes");
@@ -318,8 +362,66 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
     const b = bubble(n);
     if (fresh) b.classList.add("tbc-note--new");
     const stack = isBar(n) ? barsOf(line, true) : stackOf(line, true);
-    const box = stack.querySelector(".tbc-notebox");
-    stack.insertBefore(b, box || null);
+    const box = stack.querySelector(":scope > .tbc-notebox");
+    // A reply goes just after what it answers (and the replies already under it), in that
+    // note's thread; anything else at the end.
+    const parent = n.re && stack.querySelector(`:scope > [data-tbc-note="${CSS.escape(n.re)}"]`);
+    const root = parent ? parent.dataset.tbcRoot || n.re : n.id;
+    b.dataset.tbcRoot = root;
+    const thread = parent ? [...stack.querySelectorAll(`:scope > [data-tbc-root="${CSS.escape(root)}"]`)].filter((x) => x !== b && !x.classList.contains("tbc-notebox")) : [];
+    const after = thread[thread.length - 1];
+    stack.insertBefore(b, after ? after.nextSibling : box || null);
+  }
+
+  // The box to reply to a note, just under it in its stack. The reply goes to the same
+  // people (a Connections chat message's reply is secret too) and sits on the same line.
+  function openReply(n, b) {
+    closeBox();
+    const stack = b.parentElement;
+    if (!stack || !canNote()) return;
+    const box = document.createElement("form");
+    box.className = "tbc-notebox tbc-notebox--reply";
+    const input = document.createElement("textarea");
+    input.rows = 1;
+    input.maxLength = MAX_BODY;
+    input.placeholder = `Reply to ${b.querySelector(".tbc-note__who")?.textContent || n.from}`;
+    const go = document.createElement("button");
+    go.type = "submit";
+    go.className = "tbc-notebox__send";
+    go.title = "Send reply";
+    go.setAttribute("aria-label", "Send reply");
+    go.innerHTML = SEND_ICON;
+    box.append(input, go);
+    // Under the note and its replies so far.
+    const root = b.dataset.tbcRoot || n.id;
+    const thread = [...stack.querySelectorAll(`:scope > [data-tbc-root="${CSS.escape(root)}"]`)];
+    const last = thread[thread.length - 1] || b;
+    stack.insertBefore(box, last.nextSibling);
+    input.focus();
+    input.addEventListener("input", () => {
+      input.style.height = "auto";
+      input.style.height = `${Math.min(input.scrollHeight, 90)}px`;
+    });
+    input.addEventListener("keydown", (e) => {
+      e.stopPropagation(); // keep Twitch's own shortcuts out of it
+      if (e.key === "Escape") closeBox();
+      else if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        box.requestSubmit();
+      }
+    });
+    box.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const body = input.value.replace(/\s+/g, " ").trim();
+      if (!body) return input.focus();
+      send({
+        t: "note", channel: n.channel, chatter: n.chatter, chatterName: n.chatterName, text: n.text, body, color: myColor,
+        ...(n.secret ? { secret: true } : {}),
+        re: n.id, reFrom: n.from, reBody: String(n.body || "").slice(0, 80),
+        at: vodId() ? n.at + 1 : undefined, // on a VOD, the same moment as what it answers
+      });
+      closeBox();
+    });
   }
 
   function unstack(b) {
@@ -366,7 +468,8 @@ whenOn("chatnotes", "Notes on chat lines for mods", () => {
       if (!vod || notesFor === `vod:${v}`) return;
       notesFor = `vod:${v}`;
       notes = [];
-      send({ t: "notes", channel: vod.channel, from: vod.start, to: vodEnd() });
+      // log: the stream's questions, messages and quick info too (the relay's Stream log).
+      send({ t: "notes", channel: vod.channel, from: vod.start, to: vodEnd(), log: true });
     } else {
       const c = liveChannel();
       if (!c || notesFor === `live:${c}`) return;

@@ -654,6 +654,48 @@ export const tests = {
 
   // ----- The playground's pretend Twitch chat (StreamSpace's real chat scripts) --------------
 
+  async "in the pretend Twitch chat, a Connections chat message and a note on a line can be replied to, and replies to replies too"(h) {
+    const streamer = h.person("streamer");
+    const mod = h.person("mod1");
+    const mod2 = h.person("mod2");
+    await h.friends(streamer, mod);
+    await h.friends(streamer, mod2);
+    await h.friends(mod, mod2);
+    const tw = await h.panel("mod1", "twitch");
+    h.pretendTwitch.say("hellofoxy", "first time here!");
+    await h.until(() => [...tw.doc.querySelectorAll(".chat-line__message")].find((l) => l.textContent.includes("first time here!")), "the line in the pretend Twitch chat");
+    await h.wait(300);
+    const on = { chatter: "hellofoxy", chatterName: "hellofoxy", text: "first time here!" };
+    const bubble = (body) => [...tw.doc.querySelectorAll(".tbc-note")].find((b) => b.querySelector(".tbc-note__body")?.textContent === body);
+    const reply = async (to, body) => {
+      const b = await h.until(() => bubble(to), `the note "${to}" in chat`);
+      b.querySelector(".tbc-note__reply").click();
+      const box = await h.until(() => tw.$(".tbc-notebox--reply"), "the reply box under it");
+      h.check(box.previousElementSibling === b || box.previousElementSibling?.dataset.tbcRoot === b.dataset.tbcRoot, "the reply box sits under the note's thread");
+      box.querySelector("textarea").value = body;
+      box.requestSubmit();
+    };
+    // A Connections chat message from another mod: the reply is secret too, and answers it.
+    mod2.send({ t: "note", secret: true, channel: "streamer", ...on, body: "anyone else lagging?" });
+    const { n: parent } = await mod2.next("note", (x) => x.n.body === "anyone else lagging?");
+    await reply("anyone else lagging?", "yeah a bit");
+    const { n: r1 } = await mod2.next("note", (x) => x.n.body === "yeah a bit");
+    h.check(r1.re === parent.id && r1.secret && r1.reFrom === "mod2" && r1.reBody === "anyone else lagging?", `the reply should answer it, secretly: ${JSON.stringify(r1)}`);
+    const shown = await h.until(() => bubble("yeah a bit"), "the reply in chat");
+    h.check(shown.classList.contains("tbc-note--reply") && /mod2: anyone else lagging\?/.test(shown.querySelector(".tbc-note__quote")?.textContent || ""), "the reply shows what it answers");
+    h.check(shown.previousElementSibling === bubble("anyone else lagging?"), "the reply sits right under what it answers");
+    // A reply to that reply.
+    mod2.send({ t: "note", secret: true, channel: "streamer", ...on, body: "same", re: r1.id, reFrom: "mod1", reBody: "yeah a bit" });
+    await h.until(() => bubble("same"), "the reply to the reply");
+    h.check(bubble("same").previousElementSibling === shown, "a reply to a reply follows it in the thread");
+    // A note on a line (not secret): its reply isn't secret either.
+    mod2.send({ t: "note", channel: "streamer", ...on, body: "welcome them!" });
+    await reply("welcome them!", "on it");
+    const { n: r2 } = await mod2.next("note", (x) => x.n.body === "on it");
+    h.check(!r2.secret && r2.reFrom === "mod2", "a reply to a note on a line goes to the same people as it");
+    noErrors(tw);
+  },
+
   async "in the pretend Twitch chat, StreamSpace's flag reaches the streamer and typing chats as the mod"(h) {
     const streamer = h.person("streamer");
     const mod = h.person("mod1");

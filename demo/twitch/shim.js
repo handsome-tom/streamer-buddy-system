@@ -129,11 +129,11 @@
   function fromPage(m) {
     if (m.t === "unflag") return ready && socket.send(JSON.stringify({ t: "unflash", id: m.id }));
     let out = null;
-    if (m.t === "note") out = { t: "note", channel: m.channel, chatter: m.chatter, chatterName: m.chatterName, text: m.text, body: m.body, color: m.color, at: m.at, ...(m.secret ? { secret: true } : {}) };
+    if (m.t === "note") out = { t: "note", channel: m.channel, chatter: m.chatter, chatterName: m.chatterName, text: m.text, body: m.body, color: m.color, at: m.at, ...(m.secret ? { secret: true } : {}), ...(m.re ? { re: m.re, reFrom: m.reFrom, reBody: m.reBody } : {}) };
     else if (m.t === "unnote") out = { t: "unnote", id: m.id, channel: m.channel, at: m.at };
-    else if (m.t === "notes") out = { t: "notes", channel: m.channel, from: m.from, to: m.to };
-    else if (m.t === "ask") out = { t: "ask", to: m.to, text: m.text, options: ["t", "y", "n", "m"] };
-    else if (m.t === "flash" && (m.kind === "info" || m.kind === "love")) out = { t: "flash", kind: m.kind, to: m.to, text: m.text };
+    else if (m.t === "notes") out = { t: "notes", channel: m.channel, from: m.from, to: m.to, ...(m.log ? { log: true } : {}) };
+    else if (m.t === "ask") out = { t: "ask", to: m.to, text: m.text, options: ["t", "y", "n", "m"], channel: m.channel, anchor: m.anchor };
+    else if (m.t === "flash" && (m.kind === "info" || m.kind === "love")) out = { t: "flash", kind: m.kind, to: m.to, text: m.text, channel: m.channel, anchor: m.anchor };
     else if (m.t === "answer") out = { t: "answer", id: m.id, code: m.code };
     else if (m.t === "seen") out = { t: "seen", id: m.id };
     else if (m.t === "flag") out = { t: "flash", kind: "chat", channel: m.channel, chatter: m.chatter, chatterName: m.chatterName, chatterColor: m.chatterColor, emotes: m.emotes, text: m.text, color: m.color };

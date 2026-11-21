@@ -3,7 +3,7 @@
 // in this page (demo/hub.js), never the real one.
 
 // The same address play.html uses (with its ?v=), so a browser never runs an old copy.
-import { Socket, resetRelay, pretendTwitch, relayPost } from "../demo/hub.js?v=135";
+import { Socket, resetRelay, pretendTwitch, relayPost } from "../demo/hub.js?v=136";
 export { relayPost };
 
 export { pretendTwitch };

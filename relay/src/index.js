@@ -223,7 +223,7 @@ const WARN_GAP_MS = 30 * 1000;
 const NOTE_MS = 60 * 24 * 60 * 60 * 1000; // chat notes: as long as Twitch keeps a VOD at most
 const MAX_NOTE_LEN = 300;
 // What this relay can do that older ones couldn't, so the extension only offers what works.
-const RELAY_FEATURES = ["secretNotes"];
+const RELAY_FEATURES = ["secretNotes", "noteReplies"];
 const MAX_NOTES_PER_MINUTE = 20;
 const MAX_NOTES_SENT = 1000; // to one VOD
 
@@ -1162,6 +1162,13 @@ export class Hub {
     // Secret chat (the extension's chat-box tab): the channel's own streamer never sees it,
     // only the writer's connections and the channel's other people (its mods).
     if (m.secret && who.login !== channel) n.secret = true;
+    // A reply to another note (re: its id), with who wrote that one and a little of it, so
+    // the reply can show what it answers. It sits on the same line as that note.
+    if (/^[\w-]{1,12}$/.test(String(m.re || ""))) {
+      n.re = String(m.re);
+      n.reFrom = clean(m.reFrom).slice(0, 25).toLowerCase();
+      n.reBody = cleanTo(m.reBody, 80);
+    }
     await this.ctx.storage.put(noteKey(n), n);
     // This channel's notes from before NOTE_MS go now.
     const old = await this.ctx.storage.list({ prefix: `n:${channel}:`, end: `n:${channel}:${pad13(now - NOTE_MS)}` });

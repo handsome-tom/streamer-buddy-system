@@ -2165,6 +2165,21 @@ a[class*="saveYourStreakSideNavRow"][data-tbc-dismissed] {
 
 /* A Connections chat message (or a Just-me note): the Connections icon (or a lock) right
    after the writer's name, in the words' own color. */
+/* From the stream's log on a VOD (chatnotes.js): what it was ("asks", "quick info") after
+   the name, small and soft, and how it ended under the words. */
+.tbc-note__tag {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.75;
+}
+.tbc-note__answer {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.9;
+}
 .tbc-note__badge {
   display: inline-flex;
   margin-left: 6px;
@@ -2683,6 +2698,48 @@ html.tbc-noting .tbc-flagx::before {
 }
 .tbc-note__x:hover {
   color: #fff;
+}
+/* Reply (chatnotes.js): a small ↩ beside the bubble while it's pointed at, like the ×. */
+.tbc-note__reply {
+  align-self: center;
+  display: none;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: #adadb8;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.tbc-note:hover .tbc-note__reply {
+  display: block;
+}
+.tbc-note__reply:hover {
+  color: #fff;
+}
+/* A reply sits a little in from what it answers, with that note's name and words, small
+   and soft, above its own. */
+.tbc-note--reply {
+  margin-left: 18px;
+}
+.tbc-note--mine.tbc-note--reply {
+  margin-left: 0;
+  margin-right: 18px;
+}
+.tbc-cnotes > .tbc-note--reply {
+  align-self: stretch;
+}
+.tbc-note__quote {
+  display: block;
+  margin-bottom: 2px;
+  overflow: hidden;
+  font-size: 11.5px;
+  opacity: 0.75;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tbc-notebox--reply {
+  margin-left: 18px;
 }
 /* The bottom bubble's curled tail, like a text message's; the box being written in
    points down at its comment too. The comment itself is lit faintly to match. */
