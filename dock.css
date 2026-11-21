@@ -6827,6 +6827,13 @@ html :is(body, body.has-space.has-space) :is(
    In the same look as the rest of Messages: no boxes or header bars, round pictures with
    status rings, a soft dark haze behind your profile instead of a frame. */
 .myspace { display: flex; flex-direction: column; margin: -8px -8px 0; padding: 10px 8px 14px; background: linear-gradient(180deg, rgba(63, 125, 216, 0.38) 0%, rgba(63, 125, 216, 0.18) 45%, rgba(63, 125, 216, 0.06) 80%, rgba(63, 125, 216, 0) 100%); }
+/* Your Twitch banner behind your picture and words, fading out downward and at the sides
+   into the blue, darkened a little so the words stay easy to read. */
+.myspace { position: relative; isolation: isolate; }
+.myspace__banner { position: absolute; z-index: -1; inset: 0 0 auto; height: 150px; background-position: center; background-size: cover; opacity: 0.6; -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.75) 45%, transparent 100%); mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.75) 45%, transparent 100%); }
+.myspace__banner::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(4, 6, 14, 0.55), rgba(4, 6, 14, 0.25) 60%, rgba(4, 6, 14, 0.45)); }
+.myspace--banner .myspace__card { background: none; }
+.myspace--banner .myspace__name, .myspace--banner .myspace__fact { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
 /* "Top 8": a little bigger than the other headings, Edit and View all on its right. */
 .myspace .msgs__label { font-size: 13px; }
 .fspace__btns { display: flex; gap: 12px; }

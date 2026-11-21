@@ -5529,9 +5529,45 @@
     } else pic.append(el("span", "myspace__chanletter", login[0].toUpperCase()));
     return pic;
   }
+  // Your Twitch banner (the wide picture across the top of your channel page), shown behind
+  // your profile in Messages. Twitch's official API doesn't give banners out, so this asks
+  // Twitch's own website API (the one twitch.tv itself uses, as the extension does for flags
+  // and notes) with no sign-in. Kept for 6 hours; if Twitch says no, changes it, or you have
+  // no banner, the profile just keeps its blue fade.
+  const BANNER_MS = 6 * 60 * 60 * 1000;
+  let bannerAsked = false;
+  function myBanner() {
+    const saved = get("banner", null);
+    const mine = saved?.login === me.login ? saved : null;
+    if (!bannerAsked && !DEV && !DEMO && (!mine || Date.now() - mine.at > BANNER_MS)) {
+      bannerAsked = true;
+      fetch("https://gql.twitch.tv/gql", {
+        method: "POST",
+        headers: { "Client-Id": "kimne78kx3ncx6brgo4mv6wki5h1ko" },
+        body: JSON.stringify({ query: "query($l:String!){ user(login:$l){ bannerImageURL } }", variables: { l: me.login } }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => {
+          if (!j?.data) return; // Twitch said no: try again next time the page opens
+          const url = j.data.user?.bannerImageURL || "";
+          const safe = /^https:\/\/[\w.-]+\.(jtvnw\.net|twitch\.tv)\//.test(url) ? url : "";
+          put("banner", { login: me.login, url: safe, at: Date.now() });
+          if (safe !== (mine?.url || "") && view === "messages") render();
+        })
+        .catch(() => {});
+    }
+    return mine?.url || "";
+  }
   function mySpace() {
     const login = me.login;
     const wrap = el("section", `myspace myspace--${myStatus}`);
+    const bannerUrl = myBanner();
+    if (bannerUrl) {
+      const banner = el("div", "myspace__banner");
+      banner.style.backgroundImage = `url("${bannerUrl}")`;
+      wrap.classList.add("myspace--banner");
+      wrap.append(banner);
+    }
 
     // ----- Your profile: your picture, round, its ring your status's color; beside it your
     // name, how you're showing, the channels you mod for and your connections count.
